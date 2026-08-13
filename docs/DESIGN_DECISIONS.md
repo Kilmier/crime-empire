@@ -12,7 +12,7 @@ settled it, so a future session can verify the claim instead of taking it on fai
 
 - **Genre/scope**: persistent-world, character-driven criminal empire sim. Player freedom, no
   mandatory path, no universal win condition. Relationship graph + character decision-making
-  *are* the game, not a management sim with NPCs bolted on. — `criminal-empire-design-doc-revised.md`,
+  *are* the game, not a management sim with NPCs bolted on. — `GAME_VISION.md`,
   High Concept / Pillar 1.
 - **Scope discipline is a standing constraint**, not a one-time correction. Original ambition
   (20-city state, full laundering/politician/lawyer depth, procedural heist maps day one) was
@@ -25,7 +25,7 @@ settled it, so a future session can verify the claim instead of taking it on fai
   control transitions to them. The new POV character has **independent stats** — they inherit
   territory/relationships/standing (CK3 model), not the predecessor's personal skill sheet. This
   is now written into the vision doc itself, not just conversation history. —
-  `criminal-empire-design-doc-revised.md`, "Succession and Continuity."
+  `GAME_VISION.md`, "Succession and Continuity."
 - If no viable successor: game over for that dynasty, but the world persists; a new character can
   start in the same city, in the visible legacy/ruins of the old empire. Flagged as the project's
   strongest differentiator — cheap to fake with flavor text/news/dialogue, high narrative payoff.
@@ -37,7 +37,7 @@ settled it, so a future session can verify the claim instead of taking it on fai
   risk modifier → outcome table), with named variables so a later procedural mini-map can be a
   presentation layer over proven logic rather than a parallel system to debug. Greed/time/risk
   push-your-luck tension during an unfolding op is a deliberate design goal. —
-  `criminal-empire-design-doc-revised.md`, "Heists"; `PROJECT_CONTEXT.md`, Decision history.
+  `GAME_VISION.md`, "Heists"; `PROJECT_CONTEXT.md`, Decision history.
 
 ## Actor parity and simulation tractability
 
@@ -97,5 +97,5 @@ findings. Retired in favor of this entry; see `OPEN_CONCERNS.md` for what's stil
 - **Succession stat-inheritance not written down anywhere.** Was concern #9. Resolved: see
   "Succession and persistence" above — now explicit in the vision doc itself.
 - **No heuristic test for a disguised heat bar.** Was concern #10. Resolved:
-  `criminal-empire-design-doc-revised.md`'s Design Heuristics and
+  `GAME_VISION.md`'s Design Heuristics and
   `INFORMATION_AND_LEGIBILITY.md`'s "Anti-heat-bar tests" both cover this directly now.

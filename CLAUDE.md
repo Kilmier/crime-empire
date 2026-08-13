@@ -1,19 +1,19 @@
 # Criminal Empire — Agent Instructions
 
-Before doing anything, read these files in this folder, in this order:
-1. `PROJECT_CONTEXT.md` — project history, current phase, working style, immediate next step
-2. `criminal-empire-design-doc-revised.md` — game vision and design pillars
-3. `SIMULATION_ARCHITECTURE.md` — simulation/AI architecture
-4. `INFORMATION_AND_LEGIBILITY.md` — canonical knowledge/belief/rumor/evidence model and
+Before doing anything, read `AGENTS.md`, then these files in this order:
+1. `docs/PROJECT_CONTEXT.md` — project history, current phase, working style, immediate next step
+2. `docs/GAME_VISION.md` — game vision and design pillars
+3. `docs/SIMULATION_ARCHITECTURE.md` — simulation/AI architecture
+4. `docs/INFORMATION_AND_LEGIBILITY.md` — canonical knowledge/belief/rumor/evidence model and
    player-facing legibility contract (referenced as canon by `SIMULATION_ARCHITECTURE.md`)
-5. `DESIGN_DECISIONS.md` — settled decisions, with citations to which doc/section settled them.
+5. `docs/DESIGN_DECISIONS.md` — settled decisions, with citations to which doc/section settled them.
    Treat as authoritative; don't re-derive a decision from the docs above when it's already
    recorded here.
-6. `OPEN_CONCERNS.md` — known open risks and flaws not yet resolved. If you're about to make a
+6. `docs/OPEN_CONCERNS.md` — known open risks and flaws not yet resolved. If you're about to make a
    call that touches one of these, say so explicitly rather than silently picking an answer.
 
-`design-doc-concerns_1.md` is retired — superseded by `DESIGN_DECISIONS.md` (resolved items, with
-citations) and `OPEN_CONCERNS.md` (still-open items). Don't treat it as current.
+`design-doc-concerns_1.md` is retired — superseded by `docs/DESIGN_DECISIONS.md` (resolved items,
+with citations) and `docs/OPEN_CONCERNS.md` (still-open items). Don't treat it as current.
 
 ## Review workflow
 
@@ -39,7 +39,7 @@ Next milestone
 Implications for Claude when implementing:
 - Every commit should be reviewable in isolation — keep commits scoped to one coherent change,
   with tests passing, so Codex's review has a clean unit to evaluate.
-- Codex is reviewing against `DESIGN_DECISIONS.md` and the canon docs above, not general
+- Codex is reviewing against `docs/DESIGN_DECISIONS.md` and the canon docs above, not general
   best-practice opinion. If a Codex finding conflicts with a settled decision, that's a signal to
   surface to Matt, not to silently accept or silently dismiss.
 - Don't wait for Codex's pass to self-review — run tests and check the change against the ground
@@ -51,13 +51,13 @@ iteration speed and understanding over process/documentation overhead.
 
 ## Current phase
 Building a headless C# console prototype of the character decision pipeline described in
-`SIMULATION_ARCHITECTURE.md`. No Godot/engine work, no rendering, no save/load yet.
-See `PROJECT_CONTEXT.md`'s "Immediate next step" section for the exact task and success criterion.
+`docs/SIMULATION_ARCHITECTURE.md`. No Godot/engine work, no rendering, no save/load yet.
+See `docs/PROJECT_CONTEXT.md`'s "Immediate next step" section for the exact task and success criterion.
 
 ## Ground rules
 - Don't re-litigate settled decisions (stack, succession model, tiering, pillars) without a
-  concrete reason surfaced during actual implementation — they're recorded in PROJECT_CONTEXT.md.
-- Don't reintroduce anti-patterns explicitly rejected in SIMULATION_ARCHITECTURE.md: traits firing
+  concrete reason surfaced during actual implementation — they're recorded in `docs/PROJECT_CONTEXT.md`.
+- Don't reintroduce anti-patterns explicitly rejected in `docs/SIMULATION_ARCHITECTURE.md`: traits firing
   actions directly, unrestricted GOAP/planning, full deliberation depth for every character
   regardless of narrative relevance.
 - Scope discipline: this project has a repeated failure mode of maximalist scope. When in doubt,

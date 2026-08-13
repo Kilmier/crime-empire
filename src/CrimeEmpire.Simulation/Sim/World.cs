@@ -53,11 +53,13 @@ public sealed class World
 
     private long _nextWorldEventId = 1;
     private long _nextAssignmentId = 1;
+    private long _nextDecisionId = 1;
 
     public Character Get(string id) => Characters[id];
     public Character? Find(string id) => Characters.TryGetValue(id, out var c) ? c : null;
 
     public long NextAssignmentId() => _nextAssignmentId++;
+    public long NextDecisionId() => _nextDecisionId++;
 
     public WorldEvent Record(
         string kind,

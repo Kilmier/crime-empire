@@ -1,8 +1,8 @@
 # Criminal Empire — Project Context & Handoff
 
-Purpose of this file: give a new Claude Code / Cowork session everything it needs to start productively, without re-deriving decisions already made in design chat. Treat the two attached docs as canon; treat this file as the narrative of *why* they say what they say and *what happens next*.
+Purpose of this file: give a new coding session everything it needs to start productively, without re-deriving decisions already made in design chat. Treat the canonical documents in this directory as authoritative; treat this file as the narrative of *why* they say what they say and *what happens next*.
 
-Attach alongside this file: `criminal-empire-design-doc-revised.md` (vision) and `SIMULATION_ARCHITECTURE.md` (architecture).
+Primary companion documents: `GAME_VISION.md` (vision), `SIMULATION_ARCHITECTURE.md` (architecture), `INFORMATION_AND_LEGIBILITY.md` (information model), `DESIGN_DECISIONS.md` (settled decisions), and `OPEN_CONCERNS.md` (unresolved risks).
 
 ## What this project is
 
@@ -29,7 +29,10 @@ Full detail lives in the vision doc — this is the compressed version.
 - Rejected explicitly in the architecture doc, on purpose: unrestricted GOAP/general planning, continuous deliberation for all characters, identical AI/player interfaces, minute-resolution updates during fast-forward. These were deliberate cuts, not oversights — don't reintroduce them without a concrete demonstrated need.
 - Traits/personality must modify perception, salience, and evaluation — never fire actions directly (explicitly rejected pattern: `Aggressive → monthly chance to attack`). This is treated as the most important single anti-pattern in the whole design; violating it is the fastest way to make characters feel like slot machines instead of motivated people.
 
-## Open concerns flagged, not yet resolved (see `design-doc-concerns.md` if present)
+## Historical concerns that motivated the current architecture
+
+This list explains what drove the architecture work. For current status, use `OPEN_CONCERNS.md`;
+several items below have since received a design answer but still require executable validation.
 
 Ranked by severity:
 1. **No plan yet for how NPC-driven action becomes visible to the player as story.** The architecture doc solves tractability, not player-facing legibility. A scheme that resolves only in an internal decision trace might as well not have happened. Needs a surfacing layer: rumor, news, informant reports, dialogue.
@@ -38,21 +41,21 @@ Ranked by severity:
 4. Character schema (identity/capabilities/psychology/cognition/social/motivations/execution) is a shape, not a real schema yet — `knowledge` especially needs to implement the Truth/Knowledge/Belief/Rumor/Evidence distinction concretely.
 5. Trait/value list is currently open-ended in the docs; should be closed to a small, fixed, tunable set before implementation (earlier drafts used Loyalty/Greed/Fear/Ambition as a 4-stat starting point).
 
-## Stack decision (just made, not yet implemented)
+## Stack decision and implementation status
 
-- **Simulation core:** C#, plain classes, engine-agnostic and unit-testable from the command line. No Godot/engine dependency in this layer.
-- **Persistence:** SQLite (not JSON/binary blobs) — chosen specifically because the architecture doc's explainability requirements and the promotion/demotion tiering need real queries ("show every decision X made and why," "which dormant Tier 2 characters have unresolved grievances against active characters").
-- **Rendering/engine:** Godot 4, using C# (not GDScript) — same language as the sim core, no FFI boundary. Chosen over Unity for licensing simplicity, strong 2D/tilemap support, and a UI toolkit suited to a text/menu-dense management game rather than an action game.
-- **Sequencing is explicit and important: build the sim core as a headless console project first. No Godot project yet.** Goal: prove that a small hardcoded cast (3-4 characters) produces believable decision traces in plain text before spending any time on tilemaps, sprites, or UI. If the sim isn't compelling in text form, no amount of art fixes that, and it's cheap to find out now.
+- **Simulation core:** C#, plain classes, engine-agnostic and unit-testable from the command line. The first headless behavioral spike now exists in `src/CrimeEmpire.Simulation/`, with its console host in `src/CrimeEmpire.Runner/`.
+- **Persistence (planned, not implemented):** SQLite (not JSON/binary blobs) — chosen specifically because the architecture doc's explainability requirements and the promotion/demotion tiering need real queries ("show every decision X made and why," "which dormant Tier 2 characters have unresolved grievances against active characters").
+- **Rendering/engine (planned, not implemented):** Godot 4, using C# (not GDScript) — same language as the sim core, no FFI boundary. Chosen over Unity for licensing simplicity, strong 2D/tilemap support, and a UI toolkit suited to a text/menu-dense management game rather than an action game.
+- **Sequencing remains explicit:** validate the headless simulation and its traces before creating a Godot project. If the sim is not compelling in text form, presentation cannot repair its foundation.
 
-## Immediate next step (why you're being handed this)
+## Immediate next step
 
-Build the smallest possible executable proof of the decision pipeline described in the architecture doc:
-- 3-4 hardcoded Characters with the core data shape (capabilities/psychology/cognition/social/motivations/execution state).
-- Implement the decision pipeline: trigger → update beliefs → select agenda → generate bounded candidate set → reject unavailable → score via local utility → commit → schedule reconsideration.
-- Print human-readable decision traces (the doc gives a worked example: "Vincent continued the harbor intimidation strategy because... he did not know police surveillance had begun.").
-- No rendering, no engine, no save/load required yet — console output is the entire deliverable.
-- Success criterion: does Vincent's (and the other characters') behavior look motivated and legible from the trace, or does it look arbitrary? This is the test the entire project's core fantasy hinges on — resolve it before building anything else.
+Review and tune the existing behavioral spike against its original success criterion: does Vincent's
+(and the other characters') behavior look motivated and legible from the trace, or arbitrary? Keep
+changes focused on concrete trace evidence. Once the kernel is credible, proceed to the architecture
+document's emergence-prototype phase: richer information transmission, player-facing reports,
+delegation, rival activity, and limited tier transitions. No rendering, engine, persistence, or
+save/load is required yet.
 
 ## Working style notes for the coding agent
 

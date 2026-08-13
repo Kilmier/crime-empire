@@ -17,8 +17,6 @@ using CrimeSim.Strategy;
 /// </summary>
 public static class Pipeline
 {
-    private static long _nextDecisionId = 1;
-
     public static DecisionRecord Deliberate(World world, Character actor, ScheduledEvent trigger)
     {
         var rng = Rng.ForDecision(world.Seed, actor.Id, actor.DecisionCount++);
@@ -79,7 +77,7 @@ public static class Pipeline
         actor.Execution.ReconsiderationTriggers.AddRange(reconsideration);
 
         var record = new DecisionRecord(
-            _nextDecisionId++,
+            world.NextDecisionId(),
             world.Now,
             actor.Id,
             actor.Name,

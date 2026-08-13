@@ -95,25 +95,33 @@ public sealed class Cognition
         bool affirms = asserted.AssertedStance is Stance.Knows or Stance.Believes or Stance.Suspects;
         var prior = Find(asserted.Claim);
 
-        // Has this man already told him *this*, as opposed to having spoken about it at all?
+        // What did this man last say about this, and is he now saying something different?
         //
-        // The distinction carries real weight. Repetition is not evidence — it is the same
-        // evidence, said again, and hearing it a second time must not compound confidence or count
-        // as a development. But a man who affirmed something last month and denies it today has
-        // not repeated himself: he has recanted, and that is new information of the most
-        // interesting kind. Suppressing it because the sender was familiar would make a witness
-        // permanently unable to take anything back.
-        //
-        // So the test is same sender AND same direction. Checking the record's SourceId alone was
-        // wrong twice over: the record keeps its original source through revisions, so one man
-        // could corroborate his own earlier report indefinitely and read as a fresh voice each
-        // time; and a claim first acquired by observation names the observer, so a single sender
-        // never matched at all.
-        bool sameAccountAgain =
-            (prior?.SourceId == senderId && prior.IsHeld == affirms) ||
-            _testimony.Any(t => t.SenderId == senderId
-                                && t.Claim.Equals(asserted.Claim)
-                                && t.Affirms == affirms);
+        // Against his *latest* account, not against anything he has ever said. Searching the whole
+        // history for a matching direction meant a witness who affirmed, recanted, then affirmed
+        // again had his final word matched to his first and thrown away as repetition — so a man
+        // could be talked round and back, and only the first two moves would register. His current
+        // position is the one that counts; what he said before it is history, and history is what
+        // the testimony log is for.
+        Testimony? latestFromSender = null;
+        for (int i = _testimony.Count - 1; i >= 0; i--)
+        {
+            var t = _testimony[i];
+            if (t.SenderId != senderId || !t.Claim.Equals(asserted.Claim)) continue;
+            latestFromSender = t;
+            break;
+        }
+
+        // Word for word what he said last time. Only this is repetition.
+        bool verbatimRepeat = latestFromSender is { } last
+            ? last.AssertedStance == asserted.AssertedStance
+              && Math.Abs(last.AssertedConfidence - asserted.AssertedConfidence) < 1e-9
+            : prior?.SourceId == senderId && prior.IsHeld == affirms && !prior.Contested;
+
+        // Whether he has moved. A reversal is worth a change of confidence; firming up or
+        // softening the same position is worth noting but is still one man's single voice, so it
+        // must not compound — the two questions are separate and were previously conflated.
+        bool reversal = latestFromSender is { } prev ? prev.Affirms != affirms : true;
 
         _testimony.Add(new Testimony(
             asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence, senderId, at));
@@ -127,27 +135,29 @@ public sealed class Cognition
             return fresh;
         }
 
-        // Agreement. A second, independent voice is worth more than the same voice repeating
-        // itself, so corroboration only counts when it comes from someone new.
+        // Word for word what he said last time: the record is left exactly as it was, including
+        // its reconsideration stamp. A belief marked freshly revisited every time somebody repeats
+        // himself would make "I have learned something since I last spoke" true forever, and two
+        // characters would file accounts at each other until the calendar ran out.
+        if (verbatimRepeat) return prior;
+
+        // He has said something at least slightly different. That is worth registering as a
+        // development even when it does not shift the belief — which is the case for a man firming
+        // up or softening a position he already gave: still one voice, so it must not compound.
+        if (!reversal && prior.IsHeld == affirms)
+            return Replace(prior, prior with { LastReconsideredAt = at });
+
+        // Agreement, from a voice that is new to this claim or has just come round to it. Either
+        // way it is support the belief did not have before.
         if (prior.IsHeld == affirms)
         {
-            // Nothing new was said and nothing changed, so the record is left exactly as it was —
-            // including its reconsideration time. A belief that gets stamped as freshly revisited
-            // every time somebody repeats himself would make "he has learned something since he
-            // last spoke" true forever, and two characters would report to each other until the
-            // calendar ran out.
-            if (sameAccountAgain) return prior;
-
             double raised = Math.Clamp(prior.Confidence + 0.15 * asserted.AssertedConfidence, 0, 1);
             return Replace(prior, prior with { Confidence = raised, LastReconsideredAt = at });
         }
 
-        // Disagreement. Repetition is not evidence here either: a man who has already denied it
-        // once does not wear the belief down further by denying it again. A man who is denying it
-        // for the first time does, even if he has affirmed it before — that is a recantation, and
-        // it falls through to the erosion below.
-        if (sameAccountAgain) return prior;
-
+        // Disagreement: a first denial from this man, or a reversal of what he told him before.
+        // Either is a reason to be less sure; hearing the identical denial twice is not, and has
+        // already returned above.
         double erosion = prior.SourceKind == SourceKind.Direct ? 0.15 : 0.45;
         double shaken = Math.Clamp(prior.Confidence * (1 - erosion * asserted.AssertedConfidence), 0, 1);
 

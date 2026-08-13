@@ -30,6 +30,39 @@ public static class Reporting
     /// <summary>Most claims one report will carry. A report is not a memory dump.</summary>
     private const int MaxAsserted = 3;
 
+    /// <summary>
+    /// When this recipient was last told this character's position on this claim, if ever.
+    ///
+    /// Per claim, deliberately, rather than per report. Keying "has he already covered this" off
+    /// the timestamp of his last report treated everything as handled the moment he said anything
+    /// at all — so a retraction that lost its place to the three-item cap was dropped and then
+    /// marked as delivered, which is the worst of both. Asking about the individual claim makes an
+    /// omission stay outstanding until it is actually said.
+    /// </summary>
+    public static DateTime? LastConveyed(
+        IEnumerable<Report> reportsSent, string recipientId, Claim claim)
+    {
+        DateTime? latest = null;
+        foreach (var r in reportsSent)
+        {
+            if (r.RecipientId != recipientId) continue;
+            foreach (var a in r.Asserted)
+            {
+                if (!a.Claim.Equals(claim)) continue;
+                if (latest is null || r.At > latest) latest = r.At;
+            }
+        }
+        return latest;
+    }
+
+    /// <summary>Whether this position is news to the recipient — never said, or said and since changed.</summary>
+    public static bool NeedsConveying(
+        IEnumerable<Report> reportsSent, string recipientId, InformationRecord belief)
+    {
+        var conveyed = LastConveyed(reportsSent, recipientId, belief.Claim);
+        return conveyed is null || belief.ReconsideredAt > conveyed;
+    }
+
     public static Report Compose(
         World world,
         Character sender,
@@ -40,17 +73,24 @@ public static class Reporting
         var candor = candidate.Candor ?? ReportCandor.Candid;
         var suppressed = candidate.Suppressed;
 
-        // What he has to offer: anything he has a position on, held or explicitly disbelieved.
+        // What he has to offer: anything he has a position on, held or explicitly disbelieved,
+        // with whatever is *news* to this recipient first.
         //
-        // Restricting this to held beliefs made a retraction unsayable. A man who has come to
-        // doubt something he previously reported has news — arguably better news than another
-        // affirmation — and with only held claims eligible he could carry the correction in his
-        // head and never be able to put it in a report. Positions he holds come first, because
-        // "here is what I have" is the substance and "and that other thing was wrong" is the
-        // footnote; ordering is explicit rather than incidental because report content feeds the
-        // determinism snapshot.
+        // Ordering held positions first — the previous rule — quietly reinstated the bug it was
+        // meant to fix. A man with three standing beliefs filled the report with them every time,
+        // so a retraction never reached the page, while the report itself marked the matter
+        // covered. News leads instead: something never said, or said and since changed, outranks
+        // another restatement of what the recipient already has. Within that, held positions come
+        // before disavowals, because "here is what I have" is the substance and "that other thing
+        // was wrong" is the correction to it.
+        //
+        // Ordering is explicit rather than incidental because report content feeds the determinism
+        // snapshot.
+        var sent = world.Reports.Where(r => r.SenderId == sender.Id).ToList();
+
         var positions = perceived.Beliefs
-            .OrderByDescending(b => b.IsHeld)
+            .OrderByDescending(b => NeedsConveying(sent, recipient.Id, b))
+            .ThenByDescending(b => b.IsHeld)
             .ThenByDescending(b => b.Confidence)
             .ThenBy(b => b.Claim.ToString(), StringComparer.Ordinal)
             .ToList();

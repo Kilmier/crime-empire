@@ -35,6 +35,20 @@ public readonly record struct ReportedClaim(Claim Claim, Stance AssertedStance, 
 }
 
 /// <summary>
+/// One character having asked another to account for something.
+///
+/// Recorded because asking is an act with a cost and a consequence, not a poll. Without it,
+/// "have I asked this man yet" could only be answered by looking for his reply — so a request
+/// that went unanswered stayed invisible, and the asker put the same question again every time
+/// he was woken. A question is spent when it is asked, not when it is answered; whether the
+/// other man chooses to say anything is his decision, and silence is itself an answer.
+/// </summary>
+public sealed record InformationRequest(long Id, string AskerId, string AskedId, DateTime At)
+{
+    public override string ToString() => $"{AskerId} asked {AskedId} ({At:yyyy-MM-dd})";
+}
+
+/// <summary>
 /// One message through the organisational report channel, modelling
 /// INFORMATION_AND_LEGIBILITY.md's "Report or Message" contract.
 ///

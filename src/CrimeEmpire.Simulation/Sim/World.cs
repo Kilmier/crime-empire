@@ -58,10 +58,18 @@ public sealed class World
     /// </summary>
     public List<Report> Reports { get; } = new();
 
+    /// <summary>
+    /// Every request for an account, answered or not. See <see cref="InformationRequest"/> — a
+    /// question is spent when asked, so this is what stops a character asking the same man the
+    /// same thing on every wake.
+    /// </summary>
+    public List<InformationRequest> Requests { get; } = new();
+
     private long _nextWorldEventId = 1;
     private long _nextAssignmentId = 1;
     private long _nextDecisionId = 1;
     private long _nextReportId = 1;
+    private long _nextRequestId = 1;
 
     public Character Get(string id) => Characters[id];
     public Character? Find(string id) => Characters.TryGetValue(id, out var c) ? c : null;
@@ -69,6 +77,7 @@ public sealed class World
     public long NextAssignmentId() => _nextAssignmentId++;
     public long NextDecisionId() => _nextDecisionId++;
     public long NextReportId() => _nextReportId++;
+    public long NextRequestId() => _nextRequestId++;
 
     public WorldEvent Record(
         string kind,

@@ -31,6 +31,9 @@ public sealed record GeneratorContext(
     // option once he has said everything he has — otherwise a standing responsibility wakes him
     // on a timer and he volunteers the same account indefinitely.
     IReadOnlyList<Report> ReportsSent,
+    // Questions this character has already put to somebody. Distinct from the answers he got:
+    // an unanswered question has still been asked, and asking again gets the same silence.
+    IReadOnlyList<InformationRequest> RequestsMade,
     // VisibleTargets: entities whose *existence* is public — a storefront can be seen from the
     // street. What is happening inside it is not public, and still requires a held claim.
     IReadOnlyList<string> VisibleTargets);
@@ -387,11 +390,15 @@ public static class Generators
                              // Not the man who just asked him to account for himself. Answering a
                              // question with the same question back is not corroboration.
                              && id != asker
-                             // And not anyone who has already given his version. Asking again
-                             // gets the same answer; there is a limited supply of people who
-                             // know anything, and once it is exhausted he has to act on what he
-                             // has rather than keep asking.
-                             && !ctx.Perceived.HasAccountFrom(id))
+                             // Not anyone who has already given his version.
+                             && !ctx.Perceived.HasAccountFrom(id)
+                             // And — the part that actually bounds this — not anyone he has
+                             // already asked. Filtering on replies alone meant a question that
+                             // went unanswered left no trace, so the asker put it again on every
+                             // wake: 318 requests against 5 replies in the disloyal run, because
+                             // the one thing that ends the loop is the answer, and the answer is
+                             // the other man's decision to make, not his.
+                             && !ctx.RequestsMade.Any(r => r.AskedId == id))
                 .OrderBy(id => id, StringComparer.Ordinal)
                 .FirstOrDefault();
 
@@ -440,19 +447,17 @@ public static class Generators
         IEnumerable<InformationRecord> beliefs,
         string recipientId)
     {
-        DateTime lastSpoke = DateTime.MinValue;
-        foreach (var r in reportsSent)
-            if (r.RecipientId == recipientId && r.At > lastSpoke) lastSpoke = r.At;
+        var sent = reportsSent as IReadOnlyCollection<Report> ?? reportsSent.ToList();
 
-        if (lastSpoke == DateTime.MinValue) return true;
-
-        // Note the absence of an IsHeld filter. Learning that something he reported is not so is
-        // one of the most worthwhile things he can carry back, and a stance that has fallen to
-        // Doubts or Rejects is exactly that. Requiring the belief still be held meant a man could
-        // be talked out of an account he had already given his boss and have, by this test,
-        // nothing further to say about it.
+        // Per claim, not per report. Comparing against the timestamp of his last report said
+        // "covered" about everything the moment he said anything, so a position squeezed out by
+        // the length cap was silently retired — the report both dropped it and marked it handled.
+        //
+        // Note also the absence of an IsHeld filter. Learning that something he reported is not so
+        // is one of the most worthwhile things he can carry back, and a stance fallen to Doubts or
+        // Rejects is exactly that.
         foreach (var b in beliefs)
-            if (b.ReconsideredAt > lastSpoke) return true;
+            if (Reporting.NeedsConveying(sent, recipientId, b)) return true;
 
         return false;
     }

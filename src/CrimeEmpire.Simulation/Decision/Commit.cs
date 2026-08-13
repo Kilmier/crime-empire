@@ -140,6 +140,13 @@ public static class Commit
             case ActionKind.SeekCorroboration:
             {
                 var other = world.Get(c.TargetId!);
+
+                // Filed before anything else, because the question is spent the moment it leaves
+                // his mouth. Waiting for a reply to record it would make an unanswered request
+                // indistinguishable from one never made.
+                world.Requests.Add(new InformationRequest(
+                    world.NextRequestId(), actor.Id, other.Id, world.Now));
+
                 // He asks; the other man decides for himself what to say. Waking the other
                 // character is the whole point — a request that produced an answer directly would
                 // be truth synchronisation wearing a question mark.

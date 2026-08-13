@@ -8,12 +8,14 @@ On completion, its final content moves to `docs/milestones/NNN-short-name.md` pe
 
 **Milestone 003 — information transmission slice. Complete; Codex findings fixed.**
 
-Archived at `docs/milestones/003-information-transmission.md`, with two corrections appended rather
-than edited in. Codex raised five findings against the original commit (fixed in `cf22e5d`) and
-three more on verifying that fix, two of which `cf22e5d` introduced. 45/45 tests pass and
-`--verify` is deterministic.
+Archived at `docs/milestones/003-information-transmission.md`, with three corrections appended
+rather than edited in. Codex raised five findings against the original commit, three on verifying
+that fix, and three more after that — including a runaway corroboration loop (323 decisions) that
+was present from the original commit and that two write-ups had wrongly claimed was terminated.
+57/57 tests pass, `--verify` is deterministic, and there is now a behavioural-budget test so a
+runaway cannot sit in a green suite again.
 
-Nothing new should start until the second corrective commit has been reviewed. Milestone 004 has
+Nothing new should start until the third corrective commit has been reviewed. Milestone 004 has
 not been scoped or assigned.
 
 The record of what was attempted follows.

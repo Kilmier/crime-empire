@@ -615,12 +615,13 @@ public sealed class InformationTransmissionTests
         var alreadyReported = new[]
         {
             new Report(1, "vincent", "salvatore", acquired.AddDays(1), ReportCandor.Candid,
-                Array.Empty<ReportedClaim>(), Array.Empty<Claim>(), "reported"),
+                new[] { new ReportedClaim(claim, Stance.Believes, 0.45) },
+                Array.Empty<Claim>(), "reported"),
         };
 
         Assert.True(
             Generators.HasSomethingToReport(alreadyReported, cognition.Records, "salvatore"),
-            "being contradicted since he last spoke is something to report");
+            "being contradicted since he conveyed it is something to report");
     }
 
     /// <summary>
@@ -637,10 +638,13 @@ public sealed class InformationTransmissionTests
         var cognition = new Cognition();
         cognition.Learn(claim, Stance.Believes, 0.6, SourceKind.Report, "tommy", at);
 
+        // He actually conveyed this claim. An empty report would convey nothing and would
+        // correctly leave the matter outstanding — eligibility is per claim, not per timestamp.
         var spoke = new[]
         {
             new Report(1, "vincent", "salvatore", at.AddDays(1), ReportCandor.Candid,
-                Array.Empty<ReportedClaim>(), Array.Empty<Claim>(), "reported"),
+                new[] { new ReportedClaim(claim, Stance.Believes, 0.45) },
+                Array.Empty<Claim>(), "reported"),
         };
 
         Assert.False(Generators.HasSomethingToReport(spoke, cognition.Records, "salvatore"));
@@ -710,11 +714,14 @@ public sealed class InformationTransmissionTests
         var changed = vincent.Cognition.Find(claim)!;
         Assert.False(changed.IsHeld);
 
-        // 1. Eligibility sees it, even though he no longer holds it.
+        // 1. Eligibility sees it, even though he no longer holds it. He conveyed the original
+        //    affirmation, so this is specifically the "said, and has since changed" case rather
+        //    than the trivial "never mentioned it" one.
         var alreadyReported = new[]
         {
             new Report(1, vincent.Id, Viewpoint, t0.AddDays(1), ReportCandor.Candid,
-                Array.Empty<ReportedClaim>(), Array.Empty<Claim>(), "reported"),
+                new[] { new ReportedClaim(claim, Stance.Believes, 0.6) },
+                Array.Empty<Claim>(), "reported"),
         };
         Assert.True(
             Generators.HasSomethingToReport(alreadyReported, vincent.Cognition.Records, Viewpoint),
@@ -783,11 +790,13 @@ public sealed class InformationTransmissionTests
         Assert.Equal(2, accounts.Count(a => a.Affirms));
         Assert.Single(accounts, a => !a.Affirms);
 
-        // And having been recanted at is itself something he can pass on.
+        // And having been recanted at is itself something he can pass on — he had already told
+        // Kane the original version, so this is a correction to something on the record.
         var spoke = new[]
         {
             new Report(1, "salvatore", "kane", at.AddDays(1), ReportCandor.Candid,
-                Array.Empty<ReportedClaim>(), Array.Empty<Claim>(), "reported"),
+                new[] { new ReportedClaim(claim, Stance.Believes, 0.6) },
+                Array.Empty<Claim>(), "reported"),
         };
         Assert.True(Generators.HasSomethingToReport(spoke, cognition.Records, "kane"));
     }
@@ -813,6 +822,173 @@ public sealed class InformationTransmissionTests
         var afterRepeats = cognition.Find(claim)!;
         Assert.Equal(afterRecant.Confidence, afterRepeats.Confidence);
         Assert.Equal(afterRecant.ReconsideredAt, afterRepeats.ReconsideredAt);
+    }
+
+    /// <summary>
+    /// Asking is spent when the question is put, not when it is answered.
+    ///
+    /// Filtering only on replies meant an unanswered request left no trace at all, so the asker
+    /// put it again on every wake — 318 requests against 5 replies in the disloyal run. The reply
+    /// cannot be the terminating condition, because giving one is the other man's decision and he
+    /// is entitled to say nothing.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("cautious-vincent")]
+    [InlineData("watchful-boss")]
+    [InlineData("disloyal-vincent")]
+    public void Nobody_asks_the_same_person_for_an_account_twice(string variant)
+    {
+        var world = Run(variant);
+
+        var duplicates = world.Requests
+            .GroupBy(r => (r.AskerId, r.AskedId))
+            .Where(g => g.Count() > 1)
+            .ToList();
+
+        Assert.Empty(duplicates);
+    }
+
+    /// <summary>
+    /// A behavioural budget. Not a performance test — a runaway exchange is a *correctness*
+    /// failure that happens to show up as a number, and it went unnoticed because nothing asserted
+    /// the scenario stays a scenario. Five people over ninety days should not produce hundreds of
+    /// deliberations, and the disloyal path is the one that actually ran away.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("cautious-vincent")]
+    [InlineData("watchful-boss")]
+    [InlineData("disloyal-vincent")]
+    public void The_scenario_stays_within_a_sane_behavioural_budget(string variant)
+    {
+        var world = Run(variant);
+
+        Assert.True(world.Decisions.Count < 100,
+            $"[{variant}] {world.Decisions.Count} decisions in 90 days — an exchange is looping");
+
+        // Requests are bounded by the pairs available, not by how often anyone is woken.
+        int orgMembers = world.Characters.Values.Count(c => c.Social.OrganizationId is not null);
+        Assert.True(world.Requests.Count <= orgMembers * (orgMembers - 1),
+            $"[{variant}] {world.Requests.Count} requests exceeds one per ordered pair");
+    }
+
+    /// <summary>
+    /// Pausing and resuming must not change the information history either — including the
+    /// runaway path, which the existing replay test never covered because it only ran baseline.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("disloyal-vincent")]
+    public void Pausing_does_not_change_reports_requests_or_testimony(string variant)
+    {
+        var straight = Run(variant);
+
+        var resumed = Cast.Build(seed: 42, variant);
+        Runner.Run(resumed, Cast.Start.AddDays(20));
+        Runner.Run(resumed, Cast.Start.AddDays(55));
+        Runner.Run(resumed, Cast.Start.AddDays(90));
+
+        Assert.Equal(Channel(straight), Channel(resumed));
+    }
+
+    /// <summary>The report channel's state, flattened for comparison.</summary>
+    private static string Channel(World world)
+    {
+        var lines = world.Reports.Select(r =>
+            $"report|{r.Id}|{r.At:O}|{r.SenderId}|{r.RecipientId}|{r.Candor}|" +
+            string.Join(",", r.Asserted.Select(a => $"{a.Claim}:{a.AssertedStance}")) +
+            "|" + string.Join(",", r.Withheld));
+
+        lines = lines.Concat(world.Requests.Select(q =>
+            $"request|{q.Id}|{q.At:O}|{q.AskerId}|{q.AskedId}"));
+
+        lines = lines.Concat(world.Characters.Values
+            .OrderBy(c => c.Id, StringComparer.Ordinal)
+            .SelectMany(c => c.Cognition.Testimony.Select(t =>
+                $"testimony|{c.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|{t.At:O}")));
+
+        return string.Join('\n', lines);
+    }
+
+    /// <summary>
+    /// A position squeezed out by the length cap stays outstanding instead of being marked
+    /// delivered. Eligibility is per claim; a report that never mentioned something has not
+    /// covered it, however many other things it said.
+    /// </summary>
+    [Fact]
+    public void A_position_crowded_out_of_a_report_is_not_treated_as_delivered()
+    {
+        var at = new DateTime(1987, 3, 2, 0, 0, 0, DateTimeKind.Utc);
+        var told = new Claim(ClaimKind.BusinessRefusesTribute, "shop");
+        var untold = new Claim(ClaimKind.PersonUsedViolence, "tommy", "shop", 1);
+
+        var cognition = new Cognition();
+        cognition.Learn(told, Stance.Believes, 0.9, SourceKind.Direct, "self", at);
+        cognition.Learn(untold, Stance.Believes, 0.5, SourceKind.Direct, "self", at);
+
+        // He reported, but only got one of them out.
+        var sent = new[]
+        {
+            new Report(1, "vincent", "salvatore", at.AddDays(1), ReportCandor.Candid,
+                new[] { new ReportedClaim(told, Stance.Believes, 0.7) },
+                Array.Empty<Claim>(), "reported"),
+        };
+
+        Assert.True(
+            Generators.HasSomethingToReport(sent, cognition.Records, "salvatore"),
+            "the claim he never mentioned is still outstanding");
+
+        Assert.False(Reporting.NeedsConveying(sent, "salvatore", cognition.Find(told)!));
+        Assert.True(Reporting.NeedsConveying(sent, "salvatore", cognition.Find(untold)!));
+    }
+
+    /// <summary>
+    /// Composition leads with what is news to this recipient, so a retraction cannot be crowded
+    /// out by standing beliefs the recipient already has.
+    /// </summary>
+    [Fact]
+    public void A_retraction_outranks_positions_the_recipient_already_has()
+    {
+        var world = Cast.Build(seed: 42, "baseline");
+        var vincent = world.Get("vincent");
+        var salvatore = world.Get(Viewpoint);
+        var t0 = Cast.Start;
+
+        // Enough standing beliefs to fill the report on their own.
+        var filler = new[]
+        {
+            new Claim(ClaimKind.TargetIsVulnerable, Cast.Grocery),
+            new Claim(ClaimKind.TributeCollected, Cast.Grocery),
+            new Claim(ClaimKind.PoliceInvestigating, "tommy"),
+            new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, "tommy", 1),
+        };
+        foreach (var f in filler)
+            vincent.Cognition.Learn(f, Stance.Believes, 0.95, SourceKind.Direct, vincent.Id, t0);
+
+        // And one thing he has taken back, held at lower confidence than any of the filler.
+        var retracted = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
+        vincent.Cognition.Learn(retracted, Stance.Believes, 0.8, SourceKind.Report, Viewpoint, t0);
+        vincent.Cognition.Learn(retracted, Stance.Rejects, 0.3, SourceKind.Direct, vincent.Id, t0.AddDays(5));
+
+        // He already told the boss all the filler, and the original affirmation.
+        world.Reports.Add(new Report(
+            world.NextReportId(), vincent.Id, Viewpoint, t0.AddDays(1), ReportCandor.Candid,
+            filler.Select(f => new ReportedClaim(f, Stance.Believes, 0.7))
+                  .Append(new ReportedClaim(retracted, Stance.Believes, 0.6))
+                  .ToList(),
+            Array.Empty<Claim>(), "reported"));
+
+        world.Now = t0.AddDays(6);
+        var candidate = new Candidate("report:salvatore", ActionKind.ReportToSuperior, "test", "report in")
+        {
+            TargetId = Viewpoint,
+            Candor = ReportCandor.Candid,
+        };
+        var report = Reporting.Compose(
+            world, vincent, salvatore, candidate, Salience.Perceive(vincent, world.Now));
+
+        Assert.Contains(report.Asserted, a => a.Claim.Equals(retracted) && a.AssertedStance == Stance.Rejects);
     }
 
     private static World Run(string variant)

@@ -255,3 +255,70 @@ behaviour with it.
 - All three mutation-checked. Finding 7 was reverted in both halves at once, confirming the
   end-to-end test catches what a per-stage test could not.
 - Both viewpoint reruns re-read by hand.
+
+---
+
+## Third correction — Codex verification findings on `2a74a5d`
+
+Three more, two of them P1. The pattern from the second correction repeated and should be read
+alongside it.
+
+**9. Runaway corroboration loop.** The disloyal run produced 323 decisions, 318 requests for an
+account, and 5 replies. `SeekCorroboration` was suppressed only for people who had *already
+replied*, so a request that went unanswered left no trace and the asker put the same question again
+on every wake. The terminating condition cannot be the reply, because giving one is the other
+man's decision and he is entitled to say nothing. Asking is now recorded as
+`InformationRequest` on `World.Requests` at the moment the question is put — spent when asked, not
+when answered. Disloyal is now 45 decisions.
+
+This one is worth dwelling on: it was present in the original milestone commit, and both the
+milestone write-up and the first correction claimed the exchange terminated. The claim rested on
+reading the world log, where each *report* appears once, rather than on the decision count — which
+`--compare` prints, and which I had in front of me and did not read.
+
+**10. A retraction could still be dropped and then marked delivered.** Composition ordered held
+positions first and capped output at three, so a character with three standing beliefs filled every
+report with them and the retraction never reached the page — while the report's timestamp made
+eligibility treat the matter as covered. Composition now leads with what is *news to this
+recipient*, and eligibility is per claim (`Reporting.NeedsConveying`) rather than per report, so
+anything squeezed out by the cap stays outstanding until it is actually said.
+
+**11. Story changes were checked against all history rather than the sender's latest account.** In
+an affirm → deny → affirm sequence the final affirmation matched the *first* one and was discarded
+as repetition, so a source could be talked round and back and only the first two moves would
+register. Same-direction changes of stance or confidence were also being ignored entirely.
+`Receive` now compares against that sender's most recent account, and decides separately whether
+the change should move confidence: a reversal does, firming up or softening the same position
+updates reconsideration without compounding, and only a verbatim repeat changes nothing.
+
+### Verification
+
+- `dotnet test` — 57/57 passing (was 45).
+- `--verify` DETERMINISTIC on baseline and disloyal; `--compare` — 4 distinct histories, 13/16/13/45
+  decisions.
+- All three mutation-checked.
+- New coverage for the two gaps the review named: a **behavioural budget** test asserting no variant
+  exceeds 100 decisions or one request per ordered pair, and **pause/resume** coverage over reports,
+  requests and testimony for the disloyal path as well as baseline — the existing replay test only
+  ever ran baseline, which is why a 323-decision runaway sat in a green suite.
+
+### The recurring mistake
+
+Findings 7, 8, 10 and 11 are one error in four costumes: a correctness fix that narrows what can be
+*expressed* or *distinguished*, rather than describing the case precisely.
+
+- 7 — filtered retractions out of the channel instead of representing a non-held position.
+- 8 — blocked all repeat senders instead of distinguishing repetition from reversal.
+- 10 — ordered by "held" instead of by "new to the recipient".
+- 11 — matched against any past account instead of the latest one.
+
+Each looked like a tightening. Each removed a legitimate behaviour along with the bad one. The
+question to ask of the next fix of this shape is not "does this stop the bad case" but "what
+honest case does this also stop".
+
+### Still open after this pass
+
+- Provenance imprecision (see the previous correction) stands unchanged.
+- `docs/HANDOFF.md` does not exist; the review noted it could not be included. Not created here
+  because inventing a process document unasked is not a review fix — raise with Matt if the review
+  loop wants one.

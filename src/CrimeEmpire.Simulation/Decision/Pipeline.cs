@@ -59,6 +59,7 @@ public static class Pipeline
             SubordinatesOf(world, actor),
             OrgMembersOf(world, actor),
             world.Reports.Where(r => r.SenderId == actor.Id).ToList(),
+            world.Requests.Where(r => r.AskerId == actor.Id).ToList(),
             VisibleTargets(world, domain));
 
         // 4-5. Bounded generation, then salience/knowledge/capability/access rejection.

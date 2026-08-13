@@ -7,7 +7,8 @@ On completion, its final content moves to `docs/milestones/NNN-short-name.md` pe
 ## Status
 
 No milestone is currently active. `docs/milestones/002-dotnet-10-migration.md` (the
-`.NET 9 → 10` framework migration) is the most recently completed one, awaiting Codex review.
+`.NET 9 → 10` framework migration) is the most recently completed one — reviewed by Codex
+2026-08-13 with no findings, so `net10.0` is the accepted base to build on.
 
 Before starting the next milestone, confirm scope with Matt rather than inferring it. The next
 step in `SIMULATION_ARCHITECTURE.md`'s Validation Sequence (emergence prototype: richer

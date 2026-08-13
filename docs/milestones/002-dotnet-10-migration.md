@@ -1,6 +1,8 @@
 # Milestone 002 — .NET 9 → .NET 10 Migration
 
-Status: complete.
+Status: complete. Reviewed by Codex 2026-08-13 — no findings; build accepted as a safe base to
+build on. The deferred items in "Deferred work" below were not closed by that review and remain
+open (notably the unverified Godot/`net10.0` compatibility question).
 
 ## What was attempted
 

@@ -1,15 +1,77 @@
 # Crime Empire — Repository Guide
 
+This file applies to every coding agent working in this repository (Claude Code, Codex, or
+otherwise). `CLAUDE.md` contains additional guidance specific to Claude Code's own tooling (Plan
+mode, etc.) and defers to this file for anything shared between agents — don't assume content
+here is duplicated there.
+
 Read the canonical project documents before making non-trivial design or simulation changes:
 
-1. `docs/PROJECT_CONTEXT.md`
+1. `docs/PROJECT_CONTEXT.md` — project history and working style (narrative background; for
+   current work status see `docs/CURRENT_MILESTONE.md`, not this file)
 2. `docs/GAME_VISION.md`
 3. `docs/SIMULATION_ARCHITECTURE.md`
 4. `docs/INFORMATION_AND_LEGIBILITY.md`
-5. `docs/DESIGN_DECISIONS.md`
-6. `docs/OPEN_CONCERNS.md`
+5. `docs/DESIGN_DECISIONS.md` — settled decisions, with citations to which doc/section settled
+   them. Treat as authoritative; don't re-derive a decision from the docs above when it's already
+   recorded here.
+6. `docs/OPEN_CONCERNS.md` — known open risks, not yet resolved. If a change touches one of these,
+   say so explicitly rather than silently picking an answer.
+7. `docs/CURRENT_MILESTONE.md` — what's actively being worked on right now. Authoritative source
+   for "what's the task." If it says nothing is active, confirm scope with Matt before starting
+   anything rather than inferring the next milestone.
 
-`CLAUDE.md` contains additional collaboration guidance for Claude Code. This file applies to every coding agent.
+## Review workflow
+
+This project uses a two-agent loop: Claude (implementation) and Codex (code review /
+architectural-integrity review). The cycle is:
+
+```
+Claude implements
+      ↓
+Claude tests and commits
+      ↓
+Codex reviews that commit
+      ↓
+Owner (Matt) accepts/rejects findings
+      ↓
+Claude fixes accepted findings
+      ↓
+Codex verifies
+      ↓
+Next milestone
+```
+
+- Every commit should be reviewable in isolation — one coherent change, tests passing.
+- Codex reviews against `docs/DESIGN_DECISIONS.md` and the canon docs above, not general
+  best-practice opinion. A Codex finding that conflicts with a settled decision is a signal to
+  surface to Matt, not to silently accept or silently dismiss.
+- Claude should self-review against the constraints below before committing, so Codex's review
+  catches real issues, not basics.
+
+## Milestone lifecycle
+
+`docs/CURRENT_MILESTONE.md` is mutable — update or replace it freely while work is underway. It
+describes what's being attempted right now and is not meant to survive as history.
+
+When the current milestone is complete, do the following, in order, and then stop:
+
+1. Complete only the current milestone. Do not begin the next one.
+2. Run the full relevant test suite.
+3. Move the finished content of `docs/CURRENT_MILESTONE.md` into a new archive file at
+   `docs/milestones/NNN-short-name.md` (zero-padded, incrementing), recording: what was
+   attempted; what was completed; tests or success criteria and their results; important
+   discoveries (architectural, not just "it worked"); deferred work; the relevant commit(s).
+4. Commit the completed work — including the new milestone archive file — as one focused commit.
+5. Do not begin the next milestone. Wait for review (Codex) and/or Matt before continuing.
+
+Archived milestones under `docs/milestones/` are append-only records, never silently rewritten. If
+something there turns out wrong or incomplete, add a correction or mark it superseded — don't edit
+history to make it look like it was always accurate. Preserve final outcomes, not every
+intermediate checklist.
+
+This is distinct from `docs/DESIGN_DECISIONS.md` (durable, settled decisions, not tied to a
+milestone) and `docs/OPEN_CONCERNS.md` (durable, unresolved risks).
 
 ## Repository boundaries
 

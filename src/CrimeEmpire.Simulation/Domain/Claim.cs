@@ -80,8 +80,20 @@ public sealed record InformationRecord(
     double Confidence,
     SourceKind SourceKind,
     string SourceId,
-    DateTime AcquiredAt)
+    DateTime AcquiredAt,
+    DateTime? LastReconsideredAt = null)
 {
+    /// <summary>
+    /// When this was last argued about, defaulting to when it was first acquired.
+    ///
+    /// Kept distinct from <see cref="AcquiredAt"/> on purpose, as
+    /// INFORMATION_AND_LEGIBILITY.md's Character Information Record has both. Letting a later
+    /// corroboration overwrite the acquisition time would silently rewrite the player's timeline —
+    /// something he was told in March would appear to have been learned in May, purely because
+    /// somebody mentioned it again.
+    /// </summary>
+    public DateTime ReconsideredAt => LastReconsideredAt ?? AcquiredAt;
+
     public bool IsHeld => Stance is Stance.Knows or Stance.Believes or Stance.Suspects;
 
     public string ConfidenceLabel => Confidence switch

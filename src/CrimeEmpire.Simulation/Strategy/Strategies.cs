@@ -257,17 +257,55 @@ public static class Strategies
         if (s.BreachedPolicyId is not null)
         {
             world.Org.AdjustCondition(OrgCondition.LeadershipInstability, 0.2);
-            var breach = new Claim(ClaimKind.PersonBreachedPolicy, owner.Id, s.BreachedPolicyId, ev.Id);
-            // Traces of a breach are discoverable by others; they are not automatically known.
-            ScheduleObservation(world, world.Org.BossId, ev, 0.5, new[] { violenceClaim, breach });
+
+            // He ordered it. A man does not have to discover that he went outside his own boss's
+            // rule — he is the one who decided to. This is what gives him something to conceal
+            // later; without it the person who ordered the breach holds no claim naming himself
+            // and can only ever report candidly, while the subordinate who carried it out takes
+            // all of the exposure.
+            owner.Cognition.Learn(
+                new Claim(ClaimKind.PersonBreachedPolicy, owner.Id, s.BreachedPolicyId, ev.Id),
+                Stance.Knows, 1.0, SourceKind.Direct, owner.Id, world.Now);
         }
 
-        // Anyone whose job is looking gets a chance to notice. A chance, not a notification.
+        // Who gets a chance to notice, and on what terms. Collected before scheduling so that one
+        // event yields at most one opportunity per person: a character who qualifies twice over
+        // (the boss, who is both owed a report about the breach and works the same district) would
+        // otherwise get two independent rolls, notice twice, and deliberate twice at the same
+        // instant on the same news.
+        var opportunities = new Dictionary<string, (double Discoverability, Claim[] Claims)>(StringComparer.Ordinal);
+
+        void Offer(string? id, double discoverability, params Claim[] claims)
+        {
+            if (id is null || id == executor.Id || id == owner.Id) return;
+            // Better access wins. Two routes to the same news is not twice the chance of hearing
+            // it; it is one chance, on the better of the two terms.
+            if (opportunities.TryGetValue(id, out var existing) && existing.Discoverability >= discoverability) return;
+            opportunities[id] = (discoverability, claims);
+        }
+
+        // Two different reasons to notice, and they are not the same reason. Someone whose job is
+        // looking finds out because they went looking. Someone who works the same street finds out
+        // because it happened where they are — proximity, not skill. Without the second, the only
+        // people who can ever contradict an account are investigators, and an organisation becomes
+        // a place where nobody sees anything.
         foreach (var c in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
         {
-            if (c.Capabilities[Skill.Investigation] < 0.4) continue;
-            ScheduleObservation(world, c.Id, ev, 0.6, new[] { witnessClaim });
+            if (c.Capabilities[Skill.Investigation] >= 0.4)
+                Offer(c.Id, 0.6, witnessClaim);
+            else if (c.IsOrgMember && c.Capabilities.Districts.Contains(business.DistrictId))
+                Offer(c.Id, 0.35, witnessClaim, violenceClaim);
         }
+
+        // The boss is owed an account of a breach by virtue of the office, which is better access
+        // than merely working the district.
+        if (s.BreachedPolicyId is not null)
+            Offer(world.Org.BossId, 0.5,
+                violenceClaim,
+                new Claim(ClaimKind.PersonBreachedPolicy, owner.Id, s.BreachedPolicyId, ev.Id));
+
+        foreach (var (id, o) in opportunities.OrderBy(k => k.Key, StringComparer.Ordinal))
+            ScheduleObservation(world, id, ev, o.Discoverability, o.Claims);
     }
 
     private static void ScheduleObservation(
@@ -278,7 +316,7 @@ public static class Strategies
             world.Now + TimeSpan.FromDays(1),
             EventKind.ObservationOpportunity,
             observerId,
-            $"word of what happened at {ev.TargetId} may reach them",
+            $"he may notice what was left behind at {ev.TargetId}",
             new EventPayload
             {
                 RelatedEventId = ev.Id,

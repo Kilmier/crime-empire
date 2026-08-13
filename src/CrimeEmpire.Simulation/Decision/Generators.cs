@@ -23,6 +23,14 @@ public sealed record GeneratorContext(
     IReadOnlyList<Policy> KnownPolicies,
     string? SuperiorId,
     IReadOnlyList<string> SubordinateIds,
+    // Everyone in the same organisation, regardless of rank. Needed because the chain of command
+    // is not the only path information can take — a boss seeking a second account has to be able
+    // to reach past the man who reports to him.
+    IReadOnlyList<string> OrgMemberIds,
+    // Reports this character has already sent. Needed so that "report in" stops being a live
+    // option once he has said everything he has — otherwise a standing responsibility wakes him
+    // on a timer and he volunteers the same account indefinitely.
+    IReadOnlyList<Report> ReportsSent,
     // VisibleTargets: entities whose *existence* is public — a storefront can be seen from the
     // street. What is happening inside it is not public, and still requires a held claim.
     IReadOnlyList<string> VisibleTargets);
@@ -285,8 +293,23 @@ public static class Generators
             };
         }
 
-        if (ctx.SuperiorId is { } boss)
+        // Being asked directly changes who he answers to for this one exchange. Without it a
+        // soldier can only ever report up one rung, and a boss who goes round his capo to ask a
+        // question gets no reply — the request would reach a man whose only reporting route leads
+        // back to the person he was asked about.
+        string? asker = ctx.Trigger.Payload.Note == "asked-to-account" ? ctx.Trigger.Payload.TargetId : null;
+
+        if ((asker ?? ctx.SuperiorId) is { } boss && (asker is not null || HasSomethingNewFor(ctx, boss)))
         {
+            // What he would rather his superior did not hear: things he holds that name him as the
+            // one who used force or went outside a rule. Nothing else is worth lying about, so if
+            // this is empty the only report he can conceive of is the honest one.
+            var awkward = ctx.Perceived.OfKind(ClaimKind.PersonUsedViolence)
+                .Concat(ctx.Perceived.OfKind(ClaimKind.PersonBreachedPolicy))
+                .Where(r => r.Claim.Subject == ctx.Actor.Id)
+                .Select(r => r.Claim)
+                .ToList();
+
             yield return new Candidate(
                 $"report:{boss}",
                 ActionKind.ReportToSuperior,
@@ -295,7 +318,35 @@ public static class Generators
             {
                 TargetId = boss,
                 Domain = ctx.Agenda.Domain,
+                Candor = ReportCandor.Candid,
             };
+
+            if (awkward.Count > 0)
+            {
+                yield return new Candidate(
+                    $"report:{boss}:partial",
+                    ActionKind.ReportToSuperior,
+                    nameof(FromRelationship),
+                    $"report to {boss}, leaving out his own part")
+                {
+                    TargetId = boss,
+                    Domain = ctx.Agenda.Domain,
+                    Candor = ReportCandor.Partial,
+                    Suppressed = awkward,
+                };
+
+                yield return new Candidate(
+                    $"report:{boss}:false",
+                    ActionKind.ReportToSuperior,
+                    nameof(FromRelationship),
+                    $"tell {boss} it did not happen")
+                {
+                    TargetId = boss,
+                    Domain = ctx.Agenda.Domain,
+                    Candor = ReportCandor.False,
+                    Suppressed = awkward,
+                };
+            }
 
             // Only conceivable if he knows there is a rule to ask about.
             var relevant = ctx.KnownPolicies.FirstOrDefault(p => p.Domain == (ctx.Agenda.Domain ?? ""));
@@ -313,6 +364,71 @@ public static class Generators
                 };
             }
         }
+
+        // Going to somebody else for their version of the same thing.
+        //
+        // Only conceivable about something he was told rather than saw — there is nothing to
+        // corroborate about your own eyes — and only worth doing if there is somebody to ask who
+        // is not the man who told him. This is the recipient-initiated direction of the same
+        // report channel, which INFORMATION_AND_LEGIBILITY.md sanctions directly: leaders can
+        // request audits and seek corroboration. Without it a boss can only ever hear from the
+        // one subordinate who reports to him, and a lie from that subordinate is unfalsifiable.
+        var secondhand = ctx.Perceived.Beliefs
+            .Where(b => b.IsHeld && b.SourceKind == SourceKind.Report)
+            .OrderBy(b => b.Confidence)
+            .ThenBy(b => b.Claim.ToString(), StringComparer.Ordinal)
+            .FirstOrDefault();
+
+        if (secondhand is not null)
+        {
+            string? other = ctx.OrgMemberIds
+                .Where(id => id != ctx.Actor.Id
+                             && id != secondhand.SourceId
+                             // Not the man who just asked him to account for himself. Answering a
+                             // question with the same question back is not corroboration.
+                             && id != asker
+                             // And not anyone who has already given his version. Asking again
+                             // gets the same answer; there is a limited supply of people who
+                             // know anything, and once it is exhausted he has to act on what he
+                             // has rather than keep asking.
+                             && !ctx.Perceived.HasAccountFrom(id))
+                .OrderBy(id => id, StringComparer.Ordinal)
+                .FirstOrDefault();
+
+            if (other is not null)
+                yield return new Candidate(
+                    $"corroborate:{other}",
+                    ActionKind.SeekCorroboration,
+                    nameof(FromRelationship),
+                    $"ask {other} for his own account")
+                {
+                    TargetId = other,
+                    Domain = ctx.Agenda.Domain,
+                };
+        }
+    }
+
+    /// <summary>
+    /// Whether he has learned anything since he last reported to this person.
+    ///
+    /// Reporting is prompted by having something to say. Without this, a standing responsibility
+    /// wakes an officeholder on a timer, "report in" scores the same as it did last time because
+    /// nothing about his situation changed, and he files the identical account every few days
+    /// until the run ends. Being asked directly bypasses this — a question deserves an answer even
+    /// if the answer is the one already given.
+    /// </summary>
+    private static bool HasSomethingNewFor(GeneratorContext ctx, string recipientId)
+    {
+        DateTime lastSpoke = DateTime.MinValue;
+        foreach (var r in ctx.ReportsSent)
+            if (r.RecipientId == recipientId && r.At > lastSpoke) lastSpoke = r.At;
+
+        if (lastSpoke == DateTime.MinValue) return true;
+
+        foreach (var b in ctx.Perceived.Beliefs)
+            if (b.IsHeld && b.AcquiredAt > lastSpoke) return true;
+
+        return false;
     }
 
     // ---------------------------------------------------------------- helpers

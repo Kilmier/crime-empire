@@ -250,6 +250,75 @@ public static class Utility
                     : $"it would defy {cand.PolicyIssuerId}'s standing instruction");
         }
 
+        // --- what to say when reporting -------------------------------------------------------------
+        //
+        // Concealment is priced against three things he can actually perceive: how badly the fact
+        // would hurt him if his superior had it, how likely he thinks it is that somebody else
+        // already saw it, and what he owes the man he would be lying to. He is not consulting
+        // whether the claim is objectively true — only what he holds and what he expects.
+        if (cand.Candor is { } candor && cand.TargetId is not null)
+        {
+            double loyalty = Loyalty(actor, psy, cand.TargetId);
+
+            // How exposed he believes he already is. A man who thinks the street saw him has
+            // less to gain by denying it, because the denial is what gets caught.
+            double believedWitnesses = 0;
+            foreach (var w in perceived.OfKind(ClaimKind.WitnessSawIncident))
+                believedWitnesses = Math.Max(believedWitnesses, w.Confidence);
+
+            // The weight of what he would be hiding, as he holds it.
+            double stakes = cand.Suppressed.Count == 0
+                ? 0
+                : cand.Suppressed.Max(perceived.Confidence);
+
+            switch (candor)
+            {
+                case ReportCandor.Candid when stakes > 0:
+                    Add("self-protection", -2.0 * stakes,
+                        "telling him straight means handing over the part that damns him");
+                    Add("relationship effects", 0.8 * loyalty,
+                        "he would rather his superior heard it from him than from someone else");
+                    break;
+
+                case ReportCandor.Partial:
+                    Add("self-protection", 1.5 * stakes, "what he leaves out cannot be held against him");
+                    Add("perceived personal risk", -1.1 * believedWitnesses,
+                        "an account with a hole in it invites the question he cannot answer");
+                    Add("relationship effects", -0.5 * loyalty, "it is not what he owes the man");
+                    break;
+
+                case ReportCandor.False:
+                    // A denial that holds is worth more than an omission: an omission leaves the
+                    // fact sitting there to be found, a successful denial buries it. What makes
+                    // it dangerous is almost entirely whether he thinks somebody can contradict
+                    // him — so the risk is carried by believed witnesses rather than by a flat
+                    // penalty on lying. A large constant here would mean no configuration of any
+                    // character could ever choose this, which is not a deterrent, it is a
+                    // candidate that exists only to be rejected.
+                    Add("self-protection", 1.9 * stakes, "a flat denial buries it, if it holds");
+                    Add("perceived personal risk", -(0.25 + 3.0 * believedWitnesses) * (1 + cautious),
+                        believedWitnesses > 0.4
+                            ? "he thinks there were people on that street who saw him"
+                            : "he does not think anyone can put him there");
+                    Add("relationship effects", -1.4 * loyalty, "he would be lying to his own boss");
+                    break;
+            }
+        }
+
+        // Asking a second person costs standing — it says out loud that the first was not believed —
+        // and buys certainty in proportion to how shaky the account already is.
+        if (cand.Kind == ActionKind.SeekCorroboration && cand.TargetId is not null)
+        {
+            double shakiest = 1.0;
+            foreach (var b in perceived.Beliefs)
+                if (b.IsHeld && b.SourceKind == SourceKind.Report)
+                    shakiest = Math.Min(shakiest, b.Confidence);
+
+            Add("uncertainty", 1.5 * (1 - shakiest), "he is not satisfied with the account he has");
+            Add("relationship effects", -0.45 * proud,
+                "going behind the man who told him is an admission he does not trust him");
+        }
+
         // --- uncertainty ----------------------------------------------------------------------------
         if (cand.RequiredKnowledge.Count > 0)
         {
@@ -308,8 +377,16 @@ public static class Utility
         {
             case ActionKind.ReportToSuperior:
             case ActionKind.SeekApproval:
-                yield return (Drive.Belonging, 0.7);
+                // Reporting at all serves belonging. Concealing within it serves security instead,
+                // and costs the belonging it would otherwise have bought.
+                yield return (Drive.Belonging, c.Candor is ReportCandor.Candid or null ? 0.7 : 0.2);
                 yield return (Drive.Status, -0.25);
+                if (c.Candor is ReportCandor.Partial or ReportCandor.False)
+                    yield return (Drive.Security, 0.8);
+                break;
+
+            case ActionKind.SeekCorroboration:
+                yield return (Drive.Security, 0.5);
                 break;
             case ActionKind.AbandonStrategy:
                 yield return (Drive.Status, -0.9);

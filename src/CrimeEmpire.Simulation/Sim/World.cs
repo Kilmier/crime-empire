@@ -51,15 +51,24 @@ public sealed class World
     public List<WorldEvent> TruthLog { get; } = new();
     public List<DecisionRecord> Decisions { get; } = new();
 
+    /// <summary>
+    /// Every message sent through the organisational report channel, including what each sender
+    /// chose to withhold. Developer truth — see <see cref="Report"/>. The player-facing layer reads
+    /// the recipient's cognition instead.
+    /// </summary>
+    public List<Report> Reports { get; } = new();
+
     private long _nextWorldEventId = 1;
     private long _nextAssignmentId = 1;
     private long _nextDecisionId = 1;
+    private long _nextReportId = 1;
 
     public Character Get(string id) => Characters[id];
     public Character? Find(string id) => Characters.TryGetValue(id, out var c) ? c : null;
 
     public long NextAssignmentId() => _nextAssignmentId++;
     public long NextDecisionId() => _nextDecisionId++;
+    public long NextReportId() => _nextReportId++;
 
     public WorldEvent Record(
         string kind,

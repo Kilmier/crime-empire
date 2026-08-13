@@ -61,6 +61,13 @@ public sealed class SimulationReplayTests
             $"{d.Agenda.Kind}|{d.Agenda.Domain}|{d.Chosen?.Candidate.Id}|" +
             $"{Number(d.Chosen?.Total ?? 0)}|{d.Outcome}"));
 
+        // Report content and candour are simulation state, so determinism has to cover them —
+        // otherwise a run could pass the replay test while quietly composing different accounts.
+        lines.AddRange(world.Reports.Select(r =>
+            $"report|{r.Id}|{r.At:O}|{r.SenderId}|{r.RecipientId}|{r.Candor}|" +
+            string.Join(",", r.Asserted.Select(a => $"{a.Claim}:{a.AssertedStance}:{Number(a.AssertedConfidence)}")) +
+            "|" + string.Join(",", r.Withheld.Select(w => w.ToString()))));
+
         foreach (var business in world.Businesses.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
             lines.Add($"business|{business.Id}|{Number(business.MonthlyRevenue)}|" +
                       $"{business.PayingTribute}|{Number(business.Resistance)}|{business.Damaged}");
@@ -72,7 +79,12 @@ public sealed class SimulationReplayTests
 
             lines.AddRange(character.Cognition.Records.Select(r =>
                 $"knowledge|{character.Id}|{r.Claim.Kind}|{r.Claim.Subject}|{r.Claim.Object}|" +
-                $"{r.Stance}|{Number(r.Confidence)}|{r.SourceKind}|{r.SourceId}|{r.AcquiredAt:O}"));
+                $"{r.Stance}|{Number(r.Confidence)}|{r.SourceKind}|{r.SourceId}|{r.AcquiredAt:O}|" +
+                $"{r.ReconsideredAt:O}"));
+
+            lines.AddRange(character.Cognition.Testimony.Select(t =>
+                $"testimony|{character.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|" +
+                $"{Number(t.AssertedConfidence)}|{t.At:O}"));
         }
 
         return string.Join('\n', lines);

@@ -12,6 +12,10 @@ public enum ActionKind
     StartStrategy,
     ReportToSuperior,
     SeekApproval,
+
+    /// <summary>Ask someone other than the usual reporter for their account of the same thing.</summary>
+    SeekCorroboration,
+
     RequestHelp,
     Retaliate,
     Concede,
@@ -35,6 +39,19 @@ public sealed record Candidate(
     public StrategyKind? Strategy { get; init; }
     public CoercionMethod? Method { get; init; }
     public string? Domain { get; init; }
+
+    /// <summary>
+    /// How honest this report would be. Set only on <see cref="ActionKind.ReportToSuperior"/>.
+    ///
+    /// Candour is a candidate rather than a switch inside the reporting code because that is the
+    /// only way it can be a *choice*: it occurs to the character or does not (salience), and it
+    /// wins or loses against the alternatives on its merits (utility). Deciding it inside Commit
+    /// would put behaviour where nothing can weigh it.
+    /// </summary>
+    public ReportCandor? Candor { get; init; }
+
+    /// <summary>Claims a deceptive report would suppress or deny. Populated with Candor.</summary>
+    public IReadOnlyList<Claim> Suppressed { get; init; } = Array.Empty<Claim>();
 
     /// <summary>Claims the character must actually hold for this to be conceivable.</summary>
     public IReadOnlyList<Claim> RequiredKnowledge { get; init; } = Array.Empty<Claim>();

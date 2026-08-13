@@ -14,6 +14,7 @@ public sealed class SalienceProfile
     private readonly Dictionary<ActionKind, double> _byAction = new();
     private readonly Dictionary<CoercionMethod, double> _byMethod = new();
     private readonly Dictionary<StrategyKind, double> _byStrategy = new();
+    private readonly Dictionary<ReportCandor, double> _byCandor = new();
     private readonly List<string> _notes = new();
 
     /// <summary>Below this, an option simply does not occur to the character.</summary>
@@ -42,6 +43,12 @@ public sealed class SalienceProfile
         Note(note);
     }
 
+    internal void Scale(ReportCandor c, double factor, string note)
+    {
+        _byCandor[c] = Get(_byCandor, c) * factor;
+        Note(note);
+    }
+
     private void Note(string note)
     {
         if (note.Length > 0 && !_notes.Contains(note)) _notes.Add(note);
@@ -55,6 +62,7 @@ public sealed class SalienceProfile
         double s = Get(_byAction, c.Kind);
         if (c.Method is { } m) s *= Get(_byMethod, m);
         if (c.Strategy is { } st) s *= Get(_byStrategy, st);
+        if (c.Candor is { } cd) s *= Get(_byCandor, cd);
         return s;
     }
 }
@@ -81,7 +89,7 @@ public static class Salience
             };
             return r with { Confidence = Math.Clamp(r.Confidence * (1 - discount), 0, 1) };
         });
-        return new PerceivedSituation(c.Id, now, records);
+        return new PerceivedSituation(c.Id, now, records, c.Cognition.Testimony);
     }
 
     /// <summary>
@@ -115,6 +123,12 @@ public static class Salience
             p.Scale(ActionKind.SeekApproval, 1 + 0.45 * cautious, "");
             p.Scale(CoercionMethod.Force, 1 - 0.70 * cautious, "");
             p.Scale(CoercionMethod.Persuade, 1 + 0.30 * cautious, "");
+
+            // Leaving something out is a way of covering tracks and reads as the same trait.
+            // Flatly denying it is not — it is the version that falls apart if anyone else talks,
+            // and a careful man is precisely the one who notices that.
+            p.Scale(ReportCandor.Partial, 1 + 0.55 * cautious, $"{c.Name} thinks in terms of what need not be said");
+            p.Scale(ReportCandor.False, 1 - 0.40 * cautious, "");
         }
 
         if (proud > 0)
@@ -123,12 +137,21 @@ public static class Salience
             p.Scale(ActionKind.AbandonStrategy, 1 - 0.55 * proud, "");
             p.Scale(ActionKind.Concede, 1 - 0.65 * proud, "");
             p.Scale(ActionKind.ContinueStrategy, 1 + 0.20 * proud, "");
+
+            // Deference to authority falls — and volunteering your own misconduct to your superior
+            // is about as deferential as it gets.
+            p.Scale(ReportCandor.Candid, 1 - 0.45 * proud, "");
         }
 
         if (suspicious > 0)
         {
             p.Scale(ActionKind.Retaliate, 1 + 0.45 * suspicious, "");
             p.Scale(ActionKind.ReportToSuperior, 1 - 0.30 * suspicious, "");
+
+            // Someone who discounts second-hand claims is the same someone to whom asking a second
+            // person naturally occurs.
+            p.Scale(ActionKind.SeekCorroboration, 1 + 0.60 * suspicious,
+                $"{c.Name} does not take one man's word for it");
         }
 
         // Circumstance, not personality: believed police interest makes concealment and caution

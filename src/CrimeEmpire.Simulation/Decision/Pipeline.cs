@@ -52,6 +52,8 @@ public static class Pipeline
             knownPolicies,
             SuperiorOf(world, actor),
             SubordinatesOf(world, actor),
+            OrgMembersOf(world, actor),
+            world.Reports.Where(r => r.SenderId == actor.Id).ToList(),
             VisibleTargets(world, domain));
 
         // 4-5. Bounded generation, then salience/knowledge/capability/access rejection.
@@ -109,6 +111,20 @@ public static class Pipeline
             .OrderBy(c => c.Capabilities.Authority)
             .ThenBy(c => c.Id, StringComparer.Ordinal)
             .FirstOrDefault()?.Id;
+    }
+
+    /// <summary>
+    /// Everyone in the actor's organisation, himself excluded. Rank-blind on purpose: this is the
+    /// social reach of the organisation, not its reporting hierarchy, and the two differ.
+    /// </summary>
+    public static IReadOnlyList<string> OrgMembersOf(World world, Character actor)
+    {
+        if (!actor.IsOrgMember) return Array.Empty<string>();
+        return world.Characters.Values
+            .Where(c => c.Social.OrganizationId == actor.Social.OrganizationId && c.Id != actor.Id)
+            .OrderBy(c => c.Id, StringComparer.Ordinal)
+            .Select(c => c.Id)
+            .ToList();
     }
 
     public static IReadOnlyList<string> SubordinatesOf(World world, Character actor)

@@ -20,6 +20,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CrimeEmpire.Simulation\CrimeEmpire.Simulation.csproj" />
+    <!--
+      The player-facing renderer lives in the Runner because console formatting is deliberately
+      kept out of the simulation library (AGENTS.md, "Repository boundaries"). The no-leak test
+      has to exercise the real renderer rather than a copy of it, so the tests reach into the
+      Runner for that one type.
+    -->
+    <ProjectReference Include="..\..\src\CrimeEmpire.Runner\CrimeEmpire.Runner.csproj" />
   </ItemGroup>
 
 </Project>

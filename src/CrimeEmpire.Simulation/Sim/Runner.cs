@@ -142,7 +142,13 @@ public static class Runner
         bool learnedSomething = false;
         foreach (var claim in ev.Payload.Claims)
         {
-            observer.Cognition.Learn(claim, Stance.Believes, 0.6, SourceKind.Rumor, "the street", world.Now);
+            // Direct, and sourced to the observer himself: he noticed this, nobody told him. The
+            // confidence is well short of certainty because noticing a trace is not the same as
+            // understanding it — but it is his own, which is what makes it hard to talk him out
+            // of later. This is the "direct observation" half of the information loop; there is
+            // no rumour network here, and a claim acquired this way is never re-transmitted
+            // except through the explicit report channel.
+            observer.Cognition.Learn(claim, Stance.Believes, 0.6, SourceKind.Direct, observer.Id, world.Now);
             learnedSomething = true;
 
             if (claim.Kind == ClaimKind.PersonBreachedPolicy && claim.Subject != observer.Id)

@@ -1,6 +1,7 @@
 namespace CrimeSim.Decision;
 
 using CrimeSim.Domain;
+using CrimeSim.Org;
 using CrimeSim.Sim;
 using CrimeSim.Strategy;
 
@@ -120,19 +121,33 @@ public static class Commit
             case ActionKind.ReportToSuperior:
             {
                 var boss = world.Get(c.TargetId!);
-                // One faithful report channel. Omission, exaggeration and outright lying are the
-                // substance of step 1b; this version passes on what he holds, at second-hand
-                // confidence, and nothing he does not hold.
-                int passed = 0;
-                foreach (var b in ctx.Perceived.Beliefs.Where(b => b.IsHeld).Take(3))
-                {
-                    boss.Cognition.Learn(b.Claim, Stance.Believes, b.Confidence * 0.75,
-                        SourceKind.Report, actor.Id, world.Now);
-                    passed++;
-                }
+                var report = Reporting.Compose(world, actor, boss, c, ctx.Perceived);
+                Reporting.Deliver(world, report, boss);
+
                 world.Queue.Schedule(world.Now.AddDays(1), EventKind.RoleReview, boss.Id,
                     $"{actor.Name} reported in");
-                return $"reported to {boss.Name} ({passed} claims passed on)";
+
+                return report.Candor switch
+                {
+                    ReportCandor.Partial =>
+                        $"reported to {boss.Name}, keeping {report.Withheld.Count} thing(s) back",
+                    ReportCandor.False =>
+                        $"told {boss.Name} it did not happen",
+                    _ => $"reported to {boss.Name} ({report.Asserted.Count} claims passed on)",
+                };
+            }
+
+            case ActionKind.SeekCorroboration:
+            {
+                var other = world.Get(c.TargetId!);
+                // He asks; the other man decides for himself what to say. Waking the other
+                // character is the whole point — a request that produced an answer directly would
+                // be truth synchronisation wearing a question mark.
+                world.Queue.Schedule(world.Now.AddDays(1), EventKind.RoleReview, other.Id,
+                    $"{actor.Name} asked him directly what happened",
+                    new EventPayload { TargetId = actor.Id, Note = "asked-to-account" });
+                reconsideration.Add($"{other.Name} gives his account, or avoids giving one");
+                return $"went to {other.Name} for his own account";
             }
 
             case ActionKind.SeekApproval:

@@ -17,16 +17,41 @@ public sealed class PerceivedSituation
     private readonly List<InformationRecord> _beliefs;
     private readonly List<InformationRecord> _used = new();
 
-    public PerceivedSituation(string actorId, DateTime now, IEnumerable<InformationRecord> beliefs)
+    private readonly List<Testimony> _testimony;
+
+    public PerceivedSituation(
+        string actorId,
+        DateTime now,
+        IEnumerable<InformationRecord> beliefs,
+        IEnumerable<Testimony>? testimony = null)
     {
         ActorId = actorId;
         Now = now;
         _beliefs = beliefs.ToList();
+        _testimony = testimony?.ToList() ?? new List<Testimony>();
     }
 
     public string ActorId { get; }
     public DateTime Now { get; }
     public IReadOnlyList<InformationRecord> Beliefs => _beliefs;
+
+    /// <summary>
+    /// The accounts he has been given. Part of his own view of his situation — remembering who
+    /// told you what is not privileged world state.
+    /// </summary>
+    public IReadOnlyList<Testimony> Testimony => _testimony;
+
+    /// <summary>
+    /// Whether this person has already given him their version. Asking a man a second time for the
+    /// account he has already given is not a live option — it is the same question, and it is what
+    /// turns "seek corroboration" into an exchange that repeats until the calendar runs out.
+    /// </summary>
+    public bool HasAccountFrom(string senderId)
+    {
+        foreach (var t in _testimony)
+            if (t.SenderId == senderId) return true;
+        return false;
+    }
 
     /// <summary>Beliefs consulted so far during this deliberation, in order of first use.</summary>
     public IReadOnlyList<InformationRecord> Used => _used;

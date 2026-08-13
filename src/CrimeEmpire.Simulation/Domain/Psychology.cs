@@ -12,13 +12,24 @@ public enum Trait
     /// <summary>Coercive candidates gain salience; force looks more likely to work; escalation cost looks lower.</summary>
     Aggressive,
 
-    /// <summary>Concealment, delay and delegation gain salience; perceived risk and the uncertainty penalty rise.</summary>
+    /// <summary>
+    /// Concealment, delay and delegation gain salience; perceived risk and the uncertainty penalty
+    /// rise. Omitting an awkward fact from a report counts as concealment and gains salience with
+    /// it; flatly denying it does not, because that is the version that collapses if anyone else
+    /// talks.
+    /// </summary>
     Cautious,
 
-    /// <summary>Backing down or abandoning a commitment costs more status; deference to authority falls.</summary>
+    /// <summary>
+    /// Backing down or abandoning a commitment costs more status; deference to authority falls —
+    /// including the deference involved in volunteering your own misconduct to your superior.
+    /// </summary>
     Proud,
 
-    /// <summary>Second-hand claims are discounted harder; hostile-intent claims gain salience.</summary>
+    /// <summary>
+    /// Second-hand claims are discounted harder; hostile-intent claims gain salience; seeking a
+    /// second account of what one person told you gains salience.
+    /// </summary>
     Suspicious,
 }
 

@@ -10,6 +10,7 @@ string variant = "baseline";
 bool verify = false;
 bool full = false;
 bool compare = false;
+string? viewpoint = null;
 
 for (int i = 0; i < args.Length; i++)
 {
@@ -18,6 +19,7 @@ for (int i = 0; i < args.Length; i++)
         case "--seed" when i + 1 < args.Length: seed = int.Parse(args[++i]); break;
         case "--days" when i + 1 < args.Length: days = int.Parse(args[++i]); break;
         case "--variant" when i + 1 < args.Length: variant = args[++i]; break;
+        case "--viewpoint" when i + 1 < args.Length: viewpoint = args[++i]; break;
         case "--verify": verify = true; break;
         case "--compare": compare = true; break;
         case "--full": full = true; break;
@@ -27,7 +29,9 @@ for (int i = 0; i < args.Length; i++)
 
                   --seed N        world seed (default 42)
                   --days N        in-game days to run (default 90)
-                  --variant NAME  baseline | cautious-vincent | watchful-boss
+                  --variant NAME  baseline | cautious-vincent | watchful-boss | disloyal-vincent
+                  --viewpoint ID  show only what that character knows, as the player would see
+                                  it (e.g. salvatore) — no truth log, no decision traces
                   --full          also show options that never occurred to the character
                   --verify        run the same seed twice and compare trace hashes
                   --compare       run all variants at one seed and summarise the differences
@@ -86,8 +90,27 @@ if (compare)
     }
 
     Console.WriteLine(hashes.Distinct().Count() == hashes.Count
-        ? "Three configurations, three distinct histories."
+        ? $"{hashes.Count} configurations, {hashes.Count} distinct histories."
         : "WARNING — variants converged on identical histories. Traits are not doing any work.");
+    return 0;
+}
+
+if (viewpoint is not null)
+{
+    // Deliberately not printed alongside the developer trace. Seeing them side by side would make
+    // it far too easy to read the answer out of the truth log and believe the player could have
+    // worked it out.
+    var world = Cast.Build(seed, variant);
+    Runner.Run(world, Cast.Start.AddDays(days));
+
+    if (world.Find(viewpoint) is null)
+    {
+        Console.Error.WriteLine($"no such character: {viewpoint}");
+        Console.Error.WriteLine($"try one of: {string.Join(", ", world.Characters.Keys.OrderBy(k => k, StringComparer.Ordinal))}");
+        return 1;
+    }
+
+    Console.WriteLine(IntelligenceWriter.Render(world, viewpoint));
     return 0;
 }
 

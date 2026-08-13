@@ -319,6 +319,66 @@ honest case does this also stop".
 ### Still open after this pass
 
 - Provenance imprecision (see the previous correction) stands unchanged.
+
+---
+
+## Fourth correction — Codex verification findings on `f97ef76`
+
+The 323-decision runaway was fixed, but two narrower channel problems remained, both of them
+consequences of how that fix was scoped.
+
+**12. Partial reports repeated indefinitely.** Eligibility asked whether a claim had been
+*asserted*, so a deliberately withheld claim looked permanently unsaid, counted as news forever,
+and re-armed reporting every week — thirteen identical partial accounts from Tommy through 25 May.
+There are three cases and they were being run as two. A claim can be **asserted** (told him),
+**withheld** (considered and deliberately kept back), or **neither** (cut by the three-item cap).
+Withholding is a decision *about* the claim and settles it until his own position moves; only the
+third case is genuinely outstanding. `Reporting.LastAddressed` now spans asserted and withheld,
+with `LastConveyed` and `LastWithheld` kept separate underneath it. Disloyal falls from 13 partial
+reports to 6 reports total. A pleasing side effect: concealment is now self-limiting in the right
+way — a man who decides to keep something back stops raising the subject.
+
+**13. A request permanently closed the channel between two people.** `InformationRequest` recorded
+only asker and recipient, so having once asked a man about a shakedown barred asking him about
+anything else for the rest of the run. What is spent is the question, not the relationship;
+requests now carry the claim they are about.
+
+**14. Request state was missing from the canonical replay snapshot** (P2). Requests gate future
+candidate generation, so a run that made different requests goes on to make different decisions.
+Added to `SimulationReplayTests.Snapshot`, and asking is now also recorded in the truth log, which
+brings it under the runner's `--verify` hash by an independent route.
+
+### Verification
+
+- `dotnet test` — 63/63 (was 57). `--verify` deterministic on baseline and disloyal.
+- `--compare` — 4 distinct histories, 13/16/13/43 decisions; reports now 2/2/2/6.
+- Regression test added as asked: no two reports between the same pair may be identical.
+
+### Two failures of my own checking, worth recording
+
+- **The behavioural budget measured the wrong thing.** It capped decisions, and filing a report is
+  one cheap decision — so thirteen identical reports sat comfortably under a 100-decision limit. It
+  now bounds reports separately. A budget that only counts the unit you happened to think of is
+  not a budget.
+- **A regression test asserted against a copy of the rule rather than the rule.**
+  `A_request_spends_the_question_and_not_the_relationship` originally built the request list by hand
+  and evaluated an inline predicate written in the test — so it passed against the reverted fix. The
+  rule is now `Generators.CanAsk`, called by both the generator and the test. This is the second
+  time a test written to pin a finding turned out to be vacuous under mutation, and both times only
+  the mutation check caught it.
+
+Also note: finding 14's fix cannot be mutation-checked. The snapshot *is* the comparator, so
+removing a field from it makes the comparison blinder without failing anything. That is why the
+truth-log route matters — it is the only independent check on that state.
+
+### The pattern, updated
+
+Findings 7, 8, 10 and 11 were "a correctness fix that narrows what can be expressed". Findings 12
+and 13 are the sibling: **a correctness fix that collapses a distinction**. Withheld was merged
+with never-said; the question was merged with the relationship. Both were scoping choices made
+while fixing something real, and both produced a new defect one layer down. The question to ask of
+the next fix in this area is not only "what honest case does this stop" but "what two different
+things am I now treating as one".
 - `docs/HANDOFF.md` does not exist and will not. Matt's call, and correct: `CURRENT_MILESTONE.md`
   already is the handoff surface — status, scope in and out, planning decisions, carried-over
   items — and a second copy would only drift out of sync with it. What the complaint did expose is

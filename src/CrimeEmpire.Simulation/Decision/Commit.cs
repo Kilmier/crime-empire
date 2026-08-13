@@ -143,9 +143,17 @@ public static class Commit
 
                 // Filed before anything else, because the question is spent the moment it leaves
                 // his mouth. Waiting for a reply to record it would make an unanswered request
-                // indistinguishable from one never made.
+                // indistinguishable from one never made. Scoped to what he asked about, so it
+                // spends that question rather than the channel.
+                var about = c.AboutClaim ?? default;
                 world.Requests.Add(new InformationRequest(
-                    world.NextRequestId(), actor.Id, other.Id, world.Now));
+                    world.NextRequestId(), actor.Id, other.Id, about, world.Now));
+
+                // Asking is a thing that happened. It belongs in the developer log alongside every
+                // other occurrence, and putting it there also brings it under the runner's
+                // determinism hash rather than leaving it as untracked state.
+                world.Record("request", actor.Id, other.Id,
+                    $"{actor.Name} asked {other.Name} for his own account");
 
                 // He asks; the other man decides for himself what to say. Waking the other
                 // character is the whole point — a request that produced an answer directly would

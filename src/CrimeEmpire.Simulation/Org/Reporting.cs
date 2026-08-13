@@ -31,36 +31,74 @@ public static class Reporting
     private const int MaxAsserted = 3;
 
     /// <summary>
-    /// When this recipient was last told this character's position on this claim, if ever.
+    /// When this recipient was last actually told this character's position on this claim.
     ///
     /// Per claim, deliberately, rather than per report. Keying "has he already covered this" off
     /// the timestamp of his last report treated everything as handled the moment he said anything
     /// at all — so a retraction that lost its place to the three-item cap was dropped and then
-    /// marked as delivered, which is the worst of both. Asking about the individual claim makes an
-    /// omission stay outstanding until it is actually said.
+    /// marked as delivered, which is the worst of both.
     /// </summary>
     public static DateTime? LastConveyed(
         IEnumerable<Report> reportsSent, string recipientId, Claim claim)
+        => Latest(reportsSent, recipientId, r => r.Asserted.Any(a => a.Claim.Equals(claim)));
+
+    /// <summary>
+    /// When he last deliberately kept this from that recipient.
+    ///
+    /// Withholding is a decision *about* the claim, not an absence of one. Keeping it separate
+    /// from having said it is what lets the three cases stay apart: told, deliberately not told,
+    /// and never reached.
+    /// </summary>
+    public static DateTime? LastWithheld(
+        IEnumerable<Report> reportsSent, string recipientId, Claim claim)
+        => Latest(reportsSent, recipientId, r => r.Withheld.Any(w => w.Equals(claim)));
+
+    /// <summary>
+    /// When he last did anything with this claim toward that recipient — said it or chose not to.
+    ///
+    /// This is the one report eligibility keys off, and the distinction it draws is the fix for a
+    /// report that repeated weekly forever. Three cases, and only two of them are outstanding:
+    ///
+    ///  - <b>asserted</b> — he told him. Settled until his own position changes.
+    ///  - <b>withheld</b> — he considered it and decided to keep it back. Also settled: that
+    ///    decision stands until something changes his mind, and treating a suppressed claim as
+    ///    permanently unsaid meant it stayed "news" forever, re-arming reporting every time and
+    ///    producing thirteen identical partial accounts.
+    ///  - <b>neither</b> — it never reached the page, because the length cap cut it. Genuinely
+    ///    outstanding, and must stay so.
+    ///
+    /// Note this makes concealment self-limiting in the right way: a man who has decided to keep
+    /// something back stops bringing the subject up, and starts again only if his position on it
+    /// moves.
+    /// </summary>
+    public static DateTime? LastAddressed(
+        IEnumerable<Report> reportsSent, string recipientId, Claim claim)
+    {
+        var said = LastConveyed(reportsSent, recipientId, claim);
+        var kept = LastWithheld(reportsSent, recipientId, claim);
+        if (said is null) return kept;
+        if (kept is null) return said;
+        return said > kept ? said : kept;
+    }
+
+    /// <summary>Whether this position is news — never addressed, or addressed and since changed.</summary>
+    public static bool NeedsConveying(
+        IEnumerable<Report> reportsSent, string recipientId, InformationRecord belief)
+    {
+        var addressed = LastAddressed(reportsSent, recipientId, belief.Claim);
+        return addressed is null || belief.ReconsideredAt > addressed;
+    }
+
+    private static DateTime? Latest(
+        IEnumerable<Report> reportsSent, string recipientId, Func<Report, bool> mentions)
     {
         DateTime? latest = null;
         foreach (var r in reportsSent)
         {
-            if (r.RecipientId != recipientId) continue;
-            foreach (var a in r.Asserted)
-            {
-                if (!a.Claim.Equals(claim)) continue;
-                if (latest is null || r.At > latest) latest = r.At;
-            }
+            if (r.RecipientId != recipientId || !mentions(r)) continue;
+            if (latest is null || r.At > latest) latest = r.At;
         }
         return latest;
-    }
-
-    /// <summary>Whether this position is news to the recipient — never said, or said and since changed.</summary>
-    public static bool NeedsConveying(
-        IEnumerable<Report> reportsSent, string recipientId, InformationRecord belief)
-    {
-        var conveyed = LastConveyed(reportsSent, recipientId, belief.Claim);
-        return conveyed is null || belief.ReconsideredAt > conveyed;
     }
 
     public static Report Compose(

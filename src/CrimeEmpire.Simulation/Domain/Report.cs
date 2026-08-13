@@ -35,17 +35,22 @@ public readonly record struct ReportedClaim(Claim Claim, Stance AssertedStance, 
 }
 
 /// <summary>
-/// One character having asked another to account for something.
+/// One character having asked another to account for one particular thing.
 ///
 /// Recorded because asking is an act with a cost and a consequence, not a poll. Without it,
 /// "have I asked this man yet" could only be answered by looking for his reply — so a request
 /// that went unanswered stayed invisible, and the asker put the same question again every time
 /// he was woken. A question is spent when it is asked, not when it is answered; whether the
 /// other man chooses to say anything is his decision, and silence is itself an answer.
+///
+/// <see cref="About"/> is what keeps that from becoming a permanent silence. A request scoped only
+/// to a pair of people meant that having once asked a man about a shakedown, you could never ask
+/// him about anything again for the rest of the simulation — one question closing the channel
+/// between two characters for good. What is spent is the question, not the relationship.
 /// </summary>
-public sealed record InformationRequest(long Id, string AskerId, string AskedId, DateTime At)
+public sealed record InformationRequest(long Id, string AskerId, string AskedId, Claim About, DateTime At)
 {
-    public override string ToString() => $"{AskerId} asked {AskedId} ({At:yyyy-MM-dd})";
+    public override string ToString() => $"{AskerId} asked {AskedId} about {About} ({At:yyyy-MM-dd})";
 }
 
 /// <summary>

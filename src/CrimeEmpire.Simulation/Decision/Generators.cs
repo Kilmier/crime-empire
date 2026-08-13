@@ -397,20 +397,24 @@ public static class Generators
                              // went unanswered left no trace, so the asker put it again on every
                              // wake: 318 requests against 5 replies in the disloyal run, because
                              // the one thing that ends the loop is the answer, and the answer is
-                             // the other man's decision to make, not his.
-                             && !ctx.RequestsMade.Any(r => r.AskedId == id))
+                             // the other man's decision to make, not his — but only about this
+                             // same matter. Spending the pair rather than the question meant one
+                             // shakedown enquiry barred him from ever asking that man about
+                             // anything else for the rest of the run.
+                             && CanAsk(ctx.RequestsMade, id, secondhand.Claim))
                 .OrderBy(id => id, StringComparer.Ordinal)
                 .FirstOrDefault();
 
             if (other is not null)
                 yield return new Candidate(
-                    $"corroborate:{other}",
+                    $"corroborate:{other}:{secondhand.Claim}",
                     ActionKind.SeekCorroboration,
                     nameof(FromRelationship),
                     $"ask {other} for his own account")
                 {
                     TargetId = other,
                     Domain = ctx.Agenda.Domain,
+                    AboutClaim = secondhand.Claim,
                 };
         }
     }
@@ -433,6 +437,27 @@ public static class Generators
     /// </summary>
     private static bool HasSomethingNewFor(GeneratorContext ctx, string recipientId)
         => HasSomethingToReport(ctx.ReportsSent, ctx.Perceived.Beliefs, recipientId);
+
+    /// <summary>
+    /// Whether this character can still put this question to this person.
+    ///
+    /// A question is spent when asked — the reply is the other man's to give or withhold, so
+    /// waiting for one means asking forever. But what is spent is the question, not the
+    /// relationship: scoping the record to a pair meant a single enquiry barred him from ever
+    /// asking that man about anything again.
+    ///
+    /// Public and parameterised for the same reason as
+    /// <see cref="HasSomethingToReport"/>: a rule buried in a LINQ predicate inside a generator is
+    /// a rule nothing can test, and the first attempt at a regression test for this asserted
+    /// against a hand-written copy of the condition rather than against the condition itself.
+    /// </summary>
+    public static bool CanAsk(
+        IEnumerable<InformationRequest> requestsMade, string askedId, Claim about)
+    {
+        foreach (var r in requestsMade)
+            if (r.AskedId == askedId && r.About.Equals(about)) return false;
+        return true;
+    }
 
     /// <summary>
     /// The eligibility rule itself, taking only what it needs so it can be exercised directly.

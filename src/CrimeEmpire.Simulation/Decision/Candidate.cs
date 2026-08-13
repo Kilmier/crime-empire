@@ -53,6 +53,13 @@ public sealed record Candidate(
     /// <summary>Claims a deceptive report would suppress or deny. Populated with Candor.</summary>
     public IReadOnlyList<Claim> Suppressed { get; init; } = Array.Empty<Claim>();
 
+    /// <summary>
+    /// What a <see cref="ActionKind.SeekCorroboration"/> is about. A question has a subject; a
+    /// request recorded without one becomes a permanent bar on ever asking that person anything
+    /// again.
+    /// </summary>
+    public Claim? AboutClaim { get; init; }
+
     /// <summary>Claims the character must actually hold for this to be conceivable.</summary>
     public IReadOnlyList<Claim> RequiredKnowledge { get; init; } = Array.Empty<Claim>();
 

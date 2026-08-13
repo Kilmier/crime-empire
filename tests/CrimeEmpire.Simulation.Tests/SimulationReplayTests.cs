@@ -68,6 +68,17 @@ public sealed class SimulationReplayTests
             string.Join(",", r.Asserted.Select(a => $"{a.Claim}:{a.AssertedStance}:{Number(a.AssertedConfidence)}")) +
             "|" + string.Join(",", r.Withheld.Select(w => w.ToString()))));
 
+        // Requests too. They gate future candidate generation, so a run that made different
+        // requests would go on to make different decisions — state that steers behaviour has to be
+        // in the canonical comparison, not only in the focused pause/resume test.
+        //
+        // Note this line cannot be mutation-checked: the snapshot is the comparator, so deleting a
+        // field from it makes the comparison blinder without making anything fail. The independent
+        // assurance is that asking is also recorded in the truth log, which the runner's --verify
+        // hash covers by a different route.
+        lines.AddRange(world.Requests.Select(q =>
+            $"request|{q.Id}|{q.At:O}|{q.AskerId}|{q.AskedId}|{q.About}"));
+
         foreach (var business in world.Businesses.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
             lines.Add($"business|{business.Id}|{Number(business.MonthlyRevenue)}|" +
                       $"{business.PayingTribute}|{Number(business.Resistance)}|{business.Damaged}");

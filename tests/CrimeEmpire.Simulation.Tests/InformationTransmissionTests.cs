@@ -825,28 +825,122 @@ public sealed class InformationTransmissionTests
     }
 
     /// <summary>
-    /// Asking is spent when the question is put, not when it is answered.
+    /// Asking is spent when the question is put, not when it is answered — but what is spent is
+    /// the question, not the relationship.
     ///
     /// Filtering only on replies meant an unanswered request left no trace at all, so the asker
-    /// put it again on every wake — 318 requests against 5 replies in the disloyal run. The reply
-    /// cannot be the terminating condition, because giving one is the other man's decision and he
-    /// is entitled to say nothing.
+    /// put it again on every wake. The reply cannot be the terminating condition, because giving
+    /// one is the other man's decision and he is entitled to say nothing. Scoping the record to a
+    /// pair of people rather than to a subject then went too far the other way: one enquiry barred
+    /// a character from ever asking that man about anything again.
     /// </summary>
     [Theory]
     [InlineData("baseline")]
     [InlineData("cautious-vincent")]
     [InlineData("watchful-boss")]
     [InlineData("disloyal-vincent")]
-    public void Nobody_asks_the_same_person_for_an_account_twice(string variant)
+    public void Nobody_asks_the_same_person_about_the_same_thing_twice(string variant)
     {
         var world = Run(variant);
 
         var duplicates = world.Requests
-            .GroupBy(r => (r.AskerId, r.AskedId))
+            .GroupBy(r => (r.AskerId, r.AskedId, r.About))
             .Where(g => g.Count() > 1)
             .ToList();
 
         Assert.Empty(duplicates);
+    }
+
+    /// <summary>
+    /// Asking about one thing must not close the channel. Two different questions to the same
+    /// person are two questions, and the second must remain possible.
+    /// </summary>
+    [Fact]
+    public void A_request_spends_the_question_and_not_the_relationship()
+    {
+        var t0 = Cast.Start;
+        var asked = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
+        var different = new Claim(ClaimKind.PoliceInvestigating, "tommy");
+
+        var made = new[] { new InformationRequest(1, "salvatore", "tommy", asked, t0) };
+
+        // Exercised through the generator's own rule, not a copy of it written in the test.
+        Assert.False(Generators.CanAsk(made, "tommy", asked),
+            "the question he already put is spent");
+        Assert.True(Generators.CanAsk(made, "tommy", different),
+            "a different question to the same man must stay open");
+        Assert.True(Generators.CanAsk(made, "vincent", asked),
+            "and the same question to a different man must stay open");
+    }
+
+    /// <summary>
+    /// The same account, to the same person, twice, with nothing having changed in between.
+    ///
+    /// This is what a partial report degenerated into: withholding a claim left it looking
+    /// permanently unsaid, so it counted as news forever and re-armed reporting every week —
+    /// thirteen identical accounts from Tommy through to the end of May. Deciding to keep
+    /// something back is a decision about it, and it stands until his position moves.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("cautious-vincent")]
+    [InlineData("watchful-boss")]
+    [InlineData("disloyal-vincent")]
+    public void No_two_reports_between_the_same_pair_are_identical(string variant)
+    {
+        var world = Run(variant);
+
+        static string Content(Report r) =>
+            $"{r.Candor}|" +
+            string.Join(",", r.Asserted.Select(a => $"{a.Claim}:{a.AssertedStance}")) +
+            "|" + string.Join(",", r.Withheld.Select(w => w.ToString()));
+
+        var repeats = world.Reports
+            .GroupBy(r => (r.SenderId, r.RecipientId, Content: Content(r)))
+            .Where(g => g.Count() > 1)
+            .Select(g => $"{g.Key.SenderId}->{g.Key.RecipientId} x{g.Count()}: {g.Key.Content}")
+            .ToList();
+
+        Assert.True(repeats.Count == 0,
+            $"[{variant}] the same account was filed more than once with nothing changed:\n" +
+            string.Join("\n", repeats));
+    }
+
+    /// <summary>
+    /// The three cases a report can leave a claim in, kept apart. Told, deliberately kept back,
+    /// and never reached — only the last is still outstanding on its own.
+    /// </summary>
+    [Fact]
+    public void Withholding_a_claim_is_a_decision_about_it_not_a_silence()
+    {
+        var at = new DateTime(1987, 3, 2, 0, 0, 0, DateTimeKind.Utc);
+        var told = new Claim(ClaimKind.BusinessRefusesTribute, "shop");
+        var kept = new Claim(ClaimKind.PersonUsedViolence, "vincent", "shop", 1);
+        var unreached = new Claim(ClaimKind.PoliceInvestigating, "vincent");
+
+        var cognition = new Cognition();
+        foreach (var c in new[] { told, kept, unreached })
+            cognition.Learn(c, Stance.Believes, 0.8, SourceKind.Direct, "self", at);
+
+        var sent = new[]
+        {
+            new Report(1, "vincent", "salvatore", at.AddDays(1), ReportCandor.Partial,
+                new[] { new ReportedClaim(told, Stance.Believes, 0.6) },
+                new[] { kept }, "reported"),
+        };
+
+        Assert.False(Reporting.NeedsConveying(sent, "salvatore", cognition.Find(told)!));
+        Assert.False(Reporting.NeedsConveying(sent, "salvatore", cognition.Find(kept)!),
+            "a claim he decided to keep back is not permanently outstanding");
+        Assert.True(Reporting.NeedsConveying(sent, "salvatore", cognition.Find(unreached)!),
+            "a claim the length cap cut is still outstanding");
+
+        Assert.False(Generators.HasSomethingToReport(sent, new[] { cognition.Find(kept)! }, "salvatore"));
+
+        // Until his position on it moves — then it is worth raising after all.
+        cognition.Receive(new ReportedClaim(kept, Stance.Rejects, 0.9), "tommy", at.AddDays(5));
+        Assert.True(Reporting.NeedsConveying(sent, "salvatore", cognition.Find(kept)!),
+            "being contradicted about it since is a reason to raise it");
     }
 
     /// <summary>
@@ -867,10 +961,17 @@ public sealed class InformationTransmissionTests
         Assert.True(world.Decisions.Count < 100,
             $"[{variant}] {world.Decisions.Count} decisions in 90 days — an exchange is looping");
 
-        // Requests are bounded by the pairs available, not by how often anyone is woken.
-        int orgMembers = world.Characters.Values.Count(c => c.Social.OrganizationId is not null);
-        Assert.True(world.Requests.Count <= orgMembers * (orgMembers - 1),
-            $"[{variant}] {world.Requests.Count} requests exceeds one per ordered pair");
+        // Reports are bounded too, and separately: the decision budget alone did not catch
+        // thirteen identical partial accounts, because filing one is a single cheap decision.
+        Assert.True(world.Reports.Count < 25,
+            $"[{variant}] {world.Reports.Count} reports in 90 days — the channel is repeating");
+
+        // Requests are bounded by the questions there are to ask, not by how often anyone is
+        // woken. Deliberately not "one per ordered pair" — that was the over-tight version that
+        // shut the channel between two people permanently.
+        Assert.Equal(
+            world.Requests.Count,
+            world.Requests.Select(r => (r.AskerId, r.AskedId, r.About)).Distinct().Count());
     }
 
     /// <summary>

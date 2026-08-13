@@ -211,3 +211,47 @@ Contestedness is now recorded on the record at the moment of disagreement (`Info
   told first-hand by the doer. The wording is neutral rather than accurate, which is a workaround.
   A `Participant`/`Witness` distinction is the real fix.
 - Everything under "Deferred work" above stands unchanged.
+
+---
+
+## Second correction — Codex verification findings on `cf22e5d`
+
+Verification of the corrective commit found three more defects, two of them introduced *by* that
+commit. Appended rather than folded in, for the same reason as above.
+
+**6. "Personally witnessed" was emitted from confidence alone.** `ConfidenceLabel` returned it for
+anything at or above 0.9, with no reference to how the claim was acquired — so the same provenance
+invention that finding 3 removed from the attribution line was still arriving through the
+confidence line beside it. Vincent holds that he went outside his boss's rule at full confidence
+because he *decided* it, and the view told the player he had witnessed it. The top label is now
+"beyond doubt for him"; confidence describes certainty, `SourceKind` is the only thing permitted to
+speak about method. The doc's vocabulary still lists "personally witnessed" and it remains correct
+to use — once provenance can actually establish witnessing.
+
+**7. A retraction was unsayable, in three places at once.** Report eligibility filtered to held
+beliefs, `Reporting.Compose` filtered to held beliefs, and `Compose` then hardcoded
+`Stance.Believes` on everything it did include. A character who had been talked out of an account
+he had already given his boss had, by these tests, nothing further to say — and had any one of the
+three been fixed alone, the other two would still have swallowed it. All three now pass a position
+through in the direction he actually holds it.
+
+**8. Guarding against self-corroboration had also blocked recantation.** Finding 4's fix treated
+any further account from a familiar sender as repetition, which is right for a man saying the same
+thing twice and badly wrong for a man taking something back — it left a witness permanently unable
+to change his story. The test is now same sender *and* same direction: repetition still compounds
+nothing and does not touch the reconsideration stamp, while a reversal erodes the belief, marks it
+contested, updates reconsideration, and so becomes reportable onward.
+
+Findings 7 and 8 are the same mistake in two guises, and worth naming as one: each was a
+correctness fix that quietly narrowed what could be *expressed*. Suppressing a bad case by
+filtering the channel rather than by describing the case precisely will keep taking honest
+behaviour with it.
+
+### Verification
+
+- `dotnet test` — 45/45 passing (was 37).
+- `--verify --seed 42 --days 90` — DETERMINISTIC; `--compare` — 4 configurations, 4 distinct
+  histories.
+- All three mutation-checked. Finding 7 was reverted in both halves at once, confirming the
+  end-to-end test catches what a per-stage test could not.
+- Both viewpoint reruns re-read by hand.

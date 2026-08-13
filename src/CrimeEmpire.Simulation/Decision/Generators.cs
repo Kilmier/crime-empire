@@ -446,8 +446,13 @@ public static class Generators
 
         if (lastSpoke == DateTime.MinValue) return true;
 
+        // Note the absence of an IsHeld filter. Learning that something he reported is not so is
+        // one of the most worthwhile things he can carry back, and a stance that has fallen to
+        // Doubts or Rejects is exactly that. Requiring the belief still be held meant a man could
+        // be talked out of an account he had already given his boss and have, by this test,
+        // nothing further to say about it.
         foreach (var b in beliefs)
-            if (b.IsHeld && b.ReconsideredAt > lastSpoke) return true;
+            if (b.ReconsideredAt > lastSpoke) return true;
 
         return false;
     }

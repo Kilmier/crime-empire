@@ -95,18 +95,25 @@ public sealed class Cognition
         bool affirms = asserted.AssertedStance is Stance.Knows or Stance.Believes or Stance.Suspects;
         var prior = Find(asserted.Claim);
 
-        // Whether this voice is new to this claim, decided BEFORE the new account is filed and
-        // against the whole testimony history rather than against whoever happens to be named on
-        // the current record.
+        // Has this man already told him *this*, as opposed to having spoken about it at all?
         //
-        // Checking the record's SourceId alone was wrong twice over: the record keeps its original
-        // source when it is revised, so the same man could corroborate his own earlier report over
-        // and over and be treated as a fresh voice every time; and a claim first acquired by
-        // observation names the observer, so a single sender could repeat himself indefinitely and
-        // never match. Repetition is not evidence — it is the same evidence, said again.
-        bool alreadyHeardFrom =
-            prior?.SourceId == senderId ||
-            _testimony.Any(t => t.SenderId == senderId && t.Claim.Equals(asserted.Claim));
+        // The distinction carries real weight. Repetition is not evidence — it is the same
+        // evidence, said again, and hearing it a second time must not compound confidence or count
+        // as a development. But a man who affirmed something last month and denies it today has
+        // not repeated himself: he has recanted, and that is new information of the most
+        // interesting kind. Suppressing it because the sender was familiar would make a witness
+        // permanently unable to take anything back.
+        //
+        // So the test is same sender AND same direction. Checking the record's SourceId alone was
+        // wrong twice over: the record keeps its original source through revisions, so one man
+        // could corroborate his own earlier report indefinitely and read as a fresh voice each
+        // time; and a claim first acquired by observation names the observer, so a single sender
+        // never matched at all.
+        bool sameAccountAgain =
+            (prior?.SourceId == senderId && prior.IsHeld == affirms) ||
+            _testimony.Any(t => t.SenderId == senderId
+                                && t.Claim.Equals(asserted.Claim)
+                                && t.Affirms == affirms);
 
         _testimony.Add(new Testimony(
             asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence, senderId, at));
@@ -129,15 +136,17 @@ public sealed class Cognition
             // every time somebody repeats himself would make "he has learned something since he
             // last spoke" true forever, and two characters would report to each other until the
             // calendar ran out.
-            if (alreadyHeardFrom) return prior;
+            if (sameAccountAgain) return prior;
 
             double raised = Math.Clamp(prior.Confidence + 0.15 * asserted.AssertedConfidence, 0, 1);
             return Replace(prior, prior with { Confidence = raised, LastReconsideredAt = at });
         }
 
         // Disagreement. Repetition is not evidence here either: a man who has already denied it
-        // once does not wear the belief down further by denying it again.
-        if (alreadyHeardFrom) return prior;
+        // once does not wear the belief down further by denying it again. A man who is denying it
+        // for the first time does, even if he has affirmed it before — that is a recantation, and
+        // it falls through to the erosion below.
+        if (sameAccountAgain) return prior;
 
         double erosion = prior.SourceKind == SourceKind.Direct ? 0.15 : 0.45;
         double shaken = Math.Clamp(prior.Confidence * (1 - erosion * asserted.AssertedConfidence), 0, 1);

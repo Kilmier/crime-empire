@@ -40,18 +40,25 @@ public static class Reporting
         var candor = candidate.Candor ?? ReportCandor.Candid;
         var suppressed = candidate.Suppressed;
 
-        // What he has to offer, strongest first. Ordering is explicit rather than incidental
-        // because report content feeds the determinism snapshot.
-        var held = perceived.Beliefs
-            .Where(b => b.IsHeld)
-            .OrderByDescending(b => b.Confidence)
+        // What he has to offer: anything he has a position on, held or explicitly disbelieved.
+        //
+        // Restricting this to held beliefs made a retraction unsayable. A man who has come to
+        // doubt something he previously reported has news — arguably better news than another
+        // affirmation — and with only held claims eligible he could carry the correction in his
+        // head and never be able to put it in a report. Positions he holds come first, because
+        // "here is what I have" is the substance and "and that other thing was wrong" is the
+        // footnote; ordering is explicit rather than incidental because report content feeds the
+        // determinism snapshot.
+        var positions = perceived.Beliefs
+            .OrderByDescending(b => b.IsHeld)
+            .ThenByDescending(b => b.Confidence)
             .ThenBy(b => b.Claim.ToString(), StringComparer.Ordinal)
             .ToList();
 
         var asserted = new List<ReportedClaim>();
         var withheld = new List<Claim>();
 
-        foreach (var b in held)
+        foreach (var b in positions)
         {
             bool awkward = suppressed.Any(s => s.Equals(b.Claim));
 
@@ -72,8 +79,15 @@ public static class Reporting
                 continue;
             }
 
-            if (asserted.Count < MaxAsserted)
-                asserted.Add(new ReportedClaim(b.Claim, Stance.Believes, b.Confidence * SecondHand));
+            if (asserted.Count >= MaxAsserted) continue;
+
+            // His actual position, in the direction he actually holds it. Held things are softened
+            // to "believes" because restating something to somebody else is second-hand by
+            // definition; a position he has come to reject is passed on as a rejection, which is
+            // the whole point of letting non-held records into a report. Flattening everything to
+            // Believes would turn "I was wrong about that" into "that is true".
+            var stance = b.IsHeld ? Stance.Believes : b.Stance;
+            asserted.Add(new ReportedClaim(b.Claim, stance, b.Confidence * SecondHand));
         }
 
         string framing = candor switch

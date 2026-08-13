@@ -108,9 +108,24 @@ public sealed record InformationRecord(
 
     public bool IsHeld => Stance is Stance.Knows or Stance.Believes or Stance.Suspects;
 
+    /// <summary>
+    /// How sure he is, in words, saying nothing about how he came to be sure.
+    ///
+    /// INFORMATION_AND_LEGIBILITY.md's confidence vocabulary includes "personally witnessed", and
+    /// this used to emit it at the top of the range — but confidence and provenance are different
+    /// axes, and a label chosen purely by a number cannot claim a method. Vincent holds that he
+    /// went outside his boss's rule at full confidence because he *decided* it; rendering that as
+    /// "personally witnessed" tells the player he watched something happen, which is a fact the
+    /// simulation never recorded and which is flatly untrue.
+    ///
+    /// "Personally witnessed" is a legitimate thing to say once provenance can establish
+    /// witnessing — see the open provenance item in
+    /// docs/milestones/003-information-transmission.md. Until then the labels describe certainty
+    /// only, and <see cref="SourceKind"/> is the one thing allowed to speak about method.
+    /// </summary>
     public string ConfidenceLabel => Confidence switch
     {
-        >= 0.9 => "personally witnessed",
+        >= 0.9 => "beyond doubt for him",
         >= 0.7 => "strongly supported",
         >= 0.5 => "plausible",
         >= 0.3 => "uncertain",

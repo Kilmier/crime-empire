@@ -8,12 +8,13 @@ On completion, its final content moves to `docs/milestones/NNN-short-name.md` pe
 
 **Milestone 003 — information transmission slice. Complete; Codex findings fixed.**
 
-Archived at `docs/milestones/003-information-transmission.md`. Codex raised five findings against
-the original commit — all accepted and fixed in a follow-up commit, with a correction appended to
-the archive rather than edited into it. 37/37 tests pass and `--verify` is deterministic.
+Archived at `docs/milestones/003-information-transmission.md`, with two corrections appended rather
+than edited in. Codex raised five findings against the original commit (fixed in `cf22e5d`) and
+three more on verifying that fix, two of which `cf22e5d` introduced. 45/45 tests pass and
+`--verify` is deterministic.
 
-Nothing new should start until the corrective commit has been reviewed. Milestone 004 has not been
-scoped or assigned.
+Nothing new should start until the second corrective commit has been reviewed. Milestone 004 has
+not been scoped or assigned.
 
 The record of what was attempted follows.
 

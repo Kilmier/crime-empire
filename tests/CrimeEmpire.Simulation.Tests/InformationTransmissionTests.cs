@@ -1,5 +1,6 @@
 using CrimeSim.Decision;
 using CrimeSim.Domain;
+using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
 using CrimeSim.Trace;
@@ -238,13 +239,18 @@ public sealed class InformationTransmissionTests
             Assert.Contains(denial.Asserted, a => a.Claim.Equals(withheld) && a.AssertedStance == Stance.Rejects);
         }
 
-        // An omission says less; it never says the opposite. This is the whole difference between
-        // the two, and it is checkable from the record alone — unlike "everything he asserted he
-        // still believes", which fails honestly, because beliefs move on after the report is sent.
+        // An omission says less about the awkward thing; it never says the opposite of it.
+        //
+        // Note this is scoped to the withheld claims rather than banning Rejects outright. A
+        // report may legitimately carry a sincere rejection — "that business is not holding out
+        // any more", "I was wrong about that" — and conflating an honest retraction with a lie is
+        // exactly the confusion Candor exists to prevent. What marks the lie is denying something
+        // he is simultaneously recorded as keeping back.
         foreach (var partial in world.Reports.Where(r => r.Candor == ReportCandor.Partial))
         {
-            Assert.DoesNotContain(partial.Asserted, a => a.AssertedStance == Stance.Rejects);
             Assert.NotEmpty(partial.Withheld);
+            foreach (var w in partial.Withheld)
+                Assert.DoesNotContain(partial.Asserted, a => a.Claim.Equals(w));
         }
     }
 
@@ -425,6 +431,52 @@ public sealed class InformationTransmissionTests
         // rule because he decided to; nobody watched that happen, himself included.
         Assert.DoesNotContain("saw it himself", view, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("saw for himself", view, StringComparison.OrdinalIgnoreCase);
+
+        // And not through the confidence label either — see the dedicated test below.
+        Assert.DoesNotContain("personally witnessed", view, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The confidence label must not smuggle a provenance claim back in.
+    ///
+    /// "Personally witnessed" was emitted purely on confidence >= 0.9, with no reference to how
+    /// the claim was acquired. Vincent is the case that shows why that is wrong: he holds that he
+    /// went outside his boss's rule at full confidence because he *decided* it, and the view
+    /// therefore told the player he had witnessed something he never saw. Confidence and
+    /// provenance are different axes and a number cannot establish a method.
+    /// </summary>
+    [Theory]
+    [InlineData("vincent", "baseline")]
+    [InlineData("vincent", "disloyal-vincent")]
+    [InlineData("salvatore", "baseline")]
+    [InlineData("tommy", "baseline")]
+    public void Player_view_never_claims_witnessing_from_confidence_alone(string viewpoint, string variant)
+    {
+        var world = Run(variant);
+        string view = IntelligenceWriter.Render(world, viewpoint);
+
+        Assert.DoesNotContain("personally witnessed", view, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("witnessed", view, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Vincent's own breach specifically: he holds it at full confidence, so it exercises the top
+    /// of the label range, and he authored it rather than observing it. This pins the exact line
+    /// the finding named.
+    /// </summary>
+    [Fact]
+    public void Vincents_own_breach_is_never_rendered_as_personally_witnessed()
+    {
+        var world = Run("baseline");
+        var vincent = world.Get("vincent");
+
+        var ownBreach = vincent.Cognition.Records.Single(r =>
+            r.Claim.Kind == ClaimKind.PersonBreachedPolicy && r.Claim.Subject == vincent.Id);
+        Assert.True(ownBreach.Confidence >= 0.9, "the case only bites at the top of the label range");
+        Assert.DoesNotContain("witness", ownBreach.ConfidenceLabel, StringComparison.OrdinalIgnoreCase);
+
+        string view = IntelligenceWriter.Render(world, "vincent");
+        Assert.DoesNotContain("personally witnessed", view, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -627,6 +679,140 @@ public sealed class InformationTransmissionTests
 
         // The account is still filed, even though it moved nothing.
         Assert.Equal(2, cognition.AccountsOf(claim).Count());
+    }
+
+    /// <summary>
+    /// A retraction survives the whole channel: eligible to report, composed into the message with
+    /// the direction he actually holds, and delivered as a denial the recipient can act on.
+    ///
+    /// Tested end to end through Compose and Deliver rather than against the eligibility helper
+    /// alone, because the three stages failed independently — eligibility filtered to held
+    /// beliefs, composition filtered to held beliefs, and composition then hardcoded
+    /// <see cref="Stance.Believes"/> on everything it did include. Any one of those left standing
+    /// makes "I was wrong about that" unsayable, and a test of one stage cannot see the others.
+    /// </summary>
+    [Fact]
+    public void A_retraction_can_be_reported_composed_and_delivered()
+    {
+        var world = Cast.Build(seed: 42, "baseline");
+        var vincent = world.Get("vincent");
+        var salvatore = world.Get(Viewpoint);
+        var claim = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
+        var t0 = Cast.Start;
+
+        // Salvatore opens the scenario believing the grocery is holding out.
+        Assert.True(salvatore.Cognition.Holds(claim));
+
+        // Vincent believed it too, then found out otherwise.
+        vincent.Cognition.Learn(claim, Stance.Believes, 0.8, SourceKind.Report, Viewpoint, t0);
+        vincent.Cognition.Learn(claim, Stance.Rejects, 0.9, SourceKind.Direct, vincent.Id, t0.AddDays(5));
+
+        var changed = vincent.Cognition.Find(claim)!;
+        Assert.False(changed.IsHeld);
+
+        // 1. Eligibility sees it, even though he no longer holds it.
+        var alreadyReported = new[]
+        {
+            new Report(1, vincent.Id, Viewpoint, t0.AddDays(1), ReportCandor.Candid,
+                Array.Empty<ReportedClaim>(), Array.Empty<Claim>(), "reported"),
+        };
+        Assert.True(
+            Generators.HasSomethingToReport(alreadyReported, vincent.Cognition.Records, Viewpoint),
+            "a belief he has since rejected is something to report");
+
+        // 2. Composition carries it, in the direction he actually holds it.
+        world.Now = t0.AddDays(6);
+        var candidate = new Candidate("report:salvatore", ActionKind.ReportToSuperior, "test", "report in")
+        {
+            TargetId = Viewpoint,
+            Candor = ReportCandor.Candid,
+        };
+        var report = Reporting.Compose(
+            world, vincent, salvatore, candidate, Salience.Perceive(vincent, world.Now));
+
+        var conveyed = report.Asserted.SingleOrDefault(a => a.Claim.Equals(claim));
+        Assert.NotEqual(default, conveyed);
+        Assert.Equal(Stance.Rejects, conveyed.AssertedStance);
+        Assert.Empty(report.Withheld);
+
+        // 3. Delivery lands it as a denial, not as another affirmation.
+        Reporting.Deliver(world, report, salvatore);
+
+        Assert.Contains(
+            salvatore.Cognition.AccountsOf(claim),
+            t => t.SenderId == vincent.Id && !t.Affirms);
+        Assert.True(salvatore.Cognition.IsContested(claim));
+        Assert.True(salvatore.Cognition.ConfidenceIn(claim) < 0.75,
+            "being told it is not so should cost him confidence");
+    }
+
+    /// <summary>
+    /// A source changing its story is new information; a source repeating itself is not.
+    ///
+    /// Collapsing the two was the price of the earlier fix against self-corroboration: blocking
+    /// every further account from a familiar sender also blocked recantation, which would leave a
+    /// witness permanently unable to take anything back.
+    /// </summary>
+    [Fact]
+    public void A_source_changing_its_story_is_not_treated_as_repetition()
+    {
+        var claim = new Claim(ClaimKind.PersonUsedViolence, "tommy", "shop", 1);
+        var at = new DateTime(1987, 3, 2, 0, 0, 0, DateTimeKind.Utc);
+
+        var cognition = new Cognition();
+        cognition.Receive(new ReportedClaim(claim, Stance.Believes, 0.8), "vincent", at);
+        var afterFirst = cognition.Find(claim)!;
+
+        // Same man, same story: nothing moves, not even the reconsideration stamp.
+        cognition.Receive(new ReportedClaim(claim, Stance.Believes, 0.8), "vincent", at.AddDays(1));
+        var afterRepeat = cognition.Find(claim)!;
+        Assert.Equal(afterFirst.Confidence, afterRepeat.Confidence);
+        Assert.Equal(afterFirst.ReconsideredAt, afterRepeat.ReconsideredAt);
+
+        // Same man, opposite story: that is a recantation and it must land.
+        cognition.Receive(new ReportedClaim(claim, Stance.Rejects, 0.9), "vincent", at.AddDays(2));
+        var afterRecant = cognition.Find(claim)!;
+
+        Assert.True(afterRecant.Confidence < afterRepeat.Confidence, "taking it back should cost the belief");
+        Assert.Equal(at.AddDays(2), afterRecant.ReconsideredAt);
+        Assert.True(cognition.IsContested(claim));
+
+        // Three accounts on file, all attributable — the retraction does not erase what he said before.
+        var accounts = cognition.AccountsOf(claim).ToList();
+        Assert.Equal(3, accounts.Count);
+        Assert.Equal(2, accounts.Count(a => a.Affirms));
+        Assert.Single(accounts, a => !a.Affirms);
+
+        // And having been recanted at is itself something he can pass on.
+        var spoke = new[]
+        {
+            new Report(1, "salvatore", "kane", at.AddDays(1), ReportCandor.Candid,
+                Array.Empty<ReportedClaim>(), Array.Empty<Claim>(), "reported"),
+        };
+        Assert.True(Generators.HasSomethingToReport(spoke, cognition.Records, "kane"));
+    }
+
+    /// <summary>
+    /// And the recantation must not then compound: having denied it once, denying it again is the
+    /// same account a second time.
+    /// </summary>
+    [Fact]
+    public void A_recantation_does_not_compound_when_repeated()
+    {
+        var claim = new Claim(ClaimKind.PersonUsedViolence, "tommy", "shop", 1);
+        var at = new DateTime(1987, 3, 2, 0, 0, 0, DateTimeKind.Utc);
+
+        var cognition = new Cognition();
+        cognition.Receive(new ReportedClaim(claim, Stance.Believes, 0.8), "vincent", at);
+        cognition.Receive(new ReportedClaim(claim, Stance.Rejects, 0.9), "vincent", at.AddDays(1));
+        var afterRecant = cognition.Find(claim)!;
+
+        for (int i = 2; i <= 5; i++)
+            cognition.Receive(new ReportedClaim(claim, Stance.Rejects, 0.9), "vincent", at.AddDays(i));
+
+        var afterRepeats = cognition.Find(claim)!;
+        Assert.Equal(afterRecant.Confidence, afterRepeats.Confidence);
+        Assert.Equal(afterRecant.ReconsideredAt, afterRepeats.ReconsideredAt);
     }
 
     private static World Run(string variant)

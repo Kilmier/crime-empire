@@ -74,13 +74,16 @@ settled it, so a future session can verify the claim instead of taking it on fai
   — `PROJECT_CONTEXT.md`, "Stack decision."
 - **Target framework: .NET 10 (LTS)**, not .NET 9. The kernel was originally scaffolded against
   .NET 9 because that was the SDK already on the dev machine; Matt confirmed the intent is to move
-  to .NET 10 now that it's the current LTS, install pending. Until the SDK is installed and the
-  `.csproj` files / `global.json` are updated, the repo remains on .NET 9 as a known, temporary
-  mismatch — not a silent one. Whoever makes this change should update all three `.csproj` files
-  (`CrimeEmpire.Simulation`, `CrimeEmpire.Runner`, `CrimeEmpire.Simulation.Tests`) together and add
-  a `global.json` pinning the SDK version, as its own isolated commit so Codex can verify nothing
-  else changed. — decided in chat 2026-08-13; flagged originally by Codex during the docs/src/tests
-  reorg.
+  to .NET 10 now that it's the current LTS. — decided in chat 2026-08-13; flagged originally by
+  Codex during the docs/src/tests reorg. **Executed 2026-08-13** (milestone 002, see
+  `docs/milestones/002-dotnet-10-migration.md`): SDK pinned via `global.json` to `10.0.400`
+  with `rollForward: latestFeature`, and `TargetFramework` set to `net10.0`. Note that the
+  original decision text said "update all three `.csproj` files"; in practice the TFM is
+  centralized in `Directory.Build.props`, which `CrimeEmpire.Simulation` and `CrimeEmpire.Runner`
+  inherit, so only `Directory.Build.props` and the one redundant override in
+  `CrimeEmpire.Simulation.Tests.csproj` needed changing. Redundant per-project `TargetFramework`
+  entries were deliberately *not* added — `Directory.Build.props` is the single source of truth
+  for the TFM.
 
 ## Concerns resolved since `design-doc-concerns_1.md` was written
 

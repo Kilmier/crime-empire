@@ -6,11 +6,15 @@ On completion, its final content moves to `docs/milestones/NNN-short-name.md` pe
 
 ## Status
 
-No milestone is currently active. `docs/milestones/001-decision-pipeline.md` (the decision
-pipeline behavioral spike) is the most recently completed one.
+No milestone is currently active. `docs/milestones/002-dotnet-10-migration.md` (the
+`.NET 9 → 10` framework migration) is the most recently completed one, awaiting Codex review.
 
-Before starting the next milestone, confirm scope with Matt rather than inferring it — the
-`.NET 9 → 10` migration (decided, not executed; see `DESIGN_DECISIONS.md`) and the next step in
-`SIMULATION_ARCHITECTURE.md`'s Validation Sequence (emergence prototype: richer relationships and
-grievances, information transmission, delegation, rival activity, player-facing reports, limited
-tier transitions) are both plausible candidates, but neither has been assigned yet.
+Before starting the next milestone, confirm scope with Matt rather than inferring it. The next
+step in `SIMULATION_ARCHITECTURE.md`'s Validation Sequence (emergence prototype: richer
+relationships and grievances, information transmission, delegation, rival activity, player-facing
+reports, limited tier transitions) is the standing candidate, but it has not been assigned yet.
+
+Two small items were deliberately deferred out of milestone 002 and are available as trivial
+follow-ups: deleting the now-redundant `TargetFramework` override in
+`CrimeEmpire.Simulation.Tests.csproj`, and confirming Godot 4's C# support can consume a
+`net10.0` simulation library before any engine work begins.

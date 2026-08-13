@@ -18,8 +18,15 @@ Read the canonical project documents before making non-trivial design or simulat
 6. `docs/OPEN_CONCERNS.md` — known open risks, not yet resolved. If a change touches one of these,
    say so explicitly rather than silently picking an answer.
 7. `docs/CURRENT_MILESTONE.md` — what's actively being worked on right now. Authoritative source
-   for "what's the task." If it says nothing is active, confirm scope with Matt before starting
+   for "what's the task," and the handoff surface between agents: current status, scope in and
+   out, decisions taken at planning time, and what is deliberately carried over. There is no
+   separate handoff document and there should not be one — a second copy of this would only drift
+   out of sync with it. If it says nothing is active, confirm scope with Matt before starting
    anything rather than inferring the next milestone.
+8. `docs/milestones/NNN-*.md` — completed milestones, append-only. Read the archive for the
+   milestone a commit belongs to before reviewing that commit: corrections are appended there
+   rather than folded into the original account, so the archive — not the commit message — is
+   where "this was already found wrong, and here is what is still open" lives.
 
 ## Review workflow
 

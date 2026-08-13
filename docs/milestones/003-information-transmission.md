@@ -319,6 +319,9 @@ honest case does this also stop".
 ### Still open after this pass
 
 - Provenance imprecision (see the previous correction) stands unchanged.
-- `docs/HANDOFF.md` does not exist; the review noted it could not be included. Not created here
-  because inventing a process document unasked is not a review fix — raise with Matt if the review
-  loop wants one.
+- `docs/HANDOFF.md` does not exist and will not. Matt's call, and correct: `CURRENT_MILESTONE.md`
+  already is the handoff surface — status, scope in and out, planning decisions, carried-over
+  items — and a second copy would only drift out of sync with it. What the complaint did expose is
+  that `AGENTS.md`'s canonical read list never mentioned `docs/milestones/`, so a reviewer
+  verifying a corrective commit had nothing pointing them at the correction notes or the still-open
+  items. Both entries in that list are now explicit.

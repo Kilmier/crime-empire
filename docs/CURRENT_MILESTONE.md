@@ -6,10 +6,14 @@ On completion, its final content moves to `docs/milestones/NNN-short-name.md` pe
 
 ## Status
 
-**Milestone 003 — information transmission slice. Complete, awaiting Codex review.**
+**Milestone 003 — information transmission slice. Complete; Codex findings fixed.**
 
-Archived at `docs/milestones/003-information-transmission.md`. 17/17 tests pass; all four variants
-are deterministic. Nothing new should start until review lands.
+Archived at `docs/milestones/003-information-transmission.md`. Codex raised five findings against
+the original commit — all accepted and fixed in a follow-up commit, with a correction appended to
+the archive rather than edited into it. 37/37 tests pass and `--verify` is deterministic.
+
+Nothing new should start until the corrective commit has been reviewed. Milestone 004 has not been
+scoped or assigned.
 
 The record of what was attempted follows.
 

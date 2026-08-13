@@ -80,7 +80,7 @@ public sealed class SimulationReplayTests
             lines.AddRange(character.Cognition.Records.Select(r =>
                 $"knowledge|{character.Id}|{r.Claim.Kind}|{r.Claim.Subject}|{r.Claim.Object}|" +
                 $"{r.Stance}|{Number(r.Confidence)}|{r.SourceKind}|{r.SourceId}|{r.AcquiredAt:O}|" +
-                $"{r.ReconsideredAt:O}"));
+                $"{r.ReconsideredAt:O}|{r.Contested}"));
 
             lines.AddRange(character.Cognition.Testimony.Select(t =>
                 $"testimony|{character.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|" +

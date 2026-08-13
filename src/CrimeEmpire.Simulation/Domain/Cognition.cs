@@ -62,7 +62,13 @@ public sealed class Cognition
             if (!overrides) return prior;
             // He is revising something he already had, so the acquisition time stands. Only the
             // moment he last had cause to think about it moves.
-            record = record with { AcquiredAt = prior.AcquiredAt, LastReconsideredAt = at };
+            // A disagreement that has already happened is not undone by later learning more.
+            record = record with
+            {
+                AcquiredAt = prior.AcquiredAt,
+                LastReconsideredAt = at,
+                Contested = prior.Contested,
+            };
             _records[existing] = record;
             return record;
         }
@@ -86,11 +92,24 @@ public sealed class Cognition
     /// </summary>
     public InformationRecord Receive(ReportedClaim asserted, string senderId, DateTime at)
     {
-        _testimony.Add(new Testimony(
-            asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence, senderId, at));
-
         bool affirms = asserted.AssertedStance is Stance.Knows or Stance.Believes or Stance.Suspects;
         var prior = Find(asserted.Claim);
+
+        // Whether this voice is new to this claim, decided BEFORE the new account is filed and
+        // against the whole testimony history rather than against whoever happens to be named on
+        // the current record.
+        //
+        // Checking the record's SourceId alone was wrong twice over: the record keeps its original
+        // source when it is revised, so the same man could corroborate his own earlier report over
+        // and over and be treated as a fresh voice every time; and a claim first acquired by
+        // observation names the observer, so a single sender could repeat himself indefinitely and
+        // never match. Repetition is not evidence — it is the same evidence, said again.
+        bool alreadyHeardFrom =
+            prior?.SourceId == senderId ||
+            _testimony.Any(t => t.SenderId == senderId && t.Claim.Equals(asserted.Claim));
+
+        _testimony.Add(new Testimony(
+            asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence, senderId, at));
 
         if (prior is null)
         {
@@ -105,14 +124,21 @@ public sealed class Cognition
         // itself, so corroboration only counts when it comes from someone new.
         if (prior.IsHeld == affirms)
         {
-            bool independent = prior.SourceId != senderId;
-            double raised = independent
-                ? Math.Clamp(prior.Confidence + 0.15 * asserted.AssertedConfidence, 0, 1)
-                : prior.Confidence;
+            // Nothing new was said and nothing changed, so the record is left exactly as it was —
+            // including its reconsideration time. A belief that gets stamped as freshly revisited
+            // every time somebody repeats himself would make "he has learned something since he
+            // last spoke" true forever, and two characters would report to each other until the
+            // calendar ran out.
+            if (alreadyHeardFrom) return prior;
+
+            double raised = Math.Clamp(prior.Confidence + 0.15 * asserted.AssertedConfidence, 0, 1);
             return Replace(prior, prior with { Confidence = raised, LastReconsideredAt = at });
         }
 
-        // Disagreement.
+        // Disagreement. Repetition is not evidence here either: a man who has already denied it
+        // once does not wear the belief down further by denying it again.
+        if (alreadyHeardFrom) return prior;
+
         double erosion = prior.SourceKind == SourceKind.Direct ? 0.15 : 0.45;
         double shaken = Math.Clamp(prior.Confidence * (1 - erosion * asserted.AssertedConfidence), 0, 1);
 
@@ -122,7 +148,13 @@ public sealed class Cognition
         if (prior.SourceKind != SourceKind.Direct && shaken < 0.3)
             stance = prior.IsHeld ? Stance.Doubts : Stance.Suspects;
 
-        return Replace(prior, prior with { Stance = stance, Confidence = shaken, LastReconsideredAt = at });
+        return Replace(prior, prior with
+        {
+            Stance = stance,
+            Confidence = shaken,
+            LastReconsideredAt = at,
+            Contested = true,
+        });
     }
 
     private InformationRecord Replace(InformationRecord prior, InformationRecord updated)
@@ -152,6 +184,12 @@ public sealed class Cognition
     /// </summary>
     public bool IsContested(Claim claim)
     {
+        // Somebody contradicted what he held at the time they said it. Recorded then, because the
+        // stance may since have moved to agree with them — which is the deception succeeding, not
+        // the disagreement disappearing.
+        if (Find(claim) is { Contested: true }) return true;
+
+        // Or two of his sources simply disagree with each other.
         bool affirmed = false, denied = false;
         foreach (var t in AccountsOf(claim))
         {
@@ -160,10 +198,7 @@ public sealed class Cognition
             if (affirmed && denied) return true;
         }
 
-        if (!affirmed && !denied) return false;
-
-        // A single account that cuts against his own direct observation is a conflict too.
-        return Find(claim) is { SourceKind: SourceKind.Direct } own && own.IsHeld != affirmed;
+        return false;
     }
 
     public InformationRecord? Find(Claim claim)

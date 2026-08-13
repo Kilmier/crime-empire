@@ -409,24 +409,45 @@ public static class Generators
     }
 
     /// <summary>
-    /// Whether he has learned anything since he last reported to this person.
+    /// Whether anything has changed in what he holds since he last reported to this person.
     ///
-    /// Reporting is prompted by having something to say. Without this, a standing responsibility
-    /// wakes an officeholder on a timer, "report in" scores the same as it did last time because
-    /// nothing about his situation changed, and he files the identical account every few days
-    /// until the run ends. Being asked directly bypasses this — a question deserves an answer even
-    /// if the answer is the one already given.
+    /// "Something to say" is not only a newly acquired fact. Being contradicted, being
+    /// corroborated, or having a stance or confidence move are all developments worth carrying to
+    /// a superior — a capo who learns his account is disputed has something to report even though
+    /// he acquired no new claim. Testing acquisition alone missed every one of those, so a
+    /// character could sit on a belief that had been overturned since he last spoke.
+    ///
+    /// Reconsideration time is the right test precisely because
+    /// <see cref="Cognition.Receive"/> only advances it when something actually changed; hearing
+    /// the same man repeat himself leaves it alone, so this cannot become permanently true.
+    ///
+    /// Being asked directly bypasses this — a question deserves an answer even if the answer is
+    /// the one already given.
     /// </summary>
     private static bool HasSomethingNewFor(GeneratorContext ctx, string recipientId)
+        => HasSomethingToReport(ctx.ReportsSent, ctx.Perceived.Beliefs, recipientId);
+
+    /// <summary>
+    /// The eligibility rule itself, taking only what it needs so it can be exercised directly.
+    ///
+    /// Kept public and parameterised rather than reading it off a GeneratorContext, because the
+    /// interesting cases — reported, then contradicted, having acquired nothing new — are awkward
+    /// to stage through a whole simulation run, and a rule that can only be tested end-to-end
+    /// tends not to be tested at all. That is how the acquisition-only version survived.
+    /// </summary>
+    public static bool HasSomethingToReport(
+        IEnumerable<Report> reportsSent,
+        IEnumerable<InformationRecord> beliefs,
+        string recipientId)
     {
         DateTime lastSpoke = DateTime.MinValue;
-        foreach (var r in ctx.ReportsSent)
+        foreach (var r in reportsSent)
             if (r.RecipientId == recipientId && r.At > lastSpoke) lastSpoke = r.At;
 
         if (lastSpoke == DateTime.MinValue) return true;
 
-        foreach (var b in ctx.Perceived.Beliefs)
-            if (b.IsHeld && b.AcquiredAt > lastSpoke) return true;
+        foreach (var b in beliefs)
+            if (b.IsHeld && b.ReconsideredAt > lastSpoke) return true;
 
         return false;
     }

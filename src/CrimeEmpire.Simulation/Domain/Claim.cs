@@ -81,8 +81,20 @@ public sealed record InformationRecord(
     SourceKind SourceKind,
     string SourceId,
     DateTime AcquiredAt,
-    DateTime? LastReconsideredAt = null)
+    DateTime? LastReconsideredAt = null,
+    bool Contested = false)
 {
+    /// <summary>
+    /// Set when somebody has told him the opposite of this, whatever he concluded in the end.
+    ///
+    /// Recorded at the moment of the disagreement rather than re-derived later from the current
+    /// stance, because the stance is exactly what a contradiction changes: a belief eroded until
+    /// he doubts it now *agrees* with the man who talked him out of it, and re-deriving would
+    /// report no conflict precisely in the case where the deception worked. The disagreement is a
+    /// fact about his sources, and it does not stop having happened.
+    /// </summary>
+    public bool Contested { get; init; } = Contested;
+
     /// <summary>
     /// When this was last argued about, defaulting to when it was first acquired.
     ///

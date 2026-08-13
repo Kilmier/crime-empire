@@ -84,10 +84,15 @@ public static class IntelligenceWriter
             {
                 sb.AppendLine($"  On whether {Describe(claim, Name)}:");
 
-                // His own eyes are an account too, and it matters that it is listed alongside the
-                // others rather than presented as the answer.
-                if (who.Cognition.Find(claim) is { SourceKind: SourceKind.Direct } own)
-                    sb.AppendLine($"     he saw for himself   — {(own.IsHeld ? "it happened" : "it did not")}");
+                // What he had on his own account — seen or worked out — belongs in the list
+                // alongside the others rather than above them as the answer. A conclusion he
+                // reached himself is still just one account, and it is the one most likely to be
+                // wrong about who was responsible.
+                if (who.Cognition.Find(claim) is { } own && own.SourceKind != SourceKind.Report)
+                {
+                    string basis = own.SourceKind == SourceKind.Inference ? "he worked out" : "he has first-hand";
+                    sb.AppendLine($"     {basis,-20} — {(own.IsHeld ? "it happened" : "it did not")}");
+                }
 
                 foreach (var t in who.Cognition.AccountsOf(claim).OrderBy(t => t.At))
                     sb.AppendLine($"     {Name(t.SenderId),-20} — {(t.Affirms ? "it happened" : "it did not")} ({t.At:d MMM})");
@@ -102,12 +107,12 @@ public static class IntelligenceWriter
             .OrderBy(r => r.Claim.ToString(), StringComparer.Ordinal)
             .ToList();
 
-        var neverAsked = world.Characters.Values
-            .Where(c => c.Id != who.Id
-                        && c.Social.OrganizationId == who.Social.OrganizationId
-                        && c.Social.OrganizationId is not null
-                        && !who.Cognition.HasAccountFrom(c.Id))
-            .OrderBy(c => c.Id, StringComparer.Ordinal)
+        // Who he could go to — drawn from the people he has actually heard of, never from the
+        // world's roster. Enumerating the organisation here would put names in front of the player
+        // that the viewpoint character has no way to know, and "who else is in this outfit" is
+        // exactly the kind of thing a boss might be wrong about.
+        var neverAsked = KnownPeople(world, who)
+            .Where(id => !who.Cognition.HasAccountFrom(id))
             .ToList();
 
         if (thin.Count > 0 || neverAsked.Count > 0)
@@ -116,12 +121,48 @@ public static class IntelligenceWriter
             sb.AppendLine();
             foreach (var r in thin)
                 sb.AppendLine($"  · whether {Describe(r.Claim, Name)} — {Qualify(r, who.Cognition.IsContested(r.Claim))}");
-            foreach (var c in neverAsked)
-                sb.AppendLine($"  · {c.Name} has not given him an account");
+            foreach (var id in neverAsked)
+                sb.AppendLine($"  · {Name(id)} has not given him an account");
             sb.AppendLine();
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// The people this character has any reason to know exist, in id order.
+    ///
+    /// Assembled strictly from his own head: whoever appears in a claim he holds, whoever has
+    /// given him an account, whoever he has a relationship with, and whoever he holds a grievance
+    /// against. The world is consulted only to ask whether an id names a person at all — "the
+    /// books" and a grocery are not people to go and ask — which resolves references he already
+    /// has rather than introducing new ones.
+    ///
+    /// Public so tests can assert that no name outside this set ever reaches the page.
+    /// </summary>
+    public static IReadOnlyList<string> KnownPeople(World world, Character who)
+    {
+        var known = new SortedSet<string>(StringComparer.Ordinal);
+
+        void Consider(string? id)
+        {
+            if (string.IsNullOrEmpty(id) || id == who.Id) return;
+            if (world.Find(id) is null) return;
+            known.Add(id);
+        }
+
+        foreach (var r in who.Cognition.Records)
+        {
+            Consider(r.Claim.Subject);
+            Consider(r.Claim.Object);
+            Consider(r.SourceId);
+        }
+
+        foreach (var t in who.Cognition.Testimony) Consider(t.SenderId);
+        foreach (var id in who.Social.Relationships.Keys) Consider(id);
+        foreach (var g in who.Social.Grievances) Consider(g.AgainstId);
+
+        return known.ToList();
     }
 
     /// <summary>
@@ -156,12 +197,24 @@ public static class IntelligenceWriter
     /// Where it came from, as the player is entitled to see it. "Vincent says an associate heard"
     /// is meaningfully different from having watched it happen, and the difference has to survive
     /// into the sentence.
+    ///
+    /// Note what the Direct-but-someone-else's-id case does *not* say. It used to read "he was
+    /// there when X did it", which invented a fact the record does not contain:
+    /// <see cref="SourceKind.Direct"/> means unmediated, not present. It covers a man who watched
+    /// something, a man who did it himself, and a man who had it first-hand from the person who
+    /// did — and placing him at the scene is a claim about his whereabouts that the simulation
+    /// never made and that could be flatly false. Until provenance is precise enough to
+    /// distinguish those, the wording stays neutral about how it reached him.
     /// </summary>
     private static string Attribute(InformationRecord r, string viewpointId, Func<string, string> name)
         => r.SourceKind switch
         {
-            SourceKind.Direct when r.SourceId == viewpointId => "he saw it himself",
-            SourceKind.Direct => $"he was there when {name(r.SourceId)} did it",
+            // Not "he saw it himself" either. Self-sourced Direct covers a man who noticed
+            // something, a man who did it, and a man who gave the order — and "saw" is only true
+            // of the first. Vincent holds that he went outside his boss's rule because he decided
+            // to, which is not a thing anybody watches happen.
+            SourceKind.Direct when r.SourceId == viewpointId => "he has it first-hand",
+            SourceKind.Direct => $"he has it from {name(r.SourceId)} first-hand",
             SourceKind.Report => $"{name(r.SourceId)} told him",
             SourceKind.Inference => "he worked it out himself",
             _ => $"talk, no better sourced than {name(r.SourceId)}",

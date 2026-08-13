@@ -135,3 +135,79 @@ and quietly omits his own order.
 
 - The milestone is the single commit that introduced this file.
   `git log --diff-filter=A -- docs/milestones/003-information-transmission.md` resolves it.
+
+---
+
+## Correction — Codex review findings (appended after review)
+
+The original commit above shipped five defects. Recorded here rather than edited into the account
+above, per `AGENTS.md`: the milestone was not as clean as it was first written up, and the record
+should say so. All five were accepted and fixed in a follow-up commit; the sections above remain
+as originally written.
+
+**1. The boss could *observe* who authorised a breach.** `ResolveViolence` offered the boss
+`PersonBreachedPolicy` as part of an observation opportunity. That collapses the distinction the
+whole milestone rests on: violence against a shop is observable, but who ordered it is a
+conclusion about someone who may have been nowhere near the place, and a wrecked shopfront looks
+identical whether the capo ordered it, tolerated it, or knew nothing. It also made the concealment
+unfalsifiable in the other direction — there was nothing left for Vincent to hide. The boss now
+observes only violence and witnesses, and reaches authorship by inference
+(`Decision/Inference.cs`, a suspicion at `SourceKind.Inference` resting on violence he holds plus
+a rule he knows) or by being told.
+
+**2. The player view enumerated the authoritative character roster.** The "has not given him an
+account" section listed organisation members straight out of world state, so it could name people
+the viewpoint character had no way to know existed. Now assembled from his own head only —
+whoever appears in a claim he holds, has given him an account, he has a relationship with, or he
+holds a grievance against (`IntelligenceWriter.KnownPeople`).
+
+**3. Provenance wording invented attendance.** Generic `SourceKind.Direct` was rendered as "he was
+there when X did it" and "he saw it himself". Direct means *unmediated*, not *present*: it covers
+a man who noticed something, a man who did it, and a man who had it first-hand from the person who
+did. Vincent holds that he went outside his boss's rule because he decided to — nobody watched
+that happen. Wording is now neutral pending more precise provenance.
+
+**4. One source could corroborate itself.** Independence was decided by comparing the incoming
+sender against the *record's* `SourceId`, which keeps its original value through revisions — so
+the same man could confirm his own earlier report repeatedly and count as a fresh voice every
+time, and a claim first acquired by observation names the observer, so a single sender never
+matched at all. Independence is now decided against the whole testimony history, before the new
+account is filed, and applies to repeated denials as well as repeated affirmations.
+
+**5. Report eligibility saw only acquisition.** A character who had been contradicted since he
+last spoke had, by the old test, nothing new to say — so he could sit on an account he knew was
+disputed. Eligibility now keys off reconsideration. This is safe only because `Receive` was
+changed in the same pass to leave a record completely untouched when nothing actually changed;
+without that, "something has changed since I last spoke" would be permanently true and two
+characters would report at each other until the run ended.
+
+### Consequential change not in the findings
+
+`IsContested` had to be reworked. It previously re-derived contestedness from the current stance
+and only recognised a clash against a *directly observed* belief. Once the breach became an
+inference rather than an observation, a denial of it stopped registering as a conflict at all —
+and worse, a belief eroded until the character doubts it now *agrees* with the man who talked him
+out of it, so re-deriving reported no conflict in exactly the case where the deception worked.
+Contestedness is now recorded on the record at the moment of disagreement (`InformationRecord.Contested`).
+
+### Verification
+
+- `dotnet test` — 37/37 passing (was 17).
+- `--verify --seed 42 --days 90` — DETERMINISTIC.
+- All five findings have regression tests, and **each was mutation-checked**: the fix was reverted,
+  the suite confirmed to fail, and the fix restored. Two gaps were exposed by doing this and would
+  otherwise have shipped as false assurance:
+  - the identity-leak test passed against the reverted code, because in the five-person cast
+    Salvatore happens to know every organisation member, so the roster and his own knowledge
+    produce identical names. A member nobody references had to be introduced to tell them apart —
+    which is precisely why the original leak went unnoticed;
+  - the finding-5 test only exercised the `Cognition` side and never the eligibility rule, which
+    was private and therefore untested. It is now `Generators.HasSomethingToReport`, parameterised
+    so the interesting cases can be staged directly.
+
+### Still open after this pass
+
+- Provenance remains imprecise: `SourceKind.Direct` cannot distinguish observing, doing, and being
+  told first-hand by the doer. The wording is neutral rather than accurate, which is a workaround.
+  A `Participant`/`Witness` distinction is the real fix.
+- Everything under "Deferred work" above stands unchanged.

@@ -21,6 +21,11 @@ public static class Pipeline
     {
         var rng = Rng.ForDecision(world.Seed, actor.Id, actor.DecisionCount++);
 
+        // 0. Take stock. Conclusions he can draw from what he already holds, before he consults
+        //    any of it — so that a thing worked out is available to the same stages as a thing
+        //    seen, while staying distinguishable from it by source.
+        Inference.Reconsider(world, actor, world.Now);
+
         // 1. Perceive. Beliefs only; traits shape confidence in second-hand claims.
         var perceived = Salience.Perceive(actor, world.Now);
         var salience = Salience.Build(actor, perceived);

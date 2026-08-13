@@ -297,12 +297,18 @@ public static class Strategies
                 Offer(c.Id, 0.35, witnessClaim, violenceClaim);
         }
 
-        // The boss is owed an account of a breach by virtue of the office, which is better access
-        // than merely working the district.
+        // The boss has better access to what happened on his own territory than a passer-by does.
+        //
+        // He gets the violence and the witnesses — never the breach. Who authorised a beating is
+        // not a property of the beating: a wrecked shopfront looks identical whether the capo
+        // ordered it, tolerated it, or knew nothing about it. Handing the boss
+        // PersonBreachedPolicy as an *observation* would let him see a conclusion rather than
+        // reach one, and would make the concealment this milestone exists to model unfalsifiable
+        // in the other direction — there would be nothing left for Vincent to hide. He can reach
+        // it by inference (Decision/Inference.cs) or be told; both are defeasible, and observing
+        // a wrecked shop is neither.
         if (s.BreachedPolicyId is not null)
-            Offer(world.Org.BossId, 0.5,
-                violenceClaim,
-                new Claim(ClaimKind.PersonBreachedPolicy, owner.Id, s.BreachedPolicyId, ev.Id));
+            Offer(world.Org.BossId, 0.5, violenceClaim, witnessClaim);
 
         foreach (var (id, o) in opportunities.OrderBy(k => k.Key, StringComparer.Ordinal))
             ScheduleObservation(world, id, ev, o.Discoverability, o.Claims);

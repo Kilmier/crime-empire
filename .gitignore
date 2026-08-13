@@ -1,0 +1,43 @@
+# .NET build output
+**/bin/
+**/obj/
+
+# Test and coverage output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# IDE and editor state
+.vs/
+.vscode/
+.idea/
+.claude/settings.local.json
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Godot-generated state
+.godot/
+export.cfg
+export_presets.cfg
+
+# Local logs, caches, and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+secrets.json

@@ -1,0 +1,67 @@
+namespace CrimeSim.Domain;
+
+public enum Tier
+{
+    Active,
+    Supporting,
+    Background,
+}
+
+public sealed class Character
+{
+    public required string Id { get; init; }
+    public required string Name { get; init; }
+    public required string RoleTitle { get; init; }
+
+    public required Capabilities Capabilities { get; init; }
+
+    /// <summary>
+    /// RESTRICTED: read only by Decision/Salience.cs and Decision/Utility.cs. See Psychology.
+    /// Settable only so scenario variants can swap a personality before the run starts; nothing in
+    /// the simulation loop writes to it.
+    /// </summary>
+    public required Psychology Psychology { get; set; }
+
+    public Cognition Cognition { get; } = new();
+    public SocialState Social { get; } = new();
+    public Motivations Motivations { get; } = new();
+    public ExecutionState Execution { get; } = new();
+
+    public Tier Tier { get; set; } = Tier.Active;
+
+    /// <summary>Monotonic per-character counter used to seed this character's decision RNG stream.</summary>
+    public int DecisionCount { get; set; }
+
+    /// <summary>Set for characters who are not organisation members (e.g. the detective, the shopkeeper).</summary>
+    public bool IsOrgMember => Social.OrganizationId is not null;
+
+    public CharacterView View => new(this);
+
+    public override string ToString() => $"{Name} ({RoleTitle})";
+}
+
+/// <summary>
+/// The projection of a character that candidate generators are allowed to see.
+///
+/// It deliberately exposes no Psychology and no Cognition. Traits are unavailable so a generator
+/// cannot branch on them to emit an action; raw beliefs are unavailable so a generator must go
+/// through PerceivedSituation, which is the same belief-limited view the scorer uses. Both
+/// omissions are the point of this type — do not add those properties.
+/// </summary>
+public sealed class CharacterView
+{
+    private readonly Character _c;
+    internal CharacterView(Character c) => _c = c;
+
+    public string Id => _c.Id;
+    public string Name => _c.Name;
+    public string RoleTitle => _c.RoleTitle;
+    public Capabilities Capabilities => _c.Capabilities;
+    public SocialState Social => _c.Social;
+    public Motivations Motivations => _c.Motivations;
+    public ExecutionState Execution => _c.Execution;
+    public Tier Tier => _c.Tier;
+    public bool IsOrgMember => _c.IsOrgMember;
+
+    public override string ToString() => _c.ToString();
+}

@@ -1,0 +1,376 @@
+namespace CrimeSim.Decision;
+
+using CrimeSim.Domain;
+using CrimeSim.Org;
+using CrimeSim.Sim;
+
+/// <summary>
+/// Everything a generator is allowed to see.
+///
+/// There is no Psychology here and no raw Cognition: options are proposed from role, commitment,
+/// pressure, trigger and relationship, and any situational fact must come through Perceived. Note
+/// that KnownPolicies is pre-filtered to policies this character has actually been told about — a
+/// policy nobody told you cannot shape what occurs to you.
+/// </summary>
+public sealed record GeneratorContext(
+    CharacterView Actor,
+    PerceivedSituation Perceived,
+    Agenda Agenda,
+    DateTime Now,
+    ScheduledEvent Trigger,
+    Office? MyOffice,
+    Assignment? MyAssignment,
+    IReadOnlyList<Policy> KnownPolicies,
+    string? SuperiorId,
+    IReadOnlyList<string> SubordinateIds,
+    // VisibleTargets: entities whose *existence* is public — a storefront can be seen from the
+    // street. What is happening inside it is not public, and still requires a held claim.
+    IReadOnlyList<string> VisibleTargets);
+
+/// <summary>
+/// The bounded set of proposers. The shared action vocabulary never becomes a universal menu:
+/// each generator offers at most three options, and the union is trimmed by salience before
+/// anything is scored.
+/// </summary>
+public static class Generators
+{
+    public static List<Candidate> GenerateAll(GeneratorContext ctx)
+    {
+        var all = new List<Candidate>();
+        all.AddRange(FromCommitment(ctx));
+        all.AddRange(FromResponsibility(ctx));
+        all.AddRange(FromPressure(ctx));
+        all.AddRange(FromTrigger(ctx));
+        all.AddRange(FromRelationship(ctx));
+
+        // De-duplicate by id, keeping the first proposer.
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        return all.Where(c => seen.Add(c.Id)).ToList();
+    }
+
+    // ---------------------------------------------------------------- current intention
+    private static IEnumerable<Candidate> FromCommitment(GeneratorContext ctx)
+    {
+        if (ctx.Actor.Execution.Strategy is not { } s) yield break;
+
+        yield return new Candidate(
+            $"continue:{s.Kind}:{s.TargetId}",
+            ActionKind.ContinueStrategy,
+            nameof(FromCommitment),
+            $"carry on with {s.Label}")
+        {
+            TargetId = s.TargetId,
+            Strategy = s.Kind,
+            Method = s.Kind == StrategyKind.SecureTribute ? s.Method : null,
+            Domain = s.Domain,
+        };
+
+        if (s.Kind == StrategyKind.SecureTribute && Escalate(s.Method) is { } harder)
+        {
+            yield return Coercive(
+                ctx,
+                $"escalate:{s.TargetId}:{harder}",
+                ActionKind.AlterStrategy,
+                nameof(FromCommitment),
+                $"push harder on {s.TargetId} — {harder.ToString().ToLowerInvariant()} instead",
+                s.TargetId!,
+                StrategyKind.SecureTribute,
+                harder,
+                s.Domain);
+        }
+
+        yield return new Candidate(
+            $"abandon:{s.Kind}:{s.TargetId}",
+            ActionKind.AbandonStrategy,
+            nameof(FromCommitment),
+            $"drop {s.Label}")
+        {
+            TargetId = s.TargetId,
+            Strategy = s.Kind,
+            Domain = s.Domain,
+        };
+    }
+
+    // ---------------------------------------------------------------- role and responsibility
+    private static IEnumerable<Candidate> FromResponsibility(GeneratorContext ctx)
+    {
+        string? domain = ctx.Agenda.Domain ?? ctx.MyOffice?.Domain;
+        if (domain is null) yield break;
+
+        // Already running something in this domain: FromCommitment owns that.
+        if (ctx.Actor.Execution.Strategy?.Domain == domain) yield break;
+
+        bool investigator = ctx.Actor.Capabilities[Skill.Investigation] >= 0.4;
+
+        if (investigator)
+        {
+            // Work from an actual lead if she has one. Claims are matched by identity, so the
+            // requirement has to name the record she really holds rather than a reconstructed
+            // one — otherwise a detective is refused permission to investigate her own lead.
+            var leads = ctx.Perceived.OfKind(ClaimKind.WitnessSawIncident).ToList();
+            var named = ctx.Perceived.OfKind(ClaimKind.PersonUsedViolence).ToList();
+
+            // A lead she has already put a name against is not a reason to open the case again.
+            var lead = leads.FirstOrDefault(r => !named.Any(v => v.Claim.Object == r.Claim.Subject));
+            if (leads.Count > 0 && lead is null) yield break;
+
+            string? target = lead?.Claim.Subject ?? ctx.VisibleTargets.FirstOrDefault();
+            if (target is null) yield break;
+
+            yield return new Candidate(
+                $"investigate:{target}",
+                ActionKind.StartStrategy,
+                nameof(FromResponsibility),
+                $"open an investigation into events at {target}")
+            {
+                TargetId = target,
+                Strategy = StrategyKind.InvestigateIncident,
+                Domain = domain,
+                // With no lead, the requirement is one she cannot meet — and the trace says so.
+                RequiredKnowledge = new[] { lead?.Claim ?? new Claim(ClaimKind.WitnessSawIncident, target) },
+                RequiredSkill = Skill.Investigation,
+                RequiredSkillLevel = 0.3,
+            };
+            yield break;
+        }
+
+        // Collection duty belongs to whoever holds the office or was given the job. A boss with a
+        // general interest in revenue does not personally lean on a grocer — that is what the
+        // office-to-assignment chain exists to prevent.
+        if (ctx.MyOffice is null && ctx.MyAssignment is null) yield break;
+
+        var refusing = ctx.Perceived.OfKind(ClaimKind.BusinessRefusesTribute)
+                                    .Select(r => r.Claim.Subject)
+                                    .FirstOrDefault();
+        string? mark = refusing ?? ctx.VisibleTargets.FirstOrDefault();
+        if (mark is null) yield break;
+
+        foreach (var method in new[] { CoercionMethod.Persuade, CoercionMethod.Threaten, CoercionMethod.Force })
+        {
+            yield return Coercive(
+                ctx,
+                $"start:tribute:{mark}:{method}",
+                ActionKind.StartStrategy,
+                nameof(FromResponsibility),
+                Verb(method, mark),
+                mark,
+                StrategyKind.SecureTribute,
+                method,
+                domain,
+                requires: new[] { new Claim(ClaimKind.BusinessRefusesTribute, mark) });
+        }
+    }
+
+    // ---------------------------------------------------------------- pressure
+    private static IEnumerable<Candidate> FromPressure(GeneratorContext ctx)
+    {
+        if (ctx.Actor.Motivations.Dominant() is not { } dominant) yield break;
+        if (dominant.Value < 0.3) yield break;
+
+        switch (dominant.Kind)
+        {
+            case PressureKind.LegalExposure:
+            {
+                var incident = ctx.Perceived.OfKind(ClaimKind.PersonUsedViolence)
+                    .FirstOrDefault(r => r.Claim.Subject == ctx.Actor.Id
+                                      || ctx.SubordinateIds.Contains(r.Claim.Subject));
+                if (incident is null) yield break;
+                yield return new Candidate(
+                    $"conceal:{incident.Claim.EventId}",
+                    ActionKind.StartStrategy,
+                    nameof(FromPressure),
+                    "clean up after the incident before anyone else does")
+                {
+                    TargetId = incident.Claim.Object,
+                    Strategy = StrategyKind.ConcealIncident,
+                    Domain = ctx.MyOffice?.Domain ?? ctx.Agenda.Domain,
+                    RequiredKnowledge = new[] { incident.Claim },
+                    RequiredSkill = Skill.Discretion,
+                    RequiredSkillLevel = 0.2,
+                    RequiredCrew = 1,
+                };
+                break;
+            }
+
+            case PressureKind.Resentment:
+            {
+                var grievance = ctx.Actor.Social.Grievances
+                    .OrderByDescending(g => g.Severity)
+                    .FirstOrDefault();
+                if (grievance is null) yield break;
+
+                // If the grudge is about a specific breach, moving on it requires still believing
+                // the breach happened — and naming the claim here is what puts it into the trace.
+                var basis = ctx.Perceived.OfKind(ClaimKind.PersonBreachedPolicy)
+                    .FirstOrDefault(r => r.Claim.Subject == grievance.AgainstId);
+
+                yield return new Candidate(
+                    $"retaliate:{grievance.AgainstId}",
+                    ActionKind.Retaliate,
+                    nameof(FromPressure),
+                    $"move against {grievance.AgainstId} over {grievance.Description}")
+                {
+                    TargetId = grievance.AgainstId,
+                    Domain = ctx.Agenda.Domain,
+                    RequiredAuthority = 2,
+                    RequiredKnowledge = basis is null
+                        ? Array.Empty<Claim>()
+                        : new[] { basis.Claim },
+                };
+                break;
+            }
+
+            case PressureKind.RevenueShortfall when ctx.Actor.Execution.Strategy is { } s
+                                                    && s.Kind == StrategyKind.SecureTribute
+                                                    && Escalate(s.Method) is { } harder:
+            {
+                yield return Coercive(
+                    ctx,
+                    $"escalate:{s.TargetId}:{harder}",
+                    ActionKind.AlterStrategy,
+                    nameof(FromPressure),
+                    $"the money is not arriving — {harder.ToString().ToLowerInvariant()} {s.TargetId}",
+                    s.TargetId!,
+                    StrategyKind.SecureTribute,
+                    harder,
+                    s.Domain);
+                break;
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- direct response to the trigger
+    private static IEnumerable<Candidate> FromTrigger(GeneratorContext ctx)
+    {
+        // The floor. Doing nothing is always conceivable, so a choice is never forced by an empty set.
+        yield return new Candidate("nothing", ActionKind.DoNothing, nameof(FromTrigger), "let it lie");
+
+        if (ctx.Trigger.Kind == EventKind.Incident && ctx.Trigger.Payload.Note == "tribute-demanded")
+        {
+            string from = ctx.Trigger.Payload.TargetId ?? "";
+            yield return new Candidate($"concede:{from}", ActionKind.Concede, nameof(FromTrigger), $"pay what {from} is asking")
+            {
+                TargetId = from,
+            };
+            yield return new Candidate($"refuse:{from}", ActionKind.Refuse, nameof(FromTrigger), $"refuse {from}")
+            {
+                TargetId = from,
+            };
+        }
+    }
+
+    // ---------------------------------------------------------------- relationships
+    private static IEnumerable<Candidate> FromRelationship(GeneratorContext ctx)
+    {
+        var s = ctx.Actor.Execution.Strategy;
+
+        if (s is not null && s.DelegatedToId is null && ctx.SubordinateIds.Count > 0)
+        {
+            string sub = ctx.SubordinateIds
+                .OrderByDescending(id => ctx.Actor.Social.Toward(id).Trust)
+                .ThenBy(id => id, StringComparer.Ordinal)
+                .First();
+
+            yield return new Candidate(
+                $"delegate:{s.Kind}:{sub}",
+                ActionKind.DelegateStrategy,
+                nameof(FromRelationship),
+                $"have {sub} handle {s.Label}")
+            {
+                TargetId = sub,
+                Strategy = s.Kind,
+                Method = s.Kind == StrategyKind.SecureTribute ? s.Method : null,
+                Domain = s.Domain,
+                RequiredCrew = 1,
+            };
+        }
+
+        if (ctx.SuperiorId is { } boss)
+        {
+            yield return new Candidate(
+                $"report:{boss}",
+                ActionKind.ReportToSuperior,
+                nameof(FromRelationship),
+                $"report the situation to {boss}")
+            {
+                TargetId = boss,
+                Domain = ctx.Agenda.Domain,
+            };
+
+            // Only conceivable if he knows there is a rule to ask about.
+            var relevant = ctx.KnownPolicies.FirstOrDefault(p => p.Domain == (ctx.Agenda.Domain ?? ""));
+            if (relevant is not null)
+            {
+                yield return new Candidate(
+                    $"approval:{boss}:{relevant.Id}",
+                    ActionKind.SeekApproval,
+                    nameof(FromRelationship),
+                    $"ask {boss} to relax \"{relevant.Description}\"")
+                {
+                    TargetId = boss,
+                    Domain = ctx.Agenda.Domain,
+                    RequiredKnowledge = new[] { relevant.AwarenessClaim(ctx.Actor.Social.OrganizationId ?? "") },
+                };
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- helpers
+    /// <summary>
+    /// Builds a coercive candidate and attaches any policy it would breach — but only from policies
+    /// the character knows about, so an unknown rule exerts no pull.
+    /// </summary>
+    private static Candidate Coercive(
+        GeneratorContext ctx,
+        string id,
+        ActionKind kind,
+        string generator,
+        string description,
+        string targetId,
+        StrategyKind strategy,
+        CoercionMethod method,
+        string? domain,
+        IReadOnlyList<Claim>? requires = null)
+    {
+        Policy? breached = null;
+        foreach (var p in ctx.KnownPolicies)
+        {
+            bool violates = p.Kind switch
+            {
+                PolicyKind.NoPublicViolence => method == CoercionMethod.Force && p.Domain == domain,
+                PolicyKind.ProtectBusiness => method != CoercionMethod.Persuade && p.Domain == targetId,
+                _ => false,
+            };
+            if (violates) { breached = p; break; }
+        }
+
+        return new Candidate(id, kind, generator, description)
+        {
+            TargetId = targetId,
+            Strategy = strategy,
+            Method = method,
+            Domain = domain,
+            RequiredKnowledge = requires ?? Array.Empty<Claim>(),
+            RequiredSkill = method == CoercionMethod.Persuade ? Skill.Persuasion : Skill.Coercion,
+            RequiredSkillLevel = method == CoercionMethod.Force ? 0.3 : 0.15,
+            RequiredCrew = method == CoercionMethod.Force ? 2 : method == CoercionMethod.Threaten ? 1 : 0,
+            BreachesPolicyId = breached?.Id,
+            BreachesPolicyStrength = breached?.Strength ?? 0,
+            PolicyIssuerId = breached is null ? null : ctx.SuperiorId,
+        };
+    }
+
+    private static CoercionMethod? Escalate(CoercionMethod m) => m switch
+    {
+        CoercionMethod.Persuade => CoercionMethod.Threaten,
+        CoercionMethod.Threaten => CoercionMethod.Force,
+        _ => null,
+    };
+
+    private static string Verb(CoercionMethod m, string target) => m switch
+    {
+        CoercionMethod.Persuade => $"talk {target} round",
+        CoercionMethod.Threaten => $"lean on {target}",
+        _ => $"strong-arm {target}",
+    };
+}

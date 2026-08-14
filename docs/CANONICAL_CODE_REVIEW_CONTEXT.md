@@ -9,11 +9,18 @@ Status snapshot: 2026-08-14 on `main`.
 The working tree is accepted as of `1fe8a15`: milestones 003 and 004 are both closed, and every
 commit carrying code has now been reviewed and accepted.
 
-This file has misreported status four times: it claimed verification that had not happened, first
+This file has misreported status five times: it claimed verification that had not happened, first
 for `b8fe921` and then for `e83dacf`; it wrongly recorded `fb2c84d` and `714fbc3` as never reviewed;
-and it left a next-step gate telling readers milestone 004 was active and approved. Treat the
-"Review coverage" section below as the authority over any status wording elsewhere, including this
-paragraph.
+and its next-step gate went stale twice — first telling readers milestone 004 was active and
+approved, then telling them it was blocked on three unfixed findings after all five had been
+corrected and accepted.
+
+Twice out of five in the same section is the pattern worth noticing. A gate is prose that grants or
+withholds permission, so it goes stale in both directions and is wrong in a way that changes what
+the next reader does. Sweeps that look only for "awaiting review" or "not accepted" miss it — the
+second failure said "not fixed" and slipped straight through one. Read the gate directly whenever
+status moves. Treat the "Review coverage" section below as the authority over any status wording
+elsewhere, including this paragraph.
 
 ## Purpose and authority
 
@@ -381,7 +388,8 @@ Future changes should retain coverage for:
 ### Milestone 004 — provenance precision
 
 - `714fbc3` — Split `Direct` into four acquisition categories. The implementation commit.
-  **Reviewed and rejected**: three P1 findings, not yet fixed. Milestone 004 is blocked on them.
+  **Reviewed and rejected**: three P1 findings. All three were corrected over the four corrective
+  rounds that followed and accepted at `1fe8a15`; none remains outstanding.
 - `11c4a4a` — Record the implementation commit in the milestone-004 archive. Docs only.
 - `d2af4c8` — Withdraw the false verification of `e83dacf`. Docs only.
 - `cbadb0d` — Fix the three findings against `e83dacf`. Reviewed, no code findings.
@@ -583,12 +591,17 @@ log so runner verification gives an independent deterministic signal.
 
 **No milestone is active. Do not start one.**
 
-- **Milestone 003 — closed.** Accepted by Matt on 2026-08-14 after `d685015` reviewed clean.
-- **Milestone 004 — reviewed and rejected** on three P1 findings, none of them fixed. Blocked on
-  them. The findings are not recorded in this repository.
+- **Milestone 003 — closed and accepted.** Accepted by Matt on 2026-08-14 after `d685015` reviewed
+  clean.
+- **Milestone 004 — closed and accepted.** Accepted by Matt on 2026-08-14 after `1fe8a15` reviewed
+  with no findings, following four corrective rounds. Every finding raised against it was corrected
+  and accepted; none remains outstanding.
 
-The next step belongs to Matt: milestone 004's findings, or a scope decision. Neither is a licence
-to start work from the candidate list.
+Every commit carrying code has been reviewed and accepted. There is no outstanding corrective work.
+
+**The next step is Matt's to authorize** — a maintenance task or milestone 005, named by him and
+written into `CURRENT_MILESTONE.md` before any simulation behaviour changes. Nothing on the debt
+list, the carried-forward items, or the candidate list is a licence to begin.
 
 An earlier version of this section said milestone 003 was closed and milestone 004 "active and
 approved" while both were false. It was the last place in this file still issuing an instruction,
@@ -601,8 +614,8 @@ merely describe.
 implementing anything, infer no scope from the debt list above, and take any scope change to Matt
 and into that file first.
 
-Note carried forward for whenever milestone 004's findings are worked: `SourceKind.Direct` was not
-merely a label. It was read as a predicate at `Cognition.Learn` (override rule), `Cognition.Receive`
-(erosion resistance and stance protection), and `Salience.Perceive` (suspicion discount). Splitting
-it forced an explicit answer at each site, which is why that work needs reviewing as a state-machine
-change rather than a rename.
+Kept for whoever next touches provenance: `SourceKind.Direct` was never merely a label. It was read
+as a predicate at `Cognition.Learn` (override rule), `Cognition.Receive` (erosion resistance and
+stance protection), and `Salience.Perceive` (suspicion discount). Splitting it forced an explicit
+answer at each site, which is why it had to be reviewed as a state-machine change rather than a
+rename — and why it took four rounds to land.

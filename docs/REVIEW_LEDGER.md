@@ -35,7 +35,7 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `9703d83`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `90ff97c`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
 "not yet recorded here", not "unreviewed".
 
@@ -82,6 +82,11 @@ Oldest first — the order review takes them in.
 | `20f82bd` | Close milestone 004. Docs only | Reviewed and **rejected**. Corrected by `6cbc385`. |
 | `6cbc385` | Correct a next-step gate that had gone stale a second time. Docs only | Reviewed and **rejected**. Corrected by `9703d83`. |
 | `9703d83` | Retire `fb2c84d`'s unrecoverable findings as superseded. Docs only | Reviewed, **no findings**. Accepted by Matt. |
+| `cdbcff1` | Replace the two canonical briefs with `REVIEW_LEDGER.md` and `ROADMAP.md`. Docs only | Reviewed and **rejected**: three documentation findings — the ledger's impossible "every commit has a row" claim, a completed `OPEN_CONCERNS.md` item-4 cleanup still listed in `CURRENT_MILESTONE.md`'s deferrals, and a build-status snapshot in `CLAUDE.md`. Corrected by `221b5cf`. |
+| `221b5cf` | Bound the review ledger's coverage to an explicit checkpoint. Docs only | Reviewed, **no findings**. Accepted by Matt. |
+| `2e895a5` | Open milestone 005: Stable Occasion Identity and Strategy Lifecycle Safety. Docs only | Status not established. |
+| `f942871` | Milestone 005 implementation: causally local occasion keys, `ConcealIncident` termination | Reviewed and **rejected**: two P1 and three P2 — `ConcealIncident` redundancy scoped to `(Kind, TargetId)` instead of the incident; `ContinueStrategy` disturbing a live pending step; a `StrategyStep` with an unresolvable owner failing silently; a `ConcealIncident` candidate able to start unrecorded; the promised observation-key uniqueness test never written. Corrected by `90ff97c`. |
+| `90ff97c` | Correct milestone 005: incident-scoped redundancy, preserved scheduling, explicit executor resolution, fail-closed concealment identity | Reviewed and **rejected**: one P1 documentation finding — `ROADMAP.md` still listed the RNG-keying and `ConcealIncident`-runaway debt as unresolved and offered them as candidate scope 6, and this file's determinism checklist pointed at that stale entry. Retired in the documentation-only correction that follows this commit. |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`. Both took their
 implementation plus every corrective round through review before acceptance.
@@ -182,7 +187,11 @@ Future changes should retain coverage for:
 - Are dictionary/set traversals explicitly ordered where they affect outcomes? Adding collection
   traversal without explicit ordering is a hotspot.
 - Are IDs allocated from world state rather than process-global static counters?
-- Is random state derived from stable inputs? See the RNG-keying item in `ROADMAP.md`.
+- Is random state derived from stable inputs? Occasion keys must never be built from
+  `ScheduledEvent.Id`, `WorldEvent.Id`, or a `Claim.EventId` derived from the truth-log counter —
+  the defect milestone 005 closed. See
+  `milestones/005-stable-occasion-identity-and-strategy-lifecycle-safety.md` for what that keying
+  looked like, why it was wrong, and the insertion-stability tests that now pin it.
 - Does pause/resume produce the same history?
 - Is every new piece of future-decision-relevant state included in replay comparison?
 

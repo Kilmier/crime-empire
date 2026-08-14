@@ -20,14 +20,18 @@ sequence. Full accounts are in `docs/milestones/`.
 
 ## Known technical debt
 
-- **RNG keying.** Observation rolls are seeded from global event IDs
-  (`Rng.ForDecision(seed, observerId, 5000 + ev.Id)`), so adding or removing any event anywhere
-  re-rolls every character's perception. A per-character stream keyed off a global counter means an
-  unrelated change silently re-rolls everybody. This is a determinism-hygiene defect and is worth
-  its own scope.
-- **`ConcealIncident` runaway: latent, not fixed.** It no longer occurs in `disloyal-vincent`
-  because the event IDs moved and Tommy's police-interest rolls all began to miss — not because
-  anything was repaired. It returns whenever those rolls land again. Do not record it as resolved.
+- ~~**RNG keying.**~~ and ~~**`ConcealIncident` runaway.**~~ **Retired 2026-08-14, resolved by
+  milestone 005.** Occasion keys are now built from causally local strategy-instance identity —
+  `(owner, local sequence, advance ordinal, trace kind, observer)` — never from `ScheduledEvent.Id`,
+  `WorldEvent.Id`, or a `Claim.EventId`, so an unrelated scheduling change can no longer re-roll
+  anyone's perception. `ConcealIncident` has an explicit, tested termination rule enforced in
+  `Filters`, corrected during review to key off the incident itself rather than the target so a
+  genuinely different incident at the same location stays eligible. Full account, including the
+  correction, in `milestones/005-stable-occasion-identity-and-strategy-lifecycle-safety.md`.
+  **Separately, and not retired by the above:** the one-attempt concealment rule itself remains only
+  an MVP placeholder, not a permanent design — see that archive's deferred work and
+  `CURRENT_MILESTONE.md`'s carried-forward items. Retiring the keying defect and the runaway does not
+  retire that provisional concern.
 - **Tuning guesses.** The `FirstHandTestimony` suspicion discount of `0.15` and the `Discovery`
   discount of `0.10` are not derived figures, and nothing yet distinguishes them behaviourally from
   neighbouring values.
@@ -69,7 +73,6 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    but not the whole remaining emergence prototype in one milestone.
 5. **A scenario variant that contradicts a delegator's first-hand account** — makes milestone 004's
    distinction visible in play rather than only in unit tests.
-6. **RNG keying** — see the debt list; fixing the keying and the latent concealment runaway
-   together is a plausible bounded scope.
 
-Provenance precision was a candidate and became milestone 004, which is closed.
+Provenance precision was a candidate and became milestone 004, which is closed. RNG keying and the
+concealment runaway were a candidate and became milestone 005, which is closed.

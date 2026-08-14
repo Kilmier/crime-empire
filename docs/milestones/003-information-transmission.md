@@ -1,6 +1,9 @@
 # Milestone 003 — Information Transmission Slice
 
-Status: complete. Awaiting Codex review.
+Status: **complete and verified.** Codex verified `b8fe921` on 2026-08-13 with no remaining
+findings. Reaching that took the original commit plus four corrective rounds; each is appended
+below rather than folded into the account above, so the reviews are readable in the order they
+happened.
 
 ## What was attempted
 
@@ -12,6 +15,26 @@ character's information — with generalized rumor propagation explicitly exclud
 
 That scope is near-verbatim `INFORMATION_AND_LEGIBILITY.md`'s own "Pre-MVP Kernel Scope", and that
 document's worked test scenario is the harbour scenario milestone 001 already built.
+
+Explicitly out, as assigned: generalized rumor propagation. Also out by the same reasoning:
+media/public coverage, the case-board investigation model, tier transitions, and relationship
+schema (`OPEN_CONCERNS.md` #3).
+
+### Decisions taken at planning time
+
+Carried over from `CURRENT_MILESTONE.md` when that file was reset — they belong with the milestone
+record and were not copied across at the time.
+
+- **Viewpoint character: Salvatore**, matching the canon test scenario: he sets the policy,
+  receives the reports, and must judge what happened without seeing the decision trace. Chosen by
+  Matt over Kane (no org report channel reaches her) and over a selectable pair.
+- **Conflicting source: Tommy's account against Vincent's**, both over the same single report
+  channel, so the channel count stays at one. Chosen by Matt over using Salvatore's own
+  observation, which would have exercised the channel only once.
+- **Deception is a scored outcome, not a script** — candid/partial/false as candidates, because
+  traits must never fire actions directly.
+- **Conflict is retained additively** — testimony alongside the settled belief, so no existing
+  decision changes what it reads.
 
 ## What was completed
 

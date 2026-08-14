@@ -1,64 +1,54 @@
 # Current Milestone
 
 Mutable. Claude can update or replace this file freely while work is underway — it is not history.
-On completion, its final content moves to `docs/milestones/NNN-short-name.md` per `CLAUDE.md`'s
+On completion, its final content moves to `docs/milestones/NNN-short-name.md` per `AGENTS.md`'s
 "Milestone lifecycle" section, and this file is reset for the next one.
+
+This file is also the handoff surface between agents: status, scope in and out, decisions taken at
+planning time, and what is deliberately carried over. There is no separate handoff document.
 
 ## Status
 
-**Milestone 003 — information transmission slice. Complete; Codex findings fixed.**
+**No milestone is active.** `docs/milestones/003-information-transmission.md` — the information
+transmission slice — is the most recently completed one, verified by Codex on 2026-08-13 against
+`b8fe921` with no remaining findings.
 
-Archived at `docs/milestones/003-information-transmission.md`, with four corrections appended
-rather than edited in — five findings against the original commit, then three, then three more.
-Several were caused by the preceding fix rather than by the original work; the archive records
-that as two recurring shapes (a fix that narrows what can be expressed, and a fix that collapses a
-distinction) rather than as a list of unrelated bugs.
+Milestone 004 has not been scoped or assigned. **Confirm scope with Matt rather than inferring
+it.** The candidates below are recorded so the choice is informed, not so it can be made
+automatically.
 
-63/63 tests pass, `--verify` is deterministic on baseline and disloyal, and the channel is bounded
-by report count as well as decision count.
+## Where the project stands
 
-Nothing new should start until the fourth corrective commit has been reviewed. Milestone 004 has
-not been scoped or assigned.
+- 63 tests passing; `--verify` deterministic on baseline and `disloyal-vincent`; four variants
+  produce four distinct histories at 13/16/13/43 decisions and 2/2/2/6 reports.
+- The decision pipeline (001), .NET 10 (002) and the information loop (003) are all in place and
+  reviewed. Still no Godot project, no persistence, no save/load, no tiering.
 
-The record of what was attempted follows.
+## Candidate scopes for 004
 
-Assigned by Matt as a deliberately narrow slice of `SIMULATION_ARCHITECTURE.md`'s emergence
-prototype (step 2 of the Validation Sequence), which as written bundles six subsystems. This
-milestone takes only the information half, and only part of that.
+Not ranked, and not a recommendation — the point of listing them is that each has a known reason
+to be chosen or deferred.
 
-## Scope
+1. **Provenance precision.** `SourceKind.Direct` cannot distinguish observing something, doing it,
+   and being told first-hand by the person who did. Both the player-facing attribution wording and
+   the confidence label are currently working *around* that rather than solving it, and two review
+   findings landed on it. A `Participant`/`Witness` split is the real fix. Small, well-understood,
+   and clears a known compromise.
+2. **The rest of the emergence prototype** — richer relationships and grievances, delegation,
+   rival activity, limited tier transitions. Note that "richer relationships" is still blocked by
+   `OPEN_CONCERNS.md` #3 (relationships remain a shape, not a schema), so this one needs a design
+   pass before it can be implementation work.
+3. **Persistence / SQLite**, per the stack decision. Nothing depends on it yet, but every milestone
+   so far has been in-memory only, and `DESIGN_DECISIONS.md` chose SQLite specifically for the
+   explainability queries that the information model now actually produces data for.
+4. **Godot / `net10.0` compatibility spike.** Carried unverified since milestone 002. Cheap to
+   settle, and the answer constrains when engine work can start.
 
-In scope, as assigned:
+## Carried over, still open
 
-- direct observation;
-- one explicit report/message channel;
-- one deceptive or incomplete report;
-- one conflicting source;
-- a player-readable history constrained to the viewpoint character's information.
-
-**Explicitly not in scope: generalized rumor propagation.** Also out: media/public coverage, the
-case-board investigation model, tier transitions, and relationship-schema work
-(`OPEN_CONCERNS.md` #3, still open and still blocking "richer relationships and grievances").
-
-This scope is near-verbatim `INFORMATION_AND_LEGIBILITY.md`'s own "Pre-MVP Kernel Scope", and that
-doc's worked test scenario is the harbour scenario milestone 001 already built.
-
-## Decisions taken at planning time
-
-- **Viewpoint character: Salvatore**, matching the canon test scenario — he sets the policy,
-  receives the reports, and must judge what happened without seeing the decision trace.
-- **Conflicting source: Tommy's report against Vincent's**, both over the same single org report
-  channel, so the channel count stays at one.
-- **Deception is a scored outcome, not a script** — candid/partial/false become candidates scored
-  by the existing utility pipeline, because traits must never fire actions directly.
-- **Conflict is retained additively** — an append-only testimony log alongside the existing settled
-  belief per claim, so no existing decision changes what it reads.
-- `Pipeline.SuperiorOf` returns the *lowest* authority above an actor, so Tommy reports to Vincent,
-  not Salvatore. Resolved by giving Salvatore a `SeekCorroboration` action, which
-  `INFORMATION_AND_LEGIBILITY.md` explicitly sanctions ("Leaders can request audits, seek
-  corroboration, cultivate independent sources").
-
-## Carried over, untouched
-
-From milestone 002: the redundant `TargetFramework` override in
-`CrimeEmpire.Simulation.Tests.csproj`, and unverified Godot/`net10.0` compatibility.
+- Provenance imprecision (candidate 1 above).
+- `OPEN_CONCERNS.md` #3 — relationships have no data-model answer.
+- `OPEN_CONCERNS.md` #4 is **stale**: it claims the trait vocabulary is not closed, but milestone
+  001 closed it in `Domain/Psychology.cs`. Worth a docs pass to retire it.
+- From milestone 002: the redundant `TargetFramework` override in
+  `CrimeEmpire.Simulation.Tests.csproj`, and unverified Godot/`net10.0` compatibility.

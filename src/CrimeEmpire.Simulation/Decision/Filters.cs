@@ -26,25 +26,47 @@ public static class Filters
         {
             if (c.Kind != ActionKind.StartStrategy) continue;
 
+            // ConcealIncident is identified by which incident it is about, never by (Kind,
+            // TargetId). A location is not an incident: two separate beatings at the same shop are
+            // two different things to cover up, and a (Kind, TargetId) match to the running
+            // instance would wrongly treat the second as a restart of the first, blocking a
+            // legitimate replacement. This branch owns all of ConcealIncident's redundancy
+            // reasoning and never falls through to the generic check below.
+            if (c.Strategy == StrategyKind.ConcealIncident)
+            {
+                // Fail closed. A ConcealIncident candidate with no incident attached cannot be
+                // checked against AttemptedConcealments at all, which would let it start without
+                // ever being recorded — the exact gap the MVP rule exists to close. Refuse it
+                // outright rather than let it through unrecorded; Commit.StartStrategy repeats this
+                // guard as a throw, so the two together make an unrecorded start structurally
+                // impossible even if a future candidate reaches Commit some other way.
+                if (c.AboutIncident is not { } incident)
+                {
+                    rejected.Add(new Rejection(c, RejectionStage.Redundancy,
+                        $"{ctx.Actor.Name} has no specific incident in mind to cover up"));
+                    redundant.Add(c.Id);
+                    continue;
+                }
+
+                // MVP rule, not a permanent design commitment: one attempt at concealing a given
+                // incident, whether the attempt is still running or has already finished. Recording
+                // the incident rather than the running instance is what lets this cover the
+                // completed state too — nothing is "running" any more by then. See
+                // docs/CURRENT_MILESTONE.md.
+                if (ctx.Actor.Execution.AttemptedConcealments.Contains(incident))
+                {
+                    rejected.Add(new Rejection(c, RejectionStage.Redundancy,
+                        $"{ctx.Actor.Name} has already had a go at covering that up"));
+                    redundant.Add(c.Id);
+                }
+                continue;
+            }
+
             if (ctx.Actor.Execution.Strategy is { } running
                 && running.Kind == c.Strategy && running.TargetId == c.TargetId)
             {
                 rejected.Add(new Rejection(c, RejectionStage.Redundancy,
                     $"{ctx.Actor.Name} is already handling that"));
-                redundant.Add(c.Id);
-                continue;
-            }
-
-            // MVP rule, not a permanent design commitment: one attempt at concealing a given
-            // incident, whether the attempt is still running or has already finished. A
-            // (Kind, TargetId) match alone cannot express "already tried and finished" — the
-            // strategy is no longer running by then — so this checks the incident itself. See
-            // docs/CURRENT_MILESTONE.md.
-            if (c.Strategy == StrategyKind.ConcealIncident && c.AboutIncident is { } incident
-                && ctx.Actor.Execution.AttemptedConcealments.Contains(incident))
-            {
-                rejected.Add(new Rejection(c, RejectionStage.Redundancy,
-                    $"{ctx.Actor.Name} has already had a go at covering that up"));
                 redundant.Add(c.Id);
             }
         }

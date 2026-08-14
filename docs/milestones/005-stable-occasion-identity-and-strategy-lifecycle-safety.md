@@ -1,7 +1,10 @@
 # Milestone 005 — Stable Occasion Identity and Strategy Lifecycle Safety
 
-Status: **closed.** Implemented, verified, and archived in a single commit per Matt's authorization —
-no corrective rounds were needed before archiving. Not yet reviewed by Codex; the coverage table in
+Status: **closed**, after one corrective round. `f942871`, the implementation commit below, was
+reviewed and rejected on two P1 and three P2 findings; the correction is appended at the foot of this
+file rather than folded into the account above, per `AGENTS.md`. Nothing between here and the
+correction has been rewritten: the account below is what the milestone originally claimed, including
+the parts the correction contradicts. Not yet reviewed by Codex; the coverage table in
 `REVIEW_LEDGER.md` is the record of when that happens.
 
 ## What was attempted
@@ -215,7 +218,126 @@ holds comfortably for all four variants under the new counts.
 
 ## Relevant commits
 
-The single implementation-and-archive commit that introduced this file. Not cited by hash here, for
-the same reason milestone 001's archive gives: a commit cannot contain its own hash.
-`git log --diff-filter=A -- docs/milestones/005-stable-occasion-identity-and-strategy-lifecycle-safety.md`
-resolves it.
+- `f942871` — the implementation commit that introduced this file. **Reviewed and rejected**: two P1
+  and three P2 findings, corrected below. Not cited by hash for the commit that introduced this file,
+  for the same reason milestone 001's archive gives: a commit cannot contain its own hash.
+  `git log --diff-filter=A -- docs/milestones/005-stable-occasion-identity-and-strategy-lifecycle-safety.md`
+  resolves it.
+- The correction commit, appended below.
+
+## Correction — Codex findings on `f942871`
+
+Status: **awaiting Codex review. Not verified.**
+
+Two P1 and three P2 findings, all accepted. Nothing above is rewritten; the account of what the
+milestone originally did stands, including the parts these findings contradict.
+
+**1 (P1). Redundancy for `ConcealIncident` was scoped to `(Kind, TargetId)`, not to the incident.**
+A location is not an incident: two separate beatings at the same shop are two different things to
+cover up. Matching the running instance's `(Kind, TargetId)` — the rule stated as "general" in the
+original account and correctly used for `SecureTribute`/`InvestigateIncident` — wrongly treated a
+genuinely different incident at the same target as a restart of the one already being handled, and
+refused it. `Filters.Apply`'s redundancy stage now gives `ConcealIncident` its own branch that never
+falls through to the generic check: it is identified solely by `AboutIncident`, so a different
+`Claim.EventId` at the same target passes filtering and, on `StartStrategy`, replaces the running
+instance through the replacement path that already existed for legitimate replacements.
+
+**2 (P1). `ContinueStrategy` disturbed scheduled work it should have left alone.**
+`Strategies.ScheduleNextStep` always cancels-and-reschedules, which is correct for
+Alter/Delegate/Postpone/SeekApproval — each of those deliberately changes the timing — but
+`Commit.ContinueStrategy` called it unconditionally too. A character woken early by an unrelated
+trigger (a pressure threshold, an incident) who simply chose to continue was silently cancelling the
+step already due and rescheduling a fresh one a full interval out from now, which could delay a
+strategy indefinitely under repeated early wakes — the opposite of what "carry on" means. `Continue`
+now reschedules only when `PendingStepEventId` is null or already cancelled; otherwise it leaves the
+pending event exactly as it was.
+
+**3 (P2). A `StrategyStep` with no resolvable owner failed silently.** `Runner.Handle` resolved the
+event's executor through the same `var actor = ev.OwnerId is null ? null : world.Find(ev.OwnerId);`
+lookup used for every event kind, guarded by `when actor is not null` — so a `StrategyStep` whose
+owner was null or named nobody real simply matched no case and vanished. Nothing else can ever
+advance that instance's pending step again, so the strategy would sit inert forever with no trace of
+why. `StrategyStep` now resolves its executor explicitly through a dedicated `ResolveExecutor`, and
+throws `SimulationInvariantException` if it cannot.
+
+**4 (P2). A `ConcealIncident` candidate with no `AboutIncident` could start unrecorded.**
+`Commit.StartStrategy` only added the incident to `AttemptedConcealments` when `c.AboutIncident is {
+} incident` — silently skipping the record, not the start, when it was null. The redundancy rule's
+enforcement depends entirely on that record existing, so an unlabelled candidate could begin a
+concealment the MVP rule would then have no way to recognise on any later attempt. Fixed at both
+boundaries: `Filters.Apply`'s new `ConcealIncident` branch refuses a candidate with no
+`AboutIncident` outright (finding 1's fix), and `Commit.StartStrategy` now throws
+`SimulationInvariantException` if one reaches commitment anyway — the second layer for whatever might
+get to `Commit` some other way, such as a hand-built candidate that skipped filtering.
+
+**5 (P2). The promised observation-key uniqueness test was never written.** The original account
+asserted the `(instance, ordinal, traceKind, observer)` property was "verified" and that "a run-wide
+test pins the property," but no such test existed — only the two call sites' own structural argument.
+`World` gained `ObservationOccasionKeys`, a list populated at the point `Strategies.ScheduleObservation`
+builds each key, and a new run-wide theory test across all four variants asserts no key repeats.
+
+### Tests
+
+Eleven added, **172 total** (was 161): one positive control for finding 1 (same target, different
+`Claim.EventId`, remains eligible and replaces the running instance); two for finding 2 (an
+intervening `Continue` leaves the pending event id and cancellation-state unchanged; a paired control
+proving `Continue` still schedules when nothing is pending); two for finding 3, driven through
+`Runner`/`EventQueue` rather than by calling `Strategies.Advance` directly, per the correction's own
+instruction — a `StrategyStep` with a null owner and one naming an unknown owner each throw; two for
+finding 4 — one at filtering, one at the commit boundary, the latter also asserting no partial state
+(`Execution.Strategy` still null, `AttemptedConcealments` still empty) is left behind by the throw;
+four for finding 5, the run-wide uniqueness theory across all four variants.
+
+Each fix was mutation-checked by reverting it and confirming the corresponding test fails, then
+restoring it: reverting finding 1's branch back to the generic `(Kind, TargetId)` check emptied the
+positive-control's expected `Passed` set; reverting finding 2 back to an unconditional
+`ScheduleNextStep` call changed the pending event id where the test asserts it must not; reverting
+finding 3 back to the `when actor is not null` pattern left both new `Runner`-level tests observing no
+exception; reverting finding 4's Filters branch and, separately, its `Commit` throw each left the
+corresponding negative test observing no rejection or no exception; collapsing finding 5's key to
+drop `traceKind` and `observerId` produced a real collision — `obs|vincent|0|7` — and failed the
+uniqueness test in exactly the three variants where more than one character is offered an
+opportunity from the same advance, passing only in `cautious-vincent`, which never schedules an
+observation opportunity at all.
+
+### Behavioural movement
+
+All four hashes moved again. Decision counts are **unchanged** from the account above —
+13/16/13/19 → 33/16/33/34 was the milestone's own movement; this correction adds no further movement
+to those counts: 33/16/33/34 before the correction, 33/16/33/34 after.
+
+| Variant | Hash before correction | Hash after correction |
+|---|---|---|
+| baseline | `996A23F601F31BA9` | `5FBD6055D1170D84` |
+| cautious-vincent | `0FFCBC7BDE91C001` | `0FFCBC7BDE91C001` — **unchanged** |
+| watchful-boss | `990B9C6BCC81E0A5` | `C6FAC9C86A966399` |
+| disloyal-vincent | `7DB1DBD62670AC5B` | `1A201BB1816562BF` |
+
+`cautious-vincent`'s hash is byte-identical before and after this correction — the same clean control
+group as before, now confirming finding 2 specifically: Vincent never uses force in that variant, so
+he is never woken early by a violence-driven `PressureThreshold` or `Incident` while a tribute step is
+already pending, and `ContinueStrategy` is never exercised in the state the fix changes. The other
+three variants' hashes move with decision counts held fixed, which is the signature of a scheduling
+and identifier change rather than a choice change: finding 2 changes exactly when a step fires and
+therefore what `ScheduledEvent.Id` sequence follows, without changing which candidate wins at any
+decision point. Kane's `InvestigateIncident` start (the concrete evidence cited above for cause 1)
+still occurs in the post-correction baseline trace, confirming no qualitative regression.
+
+Findings 1, 4 and 5 had no observed effect on any of the four accepted traces: the scenario contains
+only one violence incident per variant, so finding 1's same-target-different-incident case and
+finding 4's fail-closed guards never fire naturally, and finding 5's tracking is purely additive.
+Their correctness is established by the dedicated, mutation-checked tests above, not by movement in
+the accepted scenario — the same honest limitation the original account already noted for the
+concealment termination rule itself.
+
+### Verification
+
+Build clean, 172/172 tests. Both `--verify` runs deterministic on all four variants; `--compare`
+reports four distinct histories, decisions unchanged at 33/16/33/34. Both viewpoint commands
+(`--variant disloyal-vincent --viewpoint salvatore`, `--variant baseline --viewpoint vincent`) run
+clean.
+
+### Not fixed here, and not caused here
+
+Everything under "Deferred work" above stands unchanged. This was a corrective pass against five
+specific findings, not a reopening of the milestone's scope.

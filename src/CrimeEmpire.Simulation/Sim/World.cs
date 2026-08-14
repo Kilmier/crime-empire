@@ -65,6 +65,16 @@ public sealed class World
     /// </summary>
     public List<InformationRequest> Requests { get; } = new();
 
+    /// <summary>
+    /// Every RNG occasion key ever used to schedule an ObservationOpportunity, in schedule order.
+    /// Milestone 005's uniqueness property — (strategy instance, advance ordinal, trace kind,
+    /// observer) identifies at most one opportunity — is asserted directly against this rather than
+    /// only argued for, so a future change that lets two opportunities collide on one key is caught
+    /// rather than silently redrawing one of them. Developer/test state; never consulted by any
+    /// decision.
+    /// </summary>
+    public List<string> ObservationOccasionKeys { get; } = new();
+
     private long _nextWorldEventId = 1;
     private long _nextAssignmentId = 1;
     private long _nextDecisionId = 1;

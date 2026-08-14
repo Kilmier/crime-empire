@@ -27,6 +27,17 @@ public static class Commit
         {
             case ActionKind.StartStrategy:
             {
+                // Fail closed, mirroring Filters' own refusal: a ConcealIncident that reaches Commit
+                // without an incident attached must never start, because it could never be recorded
+                // in AttemptedConcealments and the MVP rule would have nothing to check next time.
+                // Filters is expected to have already refused this candidate; this is the second
+                // layer for whatever might reach Commit some other way, e.g. a hand-built candidate
+                // that skipped filtering.
+                if (c.Strategy == StrategyKind.ConcealIncident && c.AboutIncident is null)
+                    throw new SimulationInvariantException(
+                        $"ConcealIncident candidate '{c.Id}' has no AboutIncident; it must be " +
+                        "refused before commitment, not started unrecorded.");
+
                 // Replacing whatever instance is currently running, if any — legitimate (a
                 // genuinely different incident, a new target) but not something that may orphan the
                 // old instance's pending step or leave its commitment behind for AbandonStrategy or
@@ -72,7 +83,18 @@ public static class Commit
             case ActionKind.ContinueStrategy:
             {
                 var s = actor.Execution.Strategy!;
-                Strategies.ScheduleNextStep(world, s, $"{s.Label}: next step");
+
+                // Carrying on means leaving whatever is already scheduled alone, not replacing it
+                // with a fresh one at a fresh interval. ScheduleNextStep always cancels-and-
+                // reschedules, which is right for Alter/Delegate/Postpone/SeekApproval — each of
+                // those deliberately changes the timing — but wrong here: a character woken early by
+                // some unrelated trigger (a pressure threshold, an incident) who simply chooses to
+                // continue was silently pushing the strategy's next step a full interval further out
+                // every time, which could delay it indefinitely under repeated early wakes. Only
+                // schedule when nothing is actually still pending.
+                if (s.PendingStepEventId is null || world.Queue.Cancelled.ContainsKey(s.PendingStepEventId.Value))
+                    Strategies.ScheduleNextStep(world, s, $"{s.Label}: next step");
+
                 reconsideration.Add("the approach stops working");
                 return $"carried on with {s.Label}";
             }

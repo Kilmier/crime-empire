@@ -36,8 +36,13 @@ public static class Runner
                 Observe(world, actor, ev);
                 return;
 
-            case EventKind.StrategyStep when actor is not null:
-                Strategies.Advance(world, actor, ev);
+            case EventKind.StrategyStep:
+                // Resolved explicitly rather than through the shared `actor` lookup above, which
+                // silently no-ops via `when actor is not null` on every other event kind. A
+                // StrategyStep with no owner or an owner naming nobody real is not a case to route
+                // around quietly — nothing else can ever advance that instance's pending step again,
+                // so the strategy would sit inert forever with no trace of why.
+                Strategies.Advance(world, ResolveExecutor(world, ev), ev);
                 return;
 
             case EventKind.WorldTick:
@@ -58,6 +63,22 @@ public static class Runner
                 if (actor is not null) Pipeline.Deliberate(world, actor, ev);
                 return;
         }
+    }
+
+    /// <summary>
+    /// The character a StrategyStep event is addressed to, resolved explicitly and required to
+    /// exist. Every scheduler of this event kind (Strategies.ScheduleNextStep) sets OwnerId to
+    /// DelegatedToId ?? OwnerId, so a missing or unresolvable one here means a scheduling invariant
+    /// broke upstream, not that this is a normal case to fall through silently.
+    /// </summary>
+    private static Character ResolveExecutor(World world, ScheduledEvent ev)
+    {
+        if (ev.OwnerId is null)
+            throw new SimulationInvariantException(
+                $"StrategyStep event {ev.Id} has no owner — nothing to wake and nobody to execute it.");
+        return world.Find(ev.OwnerId)
+            ?? throw new SimulationInvariantException(
+                $"StrategyStep event {ev.Id} names unknown executor '{ev.OwnerId}'.");
     }
 
     // ---------------------------------------------------------------- organisational intent

@@ -432,6 +432,7 @@ public static class Strategies
         // opportunity is one behind the ordinal the *next* advance will use.
         int ordinal = s.NextAdvanceOrdinal - 1;
         string occasionKey = $"obs|{s.OwnerId}|{s.LocalSequence}|{ordinal}|{traceKind}|{observerId}";
+        world.ObservationOccasionKeys.Add(occasionKey);
 
         world.Queue.Schedule(
             world.Now + TimeSpan.FromDays(1),

@@ -1,11 +1,11 @@
 # Milestone 003 — Information Transmission Slice
 
-Status: **complete; a fifth correction is awaiting review.**
+Status: **complete and verified at `e83dacf`**, which Codex reviewed on 2026-08-13 with no findings.
 
-This file previously said Codex had verified `b8fe921` with no remaining findings. That was wrong,
-and the claim is withdrawn rather than quietly deleted: the review of `b8fe921` returned two further
-defects, recorded in the fifth correction below. Both are downstream consequences of the fix in that
-commit, not repeats of the findings it resolved.
+An earlier version of this line said Codex had verified `b8fe921` with no remaining findings. That
+was wrong, and the claim is withdrawn rather than quietly deleted: the review of `b8fe921` returned
+two further defects, recorded as the fifth correction below and fixed in `e83dacf`. Both were
+downstream consequences of the fix in `b8fe921`, not repeats of the findings it resolved.
 
 Reaching this point took the original commit plus five corrective rounds; each is appended below
 rather than folded into the account above, so the reviews are readable in the order they happened.
@@ -467,3 +467,14 @@ turn of the same screw: **a correctness fix that stops halfway along the path th
 The subject was added to the request and not to the event, the reply, or the guard. The question to
 ask of the next fix in this area is not only "what two things am I now treating as one" but "every
 place this value is consumed — does it reach all of them".
+
+### Verification of the fifth correction
+
+Codex reviewed `e83dacf` on 2026-08-13 and returned no findings. Confirmed: build clean; 73/73
+tests; baseline replay deterministic at `17E91AAA09F72437` and disloyal at `76B31DDF574AFF8F`; four
+variants producing four distinct histories at 13 / 16 / 13 / 45 decisions; request subjects
+travelling the complete request-and-reply path; replies addressing only the requested claim; prior
+testimony blocking only the same question rather than every future one; and silence, withholding,
+denial and absence of knowledge remaining four distinct outcomes.
+
+Milestone 003 is closed with this correction. Milestone 004 is unblocked.

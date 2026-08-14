@@ -7,9 +7,9 @@ between agents; do not create a separate handoff document.
 
 ## Status
 
-**Milestone 004 is approved but not yet started.** It is blocked behind the milestone-003 fifth
-correction — see "Review disposition" below. No provenance work begins until that corrective commit
-is reviewed.
+**Milestone 004 is active and unblocked.** The milestone-003 fifth correction was fixed in `e83dacf`
+and verified by Codex on 2026-08-13 with no findings, closing milestone 003. No implementation
+commits exist for milestone 004 yet.
 
 Milestone name: **Provenance Precision**
 
@@ -188,7 +188,8 @@ same as authoritative for *what is true*. Where a reviewer's account of its own 
 with the record, the record can be the thing that is wrong, and resolving it needs Matt rather than
 a closer reading of the file.
 
-**Milestone 004 does not begin until that corrective commit is reviewed.**
+That corrective commit is `e83dacf`, reviewed by Codex on 2026-08-13 with no findings. Milestone 003
+is closed and milestone 004 is unblocked.
 
 ## Deliberately carried forward
 

@@ -1,10 +1,11 @@
 # Crime Empire — Canonical Code and Review Context
 
-Status snapshot: 2026-08-13 on `main`. Milestone 003 is complete but **not fully verified**: review
-of `b8fe921` returned two further P1 defects, recorded as the fifth correction in
-`milestones/003-information-transmission.md` and fixed in a corrective commit now awaiting review.
-An earlier version of this file called `b8fe921` verified with no remaining findings; that was
-wrong. Milestone 004 (Provenance Precision) is approved but blocked behind that review.
+Status snapshot: 2026-08-13 at repository commit `e83dacf` on `main`. Milestone 003 is complete and
+Codex-verified against `e83dacf`. Verification took five corrective rounds, not four: review of
+`b8fe921` returned two further P1 defects, recorded as the fifth correction in
+`milestones/003-information-transmission.md`. An earlier version of this file called `b8fe921`
+verified with no remaining findings; that was wrong. Milestone 004 (Provenance Precision) is active
+and unblocked, with no implementation commits yet.
 
 ## Purpose and authority
 
@@ -134,7 +135,7 @@ for comparison, not as the accepted baseline.
 - Decision counts: 13 / 16 / 13 / 43.
 - Report counts: 2 / 2 / 2 / 6.
 
-### Current baseline — milestone-003 fifth correction, awaiting review
+### Verified baseline at `e83dacf`
 
 - Build: 0 warnings, 0 errors.
 - Tests: 73 passed, 0 failed.
@@ -305,6 +306,9 @@ Future changes should retain coverage for:
   `CURRENT_MILESTONE.md`. Docs only.
 - `d142582` — Open milestone 004 (Provenance Precision) and add the two canonical context briefs.
   Docs only.
+- `fb2c84d` — Correct the continuity record and unblock the milestone-004 scope language. Docs only.
+- `e83dacf` — Scope the reply and the asking guard to the claim. Fixes the two P1 defects from the
+  review of `b8fe921`. **This is the verified implementation commit for milestone 003.**
 
 Do not squash or rewrite this history merely to make milestone 003 look cleaner. The corrective
 sequence records useful architectural failures and review lessons.

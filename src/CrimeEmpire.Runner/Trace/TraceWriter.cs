@@ -138,7 +138,7 @@ public static class TraceWriter
                 .Select(p => $"{p.Key} {p.Value:0.00}");
             sb.AppendLine($"     carrying     {(pressures.Any() ? string.Join(", ", pressures) : "nothing pressing")}");
             sb.AppendLine($"     believes     {c.Cognition.Records.Count(r => r.IsHeld)} things");
-            if (c.Social.Grievances.Count > 0)
+            if (c.Social.Grievances.Any())
                 sb.AppendLine($"     resents      {string.Join("; ", c.Social.Grievances.Select(g => $"{g.AgainstId} ({g.Description})"))}");
         }
 

@@ -40,9 +40,68 @@ public readonly record struct Testimony(
 }
 
 /// <summary>
+/// Somebody has asserted, to this character, the opposite of a position he currently holds.
+///
+/// <b>A conflict, not a lie.</b> Nothing in this record says the speaker was dishonest, and nothing
+/// in it could: it is assembled entirely from the listener's side of the exchange — what he held,
+/// how he came to hold it, and what was claimed at him. The same shape is produced by deception, by
+/// sincere disagreement, by a faulty memory, and by the listener having been wrong in the first
+/// place, and the simulation deliberately cannot tell them apart from here. Whoever consumes this
+/// therefore cannot accidentally react to the truth of the matter, because the truth of the matter
+/// is not in it.
+///
+/// <b>Why it carries the prior's provenance when one rule reads it.</b> Milestone 006 charges the
+/// same social cost whether the contradicted position was something he saw or something he was told
+/// — <c>Cognition</c> already charges that difference epistemically, through the erosion rates and
+/// stance protection below, and weighting it socially as well would bill it twice. The provenance is
+/// preserved anyway so a later evidence-led pass can weight on it without having to reconstruct what
+/// was discarded here.
+/// </summary>
+public readonly record struct AccountConflict(
+    Claim Claim,
+    string SpeakerId,
+    Stance AssertedStance,
+    double AssertedConfidence,
+    SourceKind ClaimedBasis,
+    Stance PriorStance,
+    double PriorConfidence,
+    SourceKind PriorSourceKind,
+    string PriorSourceId)
+{
+    /// <summary>
+    /// How hard the disagreement was, as the listener can perceive it: how firmly he held the
+    /// position, times how firmly it was contradicted.
+    ///
+    /// Both factors are things this character has — his own confidence, and the confidence the
+    /// speaker put behind the assertion. Neither is world truth, neither is the speaker's private
+    /// basis, and neither is the candour of the report that carried it.
+    /// </summary>
+    public double Strength => PriorConfidence * AssertedConfidence;
+
+    public override string ToString()
+        => $"{SpeakerId} contradicted {Claim} (held {PriorConfidence:0.00} via {PriorSourceKind}, " +
+           $"asserted {AssertedStance} {AssertedConfidence:0.00})";
+}
+
+/// <summary>
+/// The result of being told something: the resulting record, and whether the telling was a conflict.
+///
+/// <see cref="Cognition.Receive"/> used to return the record alone, which meant the one place that
+/// knows a contradiction occurred had no way to say so, and the fact was recoverable afterwards only
+/// by inspecting <see cref="InformationRecord.Contested"/> — a flag that stays true forever and so
+/// cannot distinguish "he was contradicted just now" from "he was contradicted in March".
+/// </summary>
+public readonly record struct Receipt(InformationRecord Record, AccountConflict? Conflict);
+
+/// <summary>
 /// What a character knows, believes and suspects. This is the only source of situational fact a
 /// decision is allowed to consult — see Decision/PerceivedSituation.cs, which wraps it and is the
 /// sole argument the scorer receives.
+///
+/// This type knows nothing about relationships. It reports a conflict through <see cref="Receipt"/>
+/// and the caller decides what it costs socially; adding a SocialState reference here would put a
+/// social consequence inside the belief store, where the layering says it does not belong and where
+/// the "decisions read cognition, never world" rule would be much harder to keep honest.
 /// </summary>
 public sealed class Cognition
 {
@@ -106,7 +165,7 @@ public sealed class Cognition
     /// see what you saw is weak evidence — but it is not immune, because a character who never
     /// doubts his own eyes cannot be deceived at all.
     /// </summary>
-    public InformationRecord Receive(ReportedClaim asserted, string senderId, DateTime at)
+    public Receipt Receive(ReportedClaim asserted, string senderId, DateTime at)
     {
         bool affirms = asserted.AssertedStance is Stance.Knows or Stance.Believes or Stance.Suspects;
         var prior = Find(asserted.Claim);
@@ -164,14 +223,21 @@ public sealed class Cognition
                 asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence,
                 asserted.ClaimedBasis.AsHeardFrom(), senderId, at);
             _records.Add(fresh);
-            return fresh;
+            // Nothing to conflict with. Being told something he has no position on either way is
+            // news, not a disagreement, however wrong it may be.
+            return new Receipt(fresh, null);
         }
 
         // Word for word what he said last time: the record is left exactly as it was, including
         // its reconsideration stamp. A belief marked freshly revisited every time somebody repeats
         // himself would make "I have learned something since I last spoke" true forever, and two
         // characters would file accounts at each other until the calendar ran out.
-        if (verbatimRepeat) return prior;
+        // Word for word what he said last time — including, crucially, when what he said last time
+        // was the same denial. Repeating a contradiction is not a fresh conflict, and returning here
+        // before the disagreement branch below is what makes "new, non-repeated" structural rather
+        // than a second rule that could disagree with this one. The same early return is what stops
+        // repeated denials compounding confidence loss, so the two guarantees cannot drift apart.
+        if (verbatimRepeat) return new Receipt(prior, null);
 
         // Whether this account is better sourced than the one the belief currently rests on, and
         // therefore ought to become the thing he would cite.
@@ -186,14 +252,15 @@ public sealed class Cognition
         // development even when it does not shift the belief — which is the case for a man firming
         // up or softening a position he already gave: still one voice, so it must not compound.
         if (!reversal && prior.IsHeld == affirms)
-            return Replace(prior, upgraded with { LastReconsideredAt = at });
+            return new Receipt(Replace(prior, upgraded with { LastReconsideredAt = at }), null);
 
         // Agreement, from a voice that is new to this claim or has just come round to it. Either
         // way it is support the belief did not have before.
         if (prior.IsHeld == affirms)
         {
             double raised = Math.Clamp(prior.Confidence + 0.15 * asserted.AssertedConfidence, 0, 1);
-            return Replace(prior, upgraded with { Confidence = raised, LastReconsideredAt = at });
+            return new Receipt(
+                Replace(prior, upgraded with { Confidence = raised, LastReconsideredAt = at }), null);
         }
 
         // Disagreement: a first denial from this man, or a reversal of what he told him before.
@@ -213,13 +280,31 @@ public sealed class Cognition
         if (!prior.SourceKind.ProtectsStance() && shaken < 0.3)
             stance = prior.IsHeld ? Stance.Doubts : Stance.Suspects;
 
-        return Replace(prior, prior with
+        var contradicted = Replace(prior, prior with
         {
             Stance = stance,
             Confidence = shaken,
             LastReconsideredAt = at,
             Contested = true,
         });
+
+        // The conflict is reported from exactly the branch that sets Contested, and describes the
+        // position as it stood *before* being shaken — the listener's firmness at the moment he was
+        // contradicted is what made the disagreement a hard one, not what is left of it afterwards.
+        //
+        // The prior's provenance travels whether or not any rule currently reads it. Milestone 004's
+        // lesson, four times over, was that a distinction drawn in one place and dropped on the way
+        // to the next is the defect this codebase produces most reliably.
+        return new Receipt(contradicted, new AccountConflict(
+            asserted.Claim,
+            senderId,
+            asserted.AssertedStance,
+            asserted.AssertedConfidence,
+            asserted.ClaimedBasis,
+            prior.Stance,
+            prior.Confidence,
+            prior.SourceKind,
+            prior.SourceId));
     }
 
     /// <summary>

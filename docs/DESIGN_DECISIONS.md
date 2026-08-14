@@ -99,6 +99,36 @@ testimony and known relationships; never enumerates the authoritative roster to 
 people; uses qualitative confidence; presents conflicting accounts with attribution; and does not
 expose utility scores, hidden intentions, or the authoritative truth log.
 
+## Relationships — settled by milestone 006
+
+See `milestones/006-relational-consequence.md`. What is settled is the conflict rule and the shape of
+the API around it; the relationship *schema* is explicitly not settled and stays open as
+`OPEN_CONCERNS.md` #3.
+
+- **The trigger is a perceived account conflict, never a detected lie.** Somebody asserting the
+  opposite of a position a character holds is a conflict, and deception, sincere disagreement, faulty
+  memory and a false prior belief all produce the identical shape. Nothing in the relationship path
+  may consult `World.TruthLog`, `World.Reports`, `ReportedClaim.ActualBasis` or `Report.Candor`; the
+  conflict record is assembled entirely from the listener's side, so the distinction is unavailable
+  rather than merely unused.
+- **The consequence is directional and is trust alone.** The listener's relationship toward the
+  speaker moves. The speaker's does not, unless he separately observes a response. No grievance is
+  raised — a conflict is not evidence of a wrong.
+- **One rule regardless of the prior's provenance.** Contradicting what a man saw and contradicting
+  what he was told cost the same socially, because `Cognition` already charges the epistemic
+  difference through erosion rates and stance protection. The provenance is preserved on the conflict
+  record so a later evidence-led pass can weight on it without reconstructing what was dropped.
+- **A repeat is not a fresh conflict.** Emitted from the branch that sets `Contested`, which sits
+  after the verbatim-repeat guard, so non-repetition is inherited from the same check that stops
+  repeated denials compounding confidence loss.
+- **All receipt paths apply it** — the report channel, delegation briefings, and assignment
+  briefings. Being the man who issued the assignment does not make contradicting somebody free.
+- **`Domain/Relations.cs` is the only code that can change relationship state**, enforced by the
+  concrete type being private to it rather than by convention. Reads never create. Grievances live on
+  the relationship.
+- **The trait-vocabulary rule applies to relationship dimensions too**: `Affection` was removed for
+  having no stated behavioural purpose rather than given one to justify keeping it.
+
 ## Stack
 
 - **Simulation core**: C#, plain classes, engine-agnostic, unit-testable from the command line.

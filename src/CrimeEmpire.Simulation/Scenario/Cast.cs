@@ -154,20 +154,19 @@ public static class Cast
         vincent.Social.OrganizationId = OrgId;
         tommy.Social.OrganizationId = OrgId;
 
-        vincent.Social.Toward("salvatore").Trust = 0.45;
-        vincent.Social.Toward("salvatore").Obligation = 0.35;
-        vincent.Social.Toward("tommy").Trust = 0.70;
+        // Starting relationships go through Relations like every later change, so there is one door
+        // rather than two. A separate seeding path that could set dimensions directly would be the
+        // obvious place for ad-hoc mutation to creep back in unnoticed.
+        Relations.Establish(vincent, "salvatore", trust: 0.45, obligation: 0.35);
+        Relations.Establish(vincent, "tommy", trust: 0.70);
 
-        tommy.Social.Toward("vincent").Trust = 0.80;
-        tommy.Social.Toward("vincent").Obligation = 0.70;
-        tommy.Social.Toward("salvatore").Trust = 0.30;
-        tommy.Social.Toward("salvatore").Obligation = 0.40;
+        Relations.Establish(tommy, "vincent", trust: 0.80, obligation: 0.70);
+        Relations.Establish(tommy, "salvatore", trust: 0.30, obligation: 0.40);
 
-        salvatore.Social.Toward("vincent").Trust = 0.50;
-        salvatore.Social.Toward("vincent").Obligation = 0.20;
+        Relations.Establish(salvatore, "vincent", trust: 0.50, obligation: 0.20);
 
         // He was passed over. This is a motive, not an instruction to betray anyone.
-        vincent.Social.Grievances.Add(
+        Relations.RaiseGrievance(vincent,
             new Grievance("salvatore", "the harbour was handed to me only after it stopped earning", 0.35, Start));
         vincent.Motivations.AddPressure(PressureKind.RevenueShortfall, 0.50);
         vincent.Motivations.AddPressure(PressureKind.Resentment, 0.30);

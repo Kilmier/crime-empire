@@ -113,6 +113,47 @@ public static class IntelligenceWriter
             }
         }
 
+        // ---------------------------------------------------------------- how he takes people
+        //
+        // His own attitude, and only ever his own. This section renders the viewpoint character's
+        // relationships outward — what *he* makes of the people he deals with — and nothing about
+        // what they make of him, which is their private state and not his to know.
+        //
+        // Three rules it must keep, and each one is a way this section could leak:
+        //
+        //  - Never a number. "He would not take his word for much" is a reading; "trust 0.12" is
+        //    hidden state with a decimal point.
+        //  - Never an accusation. A relationship that cooled because somebody contradicted him says
+        //    exactly that — he no longer takes the man's word — and never that he was lied to. The
+        //    simulation itself cannot tell a lie from an honest disagreement here, and the player
+        //    must not be handed a certainty the model does not have.
+        //  - Never anybody he does not know. Bounded by KnownPeople, like every other section.
+        var attitudes = KnownPeople(world, who)
+            .Select(id => (Id: id, Rel: who.Social.Toward(id)))
+            .Where(x => x.Rel.Trust > 0 || x.Rel.Fear > 0 || x.Rel.Grievances.Count > 0)
+            .ToList();
+
+        if (attitudes.Count > 0)
+        {
+            sb.AppendLine("HOW HE TAKES THEM");
+            sb.AppendLine();
+            foreach (var (id, rel) in attitudes)
+            {
+                sb.AppendLine($"  {Name(id)}");
+                sb.AppendLine($"     {Standing(rel.Trust)}");
+                if (rel.Fear > 0.25)
+                    sb.AppendLine($"     {(rel.Fear > 0.6 ? "he is frightened of him" : "he is wary of him")}");
+                // Quoted rather than folded into the sentence. Grievance descriptions are written
+                // from the holder's own side and mostly in the first person — "moved against me",
+                // "the harbour was handed to me only after it stopped earning" — so embedding one
+                // after "he holds it against him that" produces broken English. As his own words
+                // about it, they read correctly and stay his.
+                foreach (var g in rel.Grievances)
+                    sb.AppendLine($"     what he holds against him: \"{g.Description}\"");
+            }
+            sb.AppendLine();
+        }
+
         // ---------------------------------------------------------------- open questions
         var thin = held
             .Where(r => r.Confidence < 0.5 || who.Cognition.IsContested(r.Claim))
@@ -171,7 +212,7 @@ public static class IntelligenceWriter
         }
 
         foreach (var t in who.Cognition.Testimony) Consider(t.SenderId);
-        foreach (var id in who.Social.Relationships.Keys) Consider(id);
+        foreach (var id in who.Social.Others) Consider(id);
         foreach (var g in who.Social.Grievances) Consider(g.AgainstId);
 
         return known.ToList();
@@ -196,6 +237,27 @@ public static class IntelligenceWriter
         ClaimKind.PersonBreachedPolicy => $"{name(c.Subject)} went outside \"{c.Object}\"",
         ClaimKind.TargetIsVulnerable => $"{name(c.Subject)} would not stand up to pressure",
         _ => c.ToString(),
+    };
+
+    /// <summary>
+    /// How far he would go on this person's word, in words.
+    ///
+    /// Qualitative for the same reason confidence is: the number is hidden state, and a percentage
+    /// would let the player read the model instead of the man. Note that nothing here explains
+    /// *why* he stands where he does. A relationship that cooled because an account did not match
+    /// reads identically to one that was never warm, which is correct — the difference is a matter
+    /// of history the player has to reconstruct from the accounts above, not a label the interface
+    /// hands over.
+    ///
+    /// Public so the leak test can assert the exact wording never asserts deception.
+    /// </summary>
+    public static string Standing(double trust) => trust switch
+    {
+        >= 0.60 => "he would take his word",
+        >= 0.35 => "he takes him as he finds him",
+        >= 0.15 => "he has his reservations about him",
+        > 0 => "he would not take his word for much",
+        _ => "he puts no weight on anything the man says",
     };
 
     /// <summary>

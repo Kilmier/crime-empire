@@ -132,13 +132,16 @@ dotnet test CrimeEmpire.sln
 dotnet run --project src/CrimeEmpire.Runner -- --verify --seed 42 --days 90
 ```
 
-For information-channel changes, also run:
+For information-channel or relationship changes, also run:
 
 ```powershell
 dotnet run --project src/CrimeEmpire.Runner -- --verify --variant disloyal-vincent --seed 42 --days 90
+dotnet run --project src/CrimeEmpire.Runner -- --verify --variant resentful-tommy --seed 42 --days 90
 dotnet run --project src/CrimeEmpire.Runner -- --compare --seed 42
 dotnet run --project src/CrimeEmpire.Runner -- --variant disloyal-vincent --viewpoint salvatore --seed 42 --days 90
 dotnet run --project src/CrimeEmpire.Runner -- --variant baseline --viewpoint vincent --seed 42 --days 90
 ```
+
+`--compare` runs every variant in `Variants.All`, so it covers the full set as that list grows.
 
 Recorded baselines to compare against are in `docs/REVIEW_LEDGER.md`.

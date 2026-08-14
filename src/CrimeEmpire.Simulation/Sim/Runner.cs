@@ -157,7 +157,18 @@ public static class Runner
         // back here asked what the boss thinks *now* about something he said six hours ago, so a
         // change of mind in between rewrote what he had already told his capo.
         foreach (var disclosed in assignment.Disclosed)
-            actor.Cognition.Receive(disclosed, assignment.IssuerId, world.Now);
+        {
+            var receipt = actor.Cognition.Receive(disclosed, assignment.IssuerId, world.Now);
+
+            // The third receipt path, and it takes the same rule. A boss whose briefing contradicts
+            // what his capo already holds has contradicted him, and being the man who issued the
+            // assignment does not make it cost nothing.
+            if (receipt.Conflict is { } conflict)
+            {
+                world.AccountConflicts.Add(new PerceivedConflict(actor.Id, conflict, world.Now));
+                Relations.RecordAccountConflict(actor, conflict);
+            }
+        }
 
         actor.Motivations.Responsibilities.Add(
             new Responsibility($"assignment:{assignment.Id}", assignment.Objective, assignment.Domain));
@@ -202,7 +213,7 @@ public static class Runner
 
             if (claim.Kind == ClaimKind.PersonBreachedPolicy && claim.Subject != observer.Id)
             {
-                observer.Social.Grievances.Add(
+                Relations.RaiseGrievance(observer,
                     new Grievance(claim.Subject, $"went outside my instruction on {claim.Object}", 0.45, world.Now));
                 observer.Motivations.AddPressure(PressureKind.Resentment, 0.4);
             }

@@ -174,6 +174,21 @@ public sealed class SimulationReplayTests
                       $"{character.Execution.Strategy?.PendingStepEventId}|" +
                       string.Join(",", character.Execution.AttemptedConcealments.Select(a => a.ToString())));
 
+            // Relationship state, milestone 006. Trust now moves during a run — a perceived account
+            // conflict costs the listener trust in the speaker — and Utility.Loyalty reads trust,
+            // obligation and grievance while Concede/Refuse read fear, so all of it steers later
+            // decisions and belongs in the canonical comparison rather than only in a dedicated
+            // test. Marco's fear was already moving before this milestone and was already outside
+            // this comparator, which is the gap this line closes.
+            //
+            // Enumerated through SocialState.All, which is ordered by id: dictionary order is an
+            // implementation detail the determinism rules forbid depending on.
+            foreach (var rel in character.Social.All)
+                lines.Add($"relationship|{character.Id}|{rel.OtherId}|{Number(rel.Trust)}|" +
+                          $"{Number(rel.Fear)}|{Number(rel.Obligation)}|" +
+                          string.Join(",", rel.Grievances.Select(g =>
+                              $"{g.Description}:{Number(g.Severity)}:{g.At:O}")));
+
             lines.AddRange(character.Cognition.Records.Select(r =>
                 $"knowledge|{character.Id}|{r.Claim.Kind}|{r.Claim.Subject}|{r.Claim.Object}|" +
                 $"{r.Stance}|{Number(r.Confidence)}|{r.SourceKind}|{r.SourceId}|{r.AcquiredAt:O}|" +
@@ -223,6 +238,14 @@ public sealed class SimulationReplayTests
                       $"{character.Execution.Strategy?.NextAdvanceOrdinal}|" +
                       string.Join(",", character.Execution.AttemptedConcealments.Select(a =>
                           $"{a.Kind}:{a.Subject}:{a.Object}")));
+
+            // As above, minus the grievance timestamp: a DateTime is not derived from any global
+            // counter, but it is free text as far as this comparator is concerned and the narrower
+            // one keeps to what a perturbation could not legitimately move.
+            foreach (var rel in character.Social.All)
+                lines.Add($"relationship|{character.Id}|{rel.OtherId}|{Number(rel.Trust)}|" +
+                          $"{Number(rel.Fear)}|{Number(rel.Obligation)}|" +
+                          string.Join(",", rel.Grievances.Select(g => Number(g.Severity))));
 
             lines.AddRange(character.Cognition.Records.Select(r =>
                 $"knowledge|{character.Id}|{r.Claim.Kind}|{r.Claim.Subject}|{r.Claim.Object}|" +

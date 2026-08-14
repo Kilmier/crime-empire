@@ -133,10 +133,23 @@ public static class Commit
                 foreach (var belief in ctx.Perceived.Beliefs
                              .Where(b => b.Claim.Subject == s.TargetId && b.IsHeld)
                              .Take(2))
-                    sub.Cognition.Receive(
+                {
+                    var receipt = sub.Cognition.Receive(
                         ReportedClaim.Honest(
                             belief.Claim, Stance.Believes, belief.Confidence * 0.8, belief.SourceKind),
                         actor.Id, world.Now);
+
+                    // A briefing can contradict what the man already holds, and when it does it is
+                    // a conflict like any other. Applying the consequence only in the report channel
+                    // would be this project's most reliable defect — a rule written where it was
+                    // noticed and missing everywhere else the value travels — and it would mean a
+                    // capo could contradict his own soldier for free by calling it an instruction.
+                    if (receipt.Conflict is { } conflict)
+                    {
+                        world.AccountConflicts.Add(new PerceivedConflict(sub.Id, conflict, world.Now));
+                        Relations.RecordAccountConflict(sub, conflict);
+                    }
+                }
 
                 sub.Execution.Commitments.Add(new Commitment(
                     $"strategy:{s.OwnerId}:{s.LocalSequence}", $"handle {s.Label} for {actor.Name}", actor.Id, world.Now, 0.7));
@@ -240,7 +253,7 @@ public static class Commit
                 var target = world.Get(c.TargetId!);
                 world.Record("retaliation", actor.Id, target.Id,
                     $"{actor.Name} moved against {target.Name}");
-                target.Social.Grievances.Add(new Grievance(actor.Id, "moved against me", 0.5, world.Now));
+                Relations.RaiseGrievance(target, new Grievance(actor.Id, "moved against me", 0.5, world.Now));
                 world.Org.AdjustCondition(Org.OrgCondition.LeadershipInstability, 0.25);
                 // Acting on a grudge spends it. Otherwise resentment is a tap that never closes and
                 // the character strikes at the same person every time he is woken.

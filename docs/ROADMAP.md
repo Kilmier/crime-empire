@@ -14,9 +14,10 @@ neither the debt list nor the candidate list below is a licence to begin. Settle
 MVP vertical slice.
 
 Milestone 001 proved the kernel. Milestone 003 built the first narrow information slice of the
-emergence prototype, and 004 made its provenance precise. The rest of the emergence prototype is not
-built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
-sequence. Full accounts are in `docs/milestones/`.
+emergence prototype, 004 made its provenance precise, and 006 closed the loop's return edge by giving
+a perceived account conflict a social consequence. The rest of the emergence prototype is not built,
+and the MVP has not begun. Milestone 002 was a framework migration, not a step along this sequence.
+Full accounts are in `docs/milestones/`.
 
 ## Known technical debt
 
@@ -32,13 +33,27 @@ sequence. Full accounts are in `docs/milestones/`.
   an MVP placeholder, not a permanent design — see that archive's deferred work and
   `CURRENT_MILESTONE.md`'s carried-forward items. Retiring the keying defect and the runaway does not
   retire that provisional concern.
-- **Tuning guesses.** The `FirstHandTestimony` suspicion discount of `0.15` and the `Discovery`
-  discount of `0.10` are not derived figures, and nothing yet distinguishes them behaviourally from
-  neighbouring values.
-- **The scenario does not exercise milestone 004's central distinction.** No variant contradicts a
-  delegator's first-hand account, so the difference between authored participation and being told is
-  provable in unit tests and invisible in play. A variant where Tommy denies to Vincent that he
-  touched the place would exercise it.
+- **Tuning guesses.** The `FirstHandTestimony` suspicion discount of `0.15`, the `Discovery`
+  discount of `0.10`, and milestone 006's `Relations.ConflictTrustCost` of `0.35` are not derived
+  figures, and nothing yet distinguishes them behaviourally from neighbouring values.
+- **The scenario is the binding constraint, and this is now the most important item on this list.**
+  Three consecutive milestones have ended with a correct, mutation-checked mechanism the accepted
+  scenario cannot demonstrate: 004's provenance distinction, 005's concealment termination, and 006's
+  trust edge — which fires in every variant and moves Salvatore's trust in Vincent from 0.50 to 0.309,
+  yet changes no decision because Salvatore never afterwards scores anything that reads that
+  relationship. One organisation, five people and a single line of causation is running out of room.
+  See `milestones/006-relational-consequence.md`.
+- **A delegator never receives an account from his own executor.** The only character who puts a
+  question is the boss, and being asked redirects the answer to the asker, so a soldier's account goes
+  past the capo who sent him. This is why milestone 004's central distinction is still unobservable in
+  play, and why 006's `resentful-tommy` variant is inert. It is structural: no configuration of trust,
+  obligation or grievance changes who asks. Fixing it means changing who seeks corroboration from
+  whom, which is behaviour code.
+- **`resentful-tommy` makes the same decisions as baseline.** It differs only in seeded state that
+  reaches the trace summary, so `--compare`'s "five distinct histories" is a weaker signal than it
+  reads. Kept because its directional asymmetry becomes live once the item above is addressed.
+- **Trust cannot go negative.** Absence of trust and distrust are the same state, so a stranger who
+  contradicts you is indistinguishable from a stranger. A schema question for the design pass.
 - The test project redundantly declares `TargetFramework` despite the centralized build property in
   `Directory.Build.props`. Carried since milestone 002.
 
@@ -65,14 +80,24 @@ sequence. Full accounts are in `docs/milestones/`.
 Candidates only. They are not ordered by priority and must not be read as a queue — confirm scope
 with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation behaviour.
 
-1. **Relationship design pass** — settle the relationship schema (`OPEN_CONCERNS.md` #3) before
-   implementing richer relationships and grievances. Likely the next substantial design pass.
-2. **Persistence / SQLite** — begin storing the information and decision data now worth querying.
-3. **Godot / .NET compatibility spike** — cheaply settle an engine constraint before any UI work.
-4. **Another bounded emergence slice** — delegation, rival activity, or limited tier transitions,
-   but not the whole remaining emergence prototype in one milestone.
-5. **A scenario variant that contradicts a delegator's first-hand account** — makes milestone 004's
-   distinction visible in play rather than only in unit tests.
+1. **Scenario reach** — give the fixture enough room to demonstrate the mechanisms already built,
+   rather than adding another one it cannot show. Milestone 006's central finding argues this is now
+   the highest-value scope; the delegator-to-executor question path in the debt list above is the
+   smallest concrete instance of it.
+2. **Relationship design pass** — settle the relationship schema (`OPEN_CONCERNS.md` #3). Milestone
+   006 supplied the first executable evidence it was always conditioned on, and that item now records
+   what the kernel showed and what a document would still have to decide. Not automatically next:
+   whether to write it now or gather more evidence first is Matt's call.
+3. **Persistence / SQLite** — begin storing the information and decision data now worth querying.
+4. **Godot / .NET compatibility spike** — cheaply settle an engine constraint before any UI work.
+   Gates nothing today and its fallback is recorded above; worth a standalone commit rather than a
+   milestone.
+5. **Another bounded emergence slice** — rival activity or limited tier transitions, but not the
+   whole remaining emergence prototype in one milestone. Weigh against candidate 1: another mechanism
+   the scenario cannot exercise is volume, not progress.
 
 Provenance precision was a candidate and became milestone 004, which is closed. RNG keying and the
-concealment runaway were a candidate and became milestone 005, which is closed.
+concealment runaway were a candidate and became milestone 005, which is closed. "A scenario variant
+that contradicts a delegator's first-hand account" was candidate 5 and was attempted as part of
+milestone 006 — it **did not succeed**, for the structural reason recorded in the debt list above,
+and the underlying gap is still open.

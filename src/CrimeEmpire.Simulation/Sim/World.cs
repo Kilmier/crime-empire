@@ -20,6 +20,16 @@ public sealed class Business
     public bool Damaged { get; set; }
 }
 
+/// <summary>
+/// One perceived account conflict, as it reached one listener. Developer/test state: never
+/// consulted by any decision, and never rendered to the player.
+///
+/// Recorded so the milestone's run-wide properties can be asserted directly rather than argued for
+/// from the call sites' structure — the gap milestone 005's fifth finding was about. It also makes
+/// "does this fire naturally in the accepted scenario" a question a test can answer.
+/// </summary>
+public sealed record PerceivedConflict(string ListenerId, AccountConflict Conflict, DateTime At);
+
 /// <summary>Authoritative record of what actually happened. Never consulted by decision-making.</summary>
 public sealed record WorldEvent(
     long Id,
@@ -74,6 +84,12 @@ public sealed class World
     /// decision.
     /// </summary>
     public List<string> ObservationOccasionKeys { get; } = new();
+
+    /// <summary>
+    /// Every perceived account conflict that reached anybody, in the order they occurred. Developer
+    /// and test state only — see <see cref="PerceivedConflict"/>.
+    /// </summary>
+    public List<PerceivedConflict> AccountConflicts { get; } = new();
 
     private long _nextWorldEventId = 1;
     private long _nextAssignmentId = 1;

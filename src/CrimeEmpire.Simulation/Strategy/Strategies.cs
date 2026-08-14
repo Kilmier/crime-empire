@@ -214,13 +214,13 @@ public static class Strategies
 
                     if (s.Method == CoercionMethod.Threaten)
                     {
-                        marco.Social.Toward(executor.Id).Fear += 0.35;
+                        Relations.Frighten(marco, executor.Id, 0.35);
                         world.Record("threat", executor.Id, business.Id,
                             $"{executor.Name} made {business.Name} a promise about what came next");
                     }
                     else
                     {
-                        marco.Social.Toward(executor.Id).Fear += 0.55;
+                        Relations.Frighten(marco, executor.Id, 0.55);
                         ResolveViolence(world, owner, executor, s, business, rng);
                     }
 

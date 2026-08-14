@@ -112,6 +112,32 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Current — milestone 006 implementation. **Measured, not reviewed, not accepted.**
+
+These are measurements taken at the milestone-006 implementation commit. They are recorded here
+because a later change needs something to compare against; nothing about their presence implies the
+commit was reviewed. See `milestones/006-relational-consequence.md`.
+
+- Build: 0 warnings, 0 errors.
+- Tests: **226 passed**, 0 failed (was 172).
+- **Five** variants now, and the fifth is new: `resentful-tommy`.
+- Replay hashes `5FBD6055D1170D84` / `0FFCBC7BDE91C001` / `C6FAC9C86A966399` / `1A201BB1816562BF` /
+  `4223D4E9F7668C83` for baseline / cautious-vincent / watchful-boss / disloyal-vincent /
+  resentful-tommy, each identical on both runs.
+- Decision counts 33 / 16 / 33 / 34 / 33.
+
+**The first four hashes are byte-identical to milestone 005's.** A milestone that added a social
+consequence, moved trust during every run, and put relationship state into both replay comparators
+changed no accepted history at all. That is not reassurance and should not be read as any: the
+conflict edge fires in all five variants and Salvatore's trust in Vincent really does fall from 0.50
+to 0.309 — it simply reaches no later decision, because he never afterwards scores a candidate that
+reads that relationship. The milestone archive treats this as its central finding rather than as a
+clean bill of health.
+
+Note also that extending the test comparators cannot move these hashes by construction: `--verify`
+hashes the rendered trace, which contains no relationship state. Snapshot coverage makes the tests
+stricter and is invisible here.
+
 ### Accepted — milestone 004, `1fe8a15`
 
 - Build: 0 warnings, 0 errors.
@@ -146,11 +172,20 @@ falsification fixture —
 - `baseline` — Vincent as written;
 - `cautious-vincent` — personality changes, situation comparable;
 - `watchful-boss` — stronger policy and stronger obligation to Salvatore;
-- `disloyal-vincent` — Vincent owes Salvatore little and resents him.
+- `disloyal-vincent` — Vincent owes Salvatore little and resents him;
+- `resentful-tommy` — Tommy owes Vincent nothing and resents him, while Vincent still trusts Tommy
+  (added by milestone 006).
 
-They produce four distinct histories, which is what demonstrates that traits and relationships
+They produce distinct histories, which is what demonstrates that traits and relationships
 affect behaviour without directly triggering actions. `disloyal-vincent` is the only variant that
 exercises the request channel, so it is the one that moves when the channel changes.
+
+**Read the distinctness claim with one caveat.** `resentful-tommy` currently makes the same decisions
+as `baseline`; its hash differs only through seeded state reaching the trace summary. It was added to
+stage an executor denying his own act to his delegator and does not achieve that, for the structural
+reason in `ROADMAP.md`'s debt list. So "five configurations, five distinct histories" is at present a
+weaker statement than it appears, and a future change that made two variants converge behaviourally
+would not necessarily be caught by it.
 
 ## Load-bearing regression categories
 
@@ -169,7 +204,13 @@ Future changes should retain coverage for:
 - No two reports between the same pair are content-identical in the bounded scenario.
 - All variants remain within explicit decision and report budgets.
 - Pause/resume preserves reports, testimony, requests, and the resulting history.
-- Every `IsUnmediated()` record is self-sourced, across all four variants.
+- Every `IsUnmediated()` record is self-sourced, across all variants.
+- Relationship state is created and changed only through `Relations`, and reading never creates.
+- A perceived account conflict is decided from the listener's side alone — never from the truth log,
+  the report log, `ReportedClaim.ActualBasis`, or `Report.Candor`.
+- A repeated identical account is not a fresh conflict, and does not cost trust twice.
+- The social consequence is applied at every receipt path, not only the report channel.
+- Player output never asserts that anyone lied, and never prints a relationship value.
 
 ## Review checklist
 

@@ -36,6 +36,32 @@ answer for how those dimensions are stored, updated, or decayed. Should get the 
 dedicated document `INFORMATION_AND_LEGIBILITY.md` gave to knowledge, once the kernel shows which
 distinctions actually change decisions.
 
+**Still open. Updated 2026-08-14 with milestone 006's evidence** — which is the "once the kernel
+shows which distinctions actually change decisions" this item has always been conditioned on.
+Storage and update now have an answer for one dimension; decay, the remaining dimensions, and the
+document itself do not.
+
+What the kernel has now shown:
+
+- **Trust moves, and the movement reaches a decision.** A perceived account conflict costs the
+  listener trust in the speaker. Because `Utility.Loyalty` derives from trust and retaliation risk is
+  priced at `-(1.3 + 2.2 * loyalty)`, contradicting a man measurably lowers what it costs him to move
+  against you. That connection was not written; it fell out of one edge feeding a derived value.
+- **`Affection` was purposeless and is gone.** Declared from the first commit, never read or written
+  anywhere. A dimension list should be closed the way the trait vocabulary was closed.
+- **Absence of trust and distrust are the same state**, because the range is `[0,1]`. A stranger who
+  contradicts you is indistinguishable from a stranger. Whether that distinction earns its cost is a
+  real schema question and the clearest one this milestone surfaced.
+- **Grievances belong on the relationship**, not beside it: `AgainstId` was always a relationship key.
+- **The centralized API is worth having before the schema is settled.** One place that can change
+  relationship state made the read-creates hazard visible and made the conflict edge a three-line
+  change at each of three call sites rather than a convention.
+
+What is still unanswered, and is what a document would have to settle: decay and its rate; whether
+respect, resentment and attraction are separate dimensions or derived; whether provenance should
+weight the social consequence (milestone 006 deliberately used one rule and preserved the provenance
+so this can be decided on evidence); and negative trust.
+
 ### 4. ~~Trait/value vocabulary must be closed, but the concrete list still isn't committed~~
 **Retired 2026-08-14.** Milestone 001 closed the list in `Domain/Psychology.cs` and it is now
 recorded in `DESIGN_DECISIONS.md` under "Actor parity and simulation tractability" — traits

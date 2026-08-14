@@ -30,6 +30,7 @@ for (int i = 0; i < args.Length; i++)
                   --seed N        world seed (default 42)
                   --days N        in-game days to run (default 90)
                   --variant NAME  baseline | cautious-vincent | watchful-boss | disloyal-vincent
+                                  | resentful-tommy
                   --viewpoint ID  show only what that character knows, as the player would see
                                   it (e.g. salvatore) — no truth log, no decision traces
                   --full          also show options that never occurred to the character

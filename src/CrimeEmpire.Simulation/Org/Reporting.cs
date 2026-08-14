@@ -262,7 +262,20 @@ public static class Reporting
     public static void Deliver(World world, Report report, Character recipient)
     {
         foreach (var claim in report.Asserted)
-            recipient.Cognition.Receive(claim, report.SenderId, report.At);
+        {
+            var receipt = recipient.Cognition.Receive(claim, report.SenderId, report.At);
+
+            // What the recipient made of it is his business, and the social consequence is applied
+            // from his side only. Note this reads the receipt, never the report: `report.Candor`
+            // and the asserted claims' ActualBasis are developer truth sitting right here in scope,
+            // and the recipient has no access to either. He knows only that he was told the
+            // opposite of what he held.
+            if (receipt.Conflict is { } conflict)
+            {
+                world.AccountConflicts.Add(new PerceivedConflict(recipient.Id, conflict, report.At));
+                Relations.RecordAccountConflict(recipient, conflict);
+            }
+        }
 
         world.Reports.Add(report);
         world.Record("report", report.SenderId, report.RecipientId, report.Framing);

@@ -16,17 +16,22 @@ public readonly record struct Testimony(
     double AssertedConfidence,
     string SenderId,
     DateTime At,
-    SourceKind SpeakerBasis = SourceKind.Report)
+    SourceKind ClaimedBasis = SourceKind.Report)
 {
     /// <summary>
-    /// How the speaker said he came by it, kept exactly as offered.
+    /// The basis the speaker presented, kept exactly as offered — and only that.
     ///
-    /// The settled belief records only whether the listener now holds first-hand testimony or an
-    /// ordinary report, which is all any rule needs. Keeping the speaker's own basis here means
-    /// nothing is lost by that coarsening: discovery, inference and relayed hearsay stay
-    /// distinguishable in the log even though they land as reports.
+    /// Deliberately not what he privately had. This log lives in the listener's head, so anything
+    /// stored here is something the listener knows; putting the speaker's real basis here would
+    /// hand him the truth about a lie. What the speaker actually had is developer truth and stays
+    /// in the report log.
+    ///
+    /// The settled belief records only whether he now holds first-hand testimony or an ordinary
+    /// report. Keeping the claimed basis here means nothing is lost by that coarsening: an account
+    /// offered as discovery and one offered as inference stay distinguishable even though both
+    /// land as reports.
     /// </summary>
-    public SourceKind SpeakerBasis { get; init; } = SpeakerBasis;
+    public SourceKind ClaimedBasis { get; init; } = ClaimedBasis;
 
     /// <summary>Whether the sender asserted the claim rather than denying it.</summary>
     public bool Affirms => AssertedStance is Stance.Knows or Stance.Believes or Stance.Suspects;
@@ -124,9 +129,15 @@ public sealed class Cognition
         }
 
         // Word for word what he said last time. Only this is repetition.
+        //
+        // The basis he claims is part of what he said. "I heard it happened" and "I was there, it
+        // happened" are the same words about the same claim and are not the same account: the
+        // second is a man putting his own presence behind it, and treating that as a repeat would
+        // let a witness step forward and be filed as somebody clearing his throat.
         bool verbatimRepeat = latestFromSender is { } last
             ? last.AssertedStance == asserted.AssertedStance
               && Math.Abs(last.AssertedConfidence - asserted.AssertedConfidence) < 1e-9
+              && last.ClaimedBasis.AsHeardFrom() == asserted.ClaimedBasis.AsHeardFrom()
             : prior?.SourceId == senderId && prior.IsHeld == affirms && !prior.Contested;
 
         // Whether he has moved. A reversal is worth a change of confidence; firming up or
@@ -136,17 +147,17 @@ public sealed class Cognition
 
         _testimony.Add(new Testimony(
             asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence, senderId, at,
-            asserted.SpeakerBasis));
+            asserted.ClaimedBasis));
 
         if (prior is null)
         {
-            // How it arrives depends on who is speaking. A man who did it or saw it gives
-            // first-hand testimony; anyone passing on what they did not establish themselves gives
-            // a report, however sincerely. Hardcoding Report here made first-hand testimony
-            // impossible to acquire honestly, which is why it was being fabricated elsewhere.
+            // How it arrives depends on what the account presents itself as. An account offered as
+            // a participant's or a witness's own becomes first-hand testimony; anything else is a
+            // report, however sincere. Note this reads the *claimed* basis: what the speaker
+            // privately has is not something the listener was told.
             var fresh = new InformationRecord(
                 asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence,
-                asserted.SpeakerBasis.AsHeardFrom(), senderId, at);
+                asserted.ClaimedBasis.AsHeardFrom(), senderId, at);
             _records.Add(fresh);
             return fresh;
         }
@@ -157,18 +168,27 @@ public sealed class Cognition
         // characters would file accounts at each other until the calendar ran out.
         if (verbatimRepeat) return prior;
 
+        // Whether this account is better sourced than the one the belief currently rests on, and
+        // therefore ought to become the thing he would cite.
+        //
+        // This used to be decided only when the claim was new, so a man who already had a rumour
+        // and was then told by the participant himself kept the rumour's provenance and the
+        // rumour-teller's name against it for the rest of the run. Attribution follows the best
+        // account he has been given, not the first.
+        var upgraded = Upgrade(prior, asserted, senderId);
+
         // He has said something at least slightly different. That is worth registering as a
         // development even when it does not shift the belief — which is the case for a man firming
         // up or softening a position he already gave: still one voice, so it must not compound.
         if (!reversal && prior.IsHeld == affirms)
-            return Replace(prior, prior with { LastReconsideredAt = at });
+            return Replace(prior, upgraded with { LastReconsideredAt = at });
 
         // Agreement, from a voice that is new to this claim or has just come round to it. Either
         // way it is support the belief did not have before.
         if (prior.IsHeld == affirms)
         {
             double raised = Math.Clamp(prior.Confidence + 0.15 * asserted.AssertedConfidence, 0, 1);
-            return Replace(prior, prior with { Confidence = raised, LastReconsideredAt = at });
+            return Replace(prior, upgraded with { Confidence = raised, LastReconsideredAt = at });
         }
 
         // Disagreement: a first denial from this man, or a reversal of what he told him before.
@@ -195,6 +215,40 @@ public sealed class Cognition
             LastReconsideredAt = at,
             Contested = true,
         });
+    }
+
+    /// <summary>
+    /// How good an account is, for deciding which one a belief should be attributed to.
+    ///
+    /// Only the kinds a listener can end up with are ranked. A record he established himself is
+    /// never re-attributed to somebody who told him the same thing — being told what you already
+    /// saw does not make it his account — so those return null and the caller leaves them alone.
+    /// </summary>
+    private static int? AttributionRank(SourceKind kind) => kind switch
+    {
+        SourceKind.FirstHandTestimony => 2,
+        SourceKind.Report => 1,
+        SourceKind.Rumor => 0,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Re-attributes a belief to a better account, if this one is better.
+    ///
+    /// Equal-ranked accounts leave it alone: two reports are two reports, and the first man to say
+    /// it keeps his name against it. Only a genuine step up — a rumour becoming a report, a report
+    /// becoming a participant's own word — moves the attribution, and it moves the source with it,
+    /// because a belief that says "first-hand" while naming the man who only passed it on is worse
+    /// than either fact alone.
+    /// </summary>
+    private static InformationRecord Upgrade(InformationRecord prior, ReportedClaim asserted, string senderId)
+    {
+        if (AttributionRank(prior.SourceKind) is not { } currentRank) return prior;
+
+        var heard = asserted.ClaimedBasis.AsHeardFrom();
+        if (AttributionRank(heard) is not { } incomingRank || incomingRank <= currentRank) return prior;
+
+        return prior with { SourceKind = heard, SourceId = senderId };
     }
 
     private InformationRecord Replace(InformationRecord prior, InformationRecord updated)

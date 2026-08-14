@@ -1004,7 +1004,8 @@ public sealed class InformationTransmissionTests
     {
         var lines = world.Reports.Select(r =>
             $"report|{r.Id}|{r.At:O}|{r.SenderId}|{r.RecipientId}|{r.Candor}|" +
-            string.Join(",", r.Asserted.Select(a => $"{a.Claim}:{a.AssertedStance}")) +
+            string.Join(",", r.Asserted.Select(a =>
+                $"{a.Claim}:{a.AssertedStance}:{a.ClaimedBasis}:{a.ActualBasis}")) +
             "|" + string.Join(",", r.Withheld));
 
         // What was asked about, not only who was asked. The subject steers the reply, so a pause
@@ -1016,7 +1017,7 @@ public sealed class InformationTransmissionTests
         lines = lines.Concat(world.Characters.Values
             .OrderBy(c => c.Id, StringComparer.Ordinal)
             .SelectMany(c => c.Cognition.Testimony.Select(t =>
-                $"testimony|{c.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|{t.At:O}")));
+                $"testimony|{c.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|{t.ClaimedBasis}|{t.At:O}")));
 
         return string.Join('\n', lines);
     }

@@ -57,7 +57,14 @@ public sealed record Assignment(
     string RecipientId,
     string Domain,
     IReadOnlyList<string> Constraints,
-    IReadOnlyList<Claim> Disclosed,
+    // What the issuer told him, captured verbatim at issuance.
+    //
+    // Stance, confidence and claimed basis are all fixed here rather than read back from the
+    // issuer's cognition when the briefing lands. Six hours pass between the two, and reading them
+    // late meant a man was briefed with whatever his boss had come to believe by delivery time —
+    // including, on a bad day, a position his boss had reversed since giving the order. What was
+    // said is a fact about the moment it was said.
+    IReadOnlyList<ReportedClaim> Disclosed,
     DateTime IssuedAt,
     DateTime Deadline);
 

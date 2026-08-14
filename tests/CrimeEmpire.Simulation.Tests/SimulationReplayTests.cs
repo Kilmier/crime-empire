@@ -85,7 +85,9 @@ public sealed class SimulationReplayTests
         // otherwise a run could pass the replay test while quietly composing different accounts.
         lines.AddRange(world.Reports.Select(r =>
             $"report|{r.Id}|{r.At:O}|{r.SenderId}|{r.RecipientId}|{r.Candor}|" +
-            string.Join(",", r.Asserted.Select(a => $"{a.Claim}:{a.AssertedStance}:{Number(a.AssertedConfidence)}")) +
+            string.Join(",", r.Asserted.Select(a =>
+                $"{a.Claim}:{a.AssertedStance}:{Number(a.AssertedConfidence)}" +
+                $":{a.ClaimedBasis}:{a.ActualBasis}")) +
             "|" + string.Join(",", r.Withheld.Select(w => w.ToString()))));
 
         // Requests too. They gate future candidate generation, so a run that made different
@@ -113,9 +115,12 @@ public sealed class SimulationReplayTests
                 $"{r.Stance}|{Number(r.Confidence)}|{r.SourceKind}|{r.SourceId}|{r.AcquiredAt:O}|" +
                 $"{r.ReconsideredAt:O}|{r.Contested}"));
 
+            // Claimed basis, not actual: this is the listener's log, and what the speaker really
+            // had never enters it. The distinction is decision-relevant — it decides whether the
+            // belief is first-hand testimony — so a run that changed it must fail this comparison.
             lines.AddRange(character.Cognition.Testimony.Select(t =>
                 $"testimony|{character.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|" +
-                $"{Number(t.AssertedConfidence)}|{t.At:O}"));
+                $"{Number(t.AssertedConfidence)}|{t.ClaimedBasis}|{t.At:O}"));
         }
 
         return string.Join('\n', lines);

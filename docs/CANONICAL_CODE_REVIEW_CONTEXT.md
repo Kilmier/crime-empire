@@ -3,11 +3,11 @@
 Status snapshot: 2026-08-14 on `main`.
 
 **Milestone 003 is closed** — Codex reviewed `d685015` with no findings and Matt accepted it on
-2026-08-14. **Milestone 004 is reviewed and rejected**, on three P1 findings that are not fixed, and
-remains blocked on them. No milestone is active.
+2026-08-14. **Milestone 004 has been rejected twice and corrected twice**; its second correction is
+awaiting review. No milestone is active.
 
 Closing 003 does not accept the working tree. Its correction was delivered on top of `714fbc3`,
-milestone 004's rejected implementation, which is still present and still unfixed.
+whose rejection is now twice corrected but not yet accepted.
 
 This file has misreported status four times: it claimed verification that had not happened, first
 for `b8fe921` and then for `e83dacf`; it wrongly recorded `fb2c84d` and `714fbc3` as never reviewed;
@@ -57,7 +57,7 @@ here.
 - SDK pin: `10.0.400` in `global.json`, `rollForward: latestFeature`
 - Target framework source of truth: `Directory.Build.props` (`net10.0`)
 - Test framework: xUnit
-- Current automated tests: 99
+- Current automated tests: 133
 
 ### Layout
 
@@ -143,6 +143,22 @@ for comparison, not as the accepted baseline.
 - Decision counts: 13 / 16 / 13 / 43.
 - Report counts: 2 / 2 / 2 / 6.
 
+### Current baseline — milestone-004 second correction, awaiting review
+
+- Build: 0 warnings, 0 errors.
+- Tests: 133 passed, 0 failed.
+- Replay hashes: `B20C06E5838C0657` / `24A181B260F9C396` / `4B60DA962927A6F7` / `B274F395A61C5118`
+  for baseline / cautious-vincent / watchful-boss / disloyal-vincent, each identical on both runs.
+- Four variants produce four distinct histories.
+- Decision counts: 13 / 16 / 13 / 19.
+
+**Byte-identical to `c828bfa`.** Separating claimed from actual provenance, extending the receive
+state machine, and snapshotting assignment disclosures produced no behavioural movement at all. The
+leak was real and reachable through the API — its mutation check proves it — but never fired in
+these four variants, because the one false denial that occurs reaches a listener who already holds
+the claim and therefore takes the contradiction path, which never rewrote provenance. Correct and
+currently invisible in play.
+
 ### Accepted baseline — milestone 003, closed at `d685015`
 
 - Build: 0 warnings, 0 errors.
@@ -159,10 +175,15 @@ trace now records the belief an answer was drawn from. `disloyal-vincent` genuin
 change is the fix: two `SeekApproval` candidates aimed *down* the chain are gone, and the decisions
 that had gone to them now produce real accounts.
 
-Still present and not caused by this correction: the concealment runaway in `disloyal-vincent`,
-where Tommy restarts `ConcealIncident` twelve times.
+The concealment runaway in `disloyal-vincent` no longer appears, but is latent rather than fixed —
+see the RNG-keying item under known technical debt.
 
-### Superseded baseline — milestone 004, reviewed and rejected
+### Superseded baseline — milestone-004 first correction at `c828bfa`, rejected
+
+- Tests: 120 passed. Decision counts 13 / 16 / 13 / 19; hashes as in the current baseline above.
+  Rejected on three P1 and two P2, chiefly the private-provenance leak.
+
+### Superseded baseline — milestone 004 implementation, reviewed and rejected
 
 - Build: 0 warnings, 0 errors.
 - Tests: 86 passed, 0 failed.
@@ -383,7 +404,8 @@ been reviewed too.
 | `fb2c84d` | Reviewed and **rejected**. Its findings are not recorded in this repository — outstanding. |
 | `e83dacf` | Reviewed and **rejected**: three findings, two P1 and one P2. Corrected by `cbadb0d` and `170991b`. |
 | `a5a72f1` | Reviewed. Findings accepted; the false verification it recorded was withdrawn in `d2af4c8`. |
-| `714fbc3` | Reviewed and **rejected**: three P1 findings. **Not fixed.** Milestone 004 is blocked on them. |
+| `714fbc3` | Reviewed and **rejected**: three P1 findings. Corrected by `c828bfa`, which was itself rejected. |
+| `c828bfa` | Reviewed and **rejected**: three P1 and two P2, chiefly a false denial transmitting the sender's private basis. Corrected by the second milestone-004 correction, awaiting review. |
 | `cbadb0d`, `170991b` | The milestone-003 sixth correction. Reviewed with **no code findings**; all verification passed. One documentation finding against `170991b` — the stale next-step gate — fixed in `d685015`. |
 | `d685015` | Reviewed, **no findings**. Matt accepted the milestone-003 correction on 2026-08-14. **Milestone 003 is closed.** |
 | `11c4a4a`, `d2af4c8` | Status not established here. |
@@ -391,9 +413,10 @@ been reviewed too.
 **Accepted: milestone 003, through `d685015`.** Its implementation and every corrective round have
 been reviewed and accepted.
 
-**Not accepted: milestone 004.** `714fbc3` stands rejected on three P1 findings, none fixed. Because
-the milestone-003 correction was built on top of it, the tree these baselines were measured on
-contains rejected code. Closing 003 says this milestone's work is done; it does not bless the tree.
+**Not accepted: milestone 004.** `714fbc3` was rejected; `c828bfa` corrected it and was rejected in
+turn; the second correction is awaiting review. Because the milestone-003 correction was built on
+top of this chain, the tree these baselines were measured on still contains unaccepted code. Closing
+003 says that milestone's work is done; it does not bless the tree.
 
 `fb2c84d`'s rejection findings were never recorded in this repository. Every line it touched has
 since been rewritten and re-reviewed several times over, so the item is probably moot — but it is
@@ -528,15 +551,19 @@ log so runner verification gives an independent deterministic signal.
 
 ## Known technical debt and deferred work
 
-- `SourceKind.Direct` lacks precise provenance categories. Addressed by milestone 004, which was
-  reviewed and **rejected** on three P1 findings — so this is not closed. The attempt split it into
-  `Participant` / `Witness` / `Discovery` / `FirstHandTestimony`, with the shared properties named
-  in `Domain/Provenance.cs`.
+- `SourceKind.Direct` lacks precise provenance categories. Addressed by milestone 004, **rejected
+  twice and twice corrected**, with the second correction awaiting review — so this is not closed.
+  The attempt split it into `Participant` / `Witness` / `Discovery` / `FirstHandTestimony`, with one
+  named predicate per behaviour in `Domain/Provenance.cs`, and separated what a speaker claims from
+  what he privately has.
 - No scenario variant contradicts a delegator's first-hand testimony, so milestone 004's central
   distinction is provable only in unit tests and never visible in play.
-- Possible pre-existing runaway: `disloyal-vincent` chooses `began ConcealIncident(...)` around
-  fifteen times, restarting rather than continuing, with an empty domain in the label. Present
-  identically before and after milestone 004.
+- **RNG keying**: observation rolls are seeded from global event IDs
+  (`Rng.ForDecision(seed, observerId, 5000 + ev.Id)`), so adding or removing any event anywhere
+  re-rolls every character's perception. This is what silenced the `ConcealIncident` runaway — the
+  event IDs moved and Tommy's police-interest rolls all began to miss — rather than any repair.
+- **`ConcealIncident` runaway: latent, not fixed.** It no longer occurs in `disloyal-vincent` for
+  the reason above, and returns whenever those rolls land again. Do not record it as resolved.
 - The test project redundantly declares `TargetFramework` despite the centralized build property.
 - Godot 4 C# compatibility with `net10.0` is unverified.
 - SQLite persistence is selected but not implemented.

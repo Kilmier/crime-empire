@@ -2,14 +2,15 @@
 
 Status snapshot: 2026-08-14. **Milestone 003 is closed** — accepted after `d685015` reviewed clean,
 having taken seven corrective rounds including two occasions where the record claimed a verification
-that had not happened. **Milestone 004 (Provenance Precision) is reviewed and rejected**: three P1
-findings, **not fixed**, and it is blocked on them. What it attempted was to make information
-provenance precise enough to distinguish participating, witnessing, discovering a trace, and being
-given a first-hand account. No milestone is active.
+that had not happened. **Milestone 004 (Provenance Precision) has been rejected twice and
+corrected twice**: `714fbc3` rejected on three P1, `c828bfa` rejected on three P1 and two P2, and a
+second correction now awaiting review. Nothing about it is accepted. What it attempted was to make
+information provenance precise enough to distinguish participating, witnessing, discovering a trace,
+and being given a first-hand account. No milestone is active.
 
-Milestone 003 closing does not accept the working tree — its correction was built on top of
-milestone 004's rejected implementation, which is still present. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s
-review-coverage section is the authority on what has been looked at and what it concluded.
+Milestone 003 closing does not accept the working tree — its correction was built on top of that
+chain, which is still unaccepted. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is the
+authority on what has been looked at and what it concluded.
 
 ## Purpose and authority
 
@@ -214,10 +215,11 @@ The player-facing view:
 - presents conflicting accounts with attribution;
 - does not expose utility scores, hidden intentions, or the authoritative truth log.
 
-### Provenance — addressed in milestone 004, which was rejected on review
+### Provenance — addressed in milestone 004, rejected twice and twice corrected
 
 `SourceKind.Direct` was too broad to distinguish witnessing, participating or authoring,
-discovering a trace, and being told first-hand by a participant. Milestone 004 split it into
+discovering a trace, and being told first-hand by a participant. Milestone 004 — whose second
+correction is awaiting review, with nothing yet accepted — split it into
 `Participant`, `Witness`, `Discovery` and `FirstHandTestimony`, with no umbrella value surviving.
 Player-facing wording no longer has to stay vague: each sentence now says only what its category
 establishes, and discovery in particular never claims presence.

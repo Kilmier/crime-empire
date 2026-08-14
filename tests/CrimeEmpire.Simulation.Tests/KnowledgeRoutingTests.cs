@@ -137,7 +137,7 @@ public sealed class KnowledgeRoutingTests
             Assert.Equal(expected, listener.Find(claim)!.SourceKind);
 
             // Whatever it lands as, the speaker's own basis is preserved verbatim in the log.
-            Assert.Equal(basis, listener.Testimony.Single().SpeakerBasis);
+            Assert.Equal(basis, listener.Testimony.Single().ClaimedBasis);
         }
     }
 
@@ -251,7 +251,7 @@ public sealed class KnowledgeRoutingTests
             .SelectMany(c => c.Cognition.Records
                 .Select(r => $"know|{c.Id}|{r.Claim}|{r.Stance}|{r.SourceKind}|{r.SourceId}")
                 .Concat(c.Cognition.Testimony
-                    .Select(t => $"said|{c.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|{t.SpeakerBasis}"))));
+                    .Select(t => $"said|{c.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|{t.ClaimedBasis}"))));
 
         var straight = Run(variant);
 

@@ -1,11 +1,16 @@
 # Milestone 004 — Provenance Precision
 
-Status: **reviewed and rejected; corrected, and the correction is awaiting review.**
+Status: **twice corrected; the second correction is awaiting review. Not verified or accepted.**
 
-`714fbc3` was reviewed and rejected on three P1 findings. Codex reconstructed them from a fresh
-review at the exact commit, and they are now recorded and fixed — see the correction at the foot of
-this file. Nothing between here and there has been rewritten: the account below is what the
-milestone originally claimed, including the parts the findings contradict.
+The sequence, in order:
+
+1. `714fbc3` — the implementation. Reviewed and **rejected**, three P1.
+2. `c828bfa` — attempted the correction. Reviewed and **rejected**, three P1 and two P2.
+3. This correction — fixes those five. **Awaiting review.**
+
+Both corrections are appended at the foot of this file. Nothing between here and there has been
+rewritten: the account below is what the milestone originally claimed, including the parts later
+findings contradict.
 
 Milestone 003, which this was built on top of, has since closed.
 
@@ -267,3 +272,80 @@ Vincent's own view used to say Tommy had told him about the beating. It now says
 acquired through an assignment briefing that now leaves a record of having happened. On
 `disloyal-vincent`, Salvatore still reaches the breach by finding the traces himself and reasoning
 from them, with Vincent's denial listed beside his own conclusion.
+
+## Second correction — Codex findings on `c828bfa`
+
+Status: **awaiting Codex review. Not verified.** Nothing above is rewritten.
+
+`c828bfa` attempted the correction to `714fbc3` and was itself rejected: three P1 and two P2.
+
+**1 (P1). Claimed provenance was not separated from private provenance.** `Compose` transmitted the
+sender's real `SourceKind` on every claim including a false denial, and `Receive` treated it as
+information the listener had. So Vincent denied the beating and shipped `Participant` with the
+denial: the listener filed first-hand testimony and the concealment announced the participation it
+was concealing, through a field nobody was reading.
+
+`ReportedClaim` now carries `ClaimedBasis` and `ActualBasis`. Claimed is what the account presents
+itself as and the only thing the recipient may act on; actual is developer truth and lives in the
+report log. `Testimony` — which sits in the *listener's* head — keeps only the claimed basis, since
+anything stored there is something he knows. An honest account claims what it has; a denial
+discloses a bare assertion. A liar who wanted to say "I was there and it did not happen" would have
+to claim that basis deliberately, and none does yet.
+
+**2 (P1). Provenance was decided only for new claims.** `AsHeardFrom` ran in the `prior is null`
+branch alone, so a man who already held a generic report and was then told by the participant
+himself kept the report's classification and the report-teller's name against it for good. The
+verbatim-repeat test also ignored a changed basis, so a witness stepping forward was filed as
+somebody clearing his throat.
+
+`Upgrade` now runs on every path that keeps the belief's direction, moving both provenance and
+attributed source when the incoming account genuinely outranks the current one. Ranking covers only
+kinds a listener can hold — first-hand testimony over report over rumour — and returns nothing for
+records he established himself, so being told what you already saw never re-attributes it to the
+teller. Equal-ranked accounts leave attribution alone: two reports are two reports, and the first
+man to say it keeps his name against it. The repeat comparison now includes the claimed basis.
+
+**3 (P2). Assignment disclosures were read late.** `DeliverAssignment` looked up the issuer's mutable
+cognition six hours after issuance, so a change of mind in the gap rewrote what had already been
+said. `Assignment.Disclosed` is now `IReadOnlyList<ReportedClaim>`, fixed at issuance with stance,
+confidence and claimed basis, and delivery transmits that snapshot.
+
+**4 (P2). Snapshots did not cover the new fields.** Report lines in the replay snapshot and the
+channel comparison now carry claimed and actual basis; testimony lines carry the claimed basis. A
+run that classified beliefs differently can no longer compare equal.
+
+### Tests
+
+Thirteen added, **133 total**, in `DisclosedProvenanceTests.cs`. The two specifically required
+mutation checks both fail as intended: restoring the private-basis transmission fails the denial
+test, and disabling `Upgrade` fails both the attribution test and the changed-basis repeat test.
+
+### Behavioural movement
+
+**None.** All four replay hashes are byte-identical to `c828bfa` —
+`B20C06E5838C0657` / `24A181B260F9C396` / `4B60DA962927A6F7` / `B274F395A61C5118` — with decisions
+still 13 / 16 / 13 / 19, both `--verify` runs deterministic and pause/resume equivalent.
+
+That deserves stating plainly rather than being presented as reassurance. The leak was real and
+reachable through the API — the mutation check proves it — but it did not fire in any of the four
+variants, because the one false denial that occurs reaches a recipient who already holds the claim
+and therefore takes the contradiction path, which never rewrote provenance. The fix is correct and
+currently invisible in play. The same is true of the assignment snapshot: no issuer presently
+changes his mind in the six-hour gap.
+
+### The `ConcealIncident` runaway — explained, not fixed
+
+The previous account recorded the loop's disappearance as unexplained. It is now explained, and it
+is **not** resolved.
+
+Observation rolls are keyed from global event IDs (`Rng.ForDecision(seed, observerId, 5000 + ev.Id)`).
+Removing the synthetic information events shifted every later event ID, which shifted Tommy's
+observation seeds, and his police-interest rolls now all miss. He never comes to believe he is being
+looked at, so the legal-exposure pressure that drove the concealment loop never rises.
+
+The loop is therefore latent, not gone: it will return whenever those rolls land again, and the
+underlying defect is that a per-character RNG stream is keyed off a global counter, so unrelated
+changes anywhere in the simulation silently re-roll everybody's perception. That is a real
+determinism-hygiene problem and it stays on the deferred list. It was deliberately not addressed
+here — this is a provenance correction, and turning it into an RNG redesign is how a corrective pass
+becomes a milestone.

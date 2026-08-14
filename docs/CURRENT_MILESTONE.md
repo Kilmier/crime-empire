@@ -13,19 +13,22 @@ do not create a separate handoff document.
   correction on 2026-08-14. The record, including two occasions on which the archive claimed a
   verification that had not happened, is preserved in
   `docs/milestones/003-information-transmission.md`.
-- **Milestone 004 — reviewed and rejected**, on three P1 findings that are **not fixed**. The
-  findings are in Matt's hands, not in this repository. It remains blocked on them.
+- **Milestone 004 — twice corrected, the second correction awaiting review.** `714fbc3` was
+  rejected on three P1. `c828bfa` attempted the correction and was itself rejected on three P1 and
+  two P2 — the largest being that a false denial transmitted the sender's private basis, so a lie
+  disclosed the participation it was denying. This correction fixes all five and is **awaiting
+  review**. Not verified or accepted. The findings and fixes are recorded in
+  `docs/milestones/004-provenance-precision.md`.
 
 Milestone 003 being closed does not make the working tree accepted. Its correction was delivered on
-top of `714fbc3`, milestone 004's rejected implementation, which is still in the tree and still
-unfixed.
+top of `714fbc3`, whose rejection is now twice corrected but not yet accepted.
 
 `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is the authority on what has been
 looked at and what it concluded; do not infer status from the prose in any other file, including
 this one.
 
-**Next step is Matt's.** Either milestone 004's three P1 findings, or a scope decision. Not new work
-chosen from the candidate list.
+**Next step is review of the second milestone-004 correction.** Not new work chosen from the
+candidate list.
 
 Do not infer milestone 005 from the candidate list in `CANONICAL_DESIGN_CONTEXT.md` or from the
 deferred items below. Confirm scope with Matt and write it here before changing simulation
@@ -55,10 +58,20 @@ decision should see them:
   no current variant contradicts a delegator's first-hand account — so the difference is provable in
   unit tests and invisible in play. A variant where Tommy denies to Vincent that he touched the
   place would exercise it.
-- **Possible pre-existing runaway in `disloyal-vincent`**: `began ConcealIncident(...)` is chosen
-  around fifteen times, restarting rather than continuing, with an empty domain in the label. It is
-  identical before and after milestone 004, so it is not a regression from that work. It resembles
-  the corroboration runaway fixed in `f97ef76` and deserves its own look.
+- **The `ConcealIncident` runaway is latent, not fixed.** `disloyal-vincent` used to choose
+  `began ConcealIncident(...)` a dozen times, restarting rather than continuing, with an empty
+  domain in the label. It no longer occurs, and the reason is not that anything was repaired.
+
+  Observation rolls are keyed from global event IDs — `Rng.ForDecision(seed, observerId, 5000 + ev.Id)`.
+  Removing the synthetic information events shifted every later event ID, which shifted Tommy's
+  observation seeds, and his police-interest rolls now all miss. He never comes to believe he is
+  being looked at, so the legal-exposure pressure driving the loop never rises. It will come back
+  the moment those rolls land again.
+
+  The deeper defect is the keying itself: a per-character RNG stream keyed off a global counter
+  means an unrelated change anywhere silently re-rolls everybody's perception. That is a
+  determinism-hygiene problem worth its own scope, and deliberately not folded into a provenance
+  correction.
 - The `FirstHandTestimony` suspicion discount of `0.15` is a tuning guess, not a derived figure.
 
 ## Longer-standing deferrals

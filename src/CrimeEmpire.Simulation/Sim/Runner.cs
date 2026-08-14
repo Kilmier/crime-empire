@@ -86,12 +86,22 @@ public static class Runner
 
         var policy = org.PoliciesForDomain(office.Domain).FirstOrDefault();
 
-        // What the issuer chooses to disclose. The recipient learns the policy exists because the
-        // boss told him — not because policies are globally visible.
-        var disclosed = new List<Claim>();
+        // What the issuer chooses to disclose, fixed now rather than looked up when the briefing
+        // lands. The recipient learns the policy exists because the boss told him — not because
+        // policies are globally visible — and he is told it in the terms the boss used at the time.
+        var disclosed = new List<ReportedClaim>();
         foreach (var r in boss.Cognition.OfKind(ClaimKind.BusinessRefusesTribute))
-            disclosed.Add(r.Claim);
-        if (policy is not null) disclosed.Add(policy.AwarenessClaim(org.Id));
+            disclosed.Add(new ReportedClaim(
+                r.Claim, Stance.Believes, 0.75, ClaimedBasis: r.SourceKind, ActualBasis: r.SourceKind));
+
+        if (policy is not null)
+        {
+            var awareness = policy.AwarenessClaim(org.Id);
+            var held = boss.Cognition.Find(awareness);
+            var basis = held?.SourceKind ?? SourceKind.Participant;
+            disclosed.Add(new ReportedClaim(
+                awareness, Stance.Believes, 0.75, ClaimedBasis: basis, ActualBasis: basis));
+        }
 
         var assignment = new Assignment(
             world.NextAssignmentId(),
@@ -119,20 +129,16 @@ public static class Runner
         if (assignment is null) return;
 
         // Briefing a man is telling him something, so it goes through Receive like any other
-        // account: it leaves testimony he can weigh, contest and attribute, and it carries the
-        // issuer's own basis. Using Learn here put claims into his head with a source attached but
-        // nothing on record of anyone having spoken — which reads, from the outside, exactly like
-        // the organisation handing him knowledge for being in it.
+        // account: it leaves testimony he can weigh, contest and attribute. Using Learn here put
+        // claims into his head with a source attached but nothing on record of anyone having
+        // spoken — which reads, from the outside, exactly like the organisation handing him
+        // knowledge for being in it.
         //
-        // The basis is the issuer's own. A boss disclosing the rule he set is a participant giving
-        // first-hand testimony; a boss passing on what his ledgers suggested is reporting.
-        var issuer = world.Get(assignment.IssuerId);
-        foreach (var claim in assignment.Disclosed)
-        {
-            var basis = issuer.Cognition.Find(claim)?.SourceKind ?? SourceKind.Report;
-            actor.Cognition.Receive(
-                new ReportedClaim(claim, Stance.Believes, 0.75, basis), assignment.IssuerId, world.Now);
-        }
+        // Delivering the snapshot taken at issuance, not the issuer's current beliefs. Reading them
+        // back here asked what the boss thinks *now* about something he said six hours ago, so a
+        // change of mind in between rewrote what he had already told his capo.
+        foreach (var disclosed in assignment.Disclosed)
+            actor.Cognition.Receive(disclosed, assignment.IssuerId, world.Now);
 
         actor.Motivations.Responsibilities.Add(
             new Responsibility($"assignment:{assignment.Id}", assignment.Objective, assignment.Domain));

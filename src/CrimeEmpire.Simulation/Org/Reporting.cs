@@ -205,12 +205,18 @@ public static class Reporting
             {
                 // He asserts the opposite of what he holds. The claim is the same claim — this is
                 // a denial of a specific proposition, not a change of subject.
-                // The basis is still his own. A man denying something he did is lying as a
-                // participant, and the listener is right to receive it as first-hand testimony —
-                // false first-hand testimony, which is the most convincing kind and exactly what
-                // makes concealment worth modelling.
+                // He denies it as a bare assertion, disclosing nothing about how he would know.
+                //
+                // Transmitting his real basis here was a leak that defeated the concealment it was
+                // part of: a man denying his own beating sent `Participant`, the listener filed
+                // first-hand testimony, and the denial thereby announced the participation it was
+                // denying. What he privately has is kept as ActualBasis, which is developer truth
+                // and never reaches the recipient. A liar who wanted to say "I was there and it did
+                // not happen" would have to claim that basis deliberately; none of them does yet.
                 withheld.Add(b.Claim);
-                asserted.Add(new ReportedClaim(b.Claim, Stance.Rejects, DenialConfidence, b.SourceKind));
+                asserted.Add(new ReportedClaim(
+                    b.Claim, Stance.Rejects, DenialConfidence,
+                    ClaimedBasis: SourceKind.Report, ActualBasis: b.SourceKind));
                 continue;
             }
 
@@ -221,12 +227,13 @@ public static class Reporting
             // definition; a position he has come to reject is passed on as a rejection, which is
             // the whole point of letting non-held records into a report. Flattening everything to
             // Believes would turn "I was wrong about that" into "that is true".
-            // The speaker's own basis travels with the claim. Without it every account landed as
-            // a generic report, so the listener could not tell the man who did it from the man
-            // repeating what he had heard — and first-hand testimony could only exist by being
-            // fabricated at the point of delivery, which is what it was.
+            // Saying what he actually holds, so what he claims and what he has are the same thing.
+            // A man being straight discloses his own basis; the split between claimed and actual
+            // only opens when he is not.
             var stance = b.IsHeld ? Stance.Believes : b.Stance;
-            asserted.Add(new ReportedClaim(b.Claim, stance, b.Confidence * SecondHand, b.SourceKind));
+            asserted.Add(new ReportedClaim(
+                b.Claim, stance, b.Confidence * SecondHand,
+                ClaimedBasis: b.SourceKind, ActualBasis: b.SourceKind));
         }
 
         string framing = candor switch

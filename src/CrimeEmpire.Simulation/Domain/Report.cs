@@ -37,18 +37,29 @@ public enum ReportCandor
 /// from his own belief, and both halves have to be representable for the lie to be a lie rather
 /// than a second opinion.
 ///
-/// <see cref="SpeakerBasis"/> carries how the speaker came by it. Without it every account arrived
-/// as a generic report, so a man who did something and a man repeating a rumour about it were
-/// indistinguishable to the listener, and first-hand testimony could not exist at all except by
-/// being fabricated at the point of delivery. It describes the speaker's acquisition, not the
-/// truth of the claim: a liar denying his own act is still speaking as a participant.
+/// Basis is split in two, and the split is the whole point.
+///
+/// <see cref="ClaimedBasis"/> is what the account presents itself as — the only thing the listener
+/// may act on, because it is the only thing he was actually offered. <see cref="ActualBasis"/> is
+/// how the speaker really came by it, and is developer truth: it lives in the report log and must
+/// never reach the recipient's cognition.
+///
+/// Collapsing them leaked. A man denying his own beating transmitted `Participant`, the listener
+/// recorded first-hand testimony, and the denial thereby announced the very participation it was
+/// denying — the concealment defeating itself through a field nobody was looking at. A liar
+/// discloses a bare assertion unless he chooses to claim presence; what he privately has stays
+/// private.
 /// </summary>
 public readonly record struct ReportedClaim(
     Claim Claim,
     Stance AssertedStance,
     double AssertedConfidence,
-    SourceKind SpeakerBasis = SourceKind.Report)
+    SourceKind ClaimedBasis = SourceKind.Report,
+    SourceKind ActualBasis = SourceKind.Report)
 {
+    /// <summary>True when the speaker is presenting a basis other than the one he has.</summary>
+    public bool BasisIsMisrepresented => ClaimedBasis != ActualBasis;
+
     public override string ToString() => $"{AssertedStance} {Claim}";
 }
 

@@ -67,6 +67,25 @@ public sealed class EventPayload
     /// </summary>
     public Domain.Claim? AboutClaim { get; init; }
 
+    /// <summary>
+    /// Together with StrategySequence and AdvanceOrdinal, the exact strategy-instance identity a
+    /// StrategyStep event was scheduled for. Strategies.Advance validates all three, plus that this
+    /// event is the instance's own PendingStepEventId and that the awakened character is who the
+    /// step was addressed to — a delivery that fails any of the five throws rather than advancing
+    /// whatever instance happens to be running now.
+    /// </summary>
+    public string? StrategyOwnerId { get; init; }
+    public int? StrategySequence { get; init; }
+    public int? AdvanceOrdinal { get; init; }
+
+    /// <summary>
+    /// The RNG occasion key for an ObservationOpportunity, built at the scheduling site from causally
+    /// local identity (the strategy advance and trace kind that produced the opportunity, plus the
+    /// observer) — never reconstructed at dispatch from this event's own Id or any other global
+    /// identifier.
+    /// </summary>
+    public string? OccasionKey { get; init; }
+
     public static readonly EventPayload None = new();
 }
 

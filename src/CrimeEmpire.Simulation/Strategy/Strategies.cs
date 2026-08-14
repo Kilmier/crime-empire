@@ -33,15 +33,29 @@ public static class Strategies
         _ => TimeSpan.FromDays(4),
     };
 
-    public static void ScheduleNextStep(World world, Character actor, StrategyInstance s, string cause)
+    /// <summary>
+    /// The one path that may schedule a StrategyStep. Cancels any step already pending for this
+    /// instance first, so "at most one pending step per instance" holds regardless of which command
+    /// path — continue, alter, delegate, postpone, seek approval, or a fresh start — is doing the
+    /// scheduling, rather than being an accident of PendingStepEventId being a single-slot field
+    /// that silently orphans whatever it used to point to. Every caller, including the two that used
+    /// to schedule directly (Commit's postpone and seek-approval paths), now goes through here.
+    /// </summary>
+    public static void ScheduleNextStep(World world, StrategyInstance s, string cause, TimeSpan? interval = null)
     {
+        if (s.PendingStepEventId is { } pending)
+            world.Queue.Cancel(pending, $"{s.Label}: superseded by a newly scheduled step");
+
         var ev = world.Queue.Schedule(
-            world.Now + StepInterval(s.Kind),
+            world.Now + (interval ?? StepInterval(s.Kind)),
             EventKind.StrategyStep,
-            s.DelegatedToId ?? actor.Id,
+            s.DelegatedToId ?? s.OwnerId,
             cause,
             new EventPayload
             {
+                StrategyOwnerId = s.OwnerId,
+                StrategySequence = s.LocalSequence,
+                AdvanceOrdinal = s.NextAdvanceOrdinal,
                 Strategy = s.Kind,
                 StepIndex = s.StepIndex,
                 TargetId = s.TargetId,
@@ -49,21 +63,63 @@ public static class Strategies
         s.PendingStepEventId = ev.Id;
     }
 
-    /// <summary>Runs one step of the actor's current strategy and schedules what follows.</summary>
-    public static void Advance(World world, Character actor, ScheduledEvent ev, Rng rng)
+    /// <summary>
+    /// Removes this instance's commitment from the owner and, if execution was delegated, from the
+    /// delegate too. Both sides accumulate one — the owner's at start, the delegate's at
+    /// delegation — but only the owner's was ever cleaned up on completion or abandonment. Since
+    /// CommitmentWeight feeds utility, a finished delegate kept carrying weight for work that was
+    /// already done.
+    /// </summary>
+    public static void RemoveCommitments(World world, StrategyInstance s)
     {
-        // The step may belong to the delegator even though the delegate is executing it.
-        var owner = world.Characters.Values.FirstOrDefault(c =>
-            c.Execution.Strategy is { } st &&
-            (c.Id == actor.Id || st.DelegatedToId == actor.Id) &&
-            st.Kind == ev.Payload.Strategy);
+        string id = $"strategy:{s.OwnerId}:{s.LocalSequence}";
+        if (world.Find(s.OwnerId) is { } owner)
+            owner.Execution.Commitments.RemoveAll(c => c.Id == id);
+        if (s.DelegatedToId is { } delegateId && world.Find(delegateId) is { } sub)
+            sub.Execution.Commitments.RemoveAll(c => c.Id == id);
+    }
 
-        if (owner?.Execution.Strategy is not { } s) return;
+    /// <summary>
+    /// Runs one step of the actor's current strategy and schedules what follows.
+    ///
+    /// Validates the delivered event against the exact instance it was scheduled for: owner, local
+    /// sequence, advance ordinal, that this is the instance's own pending event, and that the woken
+    /// character is who the step was actually addressed to. All five must hold. A delivery that
+    /// fails any of them throws — this is a development kernel, EventQueue.Next already filters out
+    /// anything properly cancelled before it reaches here, so a failure means a scheduling invariant
+    /// broke upstream, not that this is a normal case to route silently around.
+    /// </summary>
+    public static void Advance(World world, Character actor, ScheduledEvent ev)
+    {
+        var payload = ev.Payload;
+        string? ownerId = payload.StrategyOwnerId;
+        int? sequence = payload.StrategySequence;
+        int? ordinal = payload.AdvanceOrdinal;
+
+        var owner = ownerId is null ? null : world.Find(ownerId);
+        var s = owner?.Execution.Strategy;
+
+        if (ownerId is null || sequence is null || ordinal is null || owner is null || s is null
+            || s.LocalSequence != sequence.Value
+            || s.NextAdvanceOrdinal != ordinal.Value
+            || s.PendingStepEventId != ev.Id
+            || actor.Id != (s.DelegatedToId ?? s.OwnerId))
+        {
+            throw new SimulationInvariantException(
+                $"StrategyStep event {ev.Id} does not match a live strategy instance " +
+                $"(owner={ownerId ?? "?"}, sequence={sequence?.ToString() ?? "?"}, " +
+                $"ordinal={ordinal?.ToString() ?? "?"}, awakened={actor.Id}). A stale or misrouted " +
+                "step must never advance a replacement.");
+        }
+
+        s.PendingStepEventId = null;
+        s.NextAdvanceOrdinal = ordinal.Value + 1;
+        var rng = Rng.ForOccasion(world.Seed, $"step|{s.OwnerId}|{s.LocalSequence}|{ordinal.Value}");
 
         var steps = StepsFor(s.Kind);
         if (s.StepIndex >= steps.Length)
         {
-            Complete(world, owner, s, "ran out of steps", rng);
+            Complete(world, owner, s, "ran out of steps");
             return;
         }
 
@@ -91,7 +147,7 @@ public static class Strategies
         var business = s.TargetId is null ? null : world.Businesses.GetValueOrDefault(s.TargetId);
         if (business is null)
         {
-            Complete(world, owner, s, "the target no longer exists", rng);
+            Complete(world, owner, s, "the target no longer exists");
             return;
         }
 
@@ -115,7 +171,7 @@ public static class Strategies
                 // sending a report that never left anyone's mouth. If he wants it, his man has to
                 // report it through the channel like anything else.
 
-                ScheduleNextStep(world, owner, s, $"{s.Label}: {step} done, next step due");
+                ScheduleNextStep(world, s, $"{s.Label}: {step} done, next step due");
                 return;
             }
 
@@ -131,7 +187,7 @@ public static class Strategies
                     $"{executor.Name} demanded payment",
                     new EventPayload { TargetId = executor.Id, Note = "tribute-demanded" });
 
-                ScheduleNextStep(world, owner, s, $"{s.Label}: awaiting an answer");
+                ScheduleNextStep(world, s, $"{s.Label}: awaiting an answer");
                 return;
 
             case 3: // press or accept
@@ -145,7 +201,7 @@ public static class Strategies
                     // He struck the deal. His own act, not news that reached him.
                     executor.Cognition.Learn(new Claim(ClaimKind.TributeCollected, business.Id),
                         Stance.Knows, 1.0, SourceKind.Participant, executor.Id, world.Now);
-                    ScheduleNextStep(world, owner, s, $"{s.Label}: collection due");
+                    ScheduleNextStep(world, s, $"{s.Label}: collection due");
                     return;
                 }
 
@@ -175,7 +231,7 @@ public static class Strategies
                     // Step back one, so the next step re-enters this check and finds out whether
                     // the pressure told.
                     s.StepIndex = 2;
-                    ScheduleNextStep(world, owner, s, $"{s.Label}: seeing whether the pressure told");
+                    ScheduleNextStep(world, s, $"{s.Label}: seeing whether the pressure told");
                     return;
                 }
 
@@ -205,7 +261,7 @@ public static class Strategies
                         SourceKind.Discovery, owner.Id, world.Now);
 
                 CloseAssignment(world, owner, s);
-                Complete(world, owner, s, "the money started arriving", rng);
+                Complete(world, owner, s, "the money started arriving");
                 return;
         }
     }
@@ -354,24 +410,41 @@ public static class Strategies
             Offer(world.Org.BossId, 0.5, violenceClaim, witnessClaim);
 
         foreach (var (id, o) in opportunities.OrderBy(k => k.Key, StringComparer.Ordinal))
-            ScheduleObservation(world, id, ev, o.Discoverability, o.Claims);
+            ScheduleObservation(world, s, "violence", id, ev.Id, ev.TargetId, o.Discoverability, o.Claims);
     }
 
+    /// <summary>
+    /// Schedules a chance to notice, keyed to the strategy advance that produced the opportunity
+    /// rather than to any global identifier — so inserting or removing an unrelated event elsewhere
+    /// cannot reroll this roll. traceKind distinguishes the different reasons the same
+    /// instance/advance can offer more than one kind of opportunity: a beating and a police-interest
+    /// surveillance opportunity are not the same occasion even when they trace back to the same
+    /// advance. relatedEventId/relatedTargetId are history for the payload and the message text
+    /// only — never randomness.
+    /// </summary>
     private static void ScheduleObservation(
-        World world, string? observerId, WorldEvent ev, double discoverability, IReadOnlyList<Claim> claims)
+        World world, StrategyInstance s, string traceKind, string? observerId,
+        long relatedEventId, string? relatedTargetId, double discoverability, IReadOnlyList<Claim> claims)
     {
         if (observerId is null) return;
+
+        // Advance already incremented NextAdvanceOrdinal on entry, so the ordinal that caused this
+        // opportunity is one behind the ordinal the *next* advance will use.
+        int ordinal = s.NextAdvanceOrdinal - 1;
+        string occasionKey = $"obs|{s.OwnerId}|{s.LocalSequence}|{ordinal}|{traceKind}|{observerId}";
+
         world.Queue.Schedule(
             world.Now + TimeSpan.FromDays(1),
             EventKind.ObservationOpportunity,
             observerId,
-            $"he may notice what was left behind at {ev.TargetId}",
+            $"he may notice what was left behind at {relatedTargetId}",
             new EventPayload
             {
-                RelatedEventId = ev.Id,
-                TargetId = ev.TargetId,
+                RelatedEventId = relatedEventId,
+                TargetId = relatedTargetId,
                 Claims = claims,
                 Discoverability = discoverability,
+                OccasionKey = occasionKey,
             });
     }
 
@@ -391,9 +464,9 @@ public static class Strategies
             owner.Motivations.AddPressure(PressureKind.LegalExposure, 0.1);
 
         if (s.StepIndex >= ConcealSteps.Length)
-            Complete(world, owner, s, clean ? "the loose ends were tied off" : "the cleanup made things worse", rng);
+            Complete(world, owner, s, clean ? "the loose ends were tied off" : "the cleanup made things worse");
         else
-            ScheduleNextStep(world, owner, s, $"{s.Label}: {step} done");
+            ScheduleNextStep(world, s, $"{s.Label}: {step} done");
     }
 
     // ------------------------------------------------------------------ investigation
@@ -422,16 +495,15 @@ public static class Strategies
                 var suspect = world.Find(lead.Claim.Object);
                 if (suspect is not null)
                     ScheduleObservation(
-                        world, suspect.Id,
-                        new WorldEvent(0, world.Now, "surveillance", owner.Id, suspect.Id, "police interest", Array.Empty<Trace>()),
-                        0.4,
-                        new[] { new Claim(ClaimKind.PoliceInvestigating, suspect.Id) });
+                        world, s, "surveillance", suspect.Id, relatedEventId: 0, relatedTargetId: suspect.Id,
+                        discoverability: 0.4,
+                        claims: new[] { new Claim(ClaimKind.PoliceInvestigating, suspect.Id) });
             }
         }
 
         if (s.StepIndex < InvestigateSteps.Length)
         {
-            ScheduleNextStep(world, owner, s, $"{s.Label}: {step} done");
+            ScheduleNextStep(world, s, $"{s.Label}: {step} done");
             return;
         }
 
@@ -453,11 +525,11 @@ public static class Strategies
                     SourceKind.Inference, owner.Id, world.Now);
         }
 
-        Complete(world, owner, s, named ? "the canvass turned up a name" : "the trail went cold", rng);
+        Complete(world, owner, s, named ? "the canvass turned up a name" : "the trail went cold");
     }
 
     // ------------------------------------------------------------------ completion
-    public static void Complete(World world, Character owner, StrategyInstance s, string why, Rng rng)
+    public static void Complete(World world, Character owner, StrategyInstance s, string why)
     {
         world.Queue.Schedule(world.Now, EventKind.StrategyComplete, owner.Id,
             $"{s.Label} finished: {why}",
@@ -465,6 +537,6 @@ public static class Strategies
 
         owner.Execution.Strategy = null;
         owner.Execution.Intention = null;
-        owner.Execution.Commitments.RemoveAll(c => c.Id.StartsWith("strategy:", StringComparison.Ordinal));
+        RemoveCommitments(world, s);
     }
 }

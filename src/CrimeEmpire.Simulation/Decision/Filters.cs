@@ -18,10 +18,43 @@ public static class Filters
     {
         var rejected = new List<Rejection>();
 
+        // Stage 0 — redundancy. Whether this is even worth doing at all, decided before anything
+        // else is weighed. Placed ahead of salience so a duplicate that would otherwise rank highly
+        // cannot take one of the bounded candidate slots and crowd out a genuinely different option.
+        var redundant = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var c in candidates)
+        {
+            if (c.Kind != ActionKind.StartStrategy) continue;
+
+            if (ctx.Actor.Execution.Strategy is { } running
+                && running.Kind == c.Strategy && running.TargetId == c.TargetId)
+            {
+                rejected.Add(new Rejection(c, RejectionStage.Redundancy,
+                    $"{ctx.Actor.Name} is already handling that"));
+                redundant.Add(c.Id);
+                continue;
+            }
+
+            // MVP rule, not a permanent design commitment: one attempt at concealing a given
+            // incident, whether the attempt is still running or has already finished. A
+            // (Kind, TargetId) match alone cannot express "already tried and finished" — the
+            // strategy is no longer running by then — so this checks the incident itself. See
+            // docs/CURRENT_MILESTONE.md.
+            if (c.Strategy == StrategyKind.ConcealIncident && c.AboutIncident is { } incident
+                && ctx.Actor.Execution.AttemptedConcealments.Contains(incident))
+            {
+                rejected.Add(new Rejection(c, RejectionStage.Redundancy,
+                    $"{ctx.Actor.Name} has already had a go at covering that up"));
+                redundant.Add(c.Id);
+            }
+        }
+
         // Stage 1 — salience. What occurs to them at all.
         var salient = new List<(Candidate Candidate, double Score)>();
         foreach (var c in candidates)
         {
+            if (redundant.Contains(c.Id)) continue;
+
             double s = salience.For(c);
             if (s < SalienceProfile.Threshold)
                 rejected.Add(new Rejection(c, RejectionStage.Salience, $"it did not occur to {ctx.Actor.Name} (salience {s:0.00})"));

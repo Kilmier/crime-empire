@@ -26,6 +26,22 @@ public sealed record Commitment(
 /// <summary>A running instance of a parameterised strategy.</summary>
 public sealed class StrategyInstance
 {
+    /// <summary>
+    /// Together with <see cref="LocalSequence"/>, the immutable identity of this instance for its
+    /// entire life — unaffected by scheduling, by any other character's activity, or by delegation.
+    /// Not the same question as who is currently executing it; see <see cref="DelegatedToId"/>.
+    /// </summary>
+    public required string OwnerId { get; init; }
+
+    /// <summary>
+    /// Assigned once from <see cref="Character.StrategyCount"/> at construction, exactly the
+    /// DecisionCount pattern one level down. Never reused, never rewound — unlike StepIndex, which
+    /// AlterStrategy legitimately rewinds to re-run a step under a new method. Occasion keys are
+    /// built from (OwnerId, LocalSequence, advance ordinal), never from StepIndex, precisely because
+    /// StepIndex can repeat and this must not.
+    /// </summary>
+    public required int LocalSequence { get; init; }
+
     public required StrategyKind Kind { get; init; }
     public required string Domain { get; init; }
     public string? TargetId { get; set; }
@@ -35,6 +51,14 @@ public sealed class StrategyInstance
     public DateTime Deadline { get; set; }
     public long? AssignmentId { get; init; }
     public long? SourceEventId { get; init; }
+
+    /// <summary>
+    /// The ordinal the next delivered StrategyStep must carry to be accepted. Incremented exactly
+    /// once, by Strategies.Advance, after a delivered event validates against it — never rewound,
+    /// never touched anywhere else. This is what an occasion key is keyed to instead of any global
+    /// scheduling identifier.
+    /// </summary>
+    public int NextAdvanceOrdinal { get; set; }
 
     /// <summary>Set when execution was handed to a subordinate. Control is transferred; outcome is not.</summary>
     public string? DelegatedToId { get; set; }
@@ -77,4 +101,14 @@ public sealed class ExecutionState
     public DateTime? NextReview { get; set; }
 
     public double CommitmentWeight => Commitments.Sum(c => c.Weight);
+
+    /// <summary>
+    /// Incidents this character has already attempted to conceal, whether the attempt is still
+    /// running or has since completed. MVP rule, not a permanent design commitment: one attempt per
+    /// incident, enforced at Decision/Filters.cs's redundancy stage. See docs/CURRENT_MILESTONE.md.
+    /// The eventual shape is likely incident-relative state about evidence and exposure in the world
+    /// rather than a private per-character tally — a man who cleans up badly and learns the traces
+    /// are still there has a real reason to go again.
+    /// </summary>
+    public List<Claim> AttemptedConcealments { get; } = new();
 }

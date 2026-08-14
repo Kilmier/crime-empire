@@ -232,27 +232,44 @@ public sealed class InformationTransmissionTests
     [Fact]
     public void Candour_distinguishes_lying_from_merely_leaving_things_out()
     {
-        var world = Run("disloyal-vincent");
+        // The full 90-day run at this seed no longer produces a False report on its own, since
+        // milestone 005 stopped keying observation and strategy-step rolls off ScheduledEvent.Id —
+        // the witness-observation rolls that used to make a denial outscore a partial account land
+        // differently now, and that movement is expected and accounted for. Staged directly through
+        // Reporting.Compose instead, which is the production rule actually under test and does not
+        // depend on which report a run happens to produce at a given seed.
+        var world = Cast.Build(seed: 42, "disloyal-vincent");
+        var vincent = world.Get("vincent");
+        var salvatore = world.Get(Viewpoint);
+        var breach = new Claim(ClaimKind.PersonBreachedPolicy, vincent.Id, "no-violence-harbour", 1);
+        vincent.Cognition.Learn(breach, Stance.Knows, 1.0, SourceKind.Participant, vincent.Id, world.Now);
 
-        var denial = world.Reports.FirstOrDefault(r => r.Candor == ReportCandor.False);
-        Assert.NotNull(denial);
+        var candidate = new Candidate("report:salvatore:false", ActionKind.ReportToSuperior, "test", "deny it")
+        {
+            TargetId = Viewpoint,
+            Candor = ReportCandor.False,
+            Suppressed = new[] { breach },
+        };
+        var denial = Reporting.Compose(
+            world, vincent, salvatore, candidate, Salience.Perceive(vincent, world.Now));
 
-        var liar = world.Get(denial!.SenderId);
+        Assert.Equal(ReportCandor.False, denial.Candor);
         foreach (var withheld in denial.Withheld)
         {
             // He holds it, and told the other man the opposite. That gap is what makes it a lie.
-            Assert.True(liar.Cognition.Find(withheld) is { IsHeld: true });
+            Assert.True(vincent.Cognition.Find(withheld) is { IsHeld: true });
             Assert.Contains(denial.Asserted, a => a.Claim.Equals(withheld) && a.AssertedStance == Stance.Rejects);
         }
 
-        // An omission says less about the awkward thing; it never says the opposite of it.
+        // An omission says less about the awkward thing; it never says the opposite of it — checked
+        // against a real run, which still produces partial reports naturally.
         //
         // Note this is scoped to the withheld claims rather than banning Rejects outright. A
         // report may legitimately carry a sincere rejection — "that business is not holding out
         // any more", "I was wrong about that" — and conflating an honest retraction with a lie is
         // exactly the confusion Candor exists to prevent. What marks the lie is denying something
         // he is simultaneously recorded as keeping back.
-        foreach (var partial in world.Reports.Where(r => r.Candor == ReportCandor.Partial))
+        foreach (var partial in Run("disloyal-vincent").Reports.Where(r => r.Candor == ReportCandor.Partial))
         {
             Assert.NotEmpty(partial.Withheld);
             foreach (var w in partial.Withheld)
@@ -978,6 +995,15 @@ public sealed class InformationTransmissionTests
         Assert.Equal(
             world.Requests.Count,
             world.Requests.Select(r => (r.AskerId, r.AskedId, r.About)).Distinct().Count());
+
+        // Extended for milestone 005. StrategyCount increments once per StartStrategy commit, so a
+        // character who could restart a strategy indefinitely — the ConcealIncident runaway — would
+        // drive it arbitrarily high. This is the unit that runaway actually inflated: a decision or
+        // report budget alone would not catch it, since starting again is one cheap decision each
+        // time, just as filing a report was.
+        foreach (var c in world.Characters.Values)
+            Assert.True(c.StrategyCount < 10,
+                $"[{variant}] {c.Name} started {c.StrategyCount} strategy instances in 90 days — a restart is looping");
     }
 
     /// <summary>

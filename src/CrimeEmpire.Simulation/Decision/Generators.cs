@@ -199,6 +199,7 @@ public static class Generators
                     RequiredSkill = Skill.Discretion,
                     RequiredSkillLevel = 0.2,
                     RequiredCrew = 1,
+                    AboutIncident = incident.Claim,
                 };
                 break;
             }

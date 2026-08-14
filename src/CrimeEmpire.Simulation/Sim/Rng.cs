@@ -30,6 +30,26 @@ public sealed class Rng
 
     public static Rng ForWorld(int worldSeed) => new(unchecked((uint)worldSeed * 0x9E3779B9u + 1u));
 
+    /// <summary>
+    /// Seeded from a causally local occasion key rather than any part of a decision index. Use this
+    /// where the occasion is not "this actor's Nth decision" but something else stable and
+    /// insertion-proof — a strategy instance's Nth advance, or a specific observer's chance to
+    /// notice a specific trace of a specific advance. The key must never contain a global scheduling
+    /// identifier (ScheduledEvent.Id, WorldEvent.Id, or a Claim.EventId derived from the truth-log
+    /// counter) — those shift when anything anywhere is scheduled or recorded, which is the defect
+    /// this method exists to avoid repeating.
+    /// </summary>
+    public static Rng ForOccasion(int worldSeed, string occasionKey)
+    {
+        uint h = Fnv1a(occasionKey);
+        unchecked
+        {
+            h ^= (uint)worldSeed * 0x85EBCA6Bu;
+            h ^= h >> 15;
+        }
+        return new Rng(h);
+    }
+
     public uint NextUInt()
     {
         uint x = _state;

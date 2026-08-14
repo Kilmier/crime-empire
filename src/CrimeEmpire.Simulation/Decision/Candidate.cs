@@ -72,6 +72,14 @@ public sealed record Candidate(
     /// <summary>Claims the character must actually hold for this to be conceivable.</summary>
     public IReadOnlyList<Claim> RequiredKnowledge { get; init; } = Array.Empty<Claim>();
 
+    /// <summary>
+    /// The incident a ConcealIncident candidate is about. Set only there. Filters' redundancy stage
+    /// uses it to enforce the one-attempt-per-incident MVP rule regardless of whether the earlier
+    /// attempt is still running or has already completed — a state (Kind, TargetId) match alone
+    /// cannot express "already tried and finished", since a finished strategy is no longer running.
+    /// </summary>
+    public Claim? AboutIncident { get; init; }
+
     public Skill? RequiredSkill { get; init; }
     public double RequiredSkillLevel { get; init; }
     public int RequiredCrew { get; init; }
@@ -90,6 +98,13 @@ public sealed record Candidate(
 
 public enum RejectionStage
 {
+    /// <summary>
+    /// He is already doing this, or has already tried once, and trying again is not new. Runs before
+    /// Salience so a redundant duplicate cannot rank into the bounded candidate set and crowd out a
+    /// genuinely different option.
+    /// </summary>
+    Redundancy,
+
     /// <summary>Did not occur to the character at all. Trait- and circumstance-driven.</summary>
     Salience,
 

@@ -27,8 +27,24 @@ public static class Commit
         {
             case ActionKind.StartStrategy:
             {
+                // Replacing whatever instance is currently running, if any — legitimate (a
+                // genuinely different incident, a new target) but not something that may orphan the
+                // old instance's pending step or leave its commitment behind for AbandonStrategy or
+                // Complete to never find. Filters' redundancy stage already refused a candidate that
+                // would merely restart the same (Kind, TargetId) or re-attempt an already-handled
+                // incident, so anything that reaches here is a real replacement.
+                if (actor.Execution.Strategy is { } previous)
+                {
+                    if (previous.PendingStepEventId is { } pendingPrevious)
+                        world.Queue.Cancel(pendingPrevious,
+                            $"{actor.Name} started {c.Strategy} instead of {previous.Label}");
+                    Strategies.RemoveCommitments(world, previous);
+                }
+
                 var s = new StrategyInstance
                 {
+                    OwnerId = actor.Id,
+                    LocalSequence = actor.StrategyCount++,
                     Kind = c.Strategy!.Value,
                     Domain = c.Domain ?? "",
                     TargetId = c.TargetId,
@@ -41,9 +57,12 @@ public static class Commit
                 actor.Execution.Strategy = s;
                 actor.Execution.Intention = c.Description;
                 actor.Execution.Commitments.Add(new Commitment(
-                    $"strategy:{s.Kind}:{s.TargetId}", c.Description, ctx.SuperiorId, world.Now, 0.6));
+                    $"strategy:{s.OwnerId}:{s.LocalSequence}", c.Description, ctx.SuperiorId, world.Now, 0.6));
 
-                Strategies.ScheduleNextStep(world, actor, s, $"{s.Label}: first step");
+                if (s.Kind == StrategyKind.ConcealIncident && c.AboutIncident is { } incident)
+                    actor.Execution.AttemptedConcealments.Add(incident);
+
+                Strategies.ScheduleNextStep(world, s, $"{s.Label}: first step");
                 reconsideration.Add("the target refuses outright");
                 reconsideration.Add("he comes to believe police are watching");
                 return $"began {s.Label}"
@@ -53,7 +72,7 @@ public static class Commit
             case ActionKind.ContinueStrategy:
             {
                 var s = actor.Execution.Strategy!;
-                Strategies.ScheduleNextStep(world, actor, s, $"{s.Label}: next step");
+                Strategies.ScheduleNextStep(world, s, $"{s.Label}: next step");
                 reconsideration.Add("the approach stops working");
                 return $"carried on with {s.Label}";
             }
@@ -65,10 +84,12 @@ public static class Commit
                 s.Method = c.Method ?? s.Method;
                 s.BreachedPolicyId = c.BreachesPolicyId ?? s.BreachedPolicyId;
                 // Drop back to the confrontation step so the new method actually gets used, and
-                // let the new method have its own turn at pressing.
+                // let the new method have its own turn at pressing. StepIndex may legitimately
+                // repeat this way; NextAdvanceOrdinal never does, which is why occasion keys are
+                // built from the ordinal and not from StepIndex.
                 s.StepIndex = 2;
                 s.PressureApplied = false;
-                Strategies.ScheduleNextStep(world, actor, s, $"{s.Label}: escalated approach");
+                Strategies.ScheduleNextStep(world, s, $"{s.Label}: escalated approach");
                 reconsideration.Add("the escalation draws attention");
                 return $"escalated from {was.ToString().ToLowerInvariant()} to {s.Method.ToString().ToLowerInvariant()} against {s.TargetId}"
                        + (c.BreachesPolicyId is not null ? $" — knowingly against \"{c.BreachesPolicyId}\"" : "");
@@ -96,9 +117,9 @@ public static class Commit
                         actor.Id, world.Now);
 
                 sub.Execution.Commitments.Add(new Commitment(
-                    $"strategy:{s.Kind}:{s.TargetId}", $"handle {s.Label} for {actor.Name}", actor.Id, world.Now, 0.7));
+                    $"strategy:{s.OwnerId}:{s.LocalSequence}", $"handle {s.Label} for {actor.Name}", actor.Id, world.Now, 0.7));
 
-                Strategies.ScheduleNextStep(world, actor, s, $"{s.Label}: {sub.Name} takes it on");
+                Strategies.ScheduleNextStep(world, s, $"{s.Label}: {sub.Name} takes it on");
                 reconsideration.Add($"{sub.Name} reports back or fails to");
                 return $"handed {s.Label} to {sub.Name}";
             }
@@ -107,9 +128,7 @@ public static class Commit
             {
                 var s = actor.Execution.Strategy;
                 if (s is null) return "let matters sit";
-                world.Queue.Schedule(world.Now.AddDays(7), EventKind.StrategyStep, actor.Id,
-                    $"{s.Label}: picked back up after a pause",
-                    new EventPayload { Strategy = s.Kind, TargetId = s.TargetId });
+                Strategies.ScheduleNextStep(world, s, $"{s.Label}: picked back up after a pause", TimeSpan.FromDays(7));
                 reconsideration.Add("the delay makes things worse");
                 return $"put {s.Label} off for a week";
             }
@@ -121,7 +140,7 @@ public static class Commit
                     world.Queue.Cancel(pending, $"{actor.Name} abandoned {s.Label}");
                 actor.Execution.Strategy = null;
                 actor.Execution.Intention = null;
-                actor.Execution.Commitments.RemoveAll(x => x.Id.StartsWith("strategy:", StringComparison.Ordinal));
+                Strategies.RemoveCommitments(world, s);
                 world.Queue.Schedule(world.Now.AddDays(10), EventKind.RoleReview, actor.Id,
                     "periodic review of his own patch");
                 return $"dropped {s.Label}";
@@ -189,9 +208,7 @@ public static class Commit
                 world.Queue.Schedule(world.Now.AddDays(1), EventKind.RoleReview, boss.Id,
                     $"{actor.Name} asked for latitude in {agenda.Domain}");
                 if (actor.Execution.Strategy is { } s)
-                    world.Queue.Schedule(world.Now.AddDays(5), EventKind.StrategyStep, actor.Id,
-                        $"{s.Label}: waiting on {boss.Name}",
-                        new EventPayload { Strategy = s.Kind, TargetId = s.TargetId });
+                    Strategies.ScheduleNextStep(world, s, $"{s.Label}: waiting on {boss.Name}", TimeSpan.FromDays(5));
                 reconsideration.Add($"{boss.Name} answers, or does not");
                 return $"asked {boss.Name} for room to move";
             }

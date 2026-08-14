@@ -37,7 +37,7 @@ public static class Runner
                 return;
 
             case EventKind.StrategyStep when actor is not null:
-                Strategies.Advance(world, actor, ev, Rng.ForDecision(world.Seed, actor.Id, 9000 + (int)ev.Id));
+                Strategies.Advance(world, actor, ev);
                 return;
 
             case EventKind.WorldTick:
@@ -152,7 +152,13 @@ public static class Runner
     /// </summary>
     private static void Observe(World world, Character observer, ScheduledEvent ev)
     {
-        var rng = Rng.ForDecision(world.Seed, observer.Id, 5000 + (int)ev.Id);
+        // Keyed to the occasion the scheduler built it from, not to this event's own Id — the whole
+        // point being that inserting or removing an unrelated event elsewhere cannot reroll it.
+        var occasionKey = ev.Payload.OccasionKey
+            ?? throw new SimulationInvariantException(
+                $"ObservationOpportunity event {ev.Id} carries no occasion key; every scheduler of " +
+                "this event kind is required to set one.");
+        var rng = Rng.ForOccasion(world.Seed, occasionKey);
         double attentiveness = 0.4 + 0.6 * observer.Capabilities[Skill.Investigation];
         if (!rng.Chance(ev.Payload.Discoverability * attentiveness)) return;
 

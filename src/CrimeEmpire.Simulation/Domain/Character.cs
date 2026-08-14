@@ -32,6 +32,12 @@ public sealed class Character
     /// <summary>Monotonic per-character counter used to seed this character's decision RNG stream.</summary>
     public int DecisionCount { get; set; }
 
+    /// <summary>
+    /// Monotonic per-character counter assigning each new strategy instance its local identity —
+    /// exactly the DecisionCount pattern, one level down. See StrategyInstance.LocalSequence.
+    /// </summary>
+    public int StrategyCount { get; set; }
+
     /// <summary>Set for characters who are not organisation members (e.g. the detective, the shopkeeper).</summary>
     public bool IsOrgMember => Social.OrganizationId is not null;
 

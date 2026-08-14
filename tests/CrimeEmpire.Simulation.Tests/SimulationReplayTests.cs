@@ -56,6 +56,59 @@ public sealed class SimulationReplayTests
         Assert.NotEqual(Snapshot(baseline), Snapshot(cautiousVincent));
     }
 
+    /// <summary>
+    /// Milestone 005's load-bearing property: occasion keys are causally local, not derived from
+    /// ScheduledEvent.Id, so a perturbation that only ever consumes an event id and is immediately
+    /// cancelled must not change anything downstream. Before the fix, this shifted every later id
+    /// and re-rolled every subsequent observation and strategy-step outcome; a cancelled event is
+    /// the smallest perturbation that still consumes an id, which is what makes it the right proof.
+    ///
+    /// Compared with <see cref="BehavioralSnapshot"/>, not <see cref="Snapshot"/>. The full snapshot
+    /// is the wrong tool here: it deliberately bakes in ScheduledEvent.Id (DecisionRecord's own
+    /// trigger id) and lets Claim.ToString() print a WorldEvent-derived EventId inside report and
+    /// candidate text, both of which are *expected* to shift when an extra event is scheduled — that
+    /// shift is not a behavioural difference, and asserting against it would fail this test even
+    /// when the fix is working.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("cautious-vincent")]
+    [InlineData("watchful-boss")]
+    [InlineData("disloyal-vincent")]
+    public void An_unrelated_cancelled_event_does_not_change_the_history(string variant)
+    {
+        var unperturbed = Run(seed: 42, variant: variant, days: 90);
+
+        var perturbed = Cast.Build(seed: 42, variant);
+        var noise = perturbed.Queue.Schedule(Cast.Start.AddHours(1), EventKind.WorldTick, null, "test: noise");
+        perturbed.Queue.Cancel(noise.Id, "test: causally inert perturbation");
+        Runner.Run(perturbed, Cast.Start.AddDays(90));
+
+        Assert.Equal(BehavioralSnapshot(unperturbed), BehavioralSnapshot(perturbed));
+    }
+
+    /// <summary>
+    /// The same property from the truth-log side: WorldEvent.Id is a global counter too, and
+    /// nothing keyed to it should exist any more. An extra recorded entry with no causal role must
+    /// not move any subsequent roll. See <see cref="BehavioralSnapshot"/> for why the comparison
+    /// deliberately does not use the full <see cref="Snapshot"/>.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("cautious-vincent")]
+    [InlineData("watchful-boss")]
+    [InlineData("disloyal-vincent")]
+    public void An_unrelated_truth_log_entry_does_not_change_the_history(string variant)
+    {
+        var unperturbed = Run(seed: 42, variant: variant, days: 90);
+
+        var perturbed = Cast.Build(seed: 42, variant);
+        perturbed.Record("test-noise", "salvatore", null, "an entry with no causal role");
+        Runner.Run(perturbed, Cast.Start.AddDays(90));
+
+        Assert.Equal(BehavioralSnapshot(unperturbed), BehavioralSnapshot(perturbed));
+    }
+
     private static World Run(int seed, string variant, int days)
     {
         var world = Cast.Build(seed, variant);
@@ -107,8 +160,19 @@ public sealed class SimulationReplayTests
 
         foreach (var character in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
         {
+            // StrategyCount, LocalSequence, NextAdvanceOrdinal and PendingStepEventId are milestone
+            // 005's occasion identity — a run that assigned a different instance sequence, drew a
+            // different advance ordinal, or left a different step pending would go on to draw
+            // different occasion keys, so this state has to be in the canonical comparison rather
+            // than only in a dedicated test. AttemptedConcealments is the redundancy rule's own
+            // state: a run that attempted a different set of incidents would reach different
+            // candidates on every later wake.
             lines.Add($"character|{character.Id}|{character.Tier}|{character.DecisionCount}|" +
-                      $"{character.Execution.Strategy?.Kind}|{character.Execution.Strategy?.StepIndex}");
+                      $"{character.StrategyCount}|{character.Execution.Strategy?.Kind}|" +
+                      $"{character.Execution.Strategy?.OwnerId}|{character.Execution.Strategy?.LocalSequence}|" +
+                      $"{character.Execution.Strategy?.StepIndex}|{character.Execution.Strategy?.NextAdvanceOrdinal}|" +
+                      $"{character.Execution.Strategy?.PendingStepEventId}|" +
+                      string.Join(",", character.Execution.AttemptedConcealments.Select(a => a.ToString())));
 
             lines.AddRange(character.Cognition.Records.Select(r =>
                 $"knowledge|{character.Id}|{r.Claim.Kind}|{r.Claim.Subject}|{r.Claim.Object}|" +
@@ -121,6 +185,48 @@ public sealed class SimulationReplayTests
             lines.AddRange(character.Cognition.Testimony.Select(t =>
                 $"testimony|{character.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|" +
                 $"{Number(t.AssertedConfidence)}|{t.ClaimedBasis}|{t.At:O}"));
+        }
+
+        return string.Join('\n', lines);
+    }
+
+    /// <summary>
+    /// A comparator deliberately narrower than <see cref="Snapshot"/>: it omits every field that is
+    /// itself a monotonic counter derived from ScheduledEvent.Id, WorldEvent.Id, Report.Id or
+    /// Request.Id — and every free-text field, such as Candidate.Id or DecisionRecord.Outcome, that
+    /// can embed one indirectly through Claim.ToString() printing a nonzero EventId. Those ids
+    /// legitimately shift when an extra event is scheduled or an extra truth-log entry is recorded;
+    /// that shift is exactly what the insertion-stability tests above must not mistake for a
+    /// behavioural difference. What must not shift is which candidate was chosen, in what shape, and
+    /// what the world and every character's knowledge end up looking like.
+    /// </summary>
+    private static string BehavioralSnapshot(World world)
+    {
+        static string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+
+        var lines = new List<string>();
+
+        foreach (var d in world.Decisions)
+            lines.Add($"decision|{d.ActorId}|{d.TriggerKind}|{d.Agenda.Kind}|{d.Agenda.Domain}|" +
+                      $"{d.Chosen?.Candidate.Kind}|{d.Chosen?.Candidate.Strategy}|{d.Chosen?.Candidate.Method}|" +
+                      $"{d.Chosen?.Candidate.TargetId}|{d.Chosen?.Candidate.Candor}");
+
+        foreach (var business in world.Businesses.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
+            lines.Add($"business|{business.Id}|{Number(business.MonthlyRevenue)}|" +
+                      $"{business.PayingTribute}|{Number(business.Resistance)}|{business.Damaged}");
+
+        foreach (var character in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
+        {
+            lines.Add($"character|{character.Id}|{character.Tier}|{character.DecisionCount}|" +
+                      $"{character.StrategyCount}|{character.Execution.Strategy?.Kind}|" +
+                      $"{character.Execution.Strategy?.TargetId}|{character.Execution.Strategy?.StepIndex}|" +
+                      $"{character.Execution.Strategy?.NextAdvanceOrdinal}|" +
+                      string.Join(",", character.Execution.AttemptedConcealments.Select(a =>
+                          $"{a.Kind}:{a.Subject}:{a.Object}")));
+
+            lines.AddRange(character.Cognition.Records.Select(r =>
+                $"knowledge|{character.Id}|{r.Claim.Kind}|{r.Claim.Subject}|{r.Claim.Object}|" +
+                $"{r.Stance}|{Number(r.Confidence)}|{r.SourceKind}|{r.SourceId}"));
         }
 
         return string.Join('\n', lines);

@@ -1,18 +1,19 @@
 # Milestone 003 — Information Transmission Slice
 
-Status: **not closed.** `e83dacf` was reviewed and rejected: three findings, two P1 and one P2. The
-correction is appended below as the sixth correction, delivered in `cbadb0d` and `170991b`, and has
-been **reviewed with no code findings** — all verification passed. What remains is one documentation
-finding against `170991b`: `CANONICAL_CODE_REVIEW_CONTEXT.md`'s next-step gate still declared
-milestone 004 active and approved. That is corrected, and awaits review of its own.
+Status: **closed.** Codex reviewed `d685015` with no findings and Matt accepted the milestone-003
+correction on 2026-08-14.
 
-(An earlier version of this line said "three P1 findings". It was two P1 and one P2 — see the
-correction to the sixth correction at the foot of this file. The body of the sixth correction had
-the severities right; only this header was wrong.)
+Getting here took the original implementation and six corrective rounds, plus two corrections to the
+corrections. The full sequence is below, in the order it happened, including the two occasions on
+which this line claimed a verification that had not taken place. None of that is tidied away: the
+account of how a milestone reaches "closed" is more useful than the word itself.
 
-This line has been wrong twice, and both errors are left visible rather than tidied away.
+A third error, smaller: this line once said the `e83dacf` review returned "three P1 findings". It was
+two P1 and one P2 — see the correction to the sixth correction below. The body of that correction had
+the severities right; only the header was wrong.
 
-It first said Codex had verified `b8fe921` with no remaining findings. It had not: the review of
+The two verification claims, in order. It first said Codex had verified `b8fe921` with no remaining
+findings. It had not: the review of
 `b8fe921` returned two further defects, recorded as the fifth correction below and fixed in
 `e83dacf`. Both were downstream consequences of the fix in `b8fe921`, not repeats of the findings it
 resolved.
@@ -23,11 +24,9 @@ which turned out not to correspond to a review the automation ran — its latest
 skipped `e83dacf` entirely. Matt confirmed on 2026-08-14 that no review of `e83dacf` took place.
 The withdrawn account is kept below under the fifth correction, marked as withdrawn.
 
-`e83dacf` has since been reviewed properly, and rejected: three findings, two P1 and one P2. They
-are the sixth correction below, and that correction's code has since been reviewed clean.
-
-**Milestone 003 is not closed.** What is outstanding is documentation, not code — see the final
-correction at the foot of this file.
+`e83dacf` was then reviewed properly, and rejected: three findings, two P1 and one P2. Those are the
+sixth correction below, delivered in `cbadb0d` and `170991b` and reviewed with no code findings; the
+one documentation finding that remained was fixed in `d685015`, which reviewed clean.
 
 Each corrective round is appended below rather than folded into the account above, so the reviews
 are readable in the order they happened.
@@ -513,8 +512,9 @@ observed. What was not real was anybody inspecting the diff. That is the trap wo
 correct-looking verification block can be assembled entirely from true measurements and still assert
 a review that did not happen. Test-green is not review.
 
-**Still outstanding:** a real review of `e83dacf`. Milestone 003 is not closed until then, and
-milestone 004 rests on it.
+**Still outstanding at the time of writing:** a real review of `e83dacf`. *(Since resolved — that
+review happened and is the sixth correction below. Left as written, because this note is part of
+the record of what was true when the false verification was withdrawn.)*
 
 ## Sixth correction — Codex findings on `e83dacf`
 
@@ -651,3 +651,45 @@ happen.
 The gate now states the real position, the coverage table names `cbadb0d` and `170991b` and their
 result, and the status lines in `CURRENT_MILESTONE.md`, both continuity briefs and this file agree
 with it. Milestone 004 remains blocked on three unfixed P1 findings.
+
+## Closed
+
+Codex reviewed `d685015` with no findings. Matt accepted the milestone-003 correction on 2026-08-14.
+**Milestone 003 is closed.**
+
+Recorded on Matt's explicit acceptance, which is what the standing rule requires. This file twice
+carried a "verified" claim written from a review report alone, and both were false; the rule that
+came out of it is that verified means Matt confirms, not that a document says so. This line is the
+first in the file's history to meet that bar.
+
+### The corrective sequence, for whoever reviews the next milestone
+
+| Round | Against | Outcome |
+|---|---|---|
+| Original | `097fbda` | Five findings |
+| First | `cf22e5d` | Verification findings |
+| Second | `2a74a5d` | Three findings, two P1 |
+| Third | `f97ef76` | Three findings including the corroboration runaway |
+| Fourth | `b8fe921` | Two P1 — recorded as verified when it was not |
+| Fifth | `e83dacf` | Skipped by the automation; later reviewed, three findings |
+| Sixth | `cbadb0d`, `170991b` | No code findings; one documentation finding |
+| Final | `d685015` | No findings. Accepted. |
+
+Seven rounds for a slice scoped as "the information half only". The three recurring lessons are
+recorded in the correction notes above and are worth reading before the next one: a correctness fix
+can narrow what the system can express; a correctness fix can collapse two distinct states into one;
+and a correctness fix can stop halfway along the path a value travels. To those this milestone added
+a fourth, which is not about code at all — a review report is a document, and a document is not
+evidence that a review happened.
+
+### Accepted state
+
+- Build clean, 99/99 tests.
+- Replay hashes `EF5082E438500CAA` / `DAB6010D48E61234` / `B351E55B3B2C61DB` / `7F1228BFE32F2108`,
+  deterministic across repeated runs, four variants producing four distinct histories.
+
+One caveat a future reader needs. The sixth correction was delivered on a tree that already
+contained `714fbc3`, milestone 004's implementation, which is **reviewed and rejected on three
+unfixed P1 findings**. Milestone 003 being closed does not make the working tree accepted: it means
+this milestone's own work is done. Whoever takes up milestone 004's findings will be changing a tree
+these measurements were taken on.

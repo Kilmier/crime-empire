@@ -1,17 +1,15 @@
 # Crime Empire — Canonical Design Context
 
-Status snapshot: 2026-08-14. **Nothing is verified.** Milestone 003's `e83dacf` was reviewed and
-rejected; its correction has been reviewed with no code findings, leaving one documentation
-correction awaiting review, so milestone 003 is not closed. Milestone 004's `714fbc3` was reviewed
-and rejected on
-three P1 findings that are not yet fixed. Earlier versions of this line called `b8fe921` and then
-`e83dacf` verified when neither was. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is
-the authority on what has been looked at and what it concluded.
+Status snapshot: 2026-08-14. **Milestone 003 is closed** — accepted after `d685015` reviewed clean,
+having taken seven corrective rounds including two occasions where the record claimed a verification
+that had not happened. **Milestone 004 (Provenance Precision) is reviewed and rejected**: three P1
+findings, **not fixed**, and it is blocked on them. What it attempted was to make information
+provenance precise enough to distinguish participating, witnessing, discovering a trace, and being
+given a first-hand account. No milestone is active.
 
-Milestone 004 (Provenance Precision) was **reviewed and rejected**: three P1 findings, **not yet
-fixed**, and milestone 004 is blocked on them. What it attempted was to make information provenance
-precise enough to distinguish participating, witnessing, discovering a trace, and being given a
-first-hand account. No milestone is active.
+Milestone 003 closing does not accept the working tree — its correction was built on top of
+milestone 004's rejected implementation, which is still present. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s
+review-coverage section is the authority on what has been looked at and what it concluded.
 
 ## Purpose and authority
 
@@ -280,9 +278,8 @@ Still unverified: Godot 4 C# compatibility with this exact .NET target.
 
 ### Milestone 003 — information transmission slice
 
-Implemented and test-green. `e83dacf` was reviewed and **rejected** — three findings, two P1 and one
-P2. The correction's code has since been reviewed with no findings; one documentation correction is
-still awaiting review, so this is not closed:
+**Closed**, accepted 2026-08-14. `e83dacf` was reviewed and rejected — three findings, two P1 and
+one P2 — and the correction was reviewed clean and accepted at `d685015`:
 
 - Observation and inference remain distinct from hidden world truth.
 - First-class reports, asserted and withheld claims, testimony, conflicts, and reconsideration.
@@ -292,8 +289,7 @@ still awaiting review, so this is not closed:
 - Regression coverage for information leaks, report loops, duplicate accounts, recantation,
   request scope, pause/resume behavior, event ordering, and deterministic replay.
 
-The milestone has required six corrective rounds, the sixth awaiting review. The recurring lessons
-were:
+The milestone took seven corrective rounds in all. The recurring lessons were:
 
 1. A correctness fix can accidentally narrow what the system can express.
 2. A correctness fix can collapse distinct states into one.

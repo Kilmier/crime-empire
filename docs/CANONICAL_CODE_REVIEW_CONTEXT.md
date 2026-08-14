@@ -2,18 +2,18 @@
 
 Status snapshot: 2026-08-14 on `main`.
 
-**Nothing here is verified.** Milestone 003's `e83dacf` was reviewed and rejected; the correction
-(`cbadb0d`, `170991b`) has since been reviewed with no code findings, leaving one documentation
-finding that this commit fixes — so milestone 003 is not closed. Milestone 004's `714fbc3` was
-reviewed and rejected on three P1 findings that are not yet fixed, so milestone 004 is blocked.
+**Milestone 003 is closed** — Codex reviewed `d685015` with no findings and Matt accepted it on
+2026-08-14. **Milestone 004 is reviewed and rejected**, on three P1 findings that are not fixed, and
+remains blocked on them. No milestone is active.
 
-Earlier versions of this file claimed verification that had not happened — first for `b8fe921`, then
-for `e83dacf` — a third wrongly recorded `fb2c84d` and `714fbc3` as never reviewed, and a fourth
-left the next-step gate telling readers milestone 004 was active and approved. Treat the "Review
-coverage" section below as the authority over any status wording elsewhere, including this
+Closing 003 does not accept the working tree. Its correction was delivered on top of `714fbc3`,
+milestone 004's rejected implementation, which is still present and still unfixed.
+
+This file has misreported status four times: it claimed verification that had not happened, first
+for `b8fe921` and then for `e83dacf`; it wrongly recorded `fb2c84d` and `714fbc3` as never reviewed;
+and it left a next-step gate telling readers milestone 004 was active and approved. Treat the
+"Review coverage" section below as the authority over any status wording elsewhere, including this
 paragraph.
-
-No milestone is active.
 
 ## Purpose and authority
 
@@ -143,7 +143,7 @@ for comparison, not as the accepted baseline.
 - Decision counts: 13 / 16 / 13 / 43.
 - Report counts: 2 / 2 / 2 / 6.
 
-### Current baseline — milestone-003 sixth correction, awaiting review
+### Accepted baseline — milestone 003, closed at `d685015`
 
 - Build: 0 warnings, 0 errors.
 - Tests: 99 passed, 0 failed.
@@ -363,6 +363,10 @@ Future changes should retain coverage for:
   **Reviewed and rejected**: three P1 findings, not yet fixed. Milestone 004 is blocked on them.
 - `11c4a4a` — Record the implementation commit in the milestone-004 archive. Docs only.
 - `d2af4c8` — Withdraw the false verification of `e83dacf`. Docs only.
+- `cbadb0d` — Fix the three findings against `e83dacf`. Reviewed, no code findings.
+- `170991b` — Enforce the false-candour invariant at `Reporting.Compose`. Reviewed, no code findings.
+- `d685015` — Replace the stale next-step gate. Docs only. Reviewed clean; **milestone 003 accepted
+  and closed here.**
 
 Do not squash or rewrite this history merely to make milestone 003 look cleaner. The corrective
 sequence records useful architectural failures and review lessons.
@@ -380,12 +384,20 @@ been reviewed too.
 | `e83dacf` | Reviewed and **rejected**: three findings, two P1 and one P2. Corrected by `cbadb0d` and `170991b`. |
 | `a5a72f1` | Reviewed. Findings accepted; the false verification it recorded was withdrawn in `d2af4c8`. |
 | `714fbc3` | Reviewed and **rejected**: three P1 findings. **Not fixed.** Milestone 004 is blocked on them. |
-| `cbadb0d`, `170991b` | The milestone-003 sixth correction. Reviewed with **no code findings**; all verification passed. One documentation finding against `170991b` — the stale next-step gate — is fixed in this commit and is itself awaiting review. |
+| `cbadb0d`, `170991b` | The milestone-003 sixth correction. Reviewed with **no code findings**; all verification passed. One documentation finding against `170991b` — the stale next-step gate — fixed in `d685015`. |
+| `d685015` | Reviewed, **no findings**. Matt accepted the milestone-003 correction on 2026-08-14. **Milestone 003 is closed.** |
 | `11c4a4a`, `d2af4c8` | Status not established here. |
 
-**Nothing in this repository is verified.** The nearest thing to a clean result is the milestone-003
-sixth correction, whose code carries no outstanding findings; its documentation correction has not
-yet been reviewed, so milestone 003 is not closed. Milestone 004's three P1s are untouched.
+**Accepted: milestone 003, through `d685015`.** Its implementation and every corrective round have
+been reviewed and accepted.
+
+**Not accepted: milestone 004.** `714fbc3` stands rejected on three P1 findings, none fixed. Because
+the milestone-003 correction was built on top of it, the tree these baselines were measured on
+contains rejected code. Closing 003 says this milestone's work is done; it does not bless the tree.
+
+`fb2c84d`'s rejection findings were never recorded in this repository. Every line it touched has
+since been rewritten and re-reviewed several times over, so the item is probably moot — but it is
+listed rather than quietly dropped, because "probably moot" is a judgement and not a review.
 
 Test-green is not review, and review is not acceptance. `714fbc3` builds clean and passes its suite
 and was still rejected; do not describe it as unreviewed or as safe.
@@ -532,22 +544,23 @@ log so runner verification gives an independent deterministic signal.
 
 **No milestone is active. Do not start one.**
 
-This section previously said milestone 003 was closed and milestone 004 active and approved. Both
-halves were wrong, and they were the last place in this file still issuing an instruction to begin
-work — which is the dangerous kind of stale, because a gate that says "go" is read as permission.
+- **Milestone 003 — closed.** Accepted by Matt on 2026-08-14 after `d685015` reviewed clean.
+- **Milestone 004 — reviewed and rejected** on three P1 findings, none of them fixed. Blocked on
+  them. The findings are not recorded in this repository.
 
-The actual state:
+The next step belongs to Matt: milestone 004's findings, or a scope decision. Neither is a licence
+to start work from the candidate list.
 
-- **Milestone 003** — not closed. Its sixth correction (`cbadb0d`, `170991b`) has been reviewed with
-  **no code findings**, and all verification passed. One documentation finding against `170991b`
-  remains, which is what this commit addresses. Nothing is closed until that is reviewed.
-- **Milestone 004** — reviewed and **rejected** on three P1 findings, none of them fixed. It is
-  blocked, and blocked twice over: on those findings, and on milestone 003 closing first, since 004
-  was built on top of it.
+An earlier version of this section said milestone 003 was closed and milestone 004 "active and
+approved" while both were false. It was the last place in this file still issuing an instruction,
+which is the dangerous kind of stale — a status line that is out of date misinforms, but a gate that
+says "approved" grants permission. When reconciling status, sweep for the sentences that cause
+something to happen ("is active", "is approved", "next step is", "is closed") before the ones that
+merely describe.
 
-Nothing is verified. `CURRENT_MILESTONE.md` is the authoritative scope and this document is not;
-read it before implementing anything, infer no scope from the debt list above, and take any scope
-change to Matt and into that file first.
+`CURRENT_MILESTONE.md` is the authoritative scope and this document is not; read it before
+implementing anything, infer no scope from the debt list above, and take any scope change to Matt
+and into that file first.
 
 Note carried forward for whenever milestone 004's findings are worked: `SourceKind.Direct` was not
 merely a label. It was read as a predicate at `Cognition.Learn` (override rule), `Cognition.Receive`

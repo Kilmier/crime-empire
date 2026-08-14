@@ -9,19 +9,21 @@ do not create a separate handoff document.
 
 **No milestone is active. Both recent milestones were reviewed and rejected.**
 
-- **Milestone 003** — `e83dacf` was reviewed and rejected on three findings, two P1. They are fixed;
-  the fix is the sixth correction in `docs/milestones/003-information-transmission.md` and is
-  **awaiting review**. Not verified.
+- **Milestone 003** — `e83dacf` was reviewed and rejected on three findings, two P1 and one P2. They
+  are fixed, in `cbadb0d` and `170991b`, and that correction has since been **reviewed with no code
+  findings**; all verification passed. One documentation finding against `170991b` remains — a stale
+  next-step gate telling readers milestone 004 was active — fixed in the commit that also carries
+  this line, and itself awaiting review. Not closed.
 - **Milestone 004** — `714fbc3` was reviewed and rejected on three P1 findings. **Not fixed.** The
   findings are in Matt's hands, not in this repository. Milestone 004 is blocked until milestone
-  003's correction passes review, and then until those three are addressed.
+  003 closes, and then until those three are addressed.
 
 Nothing in the repository is verified. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section
 is the authority on what has been looked at and what it concluded; do not infer status from the
 prose in any other file, including this one.
 
-**Next step is review of the milestone-003 sixth correction.** Not milestone 004's findings, and not
-new work.
+**Next step is review of this documentation correction.** Not milestone 004's findings, and not new
+work.
 
 Do not infer milestone 005 from the candidate list in `CANONICAL_DESIGN_CONTEXT.md` or from the
 deferred items below. Confirm scope with Matt and write it here before changing simulation

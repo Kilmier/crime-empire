@@ -1,7 +1,10 @@
 # Milestone 003 — Information Transmission Slice
 
-Status: **`e83dacf` was reviewed and rejected: three findings, two P1 and one P2. The correction is
-appended below as the sixth correction and is itself awaiting review. Not verified.**
+Status: **not closed.** `e83dacf` was reviewed and rejected: three findings, two P1 and one P2. The
+correction is appended below as the sixth correction, delivered in `cbadb0d` and `170991b`, and has
+been **reviewed with no code findings** — all verification passed. What remains is one documentation
+finding against `170991b`: `CANONICAL_CODE_REVIEW_CONTEXT.md`'s next-step gate still declared
+milestone 004 active and approved. That is corrected, and awaits review of its own.
 
 (An earlier version of this line said "three P1 findings". It was two P1 and one P2 — see the
 correction to the sixth correction at the foot of this file. The body of the sixth correction had
@@ -20,13 +23,14 @@ which turned out not to correspond to a review the automation ran — its latest
 skipped `e83dacf` entirely. Matt confirmed on 2026-08-14 that no review of `e83dacf` took place.
 The withdrawn account is kept below under the fifth correction, marked as withdrawn.
 
-`e83dacf` has since been reviewed properly, and rejected: three findings, two of them P1. They are
-the sixth correction below.
+`e83dacf` has since been reviewed properly, and rejected: three findings, two P1 and one P2. They
+are the sixth correction below, and that correction's code has since been reviewed clean.
 
-**Milestone 003 is not closed.** The sixth correction needs review of its own.
+**Milestone 003 is not closed.** What is outstanding is documentation, not code — see the final
+correction at the foot of this file.
 
-Reaching this point took the original commit plus six corrective rounds; each is appended below
-rather than folded into the account above, so the reviews are readable in the order they happened.
+Each corrective round is appended below rather than folded into the account above, so the reviews
+are readable in the order they happened.
 
 ## What was attempted
 
@@ -621,3 +625,29 @@ The guard never fires in any current variant — the generator does not produce 
 there is no behavioural movement from it. It exists because a rule that lives only in the generator
 is one refactor away from being lost, and `Candor` is read by both the developer trace and the
 replay snapshot.
+
+## Correction to the false-candour pass — a stale gate
+
+Status: **awaiting Codex review.**
+
+`170991b` was reviewed with no code findings: the false-candour invariant and its tests stand, and
+all verification passed. One P1 documentation finding remained.
+
+`CANONICAL_CODE_REVIEW_CONTEXT.md`'s "Current next-step gate" still read *"Milestone 003 is closed.
+Milestone 004 (Provenance Precision) is active and approved"*. Both halves were false by then —
+milestone 003 was mid-correction and milestone 004 had been reviewed and rejected on three P1
+findings — and every other status line in the repository had been reconciled around it while that
+one was missed.
+
+It is the worst place to leave a stale claim. A status line that is merely out of date misinforms; a
+*gate* that says "active and approved" issues an instruction, and the next agent reading it would
+have started work on a rejected milestone with the file's own authority behind them.
+
+The lesson to carry: when reconciling status, prose that gives permission ranks above prose that
+gives information. Search for the instructions, not just the descriptions — "is active", "is
+approved", "next step is", "is closed" — because those are the sentences that cause something to
+happen.
+
+The gate now states the real position, the coverage table names `cbadb0d` and `170991b` and their
+result, and the status lines in `CURRENT_MILESTONE.md`, both continuity briefs and this file agree
+with it. Milestone 004 remains blocked on three unfixed P1 findings.

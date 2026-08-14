@@ -1,7 +1,9 @@
 # Crime Empire — Canonical Design Context
 
 Status snapshot: 2026-08-14. **Nothing is verified.** Milestone 003's `e83dacf` was reviewed and
-rejected; its correction is awaiting review. Milestone 004's `714fbc3` was reviewed and rejected on
+rejected; its correction has been reviewed with no code findings, leaving one documentation
+correction awaiting review, so milestone 003 is not closed. Milestone 004's `714fbc3` was reviewed
+and rejected on
 three P1 findings that are not yet fixed. Earlier versions of this line called `b8fe921` and then
 `e83dacf` verified when neither was. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is
 the authority on what has been looked at and what it concluded.
@@ -279,7 +281,8 @@ Still unverified: Godot 4 C# compatibility with this exact .NET target.
 ### Milestone 003 — information transmission slice
 
 Implemented and test-green. `e83dacf` was reviewed and **rejected** — three findings, two P1 and one
-P2 — and the correction is awaiting review, so this is not closed:
+P2. The correction's code has since been reviewed with no findings; one documentation correction is
+still awaiting review, so this is not closed:
 
 - Observation and inference remain distinct from hidden world truth.
 - First-class reports, asserted and withheld claims, testimony, conflicts, and reconsideration.

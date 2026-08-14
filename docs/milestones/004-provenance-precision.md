@@ -1,6 +1,6 @@
 # Milestone 004 — Provenance Precision
 
-Status: **four times corrected; the fourth correction is awaiting review. Not verified or accepted.**
+Status: **closed.** Codex reviewed `1fe8a15` with no findings and Matt accepted it on 2026-08-14.
 
 The sequence, in order:
 
@@ -8,11 +8,11 @@ The sequence, in order:
 2. `c828bfa` — the first correction. Reviewed and **rejected**, three P1 and two P2.
 3. `d783745` — the second correction. Reviewed and **rejected**, two findings.
 4. `612bd50` — the third correction. Reviewed and **rejected**, two findings.
-5. This correction — fixes those two. **Awaiting review.**
+5. `1fe8a15` — the fourth correction. Reviewed with **no findings**. **Accepted.**
 
-All four corrections are appended at the foot of this file, in order. Nothing between here and there
-has been rewritten: the account below is what the milestone originally claimed, including the parts
-later findings contradict.
+All four corrections are appended at the foot of this file, in order, along with a closing note.
+Nothing between here and there has been rewritten: the account below is what the milestone
+originally claimed, including the parts later findings contradict.
 
 Milestone 003, which this was built on top of, has since closed.
 
@@ -454,3 +454,63 @@ the guarantee is now a property of the type rather than a convention about how t
 **None.** All four replay hashes unchanged at `B20C06E5838C0657` / `24A181B260F9C396` /
 `4B60DA962927A6F7` / `B274F395A61C5118`, decisions 13 / 16 / 13 / 19, both `--verify` runs
 deterministic. Nothing in the simulation ever used the routes that were closed.
+
+## Closed
+
+Codex reviewed `1fe8a15` with no findings. Matt accepted it on 2026-08-14. **Milestone 004 is
+closed.**
+
+### What it delivered
+
+`SourceKind.Direct` is gone, replaced by `Participant`, `Witness`, `Discovery` and
+`FirstHandTestimony`, with no umbrella value. Each of the four behaviours the old bundle controlled
+has its own named predicate, so a category cannot inherit a privilege nobody meant to give it.
+Knowledge travels: nothing arrives by rank, by shared employer, or by having ordered it. What a
+speaker claims is separated from what he privately has, so a denial no longer discloses the
+participation it denies. Provenance survives transmission, and repeating testimony makes it hearsay.
+
+### Accepted state
+
+- Build clean, **139/139 tests**.
+- Replay hashes `B20C06E5838C0657` / `24A181B260F9C396` / `4B60DA962927A6F7` / `B274F395A61C5118`,
+  deterministic across repeated runs, four variants producing four distinct histories.
+- Decision counts 13 / 16 / 13 / 19.
+
+### Four corrective rounds, and what they have in common
+
+| Round | Against | Outcome |
+|---|---|---|
+| Implementation | `714fbc3` | Three P1 |
+| First | `c828bfa` | Three P1, two P2 |
+| Second | `d783745` | Two findings |
+| Third | `612bd50` | Two findings |
+| Fourth | `1fe8a15` | No findings. Accepted. |
+
+Every round but the last found the same *kind* of defect: a distinction drawn in one place and not
+carried through to another. Authority implied knowledge because ordering something was treated as a
+channel. Provenance was decided when a claim was new and never revisited. A speaker's private basis
+travelled with his lie. Two fields that had to move together could still be moved apart. Milestone
+003's lesson was "a correctness fix can stop halfway along the path a value travels"; this milestone
+demonstrated it four times, and the reason is worth naming — each fix was correct where it was
+written and incomplete everywhere the value went next.
+
+The habit that eventually caught them was asking, of every new distinction: *where else does this
+value get read, and does the distinction survive the trip?*
+
+### Carried forward
+
+- **No scenario variant contradicts a delegator's first-hand account**, so the distinction between
+  authored participation and being told is provable in unit tests and invisible in play. A variant
+  where Tommy denies to Vincent that he touched the place would exercise it.
+- **The `ConcealIncident` runaway is latent, not fixed.** Observation rolls are keyed from global
+  event IDs, so removing the synthetic information events shifted Tommy's seeds and his
+  police-interest rolls now all miss. It returns whenever they land again. The underlying defect is
+  the keying: a per-character RNG stream keyed off a global counter means an unrelated change
+  anywhere silently re-rolls everybody's perception.
+- The `FirstHandTestimony` suspicion discount of `0.15` and the `Discovery` discount of `0.10` are
+  tuning guesses, not derived figures.
+
+### Relevant commits
+
+- `714fbc3` — implementation. `c828bfa`, `d783745`, `612bd50`, `1fe8a15` — the four corrections.
+  `11c4a4a` and the interleaved documentation commits carry the record.

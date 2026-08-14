@@ -7,81 +7,51 @@ do not create a separate handoff document.
 
 ## Status
 
-**No milestone is active.**
+**No milestone is active. Do not start one.**
 
-- **Milestone 003 — closed.** Codex reviewed `d685015` with no findings and Matt accepted the
-  correction on 2026-08-14. The record, including two occasions on which the archive claimed a
-  verification that had not happened, is preserved in
-  `docs/milestones/003-information-transmission.md`.
-- **Milestone 004 — four times corrected, the fourth awaiting review.** `714fbc3` rejected on three
-  P1; `c828bfa` on three P1 and two P2, chiefly a false denial transmitting the sender's private
-  basis; `d783745` on a silent `ActualBasis` default that marked honest briefings as misrepresented
-  and a repeat comparison collapsing Participant onto Witness; `612bd50` on provenance still being
-  settable by halves through an object initializer or `with`, and on live documentation claiming a
-  review automation that does not exist. This correction fixes both and is **awaiting review**. Not
-  verified or accepted. Every finding and fix is recorded in
-  `docs/milestones/004-provenance-precision.md`.
+Milestones 001–004 are complete and accepted. The most recent, **004 — Provenance Precision**, was
+accepted at `1fe8a15` on 2026-08-14 after four corrective rounds; its full record, including every
+finding and every correction, is in `docs/milestones/004-provenance-precision.md`.
 
-Milestone 003 being closed does not make the working tree accepted. Its correction was delivered on
-top of `714fbc3`, whose rejection is now four times corrected but not yet accepted.
+Every commit carrying code has been reviewed and accepted. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s
+review-coverage section is the authority on what has been looked at and what it concluded; do not
+infer status from prose anywhere else, including this file.
 
-`CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is the authority on what has been
-looked at and what it concluded; do not infer status from the prose in any other file, including
-this one.
-
-**Next step is review of the fourth milestone-004 correction.** Not new work chosen from the
-candidate list.
-
-Do not infer milestone 005 from the candidate list in `CANONICAL_DESIGN_CONTEXT.md` or from the
-deferred items below. Confirm scope with Matt and write it here before changing simulation
-behaviour.
+**Milestone 005 has not been chosen.** Do not infer it from the candidate list in
+`CANONICAL_DESIGN_CONTEXT.md`, from the carried-forward items below, or from the technical-debt list
+in the code brief. Confirm scope with Matt and write it here before changing simulation behaviour.
 
 ## Ordered review process
 
 Review is **manual**. There is no monitor running on a timer, no checkpoint the repository keeps for
-itself, and nothing that will notice a commit unless somebody points a review at it. An earlier
-version of this section described an automatic monitor; that was wrong, and the mistake matters,
-because a reader who believes coverage is automatic stops checking whether it happened.
-
-How it actually works:
+itself, and nothing that will notice a commit unless somebody points a review at it.
 
 - Matt takes commits in order, oldest unreviewed first, one at a time.
 - Each review names the exact commit whose diff was inspected.
 - A later documentation commit does not stand in for the implementation commit beneath it. If two
-  commits land back to back, both still need reviewing, in order.
-- The coverage table in `CANONICAL_CODE_REVIEW_CONTEXT.md` is the record of what has been looked at.
-  It is maintained by hand, so it is only as good as the last person to update it — which is the
-  reason it is the authority rather than the prose around it.
+  land back to back, both still need reviewing, in order.
+- The coverage table in `CANONICAL_CODE_REVIEW_CONTEXT.md` is the record. It is maintained by hand,
+  which is why it is the authority rather than the prose around it.
 
-The acceptance rule is unchanged: never write "verified" from a review report alone. A report must
-identify the exact commit actually reviewed, and Matt must confirm acceptance before the repository
-calls anything verified or closed.
+Never write "verified" or "closed" from a review report alone. A report must name the exact commit
+reviewed, and Matt must confirm acceptance. That rule exists because the record twice claimed a
+verification that had not happened.
 
-## Carried forward from milestone 004
+## Carried forward
 
-Recorded here because they came out of the work rather than from the plan, and the next scope
-decision should see them:
+Open items the next scope decision should see. Fuller versions live in the milestone-004 archive and
+the code brief's technical-debt list.
 
-- **The scenario does not exercise the distinction milestone 004 drew.** Provenance now separates
-  authored participation from first-hand testimony, and the erosion rules read that correctly, but
-  no current variant contradicts a delegator's first-hand account — so the difference is provable in
-  unit tests and invisible in play. A variant where Tommy denies to Vincent that he touched the
-  place would exercise it.
-- **The `ConcealIncident` runaway is latent, not fixed.** `disloyal-vincent` used to choose
-  `began ConcealIncident(...)` a dozen times, restarting rather than continuing, with an empty
-  domain in the label. It no longer occurs, and the reason is not that anything was repaired.
-
-  Observation rolls are keyed from global event IDs — `Rng.ForDecision(seed, observerId, 5000 + ev.Id)`.
-  Removing the synthetic information events shifted every later event ID, which shifted Tommy's
-  observation seeds, and his police-interest rolls now all miss. He never comes to believe he is
-  being looked at, so the legal-exposure pressure driving the loop never rises. It will come back
-  the moment those rolls land again.
-
-  The deeper defect is the keying itself: a per-character RNG stream keyed off a global counter
-  means an unrelated change anywhere silently re-rolls everybody's perception. That is a
-  determinism-hygiene problem worth its own scope, and deliberately not folded into a provenance
-  correction.
-- The `FirstHandTestimony` suspicion discount of `0.15` is a tuning guess, not a derived figure.
+- **The scenario does not exercise milestone 004's central distinction.** No variant contradicts a
+  delegator's first-hand account, so the difference between authored participation and being told is
+  provable in unit tests and invisible in play. A variant where Tommy denies to Vincent that he
+  touched the place would exercise it.
+- **RNG keying, and the latent `ConcealIncident` runaway.** Observation rolls are seeded from global
+  event IDs, so adding or removing any event anywhere re-rolls every character's perception. That is
+  what silenced the concealment loop rather than any repair; it returns whenever those rolls land
+  again. Worth its own scope.
+- **Tuning guesses**: the `FirstHandTestimony` suspicion discount of `0.15` and the `Discovery`
+  discount of `0.10` are not derived figures.
 
 ## Longer-standing deferrals
 

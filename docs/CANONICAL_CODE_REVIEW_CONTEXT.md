@@ -3,11 +3,11 @@
 Status snapshot: 2026-08-14 on `main`.
 
 **Milestone 003 is closed** — Codex reviewed `d685015` with no findings and Matt accepted it on
-2026-08-14. **Milestone 004 has been rejected four times and corrected four times**; its fourth correction is
-awaiting review. No milestone is active.
+2026-08-14. **Milestone 004 is closed** — Codex reviewed `1fe8a15` with no findings and Matt accepted it on
+2026-08-14, after four corrective rounds. No milestone is active.
 
-Closing 003 does not accept the working tree. Its correction was delivered on top of `714fbc3`,
-whose rejection is now four times corrected but not yet accepted.
+The working tree is accepted as of `1fe8a15`: milestones 003 and 004 are both closed, and every
+commit carrying code has now been reviewed and accepted.
 
 This file has misreported status four times: it claimed verification that had not happened, first
 for `b8fe921` and then for `e83dacf`; it wrongly recorded `fb2c84d` and `714fbc3` as never reviewed;
@@ -143,7 +143,7 @@ for comparison, not as the accepted baseline.
 - Decision counts: 13 / 16 / 13 / 43.
 - Report counts: 2 / 2 / 2 / 6.
 
-### Current baseline — milestone-004 fourth correction, awaiting review
+### Accepted baseline — milestone 004, closed at `1fe8a15`
 
 - Build: 0 warnings, 0 errors.
 - Tests: 139 passed, 0 failed.
@@ -407,7 +407,8 @@ been reviewed too.
 | `714fbc3` | Reviewed and **rejected**: three P1 findings. Corrected by `c828bfa`, which was itself rejected. |
 | `c828bfa` | Reviewed and **rejected**: three P1 and two P2, chiefly a false denial transmitting the sender's private basis. Corrected by `d783745`. |
 | `d783745` | Reviewed and **rejected**: a silent `ActualBasis` default that marked honest briefings as misrepresented, and a repeat comparison collapsing Participant onto Witness. Corrected by `612bd50`. |
-| `612bd50` | Reviewed and **rejected**: provenance still settable by halves through an object initializer or `with`, and live documentation claiming a review automation that does not exist. Corrected by the fourth milestone-004 correction, awaiting review. |
+| `612bd50` | Reviewed and **rejected**: provenance still settable by halves through an object initializer or `with`, and live documentation claiming a review automation that does not exist. Corrected by `1fe8a15`. |
+| `1fe8a15` | Reviewed, **no findings**. Matt accepted it on 2026-08-14. **Milestone 004 is closed.** |
 | `cbadb0d`, `170991b` | The milestone-003 sixth correction. Reviewed with **no code findings**; all verification passed. One documentation finding against `170991b` — the stale next-step gate — fixed in `d685015`. |
 | `d685015` | Reviewed, **no findings**. Matt accepted the milestone-003 correction on 2026-08-14. **Milestone 003 is closed.** |
 | `11c4a4a`, `d2af4c8` | Status not established here. |
@@ -415,11 +416,10 @@ been reviewed too.
 **Accepted: milestone 003, through `d685015`.** Its implementation and every corrective round have
 been reviewed and accepted.
 
-**Not accepted: milestone 004.** `714fbc3` was rejected; `c828bfa` corrected it and was rejected in
-turn, and twice more after that; the fourth correction is awaiting review. Because the
-milestone-003 correction was built on
-top of this chain, the tree these baselines were measured on still contains unaccepted code. Closing
-003 says that milestone's work is done; it does not bless the tree.
+**Accepted: milestone 004, through `1fe8a15`.** It took four corrective rounds — `714fbc3`
+rejected, then `c828bfa`, `d783745` and `612bd50` each rejected in turn — before the implementation
+was accepted. Every commit carrying code is now reviewed and accepted, so the tree these baselines
+were measured on is itself accepted.
 
 `fb2c84d`'s rejection findings were never recorded in this repository. Every line it touched has
 since been rewritten and re-reviewed several times over, so the item is probably moot — but it is
@@ -556,12 +556,13 @@ log so runner verification gives an independent deterministic signal.
 
 ## Known technical debt and deferred work
 
-- `SourceKind.Direct` lacks precise provenance categories. Addressed by milestone 004, **rejected
-  four times and four times corrected**, with the fourth correction awaiting review — so this is
-  not closed.
-  The attempt split it into `Participant` / `Witness` / `Discovery` / `FirstHandTestimony`, with one
-  named predicate per behaviour in `Domain/Provenance.cs`, and separated what a speaker claims from
-  what he privately has.
+- ~~`SourceKind.Direct` lacks precise provenance categories.~~ **Closed** by milestone 004, accepted
+  at `1fe8a15` after four corrective rounds. It split into `Participant` / `Witness` / `Discovery` /
+  `FirstHandTestimony`, with one named predicate per behaviour in `Domain/Provenance.cs`, and
+  separated what a speaker claims from what he privately has.
+- The `FirstHandTestimony` suspicion discount of `0.15`, and the `Discovery` discount of `0.10`, are
+  tuning guesses rather than derived figures. Nothing yet distinguishes them behaviourally from
+  neighbouring values.
 - No scenario variant contradicts a delegator's first-hand testimony, so milestone 004's central
   distinction is provable only in unit tests and never visible in play.
 - **RNG keying**: observation rolls are seeded from global event IDs

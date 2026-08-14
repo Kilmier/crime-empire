@@ -304,7 +304,7 @@ public sealed class InformationTransmissionTests
         var claim = new Claim(ClaimKind.PersonUsedViolence, "vincent", "shop", 1);
         var at = new DateTime(1987, 3, 2, 0, 0, 0, DateTimeKind.Utc);
 
-        cognition.Learn(claim, Stance.Knows, 1.0, SourceKind.Direct, "self", at);
+        cognition.Learn(claim, Stance.Knows, 1.0, SourceKind.Witness, "self", at);
         cognition.Receive(new ReportedClaim(claim, Stance.Rejects, 0.8), "vincent", at.AddDays(1));
 
         var after = cognition.Find(claim);
@@ -495,7 +495,7 @@ public sealed class InformationTransmissionTests
                                  && r.Claim.Subject == vincent.Id
                                  && r.IsHeld);
         Assert.NotNull(ownBreach);
-        Assert.Equal(SourceKind.Direct, ownBreach!.SourceKind);
+        Assert.Equal(SourceKind.Participant, ownBreach!.SourceKind);
 
         string view = IntelligenceWriter.Render(world, "vincent");
         string wording = IntelligenceWriter.Describe(ownBreach.Claim, id =>
@@ -522,7 +522,7 @@ public sealed class InformationTransmissionTests
         // Acquired by observation, then talked at repeatedly by one man. The record still names
         // the observer as its source, which is what the old check compared against.
         var observed = new Cognition();
-        observed.Learn(claim, Stance.Believes, 0.5, SourceKind.Direct, "self", at);
+        observed.Learn(claim, Stance.Believes, 0.5, SourceKind.Discovery, "self", at);
         double afterObserving = observed.ConfidenceIn(claim);
 
         for (int i = 1; i <= 5; i++)
@@ -532,7 +532,7 @@ public sealed class InformationTransmissionTests
 
         // One new voice may move him once. Five repetitions must not move him five times.
         var chorus = new Cognition();
-        chorus.Learn(claim, Stance.Believes, 0.5, SourceKind.Direct, "self", at);
+        chorus.Learn(claim, Stance.Believes, 0.5, SourceKind.Discovery, "self", at);
         chorus.Receive(new ReportedClaim(claim, Stance.Believes, 0.9), "tommy", at.AddDays(1));
         double afterFirst = chorus.ConfidenceIn(claim);
 
@@ -548,7 +548,7 @@ public sealed class InformationTransmissionTests
         var at = new DateTime(1987, 3, 2, 0, 0, 0, DateTimeKind.Utc);
 
         var cognition = new Cognition();
-        cognition.Learn(claim, Stance.Knows, 1.0, SourceKind.Direct, "self", at);
+        cognition.Learn(claim, Stance.Knows, 1.0, SourceKind.Witness, "self", at);
 
         cognition.Receive(new ReportedClaim(claim, Stance.Rejects, 0.8), "vincent", at.AddDays(1));
         double afterFirstDenial = cognition.ConfidenceIn(claim);
@@ -709,7 +709,7 @@ public sealed class InformationTransmissionTests
 
         // Vincent believed it too, then found out otherwise.
         vincent.Cognition.Learn(claim, Stance.Believes, 0.8, SourceKind.Report, Viewpoint, t0);
-        vincent.Cognition.Learn(claim, Stance.Rejects, 0.9, SourceKind.Direct, vincent.Id, t0.AddDays(5));
+        vincent.Cognition.Learn(claim, Stance.Rejects, 0.9, SourceKind.Discovery, vincent.Id, t0.AddDays(5));
 
         var changed = vincent.Cognition.Find(claim)!;
         Assert.False(changed.IsHeld);
@@ -920,7 +920,7 @@ public sealed class InformationTransmissionTests
 
         var cognition = new Cognition();
         foreach (var c in new[] { told, kept, unreached })
-            cognition.Learn(c, Stance.Believes, 0.8, SourceKind.Direct, "self", at);
+            cognition.Learn(c, Stance.Believes, 0.8, SourceKind.Discovery, "self", at);
 
         var sent = new[]
         {
@@ -1028,8 +1028,8 @@ public sealed class InformationTransmissionTests
         var untold = new Claim(ClaimKind.PersonUsedViolence, "tommy", "shop", 1);
 
         var cognition = new Cognition();
-        cognition.Learn(told, Stance.Believes, 0.9, SourceKind.Direct, "self", at);
-        cognition.Learn(untold, Stance.Believes, 0.5, SourceKind.Direct, "self", at);
+        cognition.Learn(told, Stance.Believes, 0.9, SourceKind.Discovery, "self", at);
+        cognition.Learn(untold, Stance.Believes, 0.5, SourceKind.Discovery, "self", at);
 
         // He reported, but only got one of them out.
         var sent = new[]
@@ -1068,12 +1068,12 @@ public sealed class InformationTransmissionTests
             new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, "tommy", 1),
         };
         foreach (var f in filler)
-            vincent.Cognition.Learn(f, Stance.Believes, 0.95, SourceKind.Direct, vincent.Id, t0);
+            vincent.Cognition.Learn(f, Stance.Believes, 0.95, SourceKind.Discovery, vincent.Id, t0);
 
         // And one thing he has taken back, held at lower confidence than any of the filler.
         var retracted = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
         vincent.Cognition.Learn(retracted, Stance.Believes, 0.8, SourceKind.Report, Viewpoint, t0);
-        vincent.Cognition.Learn(retracted, Stance.Rejects, 0.3, SourceKind.Direct, vincent.Id, t0.AddDays(5));
+        vincent.Cognition.Learn(retracted, Stance.Rejects, 0.3, SourceKind.Discovery, vincent.Id, t0.AddDays(5));
 
         // He already told the boss all the filler, and the original affirmation.
         world.Reports.Add(new Report(

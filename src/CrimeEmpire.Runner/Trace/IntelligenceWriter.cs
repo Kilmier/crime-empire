@@ -63,7 +63,7 @@ public static class IntelligenceWriter
             {
                 string mark = who.Cognition.IsContested(r.Claim) ? " ⚠" : "";
                 sb.AppendLine($"  {r.AcquiredAt:d MMM}  {Describe(r.Claim, Name)}{mark}");
-                sb.AppendLine($"           {Qualify(r, who.Cognition.IsContested(r.Claim))}, {Attribute(r, who.Id, Name)}");
+                sb.AppendLine($"           {Qualify(r, who.Cognition.IsContested(r.Claim))}, {Attribute(r, Name)}");
             }
         }
         sb.AppendLine();
@@ -88,9 +88,21 @@ public static class IntelligenceWriter
                 // alongside the others rather than above them as the answer. A conclusion he
                 // reached himself is still just one account, and it is the one most likely to be
                 // wrong about who was responsible.
-                if (who.Cognition.Find(claim) is { } own && own.SourceKind != SourceKind.Report)
+                // Only what he came to on his own account belongs here as a separate voice. Testing
+                // for "not a report" used to serve, because everything else was either unmediated
+                // or inference; with first-hand testimony in the vocabulary that test would file
+                // somebody else's account as his own, and it is already listed below under the
+                // name of the man who gave it.
+                if (who.Cognition.Find(claim) is { } own
+                    && (own.SourceKind.IsUnmediated() || own.SourceKind == SourceKind.Inference))
                 {
-                    string basis = own.SourceKind == SourceKind.Inference ? "he worked out" : "he has first-hand";
+                    string basis = own.SourceKind switch
+                    {
+                        SourceKind.Participant => "his own doing",
+                        SourceKind.Witness => "his own eyes",
+                        SourceKind.Discovery => "what he came across",
+                        _ => "what he worked out",
+                    };
                     sb.AppendLine($"     {basis,-20} — {(own.IsHeld ? "it happened" : "it did not")}");
                 }
 
@@ -198,23 +210,25 @@ public static class IntelligenceWriter
     /// is meaningfully different from having watched it happen, and the difference has to survive
     /// into the sentence.
     ///
-    /// Note what the Direct-but-someone-else's-id case does *not* say. It used to read "he was
-    /// there when X did it", which invented a fact the record does not contain:
-    /// <see cref="SourceKind.Direct"/> means unmediated, not present. It covers a man who watched
-    /// something, a man who did it himself, and a man who had it first-hand from the person who
-    /// did — and placing him at the scene is a claim about his whereabouts that the simulation
-    /// never made and that could be flatly false. Until provenance is precise enough to
-    /// distinguish those, the wording stays neutral about how it reached him.
+    /// This used to be deliberately vague. A single unmediated category covered a man who watched
+    /// something, a man who did it, and a man who had it from the person who did, so the wording
+    /// could not say "he saw it" or "he was there" without asserting a fact the record did not
+    /// contain. Provenance now distinguishes them, and each sentence below says only what its
+    /// category actually establishes.
+    ///
+    /// The rule this enforces: none of these may claim presence, sight, or participation that the
+    /// acquisition category does not carry. Discovery in particular says "came across", never
+    /// "saw" — finding a wrecked shopfront the next morning is not witnessing a beating.
     /// </summary>
-    private static string Attribute(InformationRecord r, string viewpointId, Func<string, string> name)
+    private static string Attribute(InformationRecord r, Func<string, string> name)
         => r.SourceKind switch
         {
-            // Not "he saw it himself" either. Self-sourced Direct covers a man who noticed
-            // something, a man who did it, and a man who gave the order — and "saw" is only true
-            // of the first. Vincent holds that he went outside his boss's rule because he decided
-            // to, which is not a thing anybody watches happen.
-            SourceKind.Direct when r.SourceId == viewpointId => "he has it first-hand",
-            SourceKind.Direct => $"he has it from {name(r.SourceId)} first-hand",
+            // Deliberately not "he saw it". Vincent holds that he went outside his boss's rule
+            // because he decided to, which is not a thing anybody watches happen.
+            SourceKind.Participant => "he had a hand in it himself",
+            SourceKind.Witness => "he saw it himself",
+            SourceKind.Discovery => "he came across it",
+            SourceKind.FirstHandTestimony => $"{name(r.SourceId)} was in it and told him so",
             SourceKind.Report => $"{name(r.SourceId)} told him",
             SourceKind.Inference => "he worked it out himself",
             _ => $"talk, no better sourced than {name(r.SourceId)}",

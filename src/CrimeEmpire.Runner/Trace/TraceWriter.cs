@@ -52,7 +52,7 @@ public static class TraceWriter
         {
             sb.AppendLine("   what he knew");
             foreach (var b in d.BeliefsUsed)
-                sb.AppendLine($"                  {b.Stance} {b.Claim} — {b.ConfidenceLabel}, via {b.SourceKind.ToString().ToLowerInvariant()}:{b.SourceId}");
+                sb.AppendLine($"                  {b.Stance} {b.Claim} — {b.ConfidenceLabel}, via {b.SourceKind.Label()}:{b.SourceId}");
         }
 
         if (d.Scored.Count > 0)

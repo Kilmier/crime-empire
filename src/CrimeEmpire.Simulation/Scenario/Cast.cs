@@ -203,7 +203,9 @@ public static class Cast
         org.Policies.Add(policy);
 
         // The boss knows his own rule and knows the money is short. Nobody else knows either yet.
-        salvatore.Cognition.Learn(policy.AwarenessClaim(OrgId), Stance.Knows, 1.0, SourceKind.Direct, "salvatore", Start);
+        // He set the rule, so he holds it as its author rather than as something he found out.
+        salvatore.Cognition.Learn(policy.AwarenessClaim(OrgId), Stance.Knows, 1.0,
+            SourceKind.Participant, "salvatore", Start);
         salvatore.Cognition.Learn(new Claim(ClaimKind.BusinessRefusesTribute, Grocery),
             Stance.Believes, 0.75, SourceKind.Report, "the books", Start);
         salvatore.Cognition.Learn(new Claim(ClaimKind.TargetIsVulnerable, Grocery),

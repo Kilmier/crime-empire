@@ -106,9 +106,16 @@ public static class Strategies
                 // it roughly right, and may be wrong at the margin.
                 double read = Math.Clamp(1.0 - business.Resistance + rng.Range(-0.2, 0.2), 0, 1);
                 var impression = new Claim(ClaimKind.TargetIsVulnerable, business.Id);
-                executor.Cognition.Learn(impression, Stance.Believes, read, SourceKind.Direct, executor.Id, world.Now);
+                // He went and looked at the place. Discovery rather than witnessing: what he formed
+                // a view about is a standing condition of the shop, not an event he attended.
+                executor.Cognition.Learn(impression, Stance.Believes, read, SourceKind.Discovery, executor.Id, world.Now);
+
+                // And the man who sent him has it from the man who went — an account from someone
+                // who was there, which is nearer the thing than a filed report but is still his
+                // word for it.
                 if (owner.Id != executor.Id)
-                    owner.Cognition.Learn(impression, Stance.Believes, read * 0.8, SourceKind.Report, executor.Id, world.Now);
+                    owner.Cognition.Learn(impression, Stance.Believes, read * 0.8,
+                        SourceKind.FirstHandTestimony, executor.Id, world.Now);
 
                 ScheduleNextStep(world, owner, s, $"{s.Label}: {step} done, next step due");
                 return;
@@ -117,9 +124,10 @@ public static class Strategies
             case 2: // the demand lands — the owner now has a decision to make
                 world.Record("demand", executor.Id, business.Id,
                     $"{executor.Name} put a demand to {business.Name}");
+                // His own shop and his own decision not to pay. Nobody had to tell him.
                 world.Get(business.OwnerId).Cognition.Learn(
                     new Claim(ClaimKind.BusinessRefusesTribute, business.Id),
-                    Stance.Knows, 1.0, SourceKind.Direct, business.OwnerId, world.Now);
+                    Stance.Knows, 1.0, SourceKind.Participant, business.OwnerId, world.Now);
 
                 world.Queue.Schedule(world.Now, EventKind.Incident, business.OwnerId,
                     $"{executor.Name} demanded payment",
@@ -136,8 +144,9 @@ public static class Strategies
                 {
                     world.Record("tribute-agreed", executor.Id, business.Id,
                         $"{business.Name} came to terms with {executor.Name}");
+                    // He struck the deal. His own act, not news that reached him.
                     executor.Cognition.Learn(new Claim(ClaimKind.TributeCollected, business.Id),
-                        Stance.Knows, 1.0, SourceKind.Direct, executor.Id, world.Now);
+                        Stance.Knows, 1.0, SourceKind.Participant, executor.Id, world.Now);
                     ScheduleNextStep(world, owner, s, $"{s.Label}: collection due");
                     return;
                 }
@@ -186,9 +195,16 @@ public static class Strategies
                 // He has seen the money arrive, so he no longer believes the place is holding out.
                 // Without this the objective changes but the belief driving it does not, and he
                 // starts the whole thing over again on a target that is already paying.
-                foreach (var who in new[] { owner, executor })
-                    who.Cognition.Learn(new Claim(ClaimKind.BusinessRefusesTribute, business.Id),
-                        Stance.Rejects, 0.9, SourceKind.Direct, who.Id, world.Now);
+                // Split, because the two men came to it differently. The one who collected was in
+                // it; the one who sent him finds the takings arriving. Both are unmediated and
+                // neither is the other's account, but they are not the same acquisition and the
+                // record should not say they are.
+                var collected = new Claim(ClaimKind.BusinessRefusesTribute, business.Id);
+                executor.Cognition.Learn(collected, Stance.Rejects, 0.9,
+                    SourceKind.Participant, executor.Id, world.Now);
+                if (owner.Id != executor.Id)
+                    owner.Cognition.Learn(collected, Stance.Rejects, 0.9,
+                        SourceKind.Discovery, owner.Id, world.Now);
 
                 CloseAssignment(world, owner, s);
                 Complete(world, owner, s, "the money started arriving", rng);
@@ -242,14 +258,30 @@ public static class Strategies
         var violenceClaim = new Claim(ClaimKind.PersonUsedViolence, executor.Id, business.Id, ev.Id);
         var witnessClaim = new Claim(ClaimKind.WitnessSawIncident, business.Id, executor.Id, ev.Id);
 
-        // Participants know what they themselves did. This is direct observation, not reporting —
-        // the report/rumour/distortion layer is step 1b.
-        executor.Cognition.Learn(violenceClaim, Stance.Knows, 1.0, SourceKind.Direct, executor.Id, world.Now);
-        executor.Cognition.Learn(witnessClaim, Stance.Believes, 0.6, SourceKind.Direct, executor.Id, world.Now);
-        world.Get(business.OwnerId).Cognition.Learn(violenceClaim, Stance.Knows, 1.0, SourceKind.Direct, business.OwnerId, world.Now);
+        // The man who did it. Nothing to discover and nobody to believe.
+        executor.Cognition.Learn(violenceClaim, Stance.Knows, 1.0,
+            SourceKind.Participant, executor.Id, world.Now);
 
+        // That people saw him is a guess, not an observation: he did not turn round and check the
+        // street, and he is reasoning from having done it somewhere public. Recording it as
+        // something he established would make his fear of witnesses unshakeable, when it is
+        // precisely the sort of thing he should be able to be wrong about in either direction.
+        executor.Cognition.Learn(witnessClaim, Stance.Believes, 0.6,
+            SourceKind.Inference, executor.Id, world.Now);
+
+        // The grocer watched it happen to him. Witness rather than Participant: he knows what was
+        // done and who did it, and specifically does not inherit the one thing Participant carries,
+        // which is knowledge of who gave the order.
+        world.Get(business.OwnerId).Cognition.Learn(violenceClaim, Stance.Knows, 1.0,
+            SourceKind.Witness, business.OwnerId, world.Now);
+
+        // The man who sent him hears that it was done. He was not there, and this is his executor's
+        // word — testimony from a participant, which is nearer the event than a filed report but is
+        // still an account he could come to doubt. Keeping this apart from his own authorship
+        // below is the distinction this milestone exists for.
         if (owner.Id != executor.Id)
-            owner.Cognition.Learn(violenceClaim, Stance.Knows, 0.9, SourceKind.Direct, executor.Id, world.Now);
+            owner.Cognition.Learn(violenceClaim, Stance.Knows, 0.9,
+                SourceKind.FirstHandTestimony, executor.Id, world.Now);
 
         owner.Motivations.AddPressure(PressureKind.LegalExposure, 0.3);
         executor.Motivations.AddPressure(PressureKind.LegalExposure, 0.35);
@@ -263,9 +295,14 @@ public static class Strategies
             // later; without it the person who ordered the breach holds no claim naming himself
             // and can only ever report candidly, while the subordinate who carried it out takes
             // all of the exposure.
+            //
+            // Participant, and deliberately not the same category as the line above that records
+            // him hearing the beating was done. Those are two separate acquisitions and only one
+            // of them can be argued out of him: he can be talked into doubting that Tommy went
+            // through with it; he cannot be talked into doubting that he gave the order.
             owner.Cognition.Learn(
                 new Claim(ClaimKind.PersonBreachedPolicy, owner.Id, s.BreachedPolicyId, ev.Id),
-                Stance.Knows, 1.0, SourceKind.Direct, owner.Id, world.Now);
+                Stance.Knows, 1.0, SourceKind.Participant, owner.Id, world.Now);
         }
 
         // Who gets a chance to notice, and on what terms. Collected before scheduling so that one
@@ -399,10 +436,15 @@ public static class Strategies
         {
             // The trail went cold. She stops treating the street talk as something to act on —
             // otherwise she reopens the same dead case every time the calendar nudges her.
+            //
+            // Inference, because that is what this is: nothing was observed and nobody said
+            // anything. Coming up empty is a conclusion she drew from looking and not finding, and
+            // filing it as something she established first-hand would let a failed canvass override
+            // a real account of the same incident.
             foreach (var stale in owner.Cognition.OfKind(ClaimKind.WitnessSawIncident)
                          .Where(r => r.Claim.Subject == s.TargetId).ToList())
                 owner.Cognition.Learn(stale.Claim, Stance.Doubts, stale.Confidence * 0.5,
-                    SourceKind.Direct, owner.Id, world.Now);
+                    SourceKind.Inference, owner.Id, world.Now);
         }
 
         Complete(world, owner, s, named ? "the canvass turned up a name" : "the trail went cold", rng);

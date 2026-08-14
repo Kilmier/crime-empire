@@ -79,9 +79,14 @@ public static class Salience
         double suspicion = c.Psychology[Trait.Suspicious];
         var records = c.Cognition.Records.Select(r =>
         {
-            if (r.SourceKind == SourceKind.Direct || suspicion <= 0) return r;
+            if (r.SourceKind.IsUnmediated() || suspicion <= 0) return r;
             double discount = r.SourceKind switch
             {
+                // Closer to the event than a filed report, and correspondingly harder to wave away:
+                // the man telling him was in it. Still discounted, because it is still an account.
+                // The 0.15 is a tuning guess sitting between unmediated and Report, not a derived
+                // figure.
+                SourceKind.FirstHandTestimony => 0.15 * suspicion,
                 SourceKind.Report => 0.25 * suspicion,
                 SourceKind.Rumor => 0.45 * suspicion,
                 SourceKind.Inference => 0.30 * suspicion,

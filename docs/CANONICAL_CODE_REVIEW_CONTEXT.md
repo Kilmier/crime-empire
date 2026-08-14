@@ -1,11 +1,13 @@
 # Crime Empire — Canonical Code and Review Context
 
-Status snapshot: 2026-08-13 at repository commit `e83dacf` on `main`. Milestone 003 is complete and
-Codex-verified against `e83dacf`. Verification took five corrective rounds, not four: review of
-`b8fe921` returned two further P1 defects, recorded as the fifth correction in
+Status snapshot: 2026-08-14 on `main`. Milestone 003 is complete and Codex-verified against
+`e83dacf`; verification took five corrective rounds, not four, because review of `b8fe921` returned
+two further P1 defects recorded as the fifth correction in
 `milestones/003-information-transmission.md`. An earlier version of this file called `b8fe921`
-verified with no remaining findings; that was wrong. Milestone 004 (Provenance Precision) is active
-and unblocked, with no implementation commits yet.
+verified with no remaining findings; that was wrong.
+
+Milestone 004 (Provenance Precision) is **complete and awaiting review** — see
+`milestones/004-provenance-precision.md`. No milestone is active.
 
 ## Purpose and authority
 
@@ -135,7 +137,24 @@ for comparison, not as the accepted baseline.
 - Decision counts: 13 / 16 / 13 / 43.
 - Report counts: 2 / 2 / 2 / 6.
 
-### Verified baseline at `e83dacf`
+### Current baseline — milestone 004, awaiting review
+
+- Build: 0 warnings, 0 errors.
+- Tests: 86 passed, 0 failed.
+- Replay hashes: `EF5082E438500CAA` / `67D2F9E8E70CE18E` / `B351E55B3B2C61DB` / `8658E56EDFDC06B5`
+  for baseline / cautious-vincent / watchful-boss / disloyal-vincent, each identical on both runs.
+- Four variants produce four distinct histories.
+- Decision counts: 13 / 16 / 13 / 45 — **unchanged** from `e83dacf`.
+- Report counts: 2 / 2 / 2 / 7 — **unchanged** from `e83dacf`.
+
+The hashes move; the simulation does not. Diffing the full decision and event stream against a
+pre-change build, with provenance labels normalised, shows no chosen action changed in either
+variant — only four score magnitudes, each by about 0.05, both deltas traceable to named
+reassignments. The hash movement is the developer trace and the player-facing wording, not
+behaviour. See `milestones/004-provenance-precision.md` for why the predicted behavioural change
+did not materialise.
+
+### Previous verified baseline at `e83dacf`
 
 - Build: 0 warnings, 0 errors.
 - Tests: 73 passed, 0 failed.
@@ -403,7 +422,14 @@ log so runner verification gives an independent deterministic signal.
 
 ## Known technical debt and deferred work
 
-- `SourceKind.Direct` lacks precise provenance categories.
+- ~~`SourceKind.Direct` lacks precise provenance categories.~~ Resolved by milestone 004: split into
+  `Participant` / `Witness` / `Discovery` / `FirstHandTestimony`, with the shared properties named
+  in `Domain/Provenance.cs`.
+- No scenario variant contradicts a delegator's first-hand testimony, so milestone 004's central
+  distinction is provable only in unit tests and never visible in play.
+- Possible pre-existing runaway: `disloyal-vincent` chooses `began ConcealIncident(...)` around
+  fifteen times, restarting rather than continuing, with an empty domain in the label. Present
+  identically before and after milestone 004.
 - The test project redundantly declares `TargetFramework` despite the centralized build property.
 - Godot 4 C# compatibility with `net10.0` is unverified.
 - SQLite persistence is selected but not implemented.

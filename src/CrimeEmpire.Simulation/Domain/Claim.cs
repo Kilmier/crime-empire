@@ -54,10 +54,40 @@ public enum Stance
     Rejects,
 }
 
+/// <summary>
+/// How a character came to hold a claim — the acquisition method, and nothing about how sure he is.
+///
+/// There is deliberately no umbrella value covering "unmediated". A single broad category is what
+/// this vocabulary replaced: it could not tell a man who ordered a beating from a man who watched
+/// one from a man who found the wreckage the next morning, and every rule that keyed off it had to
+/// treat all three the same. Ask for the shared property through <see cref="Provenance"/> instead;
+/// reintroducing an umbrella member is how the conflation comes back.
+/// </summary>
 public enum SourceKind
 {
-    /// <summary>Personally observed. Highest reliability.</summary>
-    Direct,
+    /// <summary>
+    /// He did it, ordered it, or it is his own act. The only category that justifies knowing
+    /// hidden authorship, because the author is him.
+    /// </summary>
+    Participant,
+
+    /// <summary>
+    /// He was there and saw it. Carries what was done and by whom he could see — never who
+    /// authorised it, which is not a visible property of an event.
+    /// </summary>
+    Witness,
+
+    /// <summary>
+    /// He came upon a trace or a consequence afterwards. Explicitly implies he was *not* present:
+    /// a wrecked shopfront is found, not witnessed.
+    /// </summary>
+    Discovery,
+
+    /// <summary>
+    /// Someone who was in it told him directly. Still testimony — closer to the event than a
+    /// filed report, but an account he could disbelieve, not something he established himself.
+    /// </summary>
+    FirstHandTestimony,
 
     /// <summary>Told by a named character through an organisational channel.</summary>
     Report,
@@ -118,10 +148,12 @@ public sealed record InformationRecord(
     /// "personally witnessed" tells the player he watched something happen, which is a fact the
     /// simulation never recorded and which is flatly untrue.
     ///
-    /// "Personally witnessed" is a legitimate thing to say once provenance can establish
-    /// witnessing — see the open provenance item in
-    /// docs/milestones/003-information-transmission.md. Until then the labels describe certainty
-    /// only, and <see cref="SourceKind"/> is the one thing allowed to speak about method.
+    /// Provenance can now establish witnessing — <see cref="SourceKind.Witness"/> exists — but that
+    /// does not move "personally witnessed" back into this list. Certainty and method are separate
+    /// axes and each gets its own sentence: the player is told how sure he is here, and how he came
+    /// to be sure by the provenance rendering. A confidence label that named a method would let a
+    /// number assert a fact about how something was learned, which is the defect this list was
+    /// rewritten to remove.
     /// </summary>
     public string ConfidenceLabel => Confidence switch
     {

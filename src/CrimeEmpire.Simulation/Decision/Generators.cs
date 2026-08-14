@@ -449,8 +449,11 @@ public static class Generators
         // report channel, which INFORMATION_AND_LEGIBILITY.md sanctions directly: leaders can
         // request audits and seek corroboration. Without it a boss can only ever hear from the
         // one subordinate who reports to him, and a lie from that subordinate is unfalsifiable.
+        // Anything he was told, not only what came up the formal channel. A participant's own
+        // account is testimony too and is exactly the kind of thing worth checking against a second
+        // voice; keying this on Report alone would quietly exempt it.
         var secondhand = ctx.Perceived.Beliefs
-            .Where(b => b.IsHeld && b.SourceKind == SourceKind.Report)
+            .Where(b => b.IsHeld && b.SourceKind.IsTestimony())
             .OrderBy(b => b.Confidence)
             .ThenBy(b => b.Claim.ToString(), StringComparer.Ordinal)
             .FirstOrDefault();

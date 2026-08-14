@@ -5,7 +5,8 @@ Verification took five corrective rounds, not four: review of `b8fe921` returned
 defects, recorded as the fifth correction in `milestones/003-information-transmission.md`. An
 earlier version of this file called `b8fe921` verified; that was wrong.
 
-Milestone 004 (Provenance Precision) is active and unblocked: make information
+Milestone 004 (Provenance Precision) is **complete and awaiting review**. No milestone is active.
+It made information
 provenance precise enough to distinguish participating, witnessing, discovering a trace, and being
 given a first-hand account. See `CURRENT_MILESTONE.md` for its authoritative scope.
 
@@ -212,18 +213,18 @@ The player-facing view:
 - presents conflicting accounts with attribution;
 - does not expose utility scores, hidden intentions, or the authoritative truth log.
 
-### Known provenance compromise
+### Provenance — resolved in milestone 004
 
-`SourceKind.Direct` is still too broad. It cannot distinguish:
+`SourceKind.Direct` was too broad to distinguish witnessing, participating or authoring,
+discovering a trace, and being told first-hand by a participant. Milestone 004 split it into
+`Participant`, `Witness`, `Discovery` and `FirstHandTestimony`, with no umbrella value surviving.
+Player-facing wording no longer has to stay vague: each sentence now says only what its category
+establishes, and discovery in particular never claims presence.
 
-- witnessing an event;
-- participating in or authoring it;
-- discovering a trace directly;
-- receiving information first-hand from the participant.
-
-Player-facing wording was made neutral so it does not invent physical attendance, but this is a
-workaround rather than a full data-model solution. A provenance-precision milestone could split
-participant, witness, discovery, and first-hand testimony.
+What remains open is not the model but the scenario. No current variant contradicts a delegator's
+first-hand account, so the distinction between "he ordered it" and "he was told it was done" — the
+one the milestone exists to draw — is provable in unit tests and invisible in play. A variant where
+the executor denies the act to the man who ordered it would exercise it.
 
 ## Current playable/provable scenario
 
@@ -344,15 +345,15 @@ intentional.
 `OPEN_CONCERNS.md` #4 says the trait vocabulary is not closed. The code and milestone 001 already
 closed it. This should be moved to the resolved decision record during an appropriate docs pass.
 
-## Candidate scopes for milestone 004 and beyond
+## Candidate scopes for the next milestone
 
-**Selected for milestone 004: option 1, provenance precision.** Approved by Matt and scoped in
-`CURRENT_MILESTONE.md`, which is authoritative. Options 2–5 remain candidates for later milestones
-and must not be inferred as next — confirm scope with Matt rather than reading an order into this
-list.
+Option 1 became milestone 004 and is done. Options 2–5 remain candidates and must not be inferred
+as next — confirm scope with Matt rather than reading an order into this list. Two candidates that
+came out of milestone 004 are recorded in `CURRENT_MILESTONE.md` under carried-forward items: a
+scenario variant that would make the provenance distinction visible in play, and a suspected
+pre-existing concealment runaway.
 
-1. **Provenance precision** — split the broad `Direct` source into meaningful acquisition modes.
-   Small, understood, and directly connected to several review findings. *Now milestone 004.*
+1. ~~**Provenance precision**~~ — done, milestone 004.
 2. **Relationship design pass** — resolve the relationship schema before implementing richer
    relationships and grievances.
 3. **Persistence/SQLite** — begin storing the information and decision data now worth querying.

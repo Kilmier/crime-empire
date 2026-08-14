@@ -58,7 +58,7 @@ public sealed class Cognition
         if (existing >= 0)
         {
             var prior = _records[existing];
-            bool overrides = sourceKind == SourceKind.Direct || confidence >= prior.Confidence;
+            bool overrides = sourceKind.IsUnmediated() || confidence >= prior.Confidence;
             if (!overrides) return prior;
             // He is revising something he already had, so the acquisition time stands. Only the
             // moment he last had cause to think about it moves.
@@ -158,13 +158,16 @@ public sealed class Cognition
         // Disagreement: a first denial from this man, or a reversal of what he told him before.
         // Either is a reason to be less sure; hearing the identical denial twice is not, and has
         // already returned above.
-        double erosion = prior.SourceKind == SourceKind.Direct ? 0.15 : 0.45;
+        // What he established himself resists hardest. An account he was given — including one from
+        // the man who was in it — is testimony, and testimony against testimony is an ordinary
+        // conflict of sources rather than being told you did not see what you saw.
+        double erosion = prior.SourceKind.IsUnmediated() ? 0.15 : 0.45;
         double shaken = Math.Clamp(prior.Confidence * (1 - erosion * asserted.AssertedConfidence), 0, 1);
 
         // Below the point where he would still act on it, the stance itself gives way — but only
         // for something he was told. What he saw himself decays in confidence and stays held.
         var stance = prior.Stance;
-        if (prior.SourceKind != SourceKind.Direct && shaken < 0.3)
+        if (!prior.SourceKind.IsUnmediated() && shaken < 0.3)
             stance = prior.IsHeld ? Stance.Doubts : Stance.Suspects;
 
         return Replace(prior, prior with

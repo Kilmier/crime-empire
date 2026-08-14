@@ -148,7 +148,12 @@ public static class Runner
             // of later. This is the "direct observation" half of the information loop; there is
             // no rumour network here, and a claim acquired this way is never re-transmitted
             // except through the explicit report channel.
-            observer.Cognition.Learn(claim, Stance.Believes, 0.6, SourceKind.Direct, observer.Id, world.Now);
+            // Discovery, and this is the load-bearing one. He is rolling against how discoverable a
+            // trace was, a day after the fact — a wrecked shopfront, a man visibly worked over,
+            // talk on the street. None of that puts him at the scene, and recording it as
+            // witnessing would have the simulation assert his whereabouts on the strength of a
+            // discovery roll.
+            observer.Cognition.Learn(claim, Stance.Believes, 0.6, SourceKind.Discovery, observer.Id, world.Now);
             learnedSomething = true;
 
             if (claim.Kind == ClaimKind.PersonBreachedPolicy && claim.Subject != observer.Id)

@@ -311,7 +311,7 @@ public static class Utility
         {
             double shakiest = 1.0;
             foreach (var b in perceived.Beliefs)
-                if (b.IsHeld && b.SourceKind == SourceKind.Report)
+                if (b.IsHeld && b.SourceKind.IsTestimony())
                     shakiest = Math.Min(shakiest, b.Confidence);
 
             Add("uncertainty", 1.5 * (1 - shakiest), "he is not satisfied with the account he has");

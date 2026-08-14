@@ -87,6 +87,29 @@ public sealed class PerceivedSituation
         return null;
     }
 
+    /// <summary>
+    /// His position on a claim whatever direction it points — held, doubted or rejected — and
+    /// consulting it counts as consulting it.
+    ///
+    /// Distinct from <see cref="Find"/>, which reports only what he holds. Both mark the record
+    /// used; this one hands back the disbelief as well. Answering a direct question needs that:
+    /// "no, that did not happen" is a real answer drawn from a real position, and reading it off
+    /// the raw belief list instead left the decision trace claiming he had consulted nothing.
+    ///
+    /// Deliberately not solved by narrowing the answer path to held beliefs. A man who has come to
+    /// reject something must still be able to say so, or sincere retractions stop being expressible.
+    /// </summary>
+    public InformationRecord? Position(Claim claim)
+    {
+        foreach (var r in _beliefs)
+        {
+            if (!r.Claim.Equals(claim)) continue;
+            MarkUsed(r);
+            return r;
+        }
+        return null;
+    }
+
     public bool Holds(Claim claim) => Find(claim) is not null;
 
     public double Confidence(Claim claim) => Find(claim)?.Confidence ?? 0.0;

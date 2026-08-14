@@ -308,8 +308,11 @@ public static class Generators
             askedAbout = ctx.Trigger.Payload.AboutClaim;
         }
 
-        if ((asker ?? ctx.SuperiorId) is { } boss
-            && (askedAbout is not null || (asker is null && HasSomethingNewFor(ctx, boss))))
+        // Who this account goes to. Being asked directly redirects the answer for this one
+        // exchange — it does not make the asker his superior, and nothing below may treat it as
+        // though it had. Authority questions key off ctx.SuperiorId, never off this.
+        if ((asker ?? ctx.SuperiorId) is { } recipient
+            && (askedAbout is not null || (asker is null && HasSomethingNewFor(ctx, recipient))))
         {
             // Answering a direct question and filing an account are different acts. Conflating them
             // is what let a man asked about one specific beating answer with whatever three things
@@ -321,38 +324,46 @@ public static class Generators
                 // answer. Where he has no position at all, nothing is offered and the request goes
                 // unanswered — already a modelled outcome, and the only honest one. He cannot be
                 // made to produce information he does not possess.
-                var position = ctx.Perceived.Beliefs.FirstOrDefault(b => b.Claim.Equals(question));
+                var position = ctx.Perceived.Position(question);
 
                 if (position is not null)
                 {
-                    // Worth lying about only when the answer names him.
-                    bool ownDoing =
+                    // Whether concealing this would be concealment at all.
+                    //
+                    // Naming him is not enough. If he does not hold the thing, saying it did not
+                    // happen is his honest position, and offering that as a False report would file
+                    // a sincere denial as a lie — destroying the one distinction ReportCandor
+                    // exists to draw, and doing it in the direction that makes an innocent man look
+                    // guilty in the developer trace. There is likewise nothing to leave out of an
+                    // account when he does not believe there was anything to leave out.
+                    bool namesHim =
                         question.Kind is ClaimKind.PersonUsedViolence or ClaimKind.PersonBreachedPolicy
                         && question.Subject == ctx.Actor.Id;
+                    bool couldDeceive = namesHim && position.IsHeld;
 
                     yield return new Candidate(
-                        $"answer:{boss}:{question}",
+                        $"answer:{recipient}:{question}",
                         ActionKind.ReportToSuperior,
                         nameof(FromRelationship),
-                        $"give {boss} his account of {question}")
+                        $"give {recipient} his account of {question}")
                     {
-                        TargetId = boss,
+                        TargetId = recipient,
                         Domain = ctx.Agenda.Domain,
                         Candor = ReportCandor.Candid,
                         AnsweringClaim = question,
                     };
 
-                    if (ownDoing)
+                    if (couldDeceive)
                     {
                         var ownPart = new[] { question };
 
                         yield return new Candidate(
-                            $"answer:{boss}:{question}:partial",
+                            $"answer:{recipient}:{question}:partial",
                             ActionKind.ReportToSuperior,
                             nameof(FromRelationship),
-                            $"give {boss} nothing on his own part in it")
+                            $"give {recipient} nothing on his own part in it")
                         {
-                            TargetId = boss,
+                            TargetId = recipient,
                             Domain = ctx.Agenda.Domain,
                             Candor = ReportCandor.Partial,
                             Suppressed = ownPart,
@@ -360,12 +371,12 @@ public static class Generators
                         };
 
                         yield return new Candidate(
-                            $"answer:{boss}:{question}:false",
+                            $"answer:{recipient}:{question}:false",
                             ActionKind.ReportToSuperior,
                             nameof(FromRelationship),
-                            $"tell {boss} it did not happen")
+                            $"tell {recipient} it did not happen")
                         {
-                            TargetId = boss,
+                            TargetId = recipient,
                             Domain = ctx.Agenda.Domain,
                             Candor = ReportCandor.False,
                             Suppressed = ownPart,
@@ -386,12 +397,12 @@ public static class Generators
                     .ToList();
 
                 yield return new Candidate(
-                    $"report:{boss}",
+                    $"report:{recipient}",
                     ActionKind.ReportToSuperior,
                     nameof(FromRelationship),
-                    $"report the situation to {boss}")
+                    $"report the situation to {recipient}")
                 {
-                    TargetId = boss,
+                    TargetId = recipient,
                     Domain = ctx.Agenda.Domain,
                     Candor = ReportCandor.Candid,
                 };
@@ -399,24 +410,24 @@ public static class Generators
                 if (awkward.Count > 0)
                 {
                     yield return new Candidate(
-                        $"report:{boss}:partial",
+                        $"report:{recipient}:partial",
                         ActionKind.ReportToSuperior,
                         nameof(FromRelationship),
-                        $"report to {boss}, leaving out his own part")
+                        $"report to {recipient}, leaving out his own part")
                     {
-                        TargetId = boss,
+                        TargetId = recipient,
                         Domain = ctx.Agenda.Domain,
                         Candor = ReportCandor.Partial,
                         Suppressed = awkward,
                     };
 
                     yield return new Candidate(
-                        $"report:{boss}:false",
+                        $"report:{recipient}:false",
                         ActionKind.ReportToSuperior,
                         nameof(FromRelationship),
-                        $"tell {boss} it did not happen")
+                        $"tell {recipient} it did not happen")
                     {
-                        TargetId = boss,
+                        TargetId = recipient,
                         Domain = ctx.Agenda.Domain,
                         Candor = ReportCandor.False,
                         Suppressed = awkward,
@@ -424,20 +435,34 @@ public static class Generators
                 }
             }
 
-            // Only conceivable if he knows there is a rule to ask about.
-            var relevant = ctx.KnownPolicies.FirstOrDefault(p => p.Domain == (ctx.Agenda.Domain ?? ""));
-            if (relevant is not null)
+            // Permission is a question for the man above him, and only for him.
+            //
+            // Keyed off SuperiorId rather than the recipient of this account. Being asked a
+            // question redirects who he answers to; it does not put the asker over him. Reusing the
+            // recipient here had a boss with no superior fall back to whoever had just questioned
+            // him, so Salvatore asked his own soldier for permission to relax Salvatore's own
+            // policy — authority running backwards down the chain because of who spoke last.
+            //
+            // A man with nobody above him has nobody to ask. That is not a gap to fill with the
+            // nearest available person; it is what being the boss means, and the option simply does
+            // not arise for him.
+            if (ctx.SuperiorId is { } authority)
             {
-                yield return new Candidate(
-                    $"approval:{boss}:{relevant.Id}",
-                    ActionKind.SeekApproval,
-                    nameof(FromRelationship),
-                    $"ask {boss} to relax \"{relevant.Description}\"")
+                // Only conceivable if he knows there is a rule to ask about.
+                var relevant = ctx.KnownPolicies.FirstOrDefault(p => p.Domain == (ctx.Agenda.Domain ?? ""));
+                if (relevant is not null)
                 {
-                    TargetId = boss,
-                    Domain = ctx.Agenda.Domain,
-                    RequiredKnowledge = new[] { relevant.AwarenessClaim(ctx.Actor.Social.OrganizationId ?? "") },
-                };
+                    yield return new Candidate(
+                        $"approval:{authority}:{relevant.Id}",
+                        ActionKind.SeekApproval,
+                        nameof(FromRelationship),
+                        $"ask {authority} to relax \"{relevant.Description}\"")
+                    {
+                        TargetId = authority,
+                        Domain = ctx.Agenda.Domain,
+                        RequiredKnowledge = new[] { relevant.AwarenessClaim(ctx.Actor.Social.OrganizationId ?? "") },
+                    };
+                }
             }
         }
 

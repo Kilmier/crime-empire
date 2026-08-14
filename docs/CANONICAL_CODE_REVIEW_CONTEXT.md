@@ -1,12 +1,13 @@
 # Crime Empire — Canonical Code and Review Context
 
-Status snapshot: 2026-08-14 on `main`, at `11c4a4a`.
+Status snapshot: 2026-08-14 on `main`.
 
-**Nothing below is verified past `d142582`.** Milestone 003's implementation is complete and
-test-green but its final commit `e83dacf` was never reviewed; milestone 004 is complete, test-green,
-and also unreviewed. Two earlier versions of this file claimed verification that had not happened —
-first for `b8fe921`, then for `e83dacf`. See "Review coverage" below for exactly which commits have
-been looked at, and treat that section as the authority over any "verified" wording elsewhere.
+**Nothing here is verified.** Milestone 003's `e83dacf` was reviewed and rejected; its correction is
+awaiting review. Milestone 004's `714fbc3` was reviewed and rejected on three P1 findings that are
+not yet fixed, so milestone 004 is blocked. Two earlier versions of this file claimed verification
+that had not happened — first for `b8fe921`, then for `e83dacf` — and a third wrongly recorded
+`fb2c84d` and `714fbc3` as never reviewed. Treat the "Review coverage" section below as the
+authority over any status wording elsewhere.
 
 No milestone is active.
 
@@ -52,7 +53,7 @@ here.
 - SDK pin: `10.0.400` in `global.json`, `rollForward: latestFeature`
 - Target framework source of truth: `Directory.Build.props` (`net10.0`)
 - Test framework: xUnit
-- Current automated tests: 63
+- Current automated tests: 95
 
 ### Layout
 
@@ -138,7 +139,25 @@ for comparison, not as the accepted baseline.
 - Decision counts: 13 / 16 / 13 / 43.
 - Report counts: 2 / 2 / 2 / 6.
 
-### Current baseline — milestone 004, awaiting review
+### Current baseline — milestone-003 sixth correction, awaiting review
+
+- Build: 0 warnings, 0 errors.
+- Tests: 95 passed, 0 failed.
+- Replay hashes: `EF5082E438500CAA` / `DAB6010D48E61234` / `B351E55B3B2C61DB` / `7F1228BFE32F2108`
+  for baseline / cautious-vincent / watchful-boss / disloyal-vincent, each identical on both runs.
+- Four variants produce four distinct histories.
+- Decision counts: 13 / 16 / 13 / **47**.
+
+`baseline` and `watchful-boss` are byte-identical to the milestone-004 baseline below.
+`cautious-vincent` has an identical decision and event stream — its hash moves only because the
+trace now records the belief an answer was drawn from. `disloyal-vincent` genuinely changes, and the
+change is the fix: two `SeekApproval` candidates aimed *down* the chain are gone, and the decisions
+that had gone to them now produce real accounts.
+
+Still present and not caused by this correction: the concealment runaway in `disloyal-vincent`,
+where Tommy restarts `ConcealIncident` twelve times.
+
+### Superseded baseline — milestone 004, reviewed and rejected
 
 - Build: 0 warnings, 0 errors.
 - Tests: 86 passed, 0 failed.
@@ -155,7 +174,7 @@ reassignments. The hash movement is the developer trace and the player-facing wo
 behaviour. See `milestones/004-provenance-precision.md` for why the predicted behavioural change
 did not materialise.
 
-### Previous baseline at `e83dacf` — test-green, unreviewed
+### Previous baseline at `e83dacf` — reviewed and rejected
 
 - Build: 0 warnings, 0 errors.
 - Tests: 73 passed, 0 failed.
@@ -329,32 +348,45 @@ Future changes should retain coverage for:
   Docs only.
 - `fb2c84d` — Correct the continuity record and unblock the milestone-004 scope language. Docs only.
 - `e83dacf` — Scope the reply and the asking guard to the claim. Fixes the two P1 defects from the
-  review of `b8fe921`. **Unreviewed.** Test-green, but never inspected.
+  review of `b8fe921`. **Reviewed and rejected**: three findings, corrected in the sixth correction.
 - `a5a72f1` — Record a milestone-003 verification that had not happened, and unblock milestone 004
   on that basis. Docs only, and wrong; corrected below.
 
 ### Milestone 004 — provenance precision
 
 - `714fbc3` — Split `Direct` into four acquisition categories. The implementation commit.
-  **Unreviewed.**
+  **Reviewed and rejected**: three P1 findings, not yet fixed. Milestone 004 is blocked on them.
 - `11c4a4a` — Record the implementation commit in the milestone-004 archive. Docs only.
-  **Unreviewed.**
+- `d2af4c8` — Withdraw the false verification of `e83dacf`. Docs only.
 
 Do not squash or rewrite this history merely to make milestone 003 look cleaner. The corrective
 sequence records useful architectural failures and review lessons.
 
 ### Review coverage — read this before trusting any "verified" claim above
 
-The review automation reviews the *latest* commit when it wakes, not every commit since it last
-ran. Commits landed back to back are therefore skipped silently, and a skipped commit looks exactly
-like a clean one from inside the repository.
+Reconciled with Matt on 2026-08-14. An earlier version of this section said `fb2c84d` and `714fbc3`
+had never been reviewed; both had been. Only `e83dacf` had genuinely been skipped, and it has since
+been reviewed too.
 
-As of `11c4a4a`, actually reviewed: **`d142582`** and **`a5a72f1`**.
-Never reviewed: **`fb2c84d`, `e83dacf`, `714fbc3`, `11c4a4a`** — which includes both commits
-carrying the code changes.
+| Commit | Status |
+|---|---|
+| `d142582` | Reviewed. Findings, fixed in `fb2c84d`. |
+| `fb2c84d` | Reviewed and **rejected**. Its findings are not recorded in this repository — outstanding. |
+| `e83dacf` | Reviewed and **rejected**: three findings, two P1. Corrected in the milestone-003 sixth correction, which is itself awaiting review. |
+| `a5a72f1` | Reviewed. Findings accepted; the false verification it recorded was withdrawn in `d2af4c8`. |
+| `714fbc3` | Reviewed and **rejected**: three P1 findings. **Not fixed.** Milestone 004 is blocked on them. |
+| `11c4a4a`, `d2af4c8` | Status not established here. |
 
-Test-green is not review. `e83dacf` and `714fbc3` build clean and pass their suites; nothing has
-inspected their diffs.
+**Nothing in this repository is currently verified.** Every commit carrying code since `b8fe921` has
+been reviewed and rejected, and the corrections to two of those rejections are outstanding —
+milestone 003's sixth correction awaiting review, milestone 004's three P1s not yet begun.
+
+Test-green is not review, and review is not acceptance. `714fbc3` builds clean and passes its suite
+and was still rejected; do not describe it as unreviewed or as safe.
+
+The automation reviews the *latest* commit when it wakes rather than every commit since it last ran,
+so a commit with another landed immediately behind it can be skipped silently — which is how
+`e83dacf` was missed. A skipped commit looks exactly like a clean one from inside the repository.
 
 ## Review history and recurring failure patterns
 

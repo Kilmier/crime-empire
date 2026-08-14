@@ -7,22 +7,21 @@ do not create a separate handoff document.
 
 ## Status
 
-**No milestone is active. Two are blocked on review that never happened.**
+**No milestone is active. Both recent milestones were reviewed and rejected.**
 
-Milestone 004 (Provenance Precision) is complete and test-green; its record is in
-`docs/milestones/004-provenance-precision.md`. Milestone 003's implementation is likewise complete
-and test-green. Neither has been reviewed:
+- **Milestone 003** — `e83dacf` was reviewed and rejected on three findings, two P1. They are fixed;
+  the fix is the sixth correction in `docs/milestones/003-information-transmission.md` and is
+  **awaiting review**. Not verified.
+- **Milestone 004** — `714fbc3` was reviewed and rejected on three P1 findings. **Not fixed.** The
+  findings are in Matt's hands, not in this repository. Milestone 004 is blocked until milestone
+  003's correction passes review, and then until those three are addressed.
 
-- `e83dacf` — milestone 003's final commit. Unreviewed.
-- `714fbc3` — milestone 004's implementation. Unreviewed.
+Nothing in the repository is verified. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section
+is the authority on what has been looked at and what it concluded; do not infer status from the
+prose in any other file, including this one.
 
-The review automation inspects only the latest commit when it wakes, so an implementation commit
-with a docs commit landed immediately behind it is skipped silently. That happened twice. Milestone
-003 was recorded as verified on 2026-08-13 on the strength of a review that had not run; Matt
-confirmed on 2026-08-14 that it had not.
-
-**Next step is review of `e83dacf`, then `714fbc3` — not new work.** Nothing here is closed, and
-milestone 004 rests on milestone 003.
+**Next step is review of the milestone-003 sixth correction.** Not milestone 004's findings, and not
+new work.
 
 Do not infer milestone 005 from the candidate list in `CANONICAL_DESIGN_CONTEXT.md` or from the
 deferred items below. Confirm scope with Matt and write it here before changing simulation

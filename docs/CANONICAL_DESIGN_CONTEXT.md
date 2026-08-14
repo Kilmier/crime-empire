@@ -1,10 +1,10 @@
 # Crime Empire — Canonical Design Context
 
-Status snapshot: 2026-08-14, at `11c4a4a`. Milestone 003's implementation is complete and test-green
-but **unreviewed**: its final commit `e83dacf` was never inspected, and an earlier version of this
-file called it verified on the strength of a review that had not run. Before that, the same line
-wrongly called `b8fe921` verified. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is
-the authority on what has actually been looked at.
+Status snapshot: 2026-08-14. **Nothing is verified.** Milestone 003's `e83dacf` was reviewed and
+rejected; its correction is awaiting review. Milestone 004's `714fbc3` was reviewed and rejected on
+three P1 findings that are not yet fixed. Earlier versions of this line called `b8fe921` and then
+`e83dacf` verified when neither was. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is
+the authority on what has been looked at and what it concluded.
 
 Milestone 004 (Provenance Precision) is **complete and awaiting review**. No milestone is active.
 It made information

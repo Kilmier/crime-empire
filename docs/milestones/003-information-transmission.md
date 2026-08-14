@@ -1,8 +1,9 @@
 # Milestone 003 — Information Transmission Slice
 
-Status: **implementation complete and test-green; the final commit `e83dacf` is unreviewed.**
+Status: **`e83dacf` was reviewed and rejected with three P1 findings; the correction is appended
+below as the sixth correction and is itself awaiting review. Not verified.**
 
-This line has now been wrong twice, and both errors are left visible rather than tidied away.
+This line has been wrong twice, and both errors are left visible rather than tidied away.
 
 It first said Codex had verified `b8fe921` with no remaining findings. It had not: the review of
 `b8fe921` returned two further defects, recorded as the fifth correction below and fixed in
@@ -15,9 +16,12 @@ which turned out not to correspond to a review the automation ran — its latest
 skipped `e83dacf` entirely. Matt confirmed on 2026-08-14 that no review of `e83dacf` took place.
 The withdrawn account is kept below under the fifth correction, marked as withdrawn.
 
-**Milestone 003 is therefore not closed.** `e83dacf` needs an actual review of its diff.
+`e83dacf` has since been reviewed properly, and rejected: three findings, two of them P1. They are
+the sixth correction below.
 
-Reaching this point took the original commit plus five corrective rounds; each is appended below
+**Milestone 003 is not closed.** The sixth correction needs review of its own.
+
+Reaching this point took the original commit plus six corrective rounds; each is appended below
 rather than folded into the account above, so the reviews are readable in the order they happened.
 
 ## What was attempted
@@ -503,3 +507,71 @@ a review that did not happen. Test-green is not review.
 
 **Still outstanding:** a real review of `e83dacf`. Milestone 003 is not closed until then, and
 milestone 004 rests on it.
+
+## Sixth correction — Codex findings on `e83dacf`
+
+Status: **awaiting Codex review. Not verified.**
+
+Three findings, all accepted by Matt. Each is a consequence of the direct-answer path added in
+`e83dacf`: that commit gave a request a subject and routed the reply, and each finding is a place
+where the reply carried something it should not have.
+
+**17 (P1). A sincere denial was classified as deliberate deception.** The answer path accepted
+non-held positions — deliberately, so a man who has come to reject something can still say so — but
+decided whether to offer a `ReportCandor.False` candidate purely on whether the claim *named* the
+respondent. A man who honestly did not believe he had done it was therefore offered a "lie" whose
+content was his actual position, and choosing it filed him in the developer record as having
+deceived his boss. That inverts the one distinction `ReportCandor` exists to draw, and inverts it in
+the direction that makes an innocent man look guilty.
+
+Fixed by requiring that the position actually be held before a deceptive candidate exists: there has
+to be something for the assertion to contradict. `Reporting.Compose` carries the same condition on
+its `False` branch, so the rule is stated where the report is composed as well as where the option
+is offered, and the two cannot drift apart. A position he does not hold now falls through to the
+honest assertion, which passes on his rejection as a rejection.
+
+**18 (P1). A direct request could invert organisational authority.** Being asked a question
+redirected who a character answers to — correct, and the reason the path exists — but the same local
+variable was then reused as the policy authority for `SeekApproval`. A man with nobody above him
+fell back to whoever had just questioned him. In the disloyal trace, Salvatore asked his own soldier
+for permission to relax Salvatore's own policy: authority running backwards down the chain because
+of who happened to speak last.
+
+Fixed by keying approval off `ctx.SuperiorId` and nothing else, and by naming the two roles apart —
+`recipient` for who gets this account, `authority` for who can permit a breach. A man with no
+superior now generates no approval candidate at all, which is what having no superior means.
+
+**19 (P2). Answer traces omitted the belief the answer rested on.** The answer path read
+`PerceivedSituation.Beliefs` directly, bypassing the accessor that marks a record consulted, so the
+decision trace showed a character answering a question about a claim while "what he knew" omitted
+that very claim. Fixed with `PerceivedSituation.Position`, which returns a position in whatever
+direction it points — held, doubted or rejected — and marks it used. Deliberately not solved by
+restricting the path to held beliefs, since that would make sincere retractions unanswerable.
+
+### Tests
+
+Nine added, 95 total. All three fixes mutation-checked by restoring the defect: dropping the
+held-position condition fails the sincere-denial test; falling back to the recipient for approval
+fails the authority test in two variants; reading the raw belief list fails the trace tests in two
+places. A paired test proves the first is not vacuous — a man who *does* hold it against himself is
+still offered the lie.
+
+### Behavioural movement
+
+`baseline` and `watchful-boss` are byte-identical. `cautious-vincent`'s hash moves with no
+behavioural change at all: its decisions and events are identical, and only the trace differs,
+because the consulted belief is now recorded. `disloyal-vincent` genuinely changes — 47 decisions,
+up from 45 — and the change is the fix: the two `SeekApproval` candidates aimed down the chain are
+gone, and the decisions that had gone to them now produce real accounts.
+
+| | before | after |
+|---|---|---|
+| decisions | 13 / 16 / 13 / 45 | 13 / 16 / 13 / **47** |
+| approval sought down-chain | 2 | **0** |
+
+### Not fixed here, and not caused here
+
+The concealment runaway in `disloyal-vincent` survives: Tommy restarts `ConcealIncident` twelve
+times, down from fourteen only because two decisions were consumed differently. It predates all of
+this and is out of scope for a corrective pass. Note the empty domain in its label,
+`ConcealIncident(, target=...)`, which may be the thread to pull.

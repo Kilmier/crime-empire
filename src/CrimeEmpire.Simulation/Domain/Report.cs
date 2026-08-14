@@ -18,7 +18,15 @@ public enum ReportCandor
     /// <summary>True as far as it goes. The incriminating part is simply not mentioned.</summary>
     Partial,
 
-    /// <summary>He asserts the opposite of something he holds.</summary>
+    /// <summary>
+    /// He asserts the opposite of something he holds.
+    ///
+    /// "Something he holds" is the whole of it. A man who has come to reject a claim and says so is
+    /// being candid about a rejection, not lying — there is nothing for the assertion to
+    /// contradict. Producing this candour for a position the sender does not hold would file a
+    /// sincere denial as deception and collapse the lie/mistaken-belief distinction this enum
+    /// exists to keep.
+    /// </summary>
     False,
 }
 

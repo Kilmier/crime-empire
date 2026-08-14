@@ -1,15 +1,17 @@
 # Milestone 004 — Provenance Precision
 
-Status: **complete and test-green; unreviewed, and resting on an unreviewed dependency.**
+Status: **reviewed and rejected. Three P1 findings, not yet fixed.**
 
-Neither `714fbc3` (this milestone's implementation) nor `e83dacf` (milestone 003's final commit,
-which this was built on top of) has been reviewed. The review automation inspects only the latest
-commit when it wakes, so both were skipped when docs commits landed immediately behind them. See
-the review-coverage section of `CANONICAL_CODE_REVIEW_CONTEXT.md`.
+`714fbc3` was reviewed and rejected. The findings are not recorded here — they are in Matt's hands
+and will be worked in a later pass. Nothing below should be read as accepted.
+
+The milestone also rests on a dependency that was itself rejected: `e83dacf`, milestone 003's final
+commit, which this was built on top of. That correction exists and is awaiting review. Milestone 003
+has to close before this milestone can be judged.
 
 This milestone was begun on the strength of a milestone-003 verification that had not happened. The
-work below stands on its own measurements, but it has not been checked by anyone, and milestone 003
-needs closing properly before this one can be judged.
+account below stands on its own measurements, which were real; what it lacked was anyone checking
+the work, and that check has now come back negative.
 
 ## What was attempted
 

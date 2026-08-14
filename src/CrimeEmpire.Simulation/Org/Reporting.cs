@@ -155,7 +155,14 @@ public static class Reporting
                 continue;
             }
 
-            if (awkward && candor == ReportCandor.False)
+            // Note the IsHeld condition. A lie is the assertion of something contrary to what the
+            // sender privately holds, so there has to be something to contradict: if he does not
+            // hold the claim, "it did not happen" is simply his position, and dressing it as a
+            // denial would record a sincere man as a liar. The generator no longer offers a False
+            // candidate in that case, and this is the same rule stated where the report is actually
+            // composed, so the two cannot drift apart. A position he does not hold falls through to
+            // the honest assertion below, which passes on his rejection as a rejection.
+            if (awkward && candor == ReportCandor.False && b.IsHeld)
             {
                 // He asserts the opposite of what he holds. The claim is the same claim — this is
                 // a denial of a specific proposition, not a change of subject.

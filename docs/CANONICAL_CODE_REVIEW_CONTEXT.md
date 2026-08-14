@@ -409,7 +409,7 @@ been reviewed too.
 | Commit | Status |
 |---|---|
 | `d142582` | Reviewed. Findings, fixed in `fb2c84d`. |
-| `fb2c84d` | Reviewed and **rejected**. Its findings are not recorded in this repository — outstanding. |
+| `fb2c84d` | Reviewed and **rejected**; its findings were never recorded here. **Retired as superseded** by Matt on 2026-08-14 — not fixed individually, and not outstanding. |
 | `e83dacf` | Reviewed and **rejected**: three findings, two P1 and one P2. Corrected by `cbadb0d` and `170991b`. |
 | `a5a72f1` | Reviewed. Findings accepted; the false verification it recorded was withdrawn in `d2af4c8`. |
 | `714fbc3` | Reviewed and **rejected**: three P1 findings. Corrected by `c828bfa`, which was itself rejected. |
@@ -429,9 +429,15 @@ rejected, then `c828bfa`, `d783745` and `612bd50` each rejected in turn — befo
 was accepted. Every commit carrying code is now reviewed and accepted, so the tree these baselines
 were measured on is itself accepted.
 
-`fb2c84d`'s rejection findings were never recorded in this repository. Every line it touched has
-since been rewritten and re-reviewed several times over, so the item is probably moot — but it is
-listed rather than quietly dropped, because "probably moot" is a judgement and not a review.
+`fb2c84d` was rejected and its findings were never written down, so what they were is not
+recoverable from this repository. Matt retired them as **superseded and non-actionable** on
+2026-08-14: `fb2c84d` was a documentation commit, and every line it touched has since been rewritten
+and re-reviewed several times over in the milestone-004 corrective rounds.
+
+Retired is not the same as fixed, and this row must not be read as either. Nobody addressed those
+findings one by one, and nobody has claimed the original review passed. What happened is that the
+text they were about no longer exists, so there is nothing left to act on. The rejection stays on
+the record; only the expectation of further work is discharged.
 
 Test-green is not review, and review is not acceptance. `714fbc3` builds clean and passes its suite
 and was still rejected; do not describe it as unreviewed or as safe.
@@ -597,7 +603,9 @@ log so runner verification gives an independent deterministic signal.
   with no findings, following four corrective rounds. Every finding raised against it was corrected
   and accepted; none remains outstanding.
 
-Every commit carrying code has been reviewed and accepted. There is no outstanding corrective work.
+Every commit carrying code has been reviewed and accepted. There is no outstanding corrective work:
+the one loose end, `fb2c84d`'s unrecorded findings, was retired as superseded on 2026-08-14 because
+the documentation it was about has since been rewritten and re-reviewed.
 
 **The next step is Matt's to authorize** — a maintenance task or milestone 005, named by him and
 written into `CURRENT_MILESTONE.md` before any simulation behaviour changes. Nothing on the debt

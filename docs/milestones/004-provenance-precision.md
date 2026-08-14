@@ -1,17 +1,18 @@
 # Milestone 004 — Provenance Precision
 
-Status: **three times corrected; the third correction is awaiting review. Not verified or accepted.**
+Status: **four times corrected; the fourth correction is awaiting review. Not verified or accepted.**
 
 The sequence, in order:
 
 1. `714fbc3` — the implementation. Reviewed and **rejected**, three P1.
-2. `c828bfa` — attempted the correction. Reviewed and **rejected**, three P1 and two P2.
+2. `c828bfa` — the first correction. Reviewed and **rejected**, three P1 and two P2.
 3. `d783745` — the second correction. Reviewed and **rejected**, two findings.
-4. This correction — fixes those two. **Awaiting review.**
+4. `612bd50` — the third correction. Reviewed and **rejected**, two findings.
+5. This correction — fixes those two. **Awaiting review.**
 
-All three corrections are appended at the foot of this file, in order. Nothing between here and
-there has been rewritten: the account below is what the milestone originally claimed, including the
-parts later findings contradict.
+All four corrections are appended at the foot of this file, in order. Nothing between here and there
+has been rewritten: the account below is what the milestone originally claimed, including the parts
+later findings contradict.
 
 Milestone 003, which this was built on top of, has since closed.
 
@@ -408,3 +409,48 @@ itself.
 deterministic. Neither defect had a live consequence in the current scenario: delegation's beliefs
 are never re-read after transmission, and no character currently offers two accounts of the same
 claim on different bases.
+
+## Fourth correction — Codex findings on `612bd50`
+
+Status: **awaiting Codex review. Not verified.** Nothing above is rewritten.
+
+Two findings.
+
+**1. Provenance was still settable by halves.** Removing the two bases as constructor parameters
+closed the "supply one, silently default the other" hole. Leaving them as public `init` left the
+same hole one step along: an object initializer could set one alone, and a `with` expression could
+do worse — start from a correct pair and desynchronise it in passing.
+
+Both accessors are now `private init`. Outside the type the only ways in are the three-argument
+constructor, which yields a generic report honestly claiming to be one, and the two factories. A
+probe using either route now fails to compile with CS0272, and a reflection test asserts the setters
+are not public so the accessor cannot be quietly widened back.
+
+**2. Live documentation described a review automation that does not exist.** `CURRENT_MILESTONE.md`
+and this brief's sibling both described a Codex monitor keeping a checkpoint, waking on a timer and
+advancing coverage by itself. There is no such thing: review is manual, ordered, and happens only
+when Matt points one at a commit. Both now say so.
+
+That correction matters more than a wording fix. A reader who believes coverage is automatic stops
+asking whether a review happened — which is exactly the failure that produced two false
+"verified" claims earlier in this milestone's history. The historical sections describing what went
+wrong at the time are left as they were; only the live process description changed.
+
+Stale "twice / second correction" language is brought up to date in the same pass. The count is now
+four, because this correction is itself the fourth.
+
+### Tests
+
+One added, **139 total**: neither basis is publicly settable, and the three-argument form still
+yields an honest generic report. The compile-level guarantee was verified separately with a probe
+file exercising both the object-initializer and `with` routes; both are rejected with CS0272.
+
+Note what changed since the last correction. `d783745`'s hazard could not be mutation-checked at
+runtime at all — the wrong value was invisible to every observable surface. This one can be, because
+the guarantee is now a property of the type rather than a convention about how to call it.
+
+### Behavioural movement
+
+**None.** All four replay hashes unchanged at `B20C06E5838C0657` / `24A181B260F9C396` /
+`4B60DA962927A6F7` / `B274F395A61C5118`, decisions 13 / 16 / 13 / 19, both `--verify` runs
+deterministic. Nothing in the simulation ever used the routes that were closed.

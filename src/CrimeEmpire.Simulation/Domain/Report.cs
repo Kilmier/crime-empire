@@ -50,21 +50,28 @@ public enum ReportCandor
 /// discloses a bare assertion unless he chooses to claim presence; what he privately has stays
 /// private.
 /// </summary>
-/// Neither basis is a positional parameter, and that is deliberate. When both defaulted, supplying
-/// only the claimed one — the natural thing to write — left the actual one silently at `Report`, so
-/// an honest participant briefing his own man came out flagged as a misrepresentation. A field
-/// whose wrong value is what you get by not thinking about it is a trap. Set them together through
-/// <see cref="Honest"/> or <see cref="Misrepresenting"/>, or name them both.
+/// The two bases can only ever be set together, and that is deliberate.
+///
+/// They are not positional parameters, because when both defaulted, supplying only the claimed one
+/// — the natural thing to write — left the actual one silently at `Report`, so an honest participant
+/// briefing his own man came out flagged as a misrepresentation. They are not publicly settable
+/// either, because `init` left the same hole open one step further along: an object initializer or
+/// a `with` expression could still move one and leave the other, and `with` is the more dangerous
+/// of the two since it starts from a correct value and quietly desynchronises it.
+///
+/// Outside this type the only ways in are the three-argument constructor, which yields a generic
+/// report honestly claiming to be one, and the two factories below. A field whose wrong value is
+/// what you get by not thinking about it is a trap; so is one that can be half-updated in passing.
 public readonly record struct ReportedClaim(
     Claim Claim,
     Stance AssertedStance,
     double AssertedConfidence)
 {
     /// <summary>What the account presents itself as. The only basis the listener may act on.</summary>
-    public SourceKind ClaimedBasis { get; init; } = SourceKind.Report;
+    public SourceKind ClaimedBasis { get; private init; } = SourceKind.Report;
 
     /// <summary>How the speaker really came by it. Developer truth; never reaches the recipient.</summary>
-    public SourceKind ActualBasis { get; init; } = SourceKind.Report;
+    public SourceKind ActualBasis { get; private init; } = SourceKind.Report;
 
     /// <summary>True when the speaker is presenting a basis other than the one he has.</summary>
     public bool BasisIsMisrepresented => ClaimedBasis != ActualBasis;

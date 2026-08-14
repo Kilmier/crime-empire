@@ -13,40 +13,49 @@ do not create a separate handoff document.
   correction on 2026-08-14. The record, including two occasions on which the archive claimed a
   verification that had not happened, is preserved in
   `docs/milestones/003-information-transmission.md`.
-- **Milestone 004 — three times corrected, the third awaiting review.** `714fbc3` rejected on three
-  P1; `c828bfa` rejected on three P1 and two P2, chiefly a false denial transmitting the sender's
-  private basis; `d783745` rejected on a silent `ActualBasis` default that marked honest briefings
-  as misrepresented, and a repeat comparison that collapsed Participant onto Witness. This
-  correction fixes both and is **awaiting review**. Not verified or accepted. Every finding and fix
-  is recorded in `docs/milestones/004-provenance-precision.md`.
+- **Milestone 004 — four times corrected, the fourth awaiting review.** `714fbc3` rejected on three
+  P1; `c828bfa` on three P1 and two P2, chiefly a false denial transmitting the sender's private
+  basis; `d783745` on a silent `ActualBasis` default that marked honest briefings as misrepresented
+  and a repeat comparison collapsing Participant onto Witness; `612bd50` on provenance still being
+  settable by halves through an object initializer or `with`, and on live documentation claiming a
+  review automation that does not exist. This correction fixes both and is **awaiting review**. Not
+  verified or accepted. Every finding and fix is recorded in
+  `docs/milestones/004-provenance-precision.md`.
 
 Milestone 003 being closed does not make the working tree accepted. Its correction was delivered on
-top of `714fbc3`, whose rejection is now twice corrected but not yet accepted.
+top of `714fbc3`, whose rejection is now four times corrected but not yet accepted.
 
 `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is the authority on what has been
 looked at and what it concluded; do not infer status from the prose in any other file, including
 this one.
 
-**Next step is review of the third milestone-004 correction.** Not new work chosen from the
+**Next step is review of the fourth milestone-004 correction.** Not new work chosen from the
 candidate list.
 
 Do not infer milestone 005 from the candidate list in `CANONICAL_DESIGN_CONTEXT.md` or from the
 deferred items below. Confirm scope with Matt and write it here before changing simulation
 behaviour.
 
-## Ordered review automation
+## Ordered review process
 
-The Codex monitor keeps an explicit reviewed-commit checkpoint. On each clean-tree run it enumerates
-every later commit oldest-first, reviews only the oldest unseen commit, reports that exact hash, and
-then advances the checkpoint to it. A later documentation commit therefore cannot hide an earlier
-implementation commit. If the checkpoint is no longer an ancestor of `HEAD`, the monitor reports
-the divergence instead of guessing at coverage. Non-`HEAD` commits are verified from an isolated
-temporary copy; the main working tree is never switched or modified.
+Review is **manual**. There is no monitor running on a timer, no checkpoint the repository keeps for
+itself, and nothing that will notice a commit unless somebody points a review at it. An earlier
+version of this section described an automatic monitor; that was wrong, and the mistake matters,
+because a reader who believes coverage is automatic stops checking whether it happened.
 
-This removes the old requirement to pause between an implementation commit and its documentation
-commit merely to keep the first one visible. It does not change the acceptance rule: never write
-"verified" from a review report alone. A report must identify the exact commit actually reviewed,
-and Matt must confirm acceptance before the repository calls it verified or closed.
+How it actually works:
+
+- Matt takes commits in order, oldest unreviewed first, one at a time.
+- Each review names the exact commit whose diff was inspected.
+- A later documentation commit does not stand in for the implementation commit beneath it. If two
+  commits land back to back, both still need reviewing, in order.
+- The coverage table in `CANONICAL_CODE_REVIEW_CONTEXT.md` is the record of what has been looked at.
+  It is maintained by hand, so it is only as good as the last person to update it — which is the
+  reason it is the authority rather than the prose around it.
+
+The acceptance rule is unchanged: never write "verified" from a review report alone. A report must
+identify the exact commit actually reviewed, and Matt must confirm acceptance before the repository
+calls anything verified or closed.
 
 ## Carried forward from milestone 004
 

@@ -3,11 +3,11 @@
 Status snapshot: 2026-08-14 on `main`.
 
 **Milestone 003 is closed** — Codex reviewed `d685015` with no findings and Matt accepted it on
-2026-08-14. **Milestone 004 has been rejected three times and corrected three times**; its third correction is
+2026-08-14. **Milestone 004 has been rejected four times and corrected four times**; its fourth correction is
 awaiting review. No milestone is active.
 
 Closing 003 does not accept the working tree. Its correction was delivered on top of `714fbc3`,
-whose rejection is now three times corrected but not yet accepted.
+whose rejection is now four times corrected but not yet accepted.
 
 This file has misreported status four times: it claimed verification that had not happened, first
 for `b8fe921` and then for `e83dacf`; it wrongly recorded `fb2c84d` and `714fbc3` as never reviewed;
@@ -57,7 +57,7 @@ here.
 - SDK pin: `10.0.400` in `global.json`, `rollForward: latestFeature`
 - Target framework source of truth: `Directory.Build.props` (`net10.0`)
 - Test framework: xUnit
-- Current automated tests: 138
+- Current automated tests: 139
 
 ### Layout
 
@@ -143,10 +143,10 @@ for comparison, not as the accepted baseline.
 - Decision counts: 13 / 16 / 13 / 43.
 - Report counts: 2 / 2 / 2 / 6.
 
-### Current baseline — milestone-004 third correction, awaiting review
+### Current baseline — milestone-004 fourth correction, awaiting review
 
 - Build: 0 warnings, 0 errors.
-- Tests: 138 passed, 0 failed.
+- Tests: 139 passed, 0 failed.
 - Replay hashes: `B20C06E5838C0657` / `24A181B260F9C396` / `4B60DA962927A6F7` / `B274F395A61C5118`
   for baseline / cautious-vincent / watchful-boss / disloyal-vincent, each identical on both runs.
 - Four variants produce four distinct histories.
@@ -406,7 +406,8 @@ been reviewed too.
 | `a5a72f1` | Reviewed. Findings accepted; the false verification it recorded was withdrawn in `d2af4c8`. |
 | `714fbc3` | Reviewed and **rejected**: three P1 findings. Corrected by `c828bfa`, which was itself rejected. |
 | `c828bfa` | Reviewed and **rejected**: three P1 and two P2, chiefly a false denial transmitting the sender's private basis. Corrected by `d783745`. |
-| `d783745` | Reviewed and **rejected**: a silent `ActualBasis` default that marked honest briefings as misrepresented, and a repeat comparison collapsing Participant onto Witness. Corrected by the third milestone-004 correction, awaiting review. |
+| `d783745` | Reviewed and **rejected**: a silent `ActualBasis` default that marked honest briefings as misrepresented, and a repeat comparison collapsing Participant onto Witness. Corrected by `612bd50`. |
+| `612bd50` | Reviewed and **rejected**: provenance still settable by halves through an object initializer or `with`, and live documentation claiming a review automation that does not exist. Corrected by the fourth milestone-004 correction, awaiting review. |
 | `cbadb0d`, `170991b` | The milestone-003 sixth correction. Reviewed with **no code findings**; all verification passed. One documentation finding against `170991b` — the stale next-step gate — fixed in `d685015`. |
 | `d685015` | Reviewed, **no findings**. Matt accepted the milestone-003 correction on 2026-08-14. **Milestone 003 is closed.** |
 | `11c4a4a`, `d2af4c8` | Status not established here. |
@@ -415,7 +416,8 @@ been reviewed too.
 been reviewed and accepted.
 
 **Not accepted: milestone 004.** `714fbc3` was rejected; `c828bfa` corrected it and was rejected in
-turn; the second correction is awaiting review. Because the milestone-003 correction was built on
+turn, and twice more after that; the fourth correction is awaiting review. Because the
+milestone-003 correction was built on
 top of this chain, the tree these baselines were measured on still contains unaccepted code. Closing
 003 says that milestone's work is done; it does not bless the tree.
 
@@ -426,12 +428,14 @@ listed rather than quietly dropped, because "probably moot" is a judgement and n
 Test-green is not review, and review is not acceptance. `714fbc3` builds clean and passes its suite
 and was still rejected; do not describe it as unreviewed or as safe.
 
-The automation now keeps an explicit reviewed-commit checkpoint and enumerates later commits
-oldest-first. Each run reviews only the oldest unseen commit and advances the checkpoint only after
-reporting that exact hash. A later documentation commit therefore cannot hide an earlier
-implementation commit. If history diverges from the checkpoint, the monitor reports the divergence
-instead of guessing at coverage; non-`HEAD` commits are verified from isolated temporary copies so
-the main working tree is never switched or modified.
+Review is **manual and ordered**. Nothing runs on a timer and nothing tracks coverage on the
+repository's behalf: commits are reviewed oldest-unreviewed-first, one at a time, by hand, and each
+review names the exact commit whose diff was inspected. A later documentation commit does not stand
+in for the implementation commit beneath it — if two land back to back, both still need reviewing.
+
+The table above is that record, maintained by hand. An earlier version of this section described an
+automatic checkpointing monitor. There is none, and believing there was is precisely how a reader
+stops checking whether a review happened.
 
 ## Review history and recurring failure patterns
 
@@ -439,21 +443,21 @@ the main working tree is never switched or modified.
 
 Twice now the record has claimed verification that never occurred: first `b8fe921`, then `e83dacf`.
 The second time it was Claude writing the claim, in good faith, from a review report that named the
-commit and quoted its exact test count and replay hashes — and which the scheduled automation had
-not produced.
+commit and quoted its exact test count and replay hashes — and which no review had produced.
 
 Two mechanics made this easy to get wrong and remain worth recording explicitly:
 
-- **At the time, the automation reviewed only the latest commit when it woke.** Two commits landing
-  back to back skipped the earlier one permanently and silently. That is how `e83dacf` was missed.
-  The ordered checkpoint described above removes this failure mode.
+- **Reviews at the time went to the latest commit only.** Two commits landing back to back skipped
+  the earlier one permanently and silently. That is how `e83dacf` was missed. Taking commits in
+  order, as described above, is what removes this failure mode — and it is a habit, not a mechanism,
+  so it holds only as long as it is kept.
 - **A review report is not proof that a review ran.** It is a document, and like any other observed
   content it can be about a commit nobody inspected.
 
 Standing review rules:
 
-1. The automation checkpoint advances one reviewed commit at a time, oldest unseen first. Never
-   skip directly to `HEAD`, even when the intervening commits are documentation-only.
+1. Review advances one commit at a time, oldest unreviewed first, by hand. Never skip directly to
+   `HEAD`, even when the intervening commits are documentation-only.
 2. Every report names the exact commit whose isolated diff was inspected and distinguishes
    verification at that commit from verification performed only at a later `HEAD`.
 3. Never write "verified" from a review report alone. Verified means Matt confirms acceptance of
@@ -553,7 +557,8 @@ log so runner verification gives an independent deterministic signal.
 ## Known technical debt and deferred work
 
 - `SourceKind.Direct` lacks precise provenance categories. Addressed by milestone 004, **rejected
-  twice and twice corrected**, with the second correction awaiting review — so this is not closed.
+  four times and four times corrected**, with the fourth correction awaiting review — so this is
+  not closed.
   The attempt split it into `Participant` / `Witness` / `Discovery` / `FirstHandTestimony`, with one
   named predicate per behaviour in `Domain/Provenance.cs`, and separated what a speaker claims from
   what he privately has.

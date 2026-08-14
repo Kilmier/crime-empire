@@ -138,6 +138,39 @@ public sealed class DisclosedProvenanceTests
     }
 
     /// <summary>
+    /// Neither basis may be set from outside the type, so neither can be moved without the other.
+    ///
+    /// Removing them as constructor parameters closed the "supply one, silently default the other"
+    /// hole; leaving them as public `init` left the same hole one step along, reachable through an
+    /// object initializer or — worse — a `with` expression, which starts from a correct pair and
+    /// desynchronises it in passing. The compiler is what actually enforces this; the assertion
+    /// below is what fails if somebody widens the accessor back.
+    /// </summary>
+    [Fact]
+    public void Neither_basis_can_be_set_from_outside_the_type()
+    {
+        foreach (string name in new[] { nameof(ReportedClaim.ClaimedBasis), nameof(ReportedClaim.ActualBasis) })
+        {
+            var property = typeof(ReportedClaim).GetProperty(name);
+            Assert.NotNull(property);
+
+            var setter = property!.SetMethod;
+            Assert.True(setter is null || !setter.IsPublic,
+                $"{name} is publicly settable, so a caller can move it without moving the other — "
+                + "use Honest(...) or Misrepresenting(...) instead of reopening this");
+        }
+
+        // And the three-argument form remains available, because a generic report honestly
+        // claiming to be a generic report is not a half-initialisation.
+        var plain = new ReportedClaim(
+            new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery), Stance.Believes, 0.8);
+
+        Assert.Equal(SourceKind.Report, plain.ClaimedBasis);
+        Assert.Equal(SourceKind.Report, plain.ActualBasis);
+        Assert.False(plain.BasisIsMisrepresented);
+    }
+
+    /// <summary>
     /// Across the running simulation: wherever a speaker misrepresented his basis, nothing the
     /// listener holds reflects the private one.
     /// </summary>

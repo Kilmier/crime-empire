@@ -1196,11 +1196,11 @@ public sealed class InformationTransmissionTests
 
         // Tommy has given him one account. That question is spent.
         salvatore.Cognition.Receive(
-            new ReportedClaim(spoken, Stance.Believes, 0.6, SourceKind.Participant), "tommy", t0);
+            ReportedClaim.Honest(spoken, Stance.Believes, 0.6, SourceKind.Participant), "tommy", t0);
 
         // And he separately holds something else, second-hand, that he might want checked.
         salvatore.Cognition.Receive(
-            new ReportedClaim(unspoken, Stance.Believes, 0.4, SourceKind.Report), "vincent", t0);
+            ReportedClaim.Honest(unspoken, Stance.Believes, 0.4, SourceKind.Report), "vincent", t0);
 
         world.Now = t0.AddDays(1);
         var trigger = world.Queue.Schedule(

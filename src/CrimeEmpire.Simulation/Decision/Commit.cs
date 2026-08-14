@@ -91,7 +91,8 @@ public static class Commit
                              .Where(b => b.Claim.Subject == s.TargetId && b.IsHeld)
                              .Take(2))
                     sub.Cognition.Receive(
-                        new ReportedClaim(belief.Claim, Stance.Believes, belief.Confidence * 0.8, belief.SourceKind),
+                        ReportedClaim.Honest(
+                            belief.Claim, Stance.Believes, belief.Confidence * 0.8, belief.SourceKind),
                         actor.Id, world.Now);
 
                 sub.Execution.Commitments.Add(new Commitment(

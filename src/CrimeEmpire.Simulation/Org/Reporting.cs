@@ -214,9 +214,9 @@ public static class Reporting
                 // and never reaches the recipient. A liar who wanted to say "I was there and it did
                 // not happen" would have to claim that basis deliberately; none of them does yet.
                 withheld.Add(b.Claim);
-                asserted.Add(new ReportedClaim(
+                asserted.Add(ReportedClaim.Misrepresenting(
                     b.Claim, Stance.Rejects, DenialConfidence,
-                    ClaimedBasis: SourceKind.Report, ActualBasis: b.SourceKind));
+                    claimed: SourceKind.Report, actual: b.SourceKind));
                 continue;
             }
 
@@ -231,9 +231,7 @@ public static class Reporting
             // A man being straight discloses his own basis; the split between claimed and actual
             // only opens when he is not.
             var stance = b.IsHeld ? Stance.Believes : b.Stance;
-            asserted.Add(new ReportedClaim(
-                b.Claim, stance, b.Confidence * SecondHand,
-                ClaimedBasis: b.SourceKind, ActualBasis: b.SourceKind));
+            asserted.Add(ReportedClaim.Honest(b.Claim, stance, b.Confidence * SecondHand, b.SourceKind));
         }
 
         string framing = candor switch

@@ -50,15 +50,39 @@ public enum ReportCandor
 /// discloses a bare assertion unless he chooses to claim presence; what he privately has stays
 /// private.
 /// </summary>
+/// Neither basis is a positional parameter, and that is deliberate. When both defaulted, supplying
+/// only the claimed one — the natural thing to write — left the actual one silently at `Report`, so
+/// an honest participant briefing his own man came out flagged as a misrepresentation. A field
+/// whose wrong value is what you get by not thinking about it is a trap. Set them together through
+/// <see cref="Honest"/> or <see cref="Misrepresenting"/>, or name them both.
 public readonly record struct ReportedClaim(
     Claim Claim,
     Stance AssertedStance,
-    double AssertedConfidence,
-    SourceKind ClaimedBasis = SourceKind.Report,
-    SourceKind ActualBasis = SourceKind.Report)
+    double AssertedConfidence)
 {
+    /// <summary>What the account presents itself as. The only basis the listener may act on.</summary>
+    public SourceKind ClaimedBasis { get; init; } = SourceKind.Report;
+
+    /// <summary>How the speaker really came by it. Developer truth; never reaches the recipient.</summary>
+    public SourceKind ActualBasis { get; init; } = SourceKind.Report;
+
     /// <summary>True when the speaker is presenting a basis other than the one he has.</summary>
     public bool BasisIsMisrepresented => ClaimedBasis != ActualBasis;
+
+    /// <summary>A man saying what he has, the way he has it. Claimed and actual are the same.</summary>
+    public static ReportedClaim Honest(Claim claim, Stance stance, double confidence, SourceKind basis)
+        => new(claim, stance, confidence) { ClaimedBasis = basis, ActualBasis = basis };
+
+    /// <summary>
+    /// A man presenting a basis other than his own — typically a denial, which discloses nothing
+    /// about how he would know.
+    ///
+    /// Degenerates to <see cref="Honest"/> when the two coincide, which is correct: a man whose
+    /// real basis was already a report gives nothing away by claiming one.
+    /// </summary>
+    public static ReportedClaim Misrepresenting(
+        Claim claim, Stance stance, double confidence, SourceKind claimed, SourceKind actual)
+        => new(claim, stance, confidence) { ClaimedBasis = claimed, ActualBasis = actual };
 
     public override string ToString() => $"{AssertedStance} {Claim}";
 }

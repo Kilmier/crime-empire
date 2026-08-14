@@ -97,6 +97,47 @@ public sealed class DisclosedProvenanceTests
     }
 
     /// <summary>
+    /// An honest briefing by a participant is not a misrepresentation, and nothing in the running
+    /// simulation quietly makes it one.
+    ///
+    /// This is the migration hazard the factories exist to remove. When both bases were positional
+    /// with defaults, supplying only the claimed one — the natural thing to write, and what the
+    /// delegation branch did — left the actual one at `Report`, so a capo briefing his own man on
+    /// something he had done himself came out flagged as lying about how he knew it.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("cautious-vincent")]
+    [InlineData("watchful-boss")]
+    [InlineData("disloyal-vincent")]
+    public void An_honest_briefing_is_never_marked_as_misrepresented(string variant)
+    {
+        var world = Run(variant);
+
+        // Nothing candid or partial ever misrepresents its basis: only a denial does that, and only
+        // for the claim it denies.
+        foreach (var report in world.Reports)
+        foreach (var spoken in report.Asserted.Where(a => a.BasisIsMisrepresented))
+        {
+            Assert.Equal(ReportCandor.False, report.Candor);
+            Assert.Equal(Stance.Rejects, spoken.AssertedStance);
+            Assert.Contains(report.Withheld, w => w.Equals(spoken.Claim));
+        }
+
+        // And the factory itself holds the line, for the basis the delegation branch passes.
+        foreach (var basis in Enum.GetValues<SourceKind>())
+        {
+            var honest = ReportedClaim.Honest(
+                new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery), Stance.Believes, 0.8, basis);
+
+            Assert.Equal(basis, honest.ClaimedBasis);
+            Assert.Equal(basis, honest.ActualBasis);
+            Assert.False(honest.BasisIsMisrepresented,
+                $"an honest account offered on a {basis} basis must not read as a lie about its basis");
+        }
+    }
+
+    /// <summary>
     /// Across the running simulation: wherever a speaker misrepresented his basis, nothing the
     /// listener holds reflects the private one.
     /// </summary>
@@ -138,12 +179,12 @@ public sealed class DisclosedProvenanceTests
         var claim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
 
         var salvatore = new Cognition();
-        salvatore.Receive(new ReportedClaim(claim, Stance.Believes, 0.5, SourceKind.Report), "vincent", at);
+        salvatore.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.5, SourceKind.Report), "vincent", at);
         Assert.Equal(SourceKind.Report, salvatore.Find(claim)!.SourceKind);
         Assert.Equal("vincent", salvatore.Find(claim)!.SourceId);
 
         salvatore.Receive(
-            new ReportedClaim(claim, Stance.Believes, 0.7, SourceKind.Participant), "tommy", at.AddDays(1));
+            ReportedClaim.Honest(claim, Stance.Believes, 0.7, SourceKind.Participant), "tommy", at.AddDays(1));
 
         var held = salvatore.Find(claim)!;
         Assert.Equal(SourceKind.FirstHandTestimony, held.SourceKind);
@@ -165,19 +206,19 @@ public sealed class DisclosedProvenanceTests
         var claim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
 
         var two = new Cognition();
-        two.Receive(new ReportedClaim(claim, Stance.Believes, 0.5, SourceKind.Report), "vincent", at);
-        two.Receive(new ReportedClaim(claim, Stance.Believes, 0.6, SourceKind.Report), "marco", at.AddDays(1));
+        two.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.5, SourceKind.Report), "vincent", at);
+        two.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.6, SourceKind.Report), "marco", at.AddDays(1));
         Assert.Equal("vincent", two.Find(claim)!.SourceId);
 
         var firm = new Cognition();
-        firm.Receive(new ReportedClaim(claim, Stance.Believes, 0.6, SourceKind.Participant), "tommy", at);
-        firm.Receive(new ReportedClaim(claim, Stance.Believes, 0.6, SourceKind.Rumor), "marco", at.AddDays(1));
+        firm.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.6, SourceKind.Participant), "tommy", at);
+        firm.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.6, SourceKind.Rumor), "marco", at.AddDays(1));
         Assert.Equal(SourceKind.FirstHandTestimony, firm.Find(claim)!.SourceKind);
         Assert.Equal("tommy", firm.Find(claim)!.SourceId);
 
         var own = new Cognition();
         own.Learn(claim, Stance.Believes, 0.6, SourceKind.Witness, "self", at);
-        own.Receive(new ReportedClaim(claim, Stance.Believes, 0.9, SourceKind.Participant), "tommy", at.AddDays(1));
+        own.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.9, SourceKind.Participant), "tommy", at.AddDays(1));
         Assert.Equal(SourceKind.Witness, own.Find(claim)!.SourceKind);
         Assert.Equal("self", own.Find(claim)!.SourceId);
     }
@@ -193,14 +234,63 @@ public sealed class DisclosedProvenanceTests
         var claim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
 
         var listener = new Cognition();
-        listener.Receive(new ReportedClaim(claim, Stance.Believes, 0.6, SourceKind.Report), "tommy", at);
+        listener.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.6, SourceKind.Report), "tommy", at);
         Assert.Equal(SourceKind.Report, listener.Find(claim)!.SourceKind);
 
         listener.Receive(
-            new ReportedClaim(claim, Stance.Believes, 0.6, SourceKind.Participant), "tommy", at.AddDays(1));
+            ReportedClaim.Honest(claim, Stance.Believes, 0.6, SourceKind.Participant), "tommy", at.AddDays(1));
 
         Assert.Equal(SourceKind.FirstHandTestimony, listener.Find(claim)!.SourceKind);
         Assert.Equal(2, listener.AccountsOf(claim).Count());
+    }
+
+    /// <summary>
+    /// "I did it" and "I saw it" are different accounts, and the repeat rule has to see that.
+    ///
+    /// The comparison used to project each claimed basis through <c>AsHeardFrom</c> before testing
+    /// equality, which maps Participant and Witness onto the same value — so a man who first said
+    /// he did it and then said he only watched it counted as having repeated himself. Those differ
+    /// in whether he is confessing, which is not a detail.
+    ///
+    /// What must *not* happen is the opposite error: treating it as a fresh voice and paying him
+    /// confidence for it. It is still one man, still saying the thing happened, so the belief is
+    /// marked reconsidered and left where it was.
+    /// </summary>
+    [Fact]
+    public void Participant_to_witness_is_a_new_account_but_earns_no_confidence()
+    {
+        var at = Cast.Start;
+        var claim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
+
+        var listener = new Cognition();
+        listener.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.6, SourceKind.Participant), "tommy", at);
+
+        var afterFirst = listener.Find(claim)!;
+        double confidence = afterFirst.Confidence;
+        var reconsideredAt = afterFirst.ReconsideredAt;
+
+        // Same words, same confidence, different claimed basis.
+        listener.Receive(
+            ReportedClaim.Honest(claim, Stance.Believes, 0.6, SourceKind.Witness), "tommy", at.AddDays(1));
+
+        var afterSecond = listener.Find(claim)!;
+
+        Assert.Equal(confidence, afterSecond.Confidence);
+        Assert.True(afterSecond.ReconsideredAt > reconsideredAt,
+            "a materially different account is a development, even when it moves nothing");
+
+        // Both accounts survive, distinguishable by the basis each was offered under.
+        Assert.Equal(2, listener.AccountsOf(claim).Count());
+        Assert.Contains(listener.AccountsOf(claim), t => t.ClaimedBasis == SourceKind.Participant);
+        Assert.Contains(listener.AccountsOf(claim), t => t.ClaimedBasis == SourceKind.Witness);
+
+        // And repeating the second one now genuinely is a repeat: nothing moves at all.
+        listener.Receive(
+            ReportedClaim.Honest(claim, Stance.Believes, 0.6, SourceKind.Witness), "tommy", at.AddDays(2));
+
+        var afterThird = listener.Find(claim)!;
+        Assert.Equal(confidence, afterThird.Confidence);
+        Assert.Equal(afterSecond.ReconsideredAt, afterThird.ReconsideredAt);
     }
 
     /// <summary>
@@ -214,17 +304,17 @@ public sealed class DisclosedProvenanceTests
         var claim = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
 
         var listener = new Cognition();
-        listener.Receive(new ReportedClaim(claim, Stance.Believes, 0.5, SourceKind.Participant), "tommy", at);
+        listener.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.5, SourceKind.Participant), "tommy", at);
         double afterFirst = listener.ConfidenceIn(claim);
 
         for (int i = 1; i <= 5; i++)
             listener.Receive(
-                new ReportedClaim(claim, Stance.Believes, 0.5, SourceKind.Participant), "tommy", at.AddDays(i));
+                ReportedClaim.Honest(claim, Stance.Believes, 0.5, SourceKind.Participant), "tommy", at.AddDays(i));
 
         Assert.Equal(afterFirst, listener.ConfidenceIn(claim));
 
         // A second voice is genuinely new support.
-        listener.Receive(new ReportedClaim(claim, Stance.Believes, 0.5, SourceKind.Report), "marco", at.AddDays(6));
+        listener.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.5, SourceKind.Report), "marco", at.AddDays(6));
         Assert.True(listener.ConfidenceIn(claim) > afterFirst);
     }
 
@@ -239,18 +329,18 @@ public sealed class DisclosedProvenanceTests
         var claim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
 
         var listener = new Cognition();
-        listener.Receive(new ReportedClaim(claim, Stance.Believes, 0.8, SourceKind.Report), "vincent", at);
+        listener.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.8, SourceKind.Report), "vincent", at);
         double before = listener.ConfidenceIn(claim);
 
         listener.Receive(
-            new ReportedClaim(claim, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", at.AddDays(1));
+            ReportedClaim.Honest(claim, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", at.AddDays(1));
         Assert.True(listener.ConfidenceIn(claim) < before);
         Assert.True(listener.IsContested(claim));
 
         double afterOne = listener.ConfidenceIn(claim);
         for (int i = 2; i <= 5; i++)
             listener.Receive(
-                new ReportedClaim(claim, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", at.AddDays(i));
+                ReportedClaim.Honest(claim, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", at.AddDays(i));
 
         Assert.Equal(afterOne, listener.ConfidenceIn(claim));
     }

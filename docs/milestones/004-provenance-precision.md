@@ -1,16 +1,17 @@
 # Milestone 004 — Provenance Precision
 
-Status: **twice corrected; the second correction is awaiting review. Not verified or accepted.**
+Status: **three times corrected; the third correction is awaiting review. Not verified or accepted.**
 
 The sequence, in order:
 
 1. `714fbc3` — the implementation. Reviewed and **rejected**, three P1.
 2. `c828bfa` — attempted the correction. Reviewed and **rejected**, three P1 and two P2.
-3. This correction — fixes those five. **Awaiting review.**
+3. `d783745` — the second correction. Reviewed and **rejected**, two findings.
+4. This correction — fixes those two. **Awaiting review.**
 
-Both corrections are appended at the foot of this file. Nothing between here and there has been
-rewritten: the account below is what the milestone originally claimed, including the parts later
-findings contradict.
+All three corrections are appended at the foot of this file, in order. Nothing between here and
+there has been rewritten: the account below is what the milestone originally claimed, including the
+parts later findings contradict.
 
 Milestone 003, which this was built on top of, has since closed.
 
@@ -349,3 +350,61 @@ changes anywhere in the simulation silently re-roll everybody's perception. That
 determinism-hygiene problem and it stays on the deferred list. It was deliberately not addressed
 here — this is a provenance correction, and turning it into an RNG redesign is how a corrective pass
 becomes a milestone.
+
+## Third correction — Codex findings on `d783745`
+
+Status: **awaiting Codex review. Not verified.** Nothing above is rewritten.
+
+Two findings.
+
+**1. The `ActualBasis = Report` default was a migration hazard.** Both bases were positional
+parameters with defaults, so supplying only the claimed one — the natural thing to write — left the
+actual one silently at `Report`. `Commit`'s delegation branch did exactly that, which meant a capo
+briefing his own man about something he had done himself came out flagged as misrepresenting how he
+knew it. A field whose wrong value is what you get by not thinking about it is a trap.
+
+Neither basis is a constructor parameter now. `ReportedClaim` takes claim, stance and confidence;
+the two bases are init properties set through `Honest(...)` or `Misrepresenting(...)`. Every
+production construction is explicit: delegation, both assignment disclosures and the candid report
+path use `Honest`; only the denial uses `Misrepresenting`, claiming a bare report while retaining
+the participant basis as developer truth.
+
+**2. The verbatim-repeat comparison collapsed Participant onto Witness.** It projected each claimed
+basis through `AsHeardFrom` before comparing, and that maps both onto `FirstHandTestimony` — so a
+man who first said he did it and then said he only watched it counted as having repeated himself.
+Those accounts differ in whether he is confessing. The comparison now tests the claimed basis
+itself.
+
+The opposite error is guarded too: a changed basis makes it a new account, not a new voice. It lands
+on the "firming up or softening a position he already gave" path, so the belief is marked
+reconsidered and its confidence does not move.
+
+### Tests
+
+Five added, **138 total**. Both regressions the review asked for:
+
+- an honest briefing is never marked misrepresented — across four variants, the only misrepresented
+  claims in any run are denials, each a `Rejects` on a withheld claim in a `False` report; and
+  `Honest(...)` is exercised for every member of `SourceKind`;
+- `Participant` → `Witness` from one man is a new account that updates reconsideration without
+  moving confidence, both accounts survive in the log distinguishable by basis, and repeating the
+  second one is a genuine repeat that moves nothing.
+
+Finding 2's fix is mutation-checked in the usual way: restoring the `AsHeardFrom` projection fails
+the Participant→Witness test.
+
+**Finding 1's fix cannot be mutation-checked at runtime, and that is worth stating rather than
+glossing.** Delegation's `ReportedClaim` is passed straight to `Receive` and never persisted, so a
+wrong `ActualBasis` there is invisible to every observable surface — reinstating the defect leaves
+all 138 tests passing. The protection is instead at the type level, and that *was* verified: a probe
+file using the old positional form fails to compile with CS1729. The runtime tests cover the
+factory contract and the invariant that only denials misrepresent; the compiler covers the hazard
+itself.
+
+### Behavioural movement
+
+**None.** All four replay hashes remain `B20C06E5838C0657` / `24A181B260F9C396` /
+`4B60DA962927A6F7` / `B274F395A61C5118`, decisions 13 / 16 / 13 / 19, both `--verify` runs
+deterministic. Neither defect had a live consequence in the current scenario: delegation's beliefs
+are never re-read after transmission, and no character currently offers two accounts of the same
+claim on different bases.

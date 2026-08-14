@@ -2,9 +2,9 @@
 
 Status snapshot: 2026-08-14. **Milestone 003 is closed** — accepted after `d685015` reviewed clean,
 having taken seven corrective rounds including two occasions where the record claimed a verification
-that had not happened. **Milestone 004 (Provenance Precision) has been rejected twice and
-corrected twice**: `714fbc3` rejected on three P1, `c828bfa` rejected on three P1 and two P2, and a
-second correction now awaiting review. Nothing about it is accepted. What it attempted was to make
+that had not happened. **Milestone 004 (Provenance Precision) has been rejected three times and
+corrected three times**: `714fbc3` on three P1, `c828bfa` on three P1 and two P2, `d783745` on two
+further findings, and a third correction now awaiting review. Nothing about it is accepted. What it attempted was to make
 information provenance precise enough to distinguish participating, witnessing, discovering a trace,
 and being given a first-hand account. No milestone is active.
 
@@ -218,7 +218,7 @@ The player-facing view:
 ### Provenance — addressed in milestone 004, rejected twice and twice corrected
 
 `SourceKind.Direct` was too broad to distinguish witnessing, participating or authoring,
-discovering a trace, and being told first-hand by a participant. Milestone 004 — whose second
+discovering a trace, and being told first-hand by a participant. Milestone 004 — whose third
 correction is awaiting review, with nothing yet accepted — split it into
 `Participant`, `Witness`, `Discovery` and `FirstHandTestimony`, with no umbrella value surviving.
 Player-facing wording no longer has to stay vague: each sentence now says only what its category

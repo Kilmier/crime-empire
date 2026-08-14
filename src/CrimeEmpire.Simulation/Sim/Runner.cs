@@ -91,16 +91,14 @@ public static class Runner
         // policies are globally visible — and he is told it in the terms the boss used at the time.
         var disclosed = new List<ReportedClaim>();
         foreach (var r in boss.Cognition.OfKind(ClaimKind.BusinessRefusesTribute))
-            disclosed.Add(new ReportedClaim(
-                r.Claim, Stance.Believes, 0.75, ClaimedBasis: r.SourceKind, ActualBasis: r.SourceKind));
+            disclosed.Add(ReportedClaim.Honest(r.Claim, Stance.Believes, 0.75, r.SourceKind));
 
         if (policy is not null)
         {
             var awareness = policy.AwarenessClaim(org.Id);
             var held = boss.Cognition.Find(awareness);
             var basis = held?.SourceKind ?? SourceKind.Participant;
-            disclosed.Add(new ReportedClaim(
-                awareness, Stance.Believes, 0.75, ClaimedBasis: basis, ActualBasis: basis));
+            disclosed.Add(ReportedClaim.Honest(awareness, Stance.Believes, 0.75, basis));
         }
 
         var assignment = new Assignment(

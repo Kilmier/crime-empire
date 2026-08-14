@@ -132,7 +132,7 @@ public sealed class KnowledgeRoutingTests
         })
         {
             var listener = new Cognition();
-            listener.Receive(new ReportedClaim(claim, Stance.Believes, 0.7, basis), "tommy", at);
+            listener.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.7, basis), "tommy", at);
 
             Assert.Equal(expected, listener.Find(claim)!.SourceKind);
 
@@ -153,12 +153,12 @@ public sealed class KnowledgeRoutingTests
         var claim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
 
         var vincent = new Cognition();
-        vincent.Receive(new ReportedClaim(claim, Stance.Believes, 0.8, SourceKind.Participant), "tommy", at);
+        vincent.Receive(ReportedClaim.Honest(claim, Stance.Believes, 0.8, SourceKind.Participant), "tommy", at);
         Assert.Equal(SourceKind.FirstHandTestimony, vincent.Find(claim)!.SourceKind);
 
         var salvatore = new Cognition();
         salvatore.Receive(
-            new ReportedClaim(claim, Stance.Believes, 0.7, vincent.Find(claim)!.SourceKind),
+            ReportedClaim.Honest(claim, Stance.Believes, 0.7, vincent.Find(claim)!.SourceKind),
             "vincent", at.AddDays(1));
 
         Assert.Equal(SourceKind.Report, salvatore.Find(claim)!.SourceKind);
@@ -190,14 +190,14 @@ public sealed class KnowledgeRoutingTests
         // Contested: contradiction erodes it at the ordinary rate and can take its stance.
         var contested = new Cognition();
         contested.Learn(claim, Stance.Believes, 0.5, SourceKind.Discovery, "self", at);
-        contested.Receive(new ReportedClaim(claim, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", at.AddDays(1));
+        contested.Receive(ReportedClaim.Honest(claim, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", at.AddDays(1));
         Assert.False(contested.Find(claim)!.IsHeld,
             "an interpreted trace must be arguable, unlike something he did or saw");
 
         // The contrast: what he saw survives the same denial.
         var saw = new Cognition();
         saw.Learn(claim, Stance.Believes, 0.5, SourceKind.Witness, "self", at);
-        saw.Receive(new ReportedClaim(claim, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", at.AddDays(1));
+        saw.Receive(ReportedClaim.Honest(claim, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", at.AddDays(1));
         Assert.True(saw.Find(claim)!.IsHeld);
     }
 

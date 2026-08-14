@@ -134,10 +134,15 @@ public sealed class Cognition
         // happened" are the same words about the same claim and are not the same account: the
         // second is a man putting his own presence behind it, and treating that as a repeat would
         // let a witness step forward and be filed as somebody clearing his throat.
+        //
+        // Compared as claimed, not as the listener files it. Projecting through AsHeardFrom first
+        // collapsed Participant and Witness onto one value, so "I did it" and "I saw it" — which
+        // are different accounts of the same events, and differ in whether he is confessing —
+        // counted as the same man saying the same thing twice.
         bool verbatimRepeat = latestFromSender is { } last
             ? last.AssertedStance == asserted.AssertedStance
               && Math.Abs(last.AssertedConfidence - asserted.AssertedConfidence) < 1e-9
-              && last.ClaimedBasis.AsHeardFrom() == asserted.ClaimedBasis.AsHeardFrom()
+              && last.ClaimedBasis == asserted.ClaimedBasis
             : prior?.SourceId == senderId && prior.IsHeld == affirms && !prior.Contested;
 
         // Whether he has moved. A reversal is worth a change of confidence; firming up or

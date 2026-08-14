@@ -36,8 +36,18 @@ public enum ReportCandor
 /// The split matters: a character reporting falsely asserts a stance and confidence that differ
 /// from his own belief, and both halves have to be representable for the lie to be a lie rather
 /// than a second opinion.
+///
+/// <see cref="SpeakerBasis"/> carries how the speaker came by it. Without it every account arrived
+/// as a generic report, so a man who did something and a man repeating a rumour about it were
+/// indistinguishable to the listener, and first-hand testimony could not exist at all except by
+/// being fabricated at the point of delivery. It describes the speaker's acquisition, not the
+/// truth of the claim: a liar denying his own act is still speaking as a participant.
 /// </summary>
-public readonly record struct ReportedClaim(Claim Claim, Stance AssertedStance, double AssertedConfidence)
+public readonly record struct ReportedClaim(
+    Claim Claim,
+    Stance AssertedStance,
+    double AssertedConfidence,
+    SourceKind SpeakerBasis = SourceKind.Report)
 {
     public override string ToString() => $"{AssertedStance} {Claim}";
 }

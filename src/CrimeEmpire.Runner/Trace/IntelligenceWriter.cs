@@ -94,7 +94,7 @@ public static class IntelligenceWriter
                 // somebody else's account as his own, and it is already listed below under the
                 // name of the man who gave it.
                 if (who.Cognition.Find(claim) is { } own
-                    && (own.SourceKind.IsUnmediated() || own.SourceKind == SourceKind.Inference))
+                    && (own.SourceKind.IsSelfAcquired() || own.SourceKind == SourceKind.Inference))
                 {
                     string basis = own.SourceKind switch
                     {

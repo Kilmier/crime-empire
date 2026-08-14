@@ -110,12 +110,10 @@ public static class Strategies
                 // a view about is a standing condition of the shop, not an event he attended.
                 executor.Cognition.Learn(impression, Stance.Believes, read, SourceKind.Discovery, executor.Id, world.Now);
 
-                // And the man who sent him has it from the man who went — an account from someone
-                // who was there, which is nearer the thing than a filed report but is still his
-                // word for it.
-                if (owner.Id != executor.Id)
-                    owner.Cognition.Learn(impression, Stance.Believes, read * 0.8,
-                        SourceKind.FirstHandTestimony, executor.Id, world.Now);
+                // The man who sent him learns nothing here. He was not there, and nobody has yet
+                // told him anything: writing the executor's read straight into his head would be
+                // sending a report that never left anyone's mouth. If he wants it, his man has to
+                // report it through the channel like anything else.
 
                 ScheduleNextStep(world, owner, s, $"{s.Label}: {step} done, next step due");
                 return;
@@ -275,13 +273,15 @@ public static class Strategies
         world.Get(business.OwnerId).Cognition.Learn(violenceClaim, Stance.Knows, 1.0,
             SourceKind.Witness, business.OwnerId, world.Now);
 
-        // The man who sent him hears that it was done. He was not there, and this is his executor's
-        // word — testimony from a participant, which is nearer the event than a filed report but is
-        // still an account he could come to doubt. Keeping this apart from his own authorship
-        // below is the distinction this milestone exists for.
-        if (owner.Id != executor.Id)
-            owner.Cognition.Learn(violenceClaim, Stance.Knows, 0.9,
-                SourceKind.FirstHandTestimony, executor.Id, world.Now);
+        // The man who sent him is told nothing here, and learns nothing here.
+        //
+        // This used to write "Tommy told him" straight into the delegator's head at the moment of
+        // the beating, with no report, no message, no meeting and no trace behind it. Ordering
+        // something is not a channel: authority does not deliver knowledge, and a player-facing
+        // account saying his man told him — when his man had not yet opened his mouth — is an
+        // invented source. He knows he gave the order, which is recorded below as his own act. That
+        // it was carried out is a separate fact, and it reaches him the way anything else does:
+        // somebody reports it, or he comes across the traces himself.
 
         owner.Motivations.AddPressure(PressureKind.LegalExposure, 0.3);
         executor.Motivations.AddPressure(PressureKind.LegalExposure, 0.35);
@@ -296,10 +296,11 @@ public static class Strategies
             // and can only ever report candidly, while the subordinate who carried it out takes
             // all of the exposure.
             //
-            // Participant, and deliberately not the same category as the line above that records
-            // him hearing the beating was done. Those are two separate acquisitions and only one
-            // of them can be argued out of him: he can be talked into doubting that Tommy went
-            // through with it; he cannot be talked into doubting that he gave the order.
+            // Note the boundary this sits on. Knowing he gave the order is his own act. Knowing it
+            // was carried out is not, and is deliberately absent here — he acquires that through a
+            // report or a discovery roll like anyone else, or not at all. A man can be talked into
+            // doubting that Tommy went through with it; he cannot be talked out of having given
+            // the order.
             owner.Cognition.Learn(
                 new Claim(ClaimKind.PersonBreachedPolicy, owner.Id, s.BreachedPolicyId, ev.Id),
                 Stance.Knows, 1.0, SourceKind.Participant, owner.Id, world.Now);
@@ -314,7 +315,12 @@ public static class Strategies
 
         void Offer(string? id, double discoverability, params Claim[] claims)
         {
-            if (id is null || id == executor.Id || id == owner.Id) return;
+            // Only the man who was there is excluded. The one who ordered it is not: he was not
+            // present, he has been told nothing, and he works the same district as everybody else
+            // who gets a roll. Excluding him made sense only while his knowledge was being written
+            // in for free; without that, denying him the ordinary chance to notice would leave a
+            // man who cannot find out about the thing he ordered by any route at all.
+            if (id is null || id == executor.Id) return;
             // Better access wins. Two routes to the same news is not twice the chance of hearing
             // it; it is one chance, on the better of the two terms.
             if (opportunities.TryGetValue(id, out var existing) && existing.Discoverability >= discoverability) return;

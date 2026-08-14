@@ -80,11 +80,19 @@ public static class Commit
                 s.DelegatedToId = c.TargetId;
                 var sub = world.Get(c.TargetId!);
                 // The delegate learns enough to act, and no more. Information topology changes here.
-                foreach (var claim in ctx.Perceived.Beliefs
+                //
+                // Through Receive, because handing a man a job is briefing him: it is an act of
+                // telling, it leaves testimony he can attribute and later contest, and it carries
+                // the delegator's own basis so the delegate can tell "I saw it myself" from "I was
+                // told". Using Learn put claims in his head sourced to his boss with nothing on
+                // record of his boss having said anything — indistinguishable, from the outside,
+                // from the organisation simply handing knowledge downward.
+                foreach (var belief in ctx.Perceived.Beliefs
                              .Where(b => b.Claim.Subject == s.TargetId && b.IsHeld)
                              .Take(2))
-                    sub.Cognition.Learn(claim.Claim, Stance.Believes, claim.Confidence * 0.8,
-                        SourceKind.Report, actor.Id, world.Now);
+                    sub.Cognition.Receive(
+                        new ReportedClaim(belief.Claim, Stance.Believes, belief.Confidence * 0.8, belief.SourceKind),
+                        actor.Id, world.Now);
 
                 sub.Execution.Commitments.Add(new Commitment(
                     $"strategy:{s.Kind}:{s.TargetId}", $"handle {s.Label} for {actor.Name}", actor.Id, world.Now, 0.7));

@@ -118,8 +118,21 @@ public static class Runner
         var assignment = world.Org.Assignments.FirstOrDefault(a => a.Id == ev.Payload.AssignmentId);
         if (assignment is null) return;
 
+        // Briefing a man is telling him something, so it goes through Receive like any other
+        // account: it leaves testimony he can weigh, contest and attribute, and it carries the
+        // issuer's own basis. Using Learn here put claims into his head with a source attached but
+        // nothing on record of anyone having spoken — which reads, from the outside, exactly like
+        // the organisation handing him knowledge for being in it.
+        //
+        // The basis is the issuer's own. A boss disclosing the rule he set is a participant giving
+        // first-hand testimony; a boss passing on what his ledgers suggested is reporting.
+        var issuer = world.Get(assignment.IssuerId);
         foreach (var claim in assignment.Disclosed)
-            actor.Cognition.Learn(claim, Stance.Believes, 0.75, SourceKind.Report, assignment.IssuerId, world.Now);
+        {
+            var basis = issuer.Cognition.Find(claim)?.SourceKind ?? SourceKind.Report;
+            actor.Cognition.Receive(
+                new ReportedClaim(claim, Stance.Believes, 0.75, basis), assignment.IssuerId, world.Now);
+        }
 
         actor.Motivations.Responsibilities.Add(
             new Responsibility($"assignment:{assignment.Id}", assignment.Objective, assignment.Domain));

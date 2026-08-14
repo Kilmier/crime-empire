@@ -188,13 +188,19 @@ public sealed class InformationTransmissionTests
     }
 
     /// <summary>
-    /// The boss can still get there — otherwise the fix to finding 1 would simply have deleted the
-    /// behaviour rather than routing it correctly.
+    /// The boss can still get there — otherwise removing his free knowledge would simply have
+    /// deleted the behaviour rather than routing it correctly.
+    ///
+    /// On `disloyal-vincent` rather than `baseline`. Once synthetic first-hand testimony was
+    /// removed, the delegator no longer knows the beating happened, so he cannot report it upward,
+    /// and in three of the four variants the boss's discovery roll does not land either. He reaches
+    /// it here, by finding the traces himself and reasoning from them to who must have authorised
+    /// it — which is the route that was supposed to exist all along.
     /// </summary>
     [Fact]
     public void A_breach_can_still_be_reasoned_to_from_facts_the_character_holds()
     {
-        var world = Run("baseline");
+        var world = Run("disloyal-vincent");
         var salvatore = world.Get(Viewpoint);
 
         var reasoned = salvatore.Cognition.Records
@@ -1073,7 +1079,11 @@ public sealed class InformationTransmissionTests
         // And one thing he has taken back, held at lower confidence than any of the filler.
         var retracted = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
         vincent.Cognition.Learn(retracted, Stance.Believes, 0.8, SourceKind.Report, Viewpoint, t0);
-        vincent.Cognition.Learn(retracted, Stance.Rejects, 0.3, SourceKind.Discovery, vincent.Id, t0.AddDays(5));
+        // Participant, not Discovery: he collected the money himself, so this is his own act. It
+        // has to be a basis that overrides, because the point under test is that *news* outranks
+        // confidence in report ordering — and a weak Discovery no longer displaces a firmer earlier
+        // record at all, which would mean he never held the retraction to report in the first place.
+        vincent.Cognition.Learn(retracted, Stance.Rejects, 0.3, SourceKind.Participant, vincent.Id, t0.AddDays(5));
 
         // He already told the boss all the filler, and the original affirmation.
         world.Reports.Add(new Report(
@@ -1164,23 +1174,71 @@ public sealed class InformationTransmissionTests
     }
 
     /// <summary>
-    /// The same rule, proved through the running simulation rather than in isolation: the boss
-    /// puts more than one question to the same man over the course of a run.
+    /// The same rule, proved through the production decision path rather than in isolation: a man
+    /// who has already had one account out of somebody can still put a different question to him.
+    ///
+    /// This used to read the finished run and look for two questions to the same person. That made
+    /// it hostage to how much information happened to circulate — and once synthetic knowledge was
+    /// removed, less did, so the assertion went vacuous without the rule it guards having changed.
+    /// Driving the pipeline directly proves the wiring uses the claim-scoped guard, whatever the
+    /// scenario happens to produce.
     /// </summary>
     [Fact]
     public void The_same_person_can_be_asked_about_more_than_one_matter()
     {
-        var world = Run("disloyal-vincent");
+        var world = Cast.Build(seed: 42, "baseline");
+        var salvatore = world.Get(Viewpoint);
+        var t0 = Cast.Start;
 
-        var repeatedlyAsked = world.Requests
-            .GroupBy(q => (q.AskerId, q.AskedId))
-            .Where(g => g.Select(q => q.About).Distinct().Count() > 1)
+        var spoken = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
+        var unspoken = new Claim(ClaimKind.PoliceInvestigating, "tommy");
+
+        // Tommy has given him one account. That question is spent.
+        salvatore.Cognition.Receive(
+            new ReportedClaim(spoken, Stance.Believes, 0.6, SourceKind.Participant), "tommy", t0);
+
+        // And he separately holds something else, second-hand, that he might want checked.
+        salvatore.Cognition.Receive(
+            new ReportedClaim(unspoken, Stance.Believes, 0.4, SourceKind.Report), "vincent", t0);
+
+        world.Now = t0.AddDays(1);
+        var trigger = world.Queue.Schedule(
+            world.Now, EventKind.RoleReview, salvatore.Id, "his patch came up for review");
+
+        var decision = Pipeline.Deliberate(world, salvatore, trigger);
+
+        var asked = decision.Generated
+            .Where(c => c.Kind == ActionKind.SeekCorroboration)
             .ToList();
 
-        Assert.True(repeatedlyAsked.Count > 0,
-            "no one was ever asked about a second matter, which is what the person-scoped guard did:\n"
-            + string.Join("\n", world.Requests.Select(q => $"{q.AskerId} -> {q.AskedId}: {q.About}")));
+        Assert.True(asked.Count > 0,
+            "having heard Tommy on one matter must not close every other line of enquiry:\n"
+            + string.Join("\n", decision.Generated.Select(c => c.Description)));
+
+        Assert.DoesNotContain(asked, c => c.TargetId == "tommy" && c.AboutClaim == spoken);
     }
+
+    /// <summary>
+    /// And the guard holds across the running simulation: no request is ever put to somebody who
+    /// has already given his account of that same claim.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("disloyal-vincent")]
+    public void No_question_is_put_twice_to_the_same_man(string variant)
+    {
+        var world = Run(variant);
+
+        var duplicated = world.Requests
+            .GroupBy(q => (q.AskerId, q.AskedId, q.About))
+            .Where(g => g.Count() > 1)
+            .Select(g => $"{g.Key.AskerId} -> {g.Key.AskedId} about {g.Key.About} x{g.Count()}")
+            .ToList();
+
+        Assert.True(duplicated.Count == 0,
+            $"[{variant}] the same question was put more than once:\n" + string.Join("\n", duplicated));
+    }
+
 
     /// <summary>
     /// Being asked does not conjure an answer. A man with no position on the matter has nothing to

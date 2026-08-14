@@ -205,8 +205,12 @@ public static class Reporting
             {
                 // He asserts the opposite of what he holds. The claim is the same claim — this is
                 // a denial of a specific proposition, not a change of subject.
+                // The basis is still his own. A man denying something he did is lying as a
+                // participant, and the listener is right to receive it as first-hand testimony —
+                // false first-hand testimony, which is the most convincing kind and exactly what
+                // makes concealment worth modelling.
                 withheld.Add(b.Claim);
-                asserted.Add(new ReportedClaim(b.Claim, Stance.Rejects, DenialConfidence));
+                asserted.Add(new ReportedClaim(b.Claim, Stance.Rejects, DenialConfidence, b.SourceKind));
                 continue;
             }
 
@@ -217,8 +221,12 @@ public static class Reporting
             // definition; a position he has come to reject is passed on as a rejection, which is
             // the whole point of letting non-held records into a report. Flattening everything to
             // Believes would turn "I was wrong about that" into "that is true".
+            // The speaker's own basis travels with the claim. Without it every account landed as
+            // a generic report, so the listener could not tell the man who did it from the man
+            // repeating what he had heard — and first-hand testimony could only exist by being
+            // fabricated at the point of delivery, which is what it was.
             var stance = b.IsHeld ? Stance.Believes : b.Stance;
-            asserted.Add(new ReportedClaim(b.Claim, stance, b.Confidence * SecondHand));
+            asserted.Add(new ReportedClaim(b.Claim, stance, b.Confidence * SecondHand, b.SourceKind));
         }
 
         string framing = candor switch

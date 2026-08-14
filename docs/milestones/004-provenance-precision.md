@@ -1,13 +1,13 @@
 # Milestone 004 — Provenance Precision
 
-Status: **reviewed and rejected. Three P1 findings, not yet fixed.**
+Status: **reviewed and rejected; corrected, and the correction is awaiting review.**
 
-`714fbc3` was reviewed and rejected. The findings are not recorded here — they are in Matt's hands
-and will be worked in a later pass. Nothing below should be read as accepted.
+`714fbc3` was reviewed and rejected on three P1 findings. Codex reconstructed them from a fresh
+review at the exact commit, and they are now recorded and fixed — see the correction at the foot of
+this file. Nothing between here and there has been rewritten: the account below is what the
+milestone originally claimed, including the parts the findings contradict.
 
-The milestone also rests on a dependency that was itself rejected: `e83dacf`, milestone 003's final
-commit, which this was built on top of. That correction exists and is awaiting review. Milestone 003
-has to close before this milestone can be judged.
+Milestone 003, which this was built on top of, has since closed.
 
 This milestone was begun on the strength of a milestone-003 verification that had not happened. The
 account below stands on its own measurements, which were real; what it lacked was anyone checking
@@ -174,3 +174,96 @@ changed, not because the simulation did.
 
 - `714fbc3` — Split `Direct` into four acquisition categories. The implementation commit: vocabulary,
   predicates, acquisition sites, rendering, and tests.
+
+## Correction — Codex findings on `714fbc3`
+
+Status: **awaiting Codex review. Not verified.**
+
+Three P1 findings, all accepted. Nothing above is deleted; the account of what the milestone
+originally did stands, including the parts these findings contradict.
+
+**1 (P1). Synthetic first-hand testimony.** `Strategies.cs` wrote `FirstHandTestimony` straight into
+the delegator's cognition at the moment of the beating, sourced to the executor, with no report, no
+message, no meeting and no trace behind it. The same thing happened for the executor's read of the
+target. Ordering something is not a channel: authority does not deliver knowledge, and the
+player-facing account said "Tommy told him" while Tommy had not yet opened his mouth.
+
+Both inserts are gone. A participant still knows what he did — Vincent holds that he *gave the
+order*, which is his own act — but that it was *carried out* is a separate fact, and it now reaches
+him the way anything else does. The delegator is also no longer excluded from the discovery roll:
+he was excluded only because his knowledge was being written in for free, and without that he had
+no route to the thing he ordered at all.
+
+**2 (P1). Provenance lost in transmission.** `ReportedClaim` carried no acquisition basis and
+`Cognition.Receive` stamped every incoming claim `Report`, so first-hand testimony could not be
+acquired honestly — which is precisely why it was being fabricated in finding 1. `ReportedClaim`
+and `Testimony` now carry `SpeakerBasis`, and `Provenance.AsHeardFrom` decides what the listener
+records: a participant or witness giving their own account arrives as `FirstHandTestimony`;
+everything else — discovery, inference, an ordinary report, and *relayed* first-hand testimony —
+arrives as `Report`. Repeating testimony makes it hearsay, and the chain cannot launder itself back
+into first-hand at each hop. The speaker's own basis is kept verbatim on the testimony entry, so the
+coarser settled belief loses nothing.
+
+Two further routes were found by the new tests rather than by reading. `Runner.DeliverAssignment`
+and `Commit`'s delegation branch both used `Learn` to put claims in a subordinate's head sourced to
+his superior, leaving nothing on record of anyone having spoken. Briefing a man is telling him, so
+both now go through `Receive` and leave testimony he can attribute and contest.
+
+**3 (P1). The bundled predicate.** `IsUnmediated` covered Participant, Witness and Discovery, and
+four separate rules keyed off it: override immunity, erosion resistance, stance protection, and the
+Suspicious exemption. A category could not be given one property without inheriting the other
+three, and Discovery inherited all four when it should have had none. Finding a wrecked shopfront
+the next morning is an interpretation of a trace — it can be weak, wrong about who, and worth
+arguing about.
+
+Replaced with `OverridesPriorRecord`, `ResistsContradiction`, `ProtectsStance` and
+`ExemptFromSuspicion`, plus a purely descriptive `IsSelfAcquired` wired to no rule at all. Their
+memberships currently coincide at Participant and Witness, which is not the point: they are separate
+questions with separate answers, so changing one can no longer quietly change the others. Discovery
+now takes a `0.10` suspicion discount — a tuning guess, recorded as one, sitting below every
+discount that applies to somebody else's word.
+
+### Tests
+
+Twenty-one added, **120 total**, in `KnowledgeRoutingTests.cs`. All three fixes mutation-checked by
+restoring the defect: reinstating the synthetic insert fails six tests across four variants;
+collapsing `AsHeardFrom` to `Report` fails the transmission and hearsay tests; re-bundling Discovery
+into the four predicates fails the displacement-and-contest test.
+
+Two existing tests needed repair, and both are recorded rather than quietly adjusted:
+
+- `A_retraction_outranks_positions_the_recipient_already_has` built its retraction as a weak
+  `Discovery`, which no longer displaces a firmer earlier record — finding 3 working as intended. It
+  now uses `Participant`, which is what collecting the money actually is.
+- `The_same_person_can_be_asked_about_more_than_one_matter` read the finished run for two questions
+  to one person. With less information circulating, that stopped happening and the assertion went
+  vacuous without the rule it guards having changed. It now drives `Pipeline.Deliberate` directly,
+  so it proves the wiring rather than the scenario's luck, and a companion test asserts across the
+  running simulation that no question is ever put twice.
+
+### Behavioural movement
+
+| | before | after |
+|---|---|---|
+| decisions | 13 / 16 / 13 / 47 | 13 / 16 / 13 / **19** |
+| reports | 2 / 2 / 2 / 7 | 2 / 2 / 2 / **2** |
+| `ConcealIncident` restarts, disloyal | 12 | **0** |
+
+All four hashes move; all four runs remain deterministic and distinct. The movement traces to one
+cause: the delegator no longer knows the beating happened, so he cannot report it upward, and the
+information that used to circulate for free now has to travel or not arrive. In three of the four
+variants the boss's discovery roll does not land and he never learns of the violence at all.
+
+The concealment runaway flagged in the deferred list above — Tommy restarting `ConcealIncident`
+twelve times — no longer occurs. That was not the object of this correction and no code was written
+against it; it stopped because the beliefs feeding the legal-exposure pressure changed. It should be
+treated as unexplained rather than fixed, and the deferred item stays until somebody understands why.
+
+### What the player sees now
+
+Vincent's own view used to say Tommy had told him about the beating. It now says
+`Tommy Nardo has not given him an account`, and the policy he holds reads
+`Salvatore Greco was in it and told him so` — first-hand testimony from the man who set the rule,
+acquired through an assignment briefing that now leaves a record of having happened. On
+`disloyal-vincent`, Salvatore still reaches the breach by finding the traces himself and reasoning
+from them, with Vincent's denial listed beside his own conclusion.

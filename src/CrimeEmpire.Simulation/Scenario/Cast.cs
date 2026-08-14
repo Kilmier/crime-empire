@@ -206,6 +206,10 @@ public static class Cast
         // He set the rule, so he holds it as its author rather than as something he found out.
         salvatore.Cognition.Learn(policy.AwarenessClaim(OrgId), Stance.Knows, 1.0,
             SourceKind.Participant, "salvatore", Start);
+        // A scenario fixture, not something the simulation routed: he starts the run already
+        // believing this, on the word of a bookkeeper nobody models. "the books" is a source
+        // outside the cast, which is what makes it a report rather than something he found — and
+        // what makes it corroboratable, since a thing you were told is a thing worth checking.
         salvatore.Cognition.Learn(new Claim(ClaimKind.BusinessRefusesTribute, Grocery),
             Stance.Believes, 0.75, SourceKind.Report, "the books", Start);
         salvatore.Cognition.Learn(new Claim(ClaimKind.TargetIsVulnerable, Grocery),

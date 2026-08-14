@@ -156,7 +156,7 @@ public sealed class ProvenanceTests
         var fresh = new Cognition();
         fresh.Receive(new ReportedClaim(claim, Stance.Knows, 1.0), "tommy", at);
         Assert.Equal(SourceKind.Report, fresh.Find(claim)!.SourceKind);
-        Assert.False(fresh.Find(claim)!.SourceKind.IsUnmediated());
+        Assert.False(fresh.Find(claim)!.SourceKind.IsSelfAcquired());
 
         // Told something he already had first-hand: still his own, corroborated.
         var already = new Cognition();
@@ -181,7 +181,7 @@ public sealed class ProvenanceTests
 
         var wrong = world.Characters.Values
             .SelectMany(c => c.Cognition.Records
-                .Where(r => r.SourceKind.IsUnmediated() && r.SourceId != c.Id)
+                .Where(r => r.SourceKind.IsSelfAcquired() && r.SourceId != c.Id)
                 .Select(r => $"{c.Id} holds {r.Claim} as {r.SourceKind} sourced to {r.SourceId}"))
             .ToList();
 

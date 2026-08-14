@@ -15,8 +15,19 @@ public readonly record struct Testimony(
     Stance AssertedStance,
     double AssertedConfidence,
     string SenderId,
-    DateTime At)
+    DateTime At,
+    SourceKind SpeakerBasis = SourceKind.Report)
 {
+    /// <summary>
+    /// How the speaker said he came by it, kept exactly as offered.
+    ///
+    /// The settled belief records only whether the listener now holds first-hand testimony or an
+    /// ordinary report, which is all any rule needs. Keeping the speaker's own basis here means
+    /// nothing is lost by that coarsening: discovery, inference and relayed hearsay stay
+    /// distinguishable in the log even though they land as reports.
+    /// </summary>
+    public SourceKind SpeakerBasis { get; init; } = SpeakerBasis;
+
     /// <summary>Whether the sender asserted the claim rather than denying it.</summary>
     public bool Affirms => AssertedStance is Stance.Knows or Stance.Believes or Stance.Suspects;
 
@@ -58,7 +69,7 @@ public sealed class Cognition
         if (existing >= 0)
         {
             var prior = _records[existing];
-            bool overrides = sourceKind.IsUnmediated() || confidence >= prior.Confidence;
+            bool overrides = sourceKind.OverridesPriorRecord() || confidence >= prior.Confidence;
             if (!overrides) return prior;
             // He is revising something he already had, so the acquisition time stands. Only the
             // moment he last had cause to think about it moves.
@@ -124,13 +135,18 @@ public sealed class Cognition
         bool reversal = latestFromSender is { } prev ? prev.Affirms != affirms : true;
 
         _testimony.Add(new Testimony(
-            asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence, senderId, at));
+            asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence, senderId, at,
+            asserted.SpeakerBasis));
 
         if (prior is null)
         {
+            // How it arrives depends on who is speaking. A man who did it or saw it gives
+            // first-hand testimony; anyone passing on what they did not establish themselves gives
+            // a report, however sincerely. Hardcoding Report here made first-hand testimony
+            // impossible to acquire honestly, which is why it was being fabricated elsewhere.
             var fresh = new InformationRecord(
                 asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence,
-                SourceKind.Report, senderId, at);
+                asserted.SpeakerBasis.AsHeardFrom(), senderId, at);
             _records.Add(fresh);
             return fresh;
         }
@@ -158,16 +174,18 @@ public sealed class Cognition
         // Disagreement: a first denial from this man, or a reversal of what he told him before.
         // Either is a reason to be less sure; hearing the identical denial twice is not, and has
         // already returned above.
-        // What he established himself resists hardest. An account he was given — including one from
-        // the man who was in it — is testimony, and testimony against testimony is an ordinary
-        // conflict of sources rather than being told you did not see what you saw.
-        double erosion = prior.SourceKind.IsUnmediated() ? 0.15 : 0.45;
+        // What he did or saw resists hardest. An account he was given — including one from the man
+        // who was in it — is testimony, and testimony against testimony is an ordinary conflict of
+        // sources rather than being told you did not see what you saw. A trace he interpreted is in
+        // the ordinary bracket too: disagreeing about what a wrecked shopfront meant is a normal
+        // disagreement, not a challenge to his eyes.
+        double erosion = prior.SourceKind.ResistsContradiction() ? 0.15 : 0.45;
         double shaken = Math.Clamp(prior.Confidence * (1 - erosion * asserted.AssertedConfidence), 0, 1);
 
         // Below the point where he would still act on it, the stance itself gives way — but only
         // for something he was told. What he saw himself decays in confidence and stays held.
         var stance = prior.Stance;
-        if (!prior.SourceKind.IsUnmediated() && shaken < 0.3)
+        if (!prior.SourceKind.ProtectsStance() && shaken < 0.3)
             stance = prior.IsHeld ? Stance.Doubts : Stance.Suspects;
 
         return Replace(prior, prior with

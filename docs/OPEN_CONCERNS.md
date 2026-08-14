@@ -36,10 +36,16 @@ answer for how those dimensions are stored, updated, or decayed. Should get the 
 dedicated document `INFORMATION_AND_LEGIBILITY.md` gave to knowledge, once the kernel shows which
 distinctions actually change decisions.
 
-### 4. Trait/value vocabulary must be closed, but the concrete list still isn't committed
-The architecture doc now *mandates* a closed, small, enumerable, data-driven trait list — that
-policy question is settled. The actual list is not: earlier drafts used Loyalty/Greed/Fear/
-Ambition as a 4-stat starting point, but the current docs still use open descriptive language
-("traits, skills, ambitions, resources, memories, secrets"). Needs to be closed before
-implementation goes past the pre-MVP kernel, or it'll be unbalanceable and unexplainable via
-player-facing opinion breakdowns.
+### 4. ~~Trait/value vocabulary must be closed, but the concrete list still isn't committed~~
+**Retired 2026-08-14.** Milestone 001 closed the list in `Domain/Psychology.cs` and it is now
+recorded in `DESIGN_DECISIONS.md` under "Actor parity and simulation tractability" — traits
+Aggressive/Cautious/Proud/Suspicious, drives Wealth/Status/Security/Belonging, with Loyalty derived
+per relationship and Ambition folded into Status. The number is kept rather than reused: the
+milestone archives are append-only and cite this item as #4.
+
+### 5. Conflict by omission is not recognized as conflict
+`IsContested` requires an actual denial. In the baseline both Vincent and Tommy omit rather than
+deny, so their accounts differ without formally conflicting. Whether one source's assertion against
+another source's conspicuous omission deserves first-class treatment is a real design question, not
+an oversight — a boss who notices that two men's stories cover different ground is doing something
+the model currently cannot represent. Surfaced by `milestones/003-information-transmission.md`.

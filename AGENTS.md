@@ -28,6 +28,30 @@ Read the canonical project documents before making non-trivial design or simulat
    rather than folded into the original account, so the archive — not the commit message — is
    where "this was already found wrong, and here is what is still open" lives.
 
+### Conditional reading
+
+Not part of the universal list above — read these when the task calls for them:
+
+- `docs/REVIEW_LEDGER.md` — **read before reviewing a commit.** The authority on what has been
+  reviewed and what it concluded, plus verification baselines, the review checklist, and the
+  recurring failure patterns. It carries no status and grants no permission.
+- `docs/ROADMAP.md` — **read only when selecting or proposing future scope.** Technical debt,
+  unbuilt work, and candidate milestones. Nothing on it authorizes anything; scope comes from Matt
+  and goes into `docs/CURRENT_MILESTONE.md` first.
+
+### When documents conflict
+
+1. `DESIGN_DECISIONS.md` for settled decisions.
+2. `GAME_VISION.md`, `SIMULATION_ARCHITECTURE.md`, `INFORMATION_AND_LEGIBILITY.md` for full design.
+3. `OPEN_CONCERNS.md` for unresolved risks.
+4. `CURRENT_MILESTONE.md` for currently assigned scope — and it is the only place active status is
+   stated. Do not infer status from prose anywhere else.
+5. `milestones/NNN-*.md` for completed work and appended corrections.
+6. `REVIEW_LEDGER.md` for review coverage and verification baselines.
+
+New durable decisions go to `DESIGN_DECISIONS.md`; new unresolved risks to `OPEN_CONCERNS.md`. Do
+not originate authority in a summary — update the source first.
+
 ## Review workflow
 
 This project uses a two-agent loop: Claude (implementation) and Codex (code review /
@@ -107,3 +131,14 @@ dotnet build CrimeEmpire.sln
 dotnet test CrimeEmpire.sln
 dotnet run --project src/CrimeEmpire.Runner -- --verify --seed 42 --days 90
 ```
+
+For information-channel changes, also run:
+
+```powershell
+dotnet run --project src/CrimeEmpire.Runner -- --verify --variant disloyal-vincent --seed 42 --days 90
+dotnet run --project src/CrimeEmpire.Runner -- --compare --seed 42
+dotnet run --project src/CrimeEmpire.Runner -- --variant disloyal-vincent --viewpoint salvatore --seed 42 --days 90
+dotnet run --project src/CrimeEmpire.Runner -- --variant baseline --viewpoint vincent --seed 42 --days 90
+```
+
+Recorded baselines to compare against are in `docs/REVIEW_LEDGER.md`.

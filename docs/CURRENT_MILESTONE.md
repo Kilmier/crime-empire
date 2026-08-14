@@ -13,13 +13,13 @@ Milestones 001–004 are complete and accepted. The most recent, **004 — Prove
 accepted at `1fe8a15` on 2026-08-14 after four corrective rounds; its full record, including every
 finding and every correction, is in `docs/milestones/004-provenance-precision.md`.
 
-Every commit carrying code has been reviewed and accepted. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s
-review-coverage section is the authority on what has been looked at and what it concluded; do not
-infer status from prose anywhere else, including this file.
+Every commit carrying code has been reviewed and accepted. `REVIEW_LEDGER.md`'s coverage table is
+the authority on what has been looked at and what it concluded; do not infer status from prose
+anywhere else, including this file.
 
-**Milestone 005 has not been chosen.** Do not infer it from the candidate list in
-`CANONICAL_DESIGN_CONTEXT.md`, from the carried-forward items below, or from the technical-debt list
-in the code brief. Confirm scope with Matt and write it here before changing simulation behaviour.
+**Milestone 005 has not been chosen.** Do not infer it from the candidate list or technical-debt
+list in `ROADMAP.md`, or from the carried-forward items below. Confirm scope with Matt and write it
+here before changing simulation behaviour.
 
 ## Ordered review process
 
@@ -30,8 +30,8 @@ itself, and nothing that will notice a commit unless somebody points a review at
 - Each review names the exact commit whose diff was inspected.
 - A later documentation commit does not stand in for the implementation commit beneath it. If two
   land back to back, both still need reviewing, in order.
-- The coverage table in `CANONICAL_CODE_REVIEW_CONTEXT.md` is the record. It is maintained by hand,
-  which is why it is the authority rather than the prose around it.
+- The coverage table in `REVIEW_LEDGER.md` is the record. It is maintained by hand, which is why it
+  is the authority rather than the prose around it.
 
 Never write "verified" or "closed" from a review report alone. A report must name the exact commit
 reviewed, and Matt must confirm acceptance. That rule exists because the record twice claimed a
@@ -40,7 +40,7 @@ verification that had not happened.
 ## Carried forward
 
 Open items the next scope decision should see. Fuller versions live in the milestone-004 archive and
-the code brief's technical-debt list.
+`ROADMAP.md`'s technical-debt list.
 
 - **The scenario does not exercise milestone 004's central distinction.** No variant contradicts a
   delegator's first-hand account, so the difference between authored participation and being told is

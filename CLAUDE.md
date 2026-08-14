@@ -13,9 +13,12 @@ Solo hobby project. Not commercial, no deadline pressure, no team — optimize f
 iteration speed and understanding over process/documentation overhead.
 
 ## Current phase
-The decision-pipeline behavioral spike (milestone 001, see `docs/milestones/001-decision-pipeline.md`)
-is complete. No Godot/engine work, no rendering, no save/load yet — still true for the project as a
-whole. See `docs/CURRENT_MILESTONE.md` for what's active now.
+`docs/CURRENT_MILESTONE.md` is the only place that says what is active — read it rather than
+inferring a phase from this file. Completed milestones are in `docs/milestones/`, unbuilt work and
+candidate scopes in `docs/ROADMAP.md`, review coverage in `docs/REVIEW_LEDGER.md`.
+
+Still true for the project as a whole: no Godot/engine work, no rendering, no persistence or
+save/load.
 
 ## Claude-Code-specific practice
 - Use Plan mode / propose an approach before writing code for anything nontrivial. This project is

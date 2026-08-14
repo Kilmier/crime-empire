@@ -1,6 +1,6 @@
-# Criminal Empire — Project Context & Handoff
+# Criminal Empire — Project Context
 
-Purpose of this file: give a new coding session everything it needs to start productively, without re-deriving decisions already made in design chat. Treat the canonical documents in this directory as authoritative; treat this file as the narrative of *why* they say what they say and *what happens next*.
+Purpose of this file: give a new coding session the background it needs, without re-deriving decisions already made in design chat. Treat the canonical documents in this directory as authoritative; treat this file as the narrative of *why* they say what they say. It is not the handoff surface — `CURRENT_MILESTONE.md` is.
 
 Primary companion documents: `GAME_VISION.md` (vision), `SIMULATION_ARCHITECTURE.md` (architecture), `INFORMATION_AND_LEGIBILITY.md` (information model), `DESIGN_DECISIONS.md` (settled decisions), and `OPEN_CONCERNS.md` (unresolved risks).
 
@@ -48,14 +48,15 @@ Ranked by severity:
 - **Rendering/engine (planned, not implemented):** Godot 4, using C# (not GDScript) — same language as the sim core, no FFI boundary. Chosen over Unity for licensing simplicity, strong 2D/tilemap support, and a UI toolkit suited to a text/menu-dense management game rather than an action game.
 - **Sequencing remains explicit:** validate the headless simulation and its traces before creating a Godot project. If the sim is not compelling in text form, presentation cannot repair its foundation.
 
-## Immediate next step
+## Where to find current status
 
-Review and tune the existing behavioral spike against its original success criterion: does Vincent's
-(and the other characters') behavior look motivated and legible from the trace, or arbitrary? Keep
-changes focused on concrete trace evidence. Once the kernel is credible, proceed to the architecture
-document's emergence-prototype phase: richer information transmission, player-facing reports,
-delegation, rival activity, and limited tier transitions. No rendering, engine, persistence, or
-save/load is required yet.
+This file is narrative background and deliberately holds no status. What is being worked on is in
+`CURRENT_MILESTONE.md` and nowhere else; completed work is in `docs/milestones/`; unbuilt work and
+candidate scopes are in `ROADMAP.md`; review coverage is in `REVIEW_LEDGER.md`.
+
+An earlier version of this section carried an "Immediate next step" describing the milestone-001
+task as though it were still pending. It was three milestones stale by the time anyone noticed,
+which is the argument for keeping status in one file.
 
 ## Working style notes for the coding agent
 

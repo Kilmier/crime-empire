@@ -2,7 +2,7 @@
 
 Settled decisions. Do not re-litigate without a concrete reason surfaced during actual
 implementation. Unresolved items live in `OPEN_CONCERNS.md`. Active work lives in
-`CURRENT_MILESTONE.md` (or `PROJECT_CONTEXT.md` until that split happens).
+`CURRENT_MILESTONE.md`; unbuilt work and candidate scopes live in `ROADMAP.md`.
 
 This file supersedes the "Decision history" section of `PROJECT_CONTEXT.md` and the resolved
 portions of the retired `design-doc-concerns_1.md`. Each entry below cites the doc/section that
@@ -58,6 +58,46 @@ settled it, so a future session can verify the claim instead of taking it on fai
 - Simulation depth is relevance-tiered (Active / Supporting / Background) with a strict Tier 1
   population budget and explicit promotion/demotion rules that preserve causally important state.
   — `SIMULATION_ARCHITECTURE.md`, "Simulation Relevance Tiers."
+- **The trait and drive vocabulary is closed, and this is the list.** Traits: `Aggressive`,
+  `Cautious`, `Proud`, `Suspicious`. Drives: `Wealth`, `Status`, `Security`, `Belonging`. Every
+  entry has a stated behavioural purpose; a trait that cannot name one does not belong, and two
+  that move the same numbers should be merged. Two omissions are deliberate: **`Loyalty`** is
+  derived per relationship from trust, obligation and Belonging rather than stored as a universal
+  scalar, because one loyalty number collapses "loyal to whom, and for which reason"; and
+  **`Ambition`** is what a Status weight already is, so a separate advancement drive would be a
+  tuning finding, not a default. — `Domain/Psychology.cs`, closed in milestone 001; this retires
+  `OPEN_CONCERNS.md` #4.
+
+## Information channel — settled invariants
+
+Settled by milestone 003 and refined by 004; see `milestones/003-information-transmission.md` and
+`milestones/004-provenance-precision.md` for the findings behind each. These are the contract the
+report channel is reviewed against — `REVIEW_LEDGER.md` cites this section rather than restating it.
+
+- **Deception is a candidate evaluated through the normal decision pipeline**, not a scripted
+  branch. No code branches on a trait to produce a lie.
+- **A report is composed only from positions the sender actually has.** Reporting code cannot read
+  authoritative truth to invent content or to make the sender accurate.
+- **A partial report distinguishes claims asserted, deliberately withheld, and omitted only because
+  the bounded message was full.** Withholding settles a claim until the sender's own position moves;
+  cap-omission leaves it outstanding.
+- **Repeated identical accounts do not compound confidence.**
+- **A source changing their account is meaningful**: recantation or contradiction updates
+  reconsideration and remains communicable onward.
+- **Corroboration counts distinct sources across the whole testimony history**, not the record's
+  original attribution.
+- **A request is scoped to a particular claim.** Asking a person one question does not permanently
+  close the communication channel with them.
+- **Asking is spent when the question is put**, not when the recipient chooses to answer. This
+  bounds unanswered requests without forcing a reply.
+- **A speaker's claimed basis is separate from what he privately holds.** Only the claimed basis may
+  reach the listener; the actual basis is developer truth. Repeating someone's testimony makes it
+  hearsay — a chain cannot launder itself back into first-hand at each hop.
+
+The player-facing view is constrained to match: it reads only the viewpoint character's cognition,
+testimony and known relationships; never enumerates the authoritative roster to reveal unknown
+people; uses qualitative confidence; presents conflicting accounts with attribution; and does not
+expose utility scores, hidden intentions, or the authoritative truth log.
 
 ## Stack
 

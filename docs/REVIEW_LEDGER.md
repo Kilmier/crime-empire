@@ -1,0 +1,299 @@
+# Crime Empire — Review Ledger
+
+The hand-maintained record of which commits have been reviewed, what those reviews concluded, and
+the instruments a review runs against. It is the authority on review coverage: if a commit is not
+on the table below, its status is not established, whatever prose elsewhere says.
+
+**This file holds no active status and grants no permission.** What is being worked on lives in
+`CURRENT_MILESTONE.md`; what is not yet built lives in `ROADMAP.md`. Nothing here is a licence to
+start anything.
+
+Read this before reviewing a commit, alongside the canon list in `AGENTS.md`.
+
+## How review works here
+
+Review is manual and ordered. Nothing runs on a timer and nothing tracks coverage on the
+repository's behalf: commits are taken oldest-unreviewed-first, one at a time, by hand, and each
+review names the exact commit whose diff was inspected. A later documentation commit does not stand
+in for the implementation commit beneath it — if two land back to back, both still need reviewing.
+
+Standing rules:
+
+1. Review advances one commit at a time, oldest unreviewed first. Never skip to `HEAD`, even when
+   the intervening commits are documentation-only.
+2. Every report names the exact commit whose isolated diff was inspected, and distinguishes
+   verification at that commit from verification performed only at a later `HEAD`.
+3. Never write "verified" from a review report alone. Verified means Matt confirms acceptance of
+   that specific reviewed commit.
+4. The coverage table below is the record. Maintained by hand, which is why it is the authority
+   rather than the prose around it.
+
+Test-green is not review, and review is not acceptance. `714fbc3` built clean, passed its suite,
+and was still rejected on three P1 findings; do not describe such a commit as unreviewed or as safe.
+
+## Commit and review coverage
+
+Oldest first — the order review takes them in. Every commit on `main` has a row.
+
+| Commit | What it did | Review status |
+|---|---|---|
+| `46f0777` | Initial simulation baseline | Reviewed in the reorg pass: the process-global decision-ID defect was found here and fixed in `4030699` (`milestones/001`). |
+| `4030699` | Reorganize into `docs`/`src`/`tests`; decision-ID determinism fix | Status not established. `DESIGN_DECISIONS.md` §Stack records that Codex raised the .NET 10 target during this reorg. |
+| `65a97c4` | Milestone lifecycle policy; archive milestone 001. Docs only | Status not established. |
+| `7032981` | Migrate `net9.0` → `net10.0` (milestone 002) | Reviewed 2026-08-13, **no findings**; accepted as a safe base (`milestones/002`). |
+| `5463157` | Record the milestone-002 review outcome. Docs only | Status not established. |
+| `097fbda` | Milestone 003 implementation: reports, testimony, viewpoint view | Reviewed and **rejected**: five findings. Corrected by `cf22e5d`. |
+| `cf22e5d` | First correction | Reviewed and **rejected**: three findings (6–8). Corrected by `2a74a5d`. |
+| `2a74a5d` | Second correction | Reviewed and **rejected**: three findings, two P1 (9–11). Corrected by `f97ef76`. |
+| `f97ef76` | Third correction; corroboration runaway | Reviewed and **rejected**: three findings (12–14). Corrected by `b8fe921`. |
+| `2d9177d` | Point the review read order at the milestone archive. Docs only | Status not established. |
+| `b8fe921` | Fourth correction: separate withheld from unsaid, scope requests | Reviewed and **rejected**: two P1 (15–16). Corrected by `e83dacf`. **Recorded as verified when it was not.** |
+| `b3c404b` | Close milestone 003, reset the current-milestone file. Docs only | Status not established. Working tree clean at this commit. |
+| `d142582` | Open milestone 004; add the two canonical context briefs. Docs only | Reviewed. Findings, fixed in `fb2c84d`. |
+| `fb2c84d` | Correct the continuity record. Docs only | Reviewed and **rejected**; its findings were never recorded. **Retired as superseded** by Matt on 2026-08-14 — see the note below. |
+| `e83dacf` | Fifth correction: scope the reply and the asking guard to the claim | Skipped at the time by a latest-commit-only rule; later reviewed and **rejected**: three findings, two P1 and one P2 (17–19). Corrected by `cbadb0d` and `170991b`. |
+| `a5a72f1` | Record a milestone-003 verification and unblock 004. Docs only, and wrong | Reviewed. Findings accepted; the false verification was withdrawn in `d2af4c8`. |
+| `714fbc3` | Milestone 004 implementation: split `Direct` into four categories | Reviewed and **rejected**: three P1. Corrected by `c828bfa`. |
+| `11c4a4a` | Record the 004 implementation commit in its archive. Docs only | Status not established. |
+| `d2af4c8` | Withdraw the false verification of `e83dacf`. Docs only | Status not established. |
+| `cbadb0d` | Sixth correction (003): direct-answer path | Reviewed, **no code findings**; all verification passed. |
+| `170991b` | Enforce the false-candour invariant at `Reporting.Compose` | Reviewed, **no code findings**. One documentation finding — the stale next-step gate — fixed in `d685015`. |
+| `d685015` | Replace the stale gate. Docs only | Reviewed, **no findings**. Matt accepted milestone 003 on 2026-08-14. |
+| `2893cf1` | Close milestone 003. Docs only | Status not established. |
+| `dac4362` | Document ordered Codex review checkpoints. Docs only | **Not reviewed**; explicitly reconciled as an ordered-review checkpoint. It described a review automation that does not exist; that text was corrected under `612bd50`'s second finding. |
+| `c828bfa` | First 004 correction: make knowledge travel | Reviewed and **rejected**: three P1 and two P2, chiefly a false denial transmitting the sender's private basis. Corrected by `d783745`. |
+| `d783745` | Second 004 correction: claimed basis vs. private basis | Reviewed and **rejected**: two findings — a silent `ActualBasis` default marking honest briefings as misrepresented, and a repeat comparison collapsing `Participant` onto `Witness`. Corrected by `612bd50`. |
+| `612bd50` | Third 004 correction | Reviewed and **rejected**: two findings — provenance still settable by halves through an object initializer or `with`, and live documentation claiming a review automation that does not exist. Corrected by `1fe8a15`. |
+| `1fe8a15` | Fourth 004 correction: close the last half-set route | Reviewed, **no findings**. Matt accepted it on 2026-08-14. Milestone 004 closed. |
+| `20f82bd` | Close milestone 004. Docs only | Reviewed and **rejected**. Corrected by `6cbc385`. |
+| `6cbc385` | Correct a next-step gate that had gone stale a second time. Docs only | Reviewed and **rejected**. Corrected by `9703d83`. |
+| `9703d83` | Retire `fb2c84d`'s unrecoverable findings as superseded. Docs only | Reviewed, **no findings**. Accepted by Matt. |
+
+Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`. Both took their
+implementation plus every corrective round through review before acceptance.
+
+**On `fb2c84d`.** It was rejected and its findings were never written down, so what they were is not
+recoverable from this repository. Matt retired them as superseded and non-actionable on 2026-08-14:
+`fb2c84d` was a documentation commit, and every line it touched has since been rewritten and
+re-reviewed several times over in the milestone-004 corrective rounds. Retired is not the same as
+fixed, and the row must not be read as either — nobody addressed those findings one by one, and
+nobody has claimed the original review passed. The text they were about no longer exists, so there
+is nothing left to act on. The rejection stays on the record; only the expectation of further work
+is discharged.
+
+Do not squash or rewrite this history to make a milestone look cleaner. The corrective sequences
+record useful architectural failures and review lessons.
+
+## Verification baselines
+
+Run from the repository root; the commands are in `AGENTS.md` §Verification.
+
+Hashes are regression evidence for a snapshot, not permanent game-design requirements. A deliberate
+behaviour change may legitimately move them if tests and milestone documentation are updated
+coherently.
+
+### Accepted — milestone 004, `1fe8a15`
+
+- Build: 0 warnings, 0 errors.
+- Tests: 139 passed, 0 failed.
+- Replay hashes `B20C06E5838C0657` / `24A181B260F9C396` / `4B60DA962927A6F7` / `B274F395A61C5118`
+  for baseline / cautious-vincent / watchful-boss / disloyal-vincent, each identical on both runs.
+- Four variants produce four distinct histories. Decision counts 13 / 16 / 13 / 19.
+
+Byte-identical to `c828bfa`: the last three corrective rounds closed real, API-reachable defects
+that never fired in these four variants. Correct and currently invisible in play — see
+`milestones/004-provenance-precision.md` for why in each case.
+
+### Superseded
+
+Kept for comparison only. The prose analysis of why each moved lives in the milestone archives.
+
+| Commit | Tests | Decisions | Note |
+|---|---|---|---|
+| `d685015` | 99 | 13 / 16 / 13 / 47 | Milestone 003 accepted. Hashes `EF5082E438500CAA` / `DAB6010D48E61234` / `B351E55B3B2C61DB` / `7F1228BFE32F2108`. |
+| `c828bfa` | 120 | 13 / 16 / 13 / 19 | Hashes as in the accepted baseline. Rejected on three P1 and two P2. |
+| `714fbc3` | 86 | 13 / 16 / 13 / 45 | Hashes moved; the simulation did not. Rejected on three P1. |
+| `e83dacf` | 73 | 13 / 16 / 13 / 45 | Reports 2 / 2 / 2 / 7. Reviewed and rejected. |
+| `b8fe921` | 63 | 13 / 16 / 13 / 43 | Recorded as verified at the time; the review in fact returned two P1. |
+
+### The scenario these baselines measure
+
+The harbour scenario: one organization, one contested district, one pressured business, a
+five-person cast. Vincent is aggressive, proud, under revenue pressure and carrying a grievance;
+whether he escalates is a scoring outcome, not a scripted event. The four variants are the
+falsification fixture —
+
+- `baseline` — Vincent as written;
+- `cautious-vincent` — personality changes, situation comparable;
+- `watchful-boss` — stronger policy and stronger obligation to Salvatore;
+- `disloyal-vincent` — Vincent owes Salvatore little and resents him.
+
+They produce four distinct histories, which is what demonstrates that traits and relationships
+affect behaviour without directly triggering actions. `disloyal-vincent` is the only variant that
+exercises the request channel, so it is the one that moves when the channel changes.
+
+## Load-bearing regression categories
+
+Future changes should retain coverage for:
+
+- Player output contains no truth unavailable to the viewpoint character.
+- Unknown characters are not named from the global roster.
+- Physical presence is not inferred from provenance that does not establish it.
+- Policy authorship is inferred or reported, not observed from violence alone.
+- One source cannot repeatedly corroborate or erode confidence with the same account.
+- A changed account is not mistaken for repetition.
+- Retractions and non-held positions can be composed and delivered.
+- Withholding counts as addressing a claim, while length-cap omission stays outstanding.
+- Information requests are bounded by `(asker, recipient, claim)`, not merely by the pair.
+- No ordered request tuple repeats.
+- No two reports between the same pair are content-identical in the bounded scenario.
+- All variants remain within explicit decision and report budgets.
+- Pause/resume preserves reports, testimony, requests, and the resulting history.
+- Every `IsUnmediated()` record is self-sourced, across all four variants.
+
+## Review checklist
+
+### Architecture
+
+- Does the simulation library remain engine-independent?
+- Does decision code read character-relative information rather than truth? Decisions must use
+  `PerceivedSituation`, not `World`, for situational facts — do not add a world reference to the
+  perceived view or expose raw cognition to candidate generators.
+- Do traits influence salience and evaluation without triggering behaviour?
+- Are strategies bounded and authored rather than unrestricted plans?
+- Are policy breaches possible and consequential rather than mechanically forbidden?
+
+### Determinism
+
+- Are dictionary/set traversals explicitly ordered where they affect outcomes? Adding collection
+  traversal without explicit ordering is a hotspot.
+- Are IDs allocated from world state rather than process-global static counters?
+- Is random state derived from stable inputs? See the RNG-keying item in `ROADMAP.md`.
+- Does pause/resume produce the same history?
+- Is every new piece of future-decision-relevant state included in replay comparison?
+
+### Information safety
+
+- Can player output name anyone the viewpoint does not know? `IntelligenceWriter` may use only
+  identities present in the viewpoint character's claims, testimony, relationships, or grievances.
+- Can it claim observation or attendance from confidence alone?
+- Can an actor infer hidden authorship directly from a visible consequence?
+- Can a report communicate a position its sender does not hold? The composer may read only the
+  sender's perceived positions, never the truth log.
+- Can truth leak through formatting code, scenario fixtures, or helper lookups?
+
+### Report channel
+
+Check the change against every invariant in `DESIGN_DECISIONS.md` §"Information channel — settled
+invariants". Those are the contract; this checklist does not restate them. Ask additionally:
+
+- Can bounded composition crowd out a changed position and then incorrectly mark it delivered?
+- Can silence create an unbounded ask loop?
+- Can concealment create an unbounded partial-report loop?
+- Is source independence checked over the whole testimony history?
+
+Review cognition changes as state-machine changes, not ordinary list updates. Walk at least: first
+acquisition; identical repetition; independent corroboration; contradiction; recantation;
+affirm → deny → affirm; held → doubted/rejected and communicated onward; acquisition time versus
+reconsideration time; contestedness after the settled stance changes.
+
+### Tests
+
+- Does each regression test invoke the production rule it claims to pin, rather than a copy of it?
+- Has the fix been temporarily reverted to prove the test fails, where practical?
+- Does the behavioural budget measure the runaway unit, not only a nearby aggregate?
+- Are both baseline and stress/disloyal paths covered?
+- Are player-visible leak assertions testing rendered output, not only hidden claim state?
+
+### Documentation and process
+
+- Is the work within the assigned milestone only?
+- Are design conflicts surfaced rather than silently resolved?
+- Are corrections appended to the milestone archive rather than rewriting history?
+- Is the commit focused and independently reviewable?
+- Is `CURRENT_MILESTONE.md` reset only after verification and closeout?
+
+## Design review questions
+
+For any proposed feature:
+
+1. What woke the actor?
+2. What information did they actually possess?
+3. What occurred to them, and why?
+4. What was available, and what was ruled out?
+5. How did traits, drives, relationships, commitments, and policy affect evaluation without firing
+   the action directly?
+6. What trace did the outcome leave?
+7. Who can observe that trace, under what conditions?
+8. How can the player learn it without receiving omniscient truth?
+9. What distinct states might this implementation accidentally collapse?
+10. What honest behaviour might a proposed safety or correctness filter accidentally remove?
+
+## Recurring failure patterns
+
+Five patterns have produced repeat findings. The detailed cases are in the milestone archives; what
+follows is the question each one leaves behind.
+
+**A correctness fix that narrows what can be expressed.** Filtering to held beliefs made retractions
+unreportable; treating every repeat sender as a duplicate blocked recantation; matching any
+historical account instead of the latest blocked affirm → deny → affirm.
+*What honest state or transition can no longer be represented after this fix?*
+
+**A correctness fix that collapses distinct states.** Treating deliberately withheld as never said
+caused repeated partial reports; treating a request as person-to-person rather than claim-scoped
+permanently closed the channel; treating confidence as provenance produced "personally witnessed"
+without evidence of attendance.
+*What two different things does this code now treat as one?*
+
+**A correctness fix that stops halfway along the path a value travels.** The request gained a
+subject that never reached the event, the reply, or the guard. Milestone 004 then demonstrated the
+same shape four times: provenance decided only for new claims; a speaker's private basis travelling
+with his lie; two fields that had to move together still movable apart.
+*Where else does this value get read, and does the distinction survive the trip?*
+
+**False-assurance tests.** Two tests copied the implementation predicate into the test rather than
+invoking the production rule, and passed after the fix was reverted. Rules that need direct pinning
+were made testable through production helpers such as `Generators.CanAsk`. Note the limit:
+a snapshot-field addition cannot be mutation-checked the same way, since deleting a field merely
+weakens the comparator — request actions are also written to the truth log so runner verification
+gives an independent deterministic signal.
+
+**Recording a review that did not happen.** See below; it is the pattern this file exists to stop.
+
+## How this record has failed
+
+The predecessor of this file misreported status five times. It claimed verification that had not
+happened, first for `b8fe921` and then for `e83dacf`; it wrongly recorded `fb2c84d` and `714fbc3` as
+never reviewed; and its next-step gate went stale twice — first telling readers milestone 004 was
+active and approved, then telling them it was blocked on three unfixed findings after all five had
+been corrected and accepted.
+
+Two mechanics made the false verifications easy to produce:
+
+- **Reviews at the time went to the latest commit only.** Two commits landing back to back skipped
+  the earlier one permanently and silently. That is how `e83dacf` was missed. Taking commits in
+  order is what removes this failure mode — and it is a habit, not a mechanism, so it holds only as
+  long as it is kept. An earlier document described an automatic checkpointing monitor; there is
+  none, and believing there was is precisely how a reader stops checking whether a review happened.
+- **A review report is not proof that a review ran.** It is a document, and like any other observed
+  content it can be about a commit nobody inspected. The false `e83dacf` claim was assembled
+  entirely from true measurements — real build, real test count, real hashes — and still asserted a
+  review that did not occur.
+
+The gate failures are the other half. A gate is prose that grants or withholds permission, so it
+goes stale in both directions and is wrong in a way that changes what the next reader does. Sweeps
+looking only for "awaiting review" or "not accepted" miss it — the second failure said "not fixed"
+and slipped straight through one. When reconciling status, sweep for the sentences that cause
+something to happen — "is active", "is approved", "next step is", "is closed" — before the ones that
+merely describe. This file carries no such sentence by design; `CURRENT_MILESTONE.md` is the only
+place status is stated.
+
+Review question to carry: **which commit did this review actually inspect, and is that the commit
+the record is about to call verified?**
+
+## A note on names
+
+The milestone archives are append-only and refer to two documents this file replaced,
+`CANONICAL_CODE_REVIEW_CONTEXT.md` and `CANONICAL_DESIGN_CONTEXT.md`. Those references are
+historical and correct as history; the files themselves are gone, their unique content divided
+between this ledger, `ROADMAP.md`, `DESIGN_DECISIONS.md`, and `OPEN_CONCERNS.md`.

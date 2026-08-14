@@ -1,8 +1,10 @@
 # Crime Empire — Canonical Design Context
 
 Status snapshot: 2026-08-13, after milestone 003 was completed and verified at commit `b8fe921`.
-Repository state when this snapshot was prepared: `b3c404b` (`Close milestone 003 and reset the
-current-milestone file`). No milestone is currently active.
+Repository state when this snapshot was prepared: `d142582` (`Open milestone 004 and add canonical
+context briefs`). Milestone 004 (Provenance Precision) is active and approved: make information
+provenance precise enough to distinguish participating, witnessing, discovering a trace, and being
+given a first-hand account. See `CURRENT_MILESTONE.md` for its authoritative scope.
 
 ## Purpose and authority
 
@@ -339,12 +341,15 @@ intentional.
 `OPEN_CONCERNS.md` #4 says the trait vocabulary is not closed. The code and milestone 001 already
 closed it. This should be moved to the resolved decision record during an appropriate docs pass.
 
-## Candidate scopes for milestone 004
+## Candidate scopes for milestone 004 and beyond
 
-No candidate has been selected. Confirm scope with Matt rather than inferring it.
+**Selected for milestone 004: option 1, provenance precision.** Approved by Matt and scoped in
+`CURRENT_MILESTONE.md`, which is authoritative. Options 2–5 remain candidates for later milestones
+and must not be inferred as next — confirm scope with Matt rather than reading an order into this
+list.
 
 1. **Provenance precision** — split the broad `Direct` source into meaningful acquisition modes.
-   Small, understood, and directly connected to several review findings.
+   Small, understood, and directly connected to several review findings. *Now milestone 004.*
 2. **Relationship design pass** — resolve the relationship schema before implementing richer
    relationships and grievances.
 3. **Persistence/SQLite** — begin storing the information and decision data now worth querying.

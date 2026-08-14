@@ -1,7 +1,8 @@
 # Crime Empire — Canonical Code and Review Context
 
-Status snapshot: 2026-08-13 at repository commit `b3c404b` on `main`. Milestone 003 is complete and
-Codex-verified against implementation commit `b8fe921`. No milestone is active.
+Status snapshot: 2026-08-13 at repository commit `d142582` on `main`. Milestone 003 is complete and
+Codex-verified against implementation commit `b8fe921`. Milestone 004 (Provenance Precision) is
+active and approved; no implementation commits exist for it yet.
 
 ## Purpose and authority
 
@@ -280,6 +281,8 @@ Future changes should retain coverage for:
   replay coverage. This is the verified implementation commit.
 - `b3c404b` — Close milestone 003, move missing planning choices into the archive, and reset
   `CURRENT_MILESTONE.md`. Docs only.
+- `d142582` — Open milestone 004 (Provenance Precision) and add the two canonical context briefs.
+  Docs only.
 
 Do not squash or rewrite this history merely to make milestone 003 look cleaner. The corrective
 sequence records useful architectural failures and review lessons.
@@ -385,6 +388,15 @@ log so runner verification gives an independent deterministic signal.
 
 ## Current next-step gate
 
-Milestone 003 is closed. No milestone 004 scope has been selected. The next implementation must not
-be inferred from this document; confirm scope with Matt and write it to `CURRENT_MILESTONE.md` before
-changing simulation behavior.
+Milestone 003 is closed. Milestone 004 (Provenance Precision) is active and approved: replace the
+broad `SourceKind.Direct` with the smallest vocabulary that keeps participating, witnessing,
+discovering a trace, and receiving a first-hand account distinct.
+
+`CURRENT_MILESTONE.md` is the authoritative scope, not this document. Read it before implementing;
+nothing beyond it should be inferred from the debt list above, and any scope change goes to Matt and
+into that file first.
+
+Note for review: `SourceKind.Direct` is not merely a label. It is used as a predicate at
+`Cognition.Learn` (override rule), `Cognition.Receive` (erosion resistance and stance protection),
+and `Salience.Perceive` (suspicion discount). Splitting it forces an explicit answer at each site,
+which is why milestone 004 asks for it to be reviewed as a state-machine change.

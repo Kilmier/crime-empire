@@ -71,7 +71,34 @@ review; do not silently collapse two acquisition modes back into one.
 - SQLite persistence or save/load.
 - Godot integration or UI work.
 - New scenario content except the smallest fixture change required to test provenance distinctions.
-- Retuning unrelated decision weights or changing established milestone-003 behavior.
+- Retuning decision weights unrelated to provenance.
+- Changing established milestone-003 behavior for any reason *other* than a corrected acquisition
+  category. See "Behavior changes that provenance causes" below — this exclusion is about unrelated
+  drift, not about the milestone's own consequences.
+
+## Behavior changes that provenance causes
+
+`SourceKind.Direct` is not only a label. It is read as a predicate in four places, and each one has
+to be answered explicitly once the category is split:
+
+- `Cognition.Learn` — direct acquisition overrides a prior record regardless of confidence;
+- `Cognition.Receive` — contradiction erodes a directly-held belief by 0.15 rather than 0.45;
+- `Cognition.Receive` — a directly-held belief keeps its stance below the acting threshold;
+- `Salience.Perceive` — the `Suspicious` discount exempts directly-held claims.
+
+Behavior changes that follow from assigning a claim its true acquisition category are **in scope and
+expected**; this milestone cannot be delivered without them. What remains out of scope is behavior
+drift with no provenance cause.
+
+Each such change must be:
+
+- traceable to a specific reassignment, stated as "this claim was X, is now Y, so this rule now
+  applies to it differently";
+- diffed against the milestone-003 baseline, with the differences in scenario output described
+  rather than merely re-baselined;
+- recorded in this file as it is discovered, and carried into the milestone archive at closeout.
+
+An unexplained baseline movement is a defect. An explained one is the milestone working.
 
 ## Constraints and review hotspots
 
@@ -97,7 +124,9 @@ review; do not silently collapse two acquisition modes back into one.
   current scenario exercises them.
 - Provenance and confidence remain independently represented and rendered.
 - Existing milestone-003 reporting, recantation, withholding, request, contradiction, and bounded
-  behavior remains intact.
+  behavior remains intact in mechanism. Where a corrected acquisition category changes an outcome,
+  the mechanism must still be the milestone-003 one and the change must be explained per "Behavior
+  changes that provenance causes" — intact does not mean byte-identical output.
 - New tests directly exercise production acquisition and rendering rules rather than duplicating
   their predicates in test code.
 - Where practical, new regression tests are mutation-checked by temporarily restoring the defect
@@ -119,6 +148,28 @@ review; do not silently collapse two acquisition modes back into one.
 - Codex reviews that commit against the canonical documents and this milestone scope.
 - After review and accepted corrections, `CURRENT_MILESTONE.md` is reset. No milestone 005 work
   begins automatically.
+
+## Review disposition — Codex on `d142582`
+
+Four findings. Two accepted and fixed in the follow-up commit: the canonical briefs were stale in
+the same commit that created them, and the scope language contradicted itself. Both are corrected
+above.
+
+Two P1s **rejected**, recorded here so they are not re-raised without new evidence. Codex reported
+that `b8fe921` was rejected in review with two unresolved request-scoping defects, making the briefs'
+"verified" claim false and milestone 004 premature. The repository record says otherwise:
+
+- `docs/milestones/003-information-transmission.md:3` states Codex verified `b8fe921` on 2026-08-13
+  with no remaining findings, and `AGENTS.md` makes that archive authoritative for what is open.
+- The archive holds four correction sections — the original review, `cf22e5d`, `2a74a5d`,
+  `f97ef76` — and none for `b8fe921`.
+- The two named defects match the fourth correction's findings 12 and 13 ("withheld was merged with
+  never-said; the question was merged with the relationship"), which were findings against
+  `f97ef76`. `b8fe921` is the commit that fixed them.
+
+The likeliest reading is that the f97ef76 findings were re-surfaced against the commit that resolved
+them. If a genuine review of `b8fe921` exists that found new defects, then the archive's line 3 is
+false and milestone-003 closeout failed — a larger problem than the one reported, and Matt's call.
 
 ## Deliberately carried forward
 

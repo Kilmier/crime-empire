@@ -1,7 +1,11 @@
 # Milestone 003 — Information Transmission Slice
 
-Status: **`e83dacf` was reviewed and rejected with three P1 findings; the correction is appended
-below as the sixth correction and is itself awaiting review. Not verified.**
+Status: **`e83dacf` was reviewed and rejected: three findings, two P1 and one P2. The correction is
+appended below as the sixth correction and is itself awaiting review. Not verified.**
+
+(An earlier version of this line said "three P1 findings". It was two P1 and one P2 — see the
+correction to the sixth correction at the foot of this file. The body of the sixth correction had
+the severities right; only this header was wrong.)
 
 This line has been wrong twice, and both errors are left visible rather than tidied away.
 
@@ -575,3 +579,45 @@ The concealment runaway in `disloyal-vincent` survives: Tommy restarts `ConcealI
 times, down from fourteen only because two decisions were consumed differently. It predates all of
 this and is out of scope for a corrective pass. Note the empty domain in its label,
 `ConcealIncident(, target=...)`, which may be the thread to pull.
+
+## Correction to the sixth correction — severity split
+
+Status: **awaiting Codex review. Not verified.**
+
+The status header of this file described the `e83dacf` review as "three P1 findings". It was three
+findings, **two P1 and one P2**:
+
+- **17 — P1.** A sincere denial classified as deliberate deception.
+- **18 — P1.** A direct request could invert organisational authority.
+- **19 — P2.** Answer traces omitted the belief the answer rested on.
+
+The body of the sixth correction above already carried the right severities; the header did not, and
+the header is what a reader skimming for status sees. Recorded here rather than left as a silent
+edit, and the header now points at this note.
+
+Nothing about the fixes changes — all three were accepted and all three are corrected.
+
+### Also fixed in the same pass — the false-candour invariant
+
+Finding 17 was fixed in the generator, so no inconsistent candidate is offered. It was not enforced
+where the report is actually built. A candidate marked `ReportCandor.False` whose suppressed claim
+the sender did not hold fell through to the honest branch, emitted his real rejection, and still
+came back stamped `False` with lying framing: content and label disagreeing, and a sincere man
+recorded as a liar by a field nothing had checked.
+
+`Reporting.Compose` now refuses that combination outright, throwing rather than quietly relabelling
+it `Candid`. Silently correcting the caller would hide a real inconsistency in whoever built the
+candidate, and `SIMULATION_ARCHITECTURE.md`'s scheduling invariants already ask for the opposite —
+fail visibly in development rather than silently corrupt history. The check mirrors the two
+conditions the composition loop applies, so label and content cannot diverge: the claim must survive
+the answering scope, and the sender must hold it.
+
+Three tests: the invalid combination handed straight to `Compose` and refused; a positive control
+proving the guard rejects inconsistency rather than rejecting lying; and a run-wide assertion that
+no false report the simulation actually files is without a denial in it. Mutation-checked by
+disabling the guard.
+
+The guard never fires in any current variant — the generator does not produce such a candidate — so
+there is no behavioural movement from it. It exists because a rule that lives only in the generator
+is one refactor away from being lost, and `Candor` is read by both the developer trace and the
+replay snapshot.

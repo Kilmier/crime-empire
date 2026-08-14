@@ -6,10 +6,10 @@ three P1 findings that are not yet fixed. Earlier versions of this line called `
 `e83dacf` verified when neither was. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is
 the authority on what has been looked at and what it concluded.
 
-Milestone 004 (Provenance Precision) is **complete and awaiting review**. No milestone is active.
-It made information
-provenance precise enough to distinguish participating, witnessing, discovering a trace, and being
-given a first-hand account. See `CURRENT_MILESTONE.md` for its authoritative scope.
+Milestone 004 (Provenance Precision) was **reviewed and rejected**: three P1 findings, **not yet
+fixed**, and milestone 004 is blocked on them. What it attempted was to make information provenance
+precise enough to distinguish participating, witnessing, discovering a trace, and being given a
+first-hand account. No milestone is active.
 
 ## Purpose and authority
 
@@ -214,7 +214,7 @@ The player-facing view:
 - presents conflicting accounts with attribution;
 - does not expose utility scores, hidden intentions, or the authoritative truth log.
 
-### Provenance — resolved in milestone 004
+### Provenance — addressed in milestone 004, which was rejected on review
 
 `SourceKind.Direct` was too broad to distinguish witnessing, participating or authoring,
 discovering a trace, and being told first-hand by a participant. Milestone 004 split it into
@@ -278,7 +278,8 @@ Still unverified: Godot 4 C# compatibility with this exact .NET target.
 
 ### Milestone 003 — information transmission slice
 
-Implemented and test-green; the final commit `e83dacf` is unreviewed, so this is not closed:
+Implemented and test-green. `e83dacf` was reviewed and **rejected** — three findings, two P1 and one
+P2 — and the correction is awaiting review, so this is not closed:
 
 - Observation and inference remain distinct from hidden world truth.
 - First-class reports, asserted and withheld claims, testimony, conflicts, and reconsideration.
@@ -288,7 +289,7 @@ Implemented and test-green; the final commit `e83dacf` is unreviewed, so this is
 - Regression coverage for information leaks, report loops, duplicate accounts, recantation,
   request scope, pause/resume behavior, event ordering, and deterministic replay.
 
-The milestone required five corrective rounds, the fifth still unreviewed. The recurring lessons
+The milestone has required six corrective rounds, the sixth awaiting review. The recurring lessons
 were:
 
 1. A correctness fix can accidentally narrow what the system can express.

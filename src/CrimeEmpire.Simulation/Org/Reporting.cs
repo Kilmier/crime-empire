@@ -101,6 +101,19 @@ public static class Reporting
         return latest;
     }
 
+    /// <summary>
+    /// Whether this suppressed claim would actually produce a denial.
+    ///
+    /// Mirrors the two conditions the composition loop applies: the claim has to survive the
+    /// answering scope, and the sender has to hold it — there is nothing to contradict otherwise.
+    /// Reads <see cref="PerceivedSituation.Beliefs"/> rather than an accessor on purpose, because
+    /// this is a structural check on the candidate and must not register as the character having
+    /// consulted anything.
+    /// </summary>
+    private static bool WouldDeny(Claim claim, Candidate candidate, PerceivedSituation perceived)
+        => (candidate.AnsweringClaim is not { } asked || claim.Equals(asked))
+           && perceived.Beliefs.Any(b => b.Claim.Equals(claim) && b.IsHeld);
+
     public static Report Compose(
         World world,
         Character sender,
@@ -110,6 +123,32 @@ public static class Reporting
     {
         var candor = candidate.Candor ?? ReportCandor.Candid;
         var suppressed = candidate.Suppressed;
+
+        // A false report has to contain a lie. Not "was asked for", not "was labelled" — has to
+        // actually emit a denial of something the sender privately holds, once the answering scope
+        // and the held-position rule below have had their say.
+        //
+        // Without this the label and the content could disagree. A candidate marked False whose
+        // suppressed claim the sender does not hold fell through to the honest branch, emitted his
+        // real rejection, and still came back stamped ReportCandor.False with lying framing — a
+        // sincere man recorded as a liar by a field nothing had checked. The generator no longer
+        // offers such a candidate, but a rule that lives only in the generator is one refactor away
+        // from being lost, and Candor is read by the developer trace and the replay snapshot.
+        //
+        // Rejected rather than quietly relabelled to Candid. Silently correcting the caller would
+        // hide a real inconsistency in whoever built the candidate, and SIMULATION_ARCHITECTURE.md
+        // asks for exactly the opposite: fail visibly in development rather than silently
+        // corrupting history.
+        if (candor == ReportCandor.False && !suppressed.Any(c => WouldDeny(c, candidate, perceived)))
+        {
+            throw new ArgumentException(
+                $"Report candour is False but nothing would be denied. {sender.Id} -> {recipient.Id}, " +
+                $"candidate '{candidate.Id}', suppressed [{string.Join(", ", suppressed)}]" +
+                (candidate.AnsweringClaim is { } scope ? $", answering {scope}" : "") +
+                ". A false report must assert the opposite of a position the sender holds; if he " +
+                "holds no such position, the honest report is the only one available to him.",
+                nameof(candidate));
+        }
 
         // What he has to offer: anything he has a position on, held or explicitly disbelieved,
         // with whatever is *news* to this recipient first.

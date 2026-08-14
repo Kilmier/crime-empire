@@ -1,5 +1,6 @@
 using CrimeSim.Decision;
 using CrimeSim.Domain;
+using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
 
@@ -136,6 +137,89 @@ public sealed class DirectAnswerTests
         }
 
         Assert.True(answers > 0, $"[{variant}] no answer was ever given, so nothing was proved");
+    }
+
+    /// <summary>
+    /// The invariant at the place the report is actually built, not merely at the place candidates
+    /// are offered.
+    ///
+    /// A candidate marked False whose suppressed claim the sender does not hold used to fall
+    /// through to the honest branch and come back stamped `ReportCandor.False` with lying framing:
+    /// content and label disagreeing, and a sincere man recorded as a liar by a field nothing had
+    /// checked. Composing must refuse it outright rather than quietly relabel it, so a future
+    /// caller cannot reintroduce the state by building a candidate by hand.
+    /// </summary>
+    [Fact]
+    public void Composing_refuses_a_false_report_that_would_deny_nothing()
+    {
+        var world = Cast.Build(seed: 42, "baseline");
+        var tommy = world.Get("tommy");
+        var salvatore = world.Get("salvatore");
+
+        // He sincerely does not believe he did it.
+        tommy.Cognition.Learn(Beating, Stance.Rejects, 0.9, SourceKind.Participant, tommy.Id, Cast.Start);
+        var perceived = Salience.Perceive(tommy, Cast.Start);
+
+        var inconsistent = new Candidate(
+            "handmade:false", ActionKind.ReportToSuperior, "test", "deny something he does not hold")
+        {
+            TargetId = salvatore.Id,
+            Candor = ReportCandor.False,
+            Suppressed = new[] { Beating },
+            AnsweringClaim = Beating,
+        };
+
+        var thrown = Assert.Throws<ArgumentException>(() =>
+            Reporting.Compose(world, tommy, salvatore, inconsistent, perceived));
+
+        Assert.Contains("candour is False", thrown.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(world.Reports);
+    }
+
+    /// <summary>
+    /// The positive control. The same candidate against a man who does hold it composes normally,
+    /// and what comes back is a denial — so the guard above rejects inconsistency rather than
+    /// rejecting lying.
+    /// </summary>
+    [Fact]
+    public void Composing_still_produces_a_denial_when_there_is_something_to_deny()
+    {
+        var world = Cast.Build(seed: 42, "baseline");
+        var tommy = world.Get("tommy");
+        var salvatore = world.Get("salvatore");
+
+        tommy.Cognition.Learn(Beating, Stance.Knows, 1.0, SourceKind.Participant, tommy.Id, Cast.Start);
+        var perceived = Salience.Perceive(tommy, Cast.Start);
+
+        var lie = new Candidate(
+            "handmade:false", ActionKind.ReportToSuperior, "test", "deny it")
+        {
+            TargetId = salvatore.Id,
+            Candor = ReportCandor.False,
+            Suppressed = new[] { Beating },
+            AnsweringClaim = Beating,
+        };
+
+        var report = Reporting.Compose(world, tommy, salvatore, lie, perceived);
+
+        Assert.Equal(ReportCandor.False, report.Candor);
+        Assert.Contains(report.Asserted, a => a.Claim.Equals(Beating) && a.AssertedStance == Stance.Rejects);
+    }
+
+    /// <summary>
+    /// Every report the simulation actually produces satisfies the same invariant: a false one
+    /// always carries a denial. The guard is a backstop; this is the guarantee in play.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("disloyal-vincent")]
+    public void No_false_report_is_ever_filed_without_a_denial_in_it(string variant)
+    {
+        var world = Run(variant);
+
+        foreach (var report in world.Reports.Where(r => r.Candor == ReportCandor.False))
+            Assert.True(report.Asserted.Any(a => a.AssertedStance == Stance.Rejects),
+                $"[{variant}] report {report.Id} from {report.SenderId} is marked false but denies nothing");
     }
 
     /// <summary>

@@ -53,7 +53,7 @@ here.
 - SDK pin: `10.0.400` in `global.json`, `rollForward: latestFeature`
 - Target framework source of truth: `Directory.Build.props` (`net10.0`)
 - Test framework: xUnit
-- Current automated tests: 95
+- Current automated tests: 99
 
 ### Layout
 
@@ -142,9 +142,10 @@ for comparison, not as the accepted baseline.
 ### Current baseline — milestone-003 sixth correction, awaiting review
 
 - Build: 0 warnings, 0 errors.
-- Tests: 95 passed, 0 failed.
+- Tests: 99 passed, 0 failed.
 - Replay hashes: `EF5082E438500CAA` / `DAB6010D48E61234` / `B351E55B3B2C61DB` / `7F1228BFE32F2108`
-  for baseline / cautious-vincent / watchful-boss / disloyal-vincent, each identical on both runs.
+  for baseline / cautious-vincent / watchful-boss / disloyal-vincent, each identical on both runs
+  and unchanged by the false-candour guard, which never fires in any current variant.
 - Four variants produce four distinct histories.
 - Decision counts: 13 / 16 / 13 / **47**.
 
@@ -505,7 +506,8 @@ log so runner verification gives an independent deterministic signal.
 
 ## Known technical debt and deferred work
 
-- ~~`SourceKind.Direct` lacks precise provenance categories.~~ Resolved by milestone 004: split into
+- `SourceKind.Direct` lacks precise provenance categories. Addressed by milestone 004, which was
+  reviewed and **rejected** on three P1 findings — so this is not closed. The attempt split it into
   `Participant` / `Witness` / `Discovery` / `FirstHandTestimony`, with the shared properties named
   in `Domain/Provenance.cs`.
 - No scenario variant contradicts a delegator's first-hand testimony, so milestone 004's central

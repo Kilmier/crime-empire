@@ -161,5 +161,5 @@ changed, not because the simulation did.
 
 ## Relevant commits
 
-- (this milestone's implementation commit — one focused change across the vocabulary, predicates,
-  acquisition sites, rendering, and tests)
+- `714fbc3` — Split `Direct` into four acquisition categories. The implementation commit: vocabulary,
+  predicates, acquisition sites, rendering, and tests.

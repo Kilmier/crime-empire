@@ -168,6 +168,123 @@ public sealed class RelationalConsequenceTests
         Assert.True(sawIt.Cognition.ConfidenceIn(Beating) > wasTold.Cognition.ConfidenceIn(Beating));
     }
 
+    // ---------------------------------------------------------------- the state machine
+    //
+    // Cognition changes are reviewed as state-machine changes, not list updates, and the transitions
+    // below are the ones the ledger's checklist names. Each asserts both halves — how many conflicts
+    // were emitted and where trust ended up — because the two can disagree: an emission that applied
+    // no consequence and a consequence applied without an emission are different defects, and a test
+    // that checked only one would miss the other.
+
+    /// <summary>
+    /// Recantation. A man affirms something the listener does not hold, then takes it back. Neither
+    /// move contradicts a position the listener holds at the time, so neither is a conflict — the
+    /// listener acquires the claim from him and then follows him off it.
+    /// </summary>
+    [Fact]
+    public void A_recantation_by_the_only_source_is_not_a_conflict()
+    {
+        var listener = Character("salvatore");
+        Relations.Establish(listener, "tommy", trust: 0.80);
+
+        var conflicts = new List<AccountConflict>();
+        Receive(listener, conflicts, Affirm(0.8), "tommy", At);
+        Receive(listener, conflicts, Denial(0.9), "tommy", At.AddDays(1));
+
+        // The second account reverses the first, and it is the listener's own standing belief —
+        // acquired from this same man — that it reverses. That is a conflict: he is being told the
+        // opposite of what he currently holds, and the model does not care that he holds it on the
+        // speaker's own earlier say-so.
+        Assert.Single(conflicts);
+        Assert.Equal(0.80 - Relations.ConflictTrustCost * conflicts[0].Strength,
+            listener.Social.Toward("tommy").Trust, 9);
+    }
+
+    /// <summary>
+    /// Affirm → deny → affirm from one source. Milestone 003 had to repair this comparison twice, so
+    /// it gets its own accounting here: each genuine reversal is one conflict, and the man coming
+    /// back round is not a free pass — coming back is itself a reversal of the denial the listener
+    /// had by then adopted, if he adopted it.
+    /// </summary>
+    [Fact]
+    public void Affirm_deny_affirm_emits_one_conflict_per_genuine_reversal()
+    {
+        var listener = Character("salvatore");
+        Relations.Establish(listener, "tommy", trust: 0.90);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
+
+        var conflicts = new List<AccountConflict>();
+        Receive(listener, conflicts, Affirm(0.8), "tommy", At.AddDays(1));   // agrees — not a conflict
+        Receive(listener, conflicts, Denial(0.9), "tommy", At.AddDays(2));   // reverses — a conflict
+        Receive(listener, conflicts, Affirm(0.8), "tommy", At.AddDays(3));   // comes back round
+
+        // **One**, and the reason is the point of the test. A firmly held position eroded by the
+        // denial without being displaced by it, so the listener still held the claim when Tommy came
+        // back round — and a man agreeing with what you already think is not contradicting you,
+        // however much he has been swinging about. The companion test below covers the case where
+        // the denial does displace, and there the return trip *is* a second conflict.
+        var single = Assert.Single(conflicts);
+        Assert.Equal("tommy", single.SpeakerId);
+        Assert.Equal(Stance.Rejects, single.AssertedStance);
+
+        Assert.Equal(0.90 - Relations.ConflictTrustCost * single.Strength,
+            listener.Social.Toward("tommy").Trust, 9);
+
+        // The belief survived, and the disagreement stays on the record regardless.
+        Assert.True(listener.Cognition.Holds(Beating));
+        Assert.True(listener.Cognition.IsContested(Beating));
+    }
+
+    /// <summary>
+    /// The same sequence against a position weak enough that the denial displaces it. Now the
+    /// listener has followed Tommy off the claim, so Tommy coming back round contradicts what the
+    /// listener holds by then — two reversals, two conflicts, and trust paying for both.
+    /// </summary>
+    [Fact]
+    public void When_the_denial_displaces_the_belief_coming_back_round_is_a_second_conflict()
+    {
+        var listener = Character("salvatore");
+        Relations.Establish(listener, "tommy", trust: 0.90);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.4, SourceKind.Report, "someone", At);
+
+        var conflicts = new List<AccountConflict>();
+        Receive(listener, conflicts, Denial(0.9), "tommy", At.AddDays(1));
+        Assert.False(listener.Cognition.Holds(Beating));      // the denial took
+
+        Receive(listener, conflicts, Affirm(0.8), "tommy", At.AddDays(2));
+
+        Assert.Equal(2, conflicts.Count);
+        Assert.Equal(Stance.Rejects, conflicts[0].AssertedStance);
+        Assert.Equal(Stance.Believes, conflicts[1].AssertedStance);
+
+        double expected = 0.90;
+        foreach (var c in conflicts) expected -= Relations.ConflictTrustCost * c.Strength;
+        Assert.Equal(Math.Max(0, expected), listener.Social.Toward("tommy").Trust, 9);
+    }
+
+    /// <summary>
+    /// The same sequence with the repeats interleaved: only the moves that change direction count,
+    /// and restating a position already given costs nothing further.
+    /// </summary>
+    [Fact]
+    public void Restating_a_position_between_reversals_adds_no_conflict()
+    {
+        var listener = Character("salvatore");
+        Relations.Establish(listener, "tommy", trust: 0.90);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
+
+        var conflicts = new List<AccountConflict>();
+        Receive(listener, conflicts, Denial(0.9), "tommy", At.AddDays(1));
+        Receive(listener, conflicts, Denial(0.9), "tommy", At.AddDays(2));
+        Receive(listener, conflicts, Denial(0.9), "tommy", At.AddDays(3));
+        double afterRepeats = listener.Social.Toward("tommy").Trust;
+
+        Receive(listener, conflicts, Affirm(0.8), "tommy", At.AddDays(4));
+
+        Assert.Equal(1, conflicts.Count(c => c.AssertedStance == Stance.Rejects));
+        Assert.Equal(0.90 - Relations.ConflictTrustCost * conflicts[0].Strength, afterRepeats, 9);
+    }
+
     // ---------------------------------------------------------------- rulings 2 and 12
 
     [Fact]
@@ -309,7 +426,7 @@ public sealed class RelationalConsequenceTests
         foreach (var p in iface.GetProperties())
             Assert.Null(p.SetMethod);
 
-        Assert.Empty(iface.GetMethods().Where(m => !m.IsSpecialName));
+        Assert.DoesNotContain(iface.GetMethods(), m => !m.IsSpecialName);
 
         // No publicly visible implementation of it exists anywhere in the simulation assembly.
         var publicImpls = typeof(Relations).Assembly.GetExportedTypes()
@@ -317,6 +434,67 @@ public sealed class RelationalConsequenceTests
             .ToList();
 
         Assert.Empty(publicImpls);
+    }
+
+    /// <summary>
+    /// `IReadOnlyList&lt;T&gt;` is an interface, not a guarantee. Returning the backing list as one
+    /// let any caller cast it straight back and add to it, so the read-only surface was read-only by
+    /// politeness — the exact bypass this asserts is now closed.
+    /// </summary>
+    [Fact]
+    public void The_grievance_collection_cannot_be_cast_back_to_something_mutable()
+    {
+        var c = Character("vincent");
+        Relations.RaiseGrievance(c, new Grievance("tommy", "one", 0.3, At));
+
+        var exposed = c.Social.Toward("tommy").Grievances;
+
+        // The backing list must not be reachable by a cast. Note that the wrapper does still
+        // implement IList<Grievance> — that is unavoidable and harmless, because every mutating
+        // member on it throws rather than quietly succeeding, which is the property that matters.
+        Assert.Null(exposed as List<Grievance>);
+        var asList = Assert.IsAssignableFrom<IList<Grievance>>(exposed);
+        Assert.Throws<NotSupportedException>(() => asList.Add(new Grievance("tommy", "smuggled in", 9.0, At)));
+        Assert.Throws<NotSupportedException>(() => asList.Clear());
+        Assert.Throws<NotSupportedException>(() => asList[0] = new Grievance("tommy", "swapped", 9.0, At));
+        Assert.Single(c.Social.Toward("tommy").Grievances);
+        Assert.Equal(0.3, c.Social.GrievanceAgainst("tommy"), 9);
+    }
+
+    /// <summary>
+    /// The absent reading is handed to every caller who asks about somebody unknown. If one of them
+    /// could write to it, the contamination would be invisible and would follow the character
+    /// around — so the mutation guard refuses it outright rather than silently discarding the write.
+    /// </summary>
+    [Fact]
+    public void The_absent_relationship_reading_cannot_be_contaminated()
+    {
+        var c = Character("vincent");
+        var absent = c.Social.Toward("a-stranger");
+
+        Assert.Null(absent.Grievances as List<Grievance>);
+        Assert.Throws<NotSupportedException>(
+            () => ((IList<Grievance>)absent.Grievances).Add(new Grievance("a-stranger", "x", 1.0, At)));
+
+        // And a later absent read is unaffected by anything attempted against an earlier one.
+        Assert.Empty(c.Social.Toward("a-stranger").Grievances);
+        Assert.Equal(0, c.Social.Toward("a-stranger").Trust);
+        Assert.Empty(c.Social.Others);
+    }
+
+    /// <summary>
+    /// Finding 2: an absent reading must still say who it is about. A shared sentinel reported
+    /// `OtherId = ""`, so every absent read claimed to be about nobody — wrong in itself and
+    /// misleading to anything that logged or grouped by it.
+    /// </summary>
+    [Fact]
+    public void An_absent_reading_names_the_person_it_was_asked_about()
+    {
+        var c = Character("vincent");
+
+        Assert.Equal("a-stranger", c.Social.Toward("a-stranger").OtherId);
+        Assert.Equal("someone-else", c.Social.Toward("someone-else").OtherId);
+        Assert.Empty(c.Social.Others);
     }
 
     [Fact]
@@ -409,6 +587,100 @@ public sealed class RelationalConsequenceTests
 
         Assert.True(tommy.Social.Toward("vincent").Trust < before);
         Assert.Contains(world.AccountConflicts, c => c.ListenerId == "tommy" && c.Conflict.SpeakerId == "vincent");
+    }
+
+    // ---------------------------------------------------------------- the delegator's account path
+
+    /// <summary>
+    /// The delegator's question exists and reaches the man he sent.
+    ///
+    /// Generated from <see cref="Generators"/> itself rather than hand-built, because the thing
+    /// under test is that the option occurs to him at all — before this generator existed, the only
+    /// character who ever put a question was whoever happened to hold a shaky second-hand belief,
+    /// and a delegator holding first-hand traces of his own man's work was specifically excluded.
+    /// </summary>
+    [Fact]
+    public void A_delegator_can_put_it_to_the_man_he_sent()
+    {
+        var (world, vincent, _) = Delegated();
+
+        var candidates = Generators.GenerateAll(Context(world, vincent));
+
+        var ask = Assert.Single(candidates, c =>
+            c.Kind == ActionKind.SeekCorroboration && c.TargetId == "tommy"
+            && c.AboutClaim is { } a && a.Equals(Beating));
+
+        Assert.Equal("FromDelegation", ask.Generator);
+    }
+
+    /// <summary>
+    /// The standing to ask outlives the operation. The first version of this generator read the live
+    /// strategy's DelegatedToId, so the question existed only while the work was running — which is
+    /// exactly the window in which a man is too busy to ask, and it had evaporated by the time he
+    /// was free.
+    /// </summary>
+    [Fact]
+    public void The_standing_to_ask_survives_the_strategy_finishing()
+    {
+        var (world, vincent, _) = Delegated();
+        vincent.Execution.Strategy = null;
+
+        var candidates = Generators.GenerateAll(Context(world, vincent));
+
+        Assert.Contains(candidates, c =>
+            c.Kind == ActionKind.SeekCorroboration && c.TargetId == "tommy");
+    }
+
+    /// <summary>
+    /// **The end-to-end path, and the proof finding 3 asks for.** An executor contradicts his
+    /// delegator and the delegator's trust in him falls — through production code the whole way:
+    /// the generator offers the question, `Commit` records the request and schedules the executor's
+    /// wake, `Runner` delivers it, the executor's own `Pipeline` deliberation picks what to say,
+    /// `Reporting` composes and delivers it, `Cognition.Receive` recognises the contradiction, and
+    /// `Relations` applies the consequence. Nothing here hand-builds a conflict.
+    ///
+    /// One thing is staged and it is not a coefficient: this Tommy does not believe anybody saw him.
+    /// In the accepted scenario he does — `ResolveViolence` leaves him inferring witnesses — and
+    /// <see cref="Utility"/> prices a denial almost entirely on that belief, so he conceals instead
+    /// of denying and no contradiction reaches Vincent. That is the model working: a man who thinks
+    /// the street watched him do it does not tell his capo it never happened. Removing that belief
+    /// here is setting up the case where a denial is the rational move, not tuning one into
+    /// existence — and the denial still has to win its own utility competition, which is asserted
+    /// below rather than assumed.
+    /// </summary>
+    [Fact]
+    public void An_executor_who_denies_it_costs_himself_his_delegators_trust()
+    {
+        var (world, vincent, tommy) = Delegated();
+
+        // He has no reason to think he was seen, so a denial is not priced out of the running.
+        Assert.False(tommy.Cognition.Holds(new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, "tommy")));
+
+        double before = vincent.Social.Toward("tommy").Trust;
+        Assert.True(before > 0, "the fixture needs a real relationship for the movement to be visible");
+
+        // Vincent puts the question — the only forced step, and it is the choice to ask, not what
+        // comes back. Everything downstream is the simulation's.
+        var ask = Generators.GenerateAll(Context(world, vincent))
+            .Single(c => c.Kind == ActionKind.SeekCorroboration && c.TargetId == "tommy");
+        var ctx = Context(world, vincent);
+        Commit.Apply(world, vincent, ask, ctx.Agenda, ctx, new List<string>());
+
+        Runner.Run(world, world.Now.AddDays(5));
+
+        // Tommy decided for himself to deny it, and it reached Vincent as a denial.
+        var denial = Assert.Single(world.Reports,
+            r => r.SenderId == "tommy" && r.RecipientId == "vincent" && r.Candor == ReportCandor.False);
+        Assert.Contains(denial.Asserted, a => a.Claim.Equals(Beating) && a.AssertedStance == Stance.Rejects);
+
+        // The delegator registered it as a conflict and it cost the executor his trust.
+        var conflict = Assert.Single(world.AccountConflicts,
+            c => c.ListenerId == "vincent" && c.Conflict.SpeakerId == "tommy");
+        Assert.Equal(Beating, conflict.Conflict.Claim);
+        Assert.True(vincent.Social.Toward("tommy").Trust < before);
+
+        // Directional, still: Tommy's own view of Vincent is untouched by having lied to him.
+        Assert.Equal(0.10, tommy.Social.Toward("vincent").Trust, 9);
     }
 
     // ---------------------------------------------------------------- ruling 7: behavioural relevance
@@ -557,6 +829,19 @@ public sealed class RelationalConsequenceTests
         => ReportedClaim.Misrepresenting(
             Beating, Stance.Rejects, confidence, claimed: SourceKind.Report, actual: SourceKind.Participant);
 
+    private static ReportedClaim Affirm(double confidence)
+        => ReportedClaim.Honest(Beating, Stance.Believes, confidence, SourceKind.Participant);
+
+    /// <summary>Delivers an account and applies whatever consequence it carried, recording the conflict.</summary>
+    private static void Receive(
+        Character listener, List<AccountConflict> log, ReportedClaim said, string senderId, DateTime at)
+    {
+        var receipt = listener.Cognition.Receive(said, senderId, at);
+        if (receipt.Conflict is not { } conflict) return;
+        log.Add(conflict);
+        Relations.RecordAccountConflict(listener, conflict);
+    }
+
     private static void Apply(Character listener, Receipt receipt)
     {
         if (receipt.Conflict is { } conflict) Relations.RecordAccountConflict(listener, conflict);
@@ -570,6 +855,40 @@ public sealed class RelationalConsequenceTests
         Capabilities = new Capabilities(new Dictionary<Skill, double>(), 1, 1000, 1, new[] { Cast.Harbour }),
         Psychology = new Psychology(new Dictionary<Trait, double>(), new Dictionary<Drive, double>()),
     };
+
+    /// <summary>
+    /// A world in which Vincent has delegated the shakedown to Tommy, Tommy has done it, and Vincent
+    /// has since come across the traces himself. The state the accepted scenario actually reaches by
+    /// late March, staged directly so the exchange under test does not depend on fifty days of
+    /// unrelated causation landing the same way.
+    /// </summary>
+    private static (World World, Character Vincent, Character Tommy) Delegated()
+    {
+        var world = Cast.Build(42, "resentful-tommy");
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+
+        vincent.Execution.Strategy = new StrategyInstance
+        {
+            OwnerId = vincent.Id,
+            LocalSequence = vincent.StrategyCount++,
+            Kind = StrategyKind.SecureTribute,
+            Domain = Cast.Harbour,
+            TargetId = Cast.Grocery,
+            Method = CoercionMethod.Force,
+            StartedAt = world.Now,
+            Deadline = world.Now.AddDays(30),
+            DelegatedToId = tommy.Id,
+        };
+        vincent.Execution.RecordDelegation(tommy.Id);
+
+        // He did it, and he knows he did. She found the traces afterwards, which is what Discovery
+        // means and why it does not put her at the scene.
+        tommy.Cognition.Learn(Beating, Stance.Knows, 1.0, SourceKind.Participant, tommy.Id, world.Now);
+        vincent.Cognition.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, vincent.Id, world.Now);
+
+        return (world, vincent, tommy);
+    }
 
     private static World Run(string variant)
     {

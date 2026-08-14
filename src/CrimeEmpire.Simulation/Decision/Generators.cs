@@ -53,6 +53,7 @@ public static class Generators
         all.AddRange(FromPressure(ctx));
         all.AddRange(FromTrigger(ctx));
         all.AddRange(FromRelationship(ctx));
+        all.AddRange(FromDelegation(ctx));
 
         // De-duplicate by id, keeping the first proposer.
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -523,6 +524,74 @@ public static class Generators
                     Domain = ctx.Agenda.Domain,
                     AboutClaim = secondhand.Claim,
                 };
+        }
+    }
+
+    // ---------------------------------------------------------------- delegation
+    /// <summary>
+    /// A delegator asking the man he sent to account for what he did.
+    ///
+    /// This is the one route by which an account travels *down* the chain of delegation rather than
+    /// up it, and without it the executor's version of his own work never reaches the person who
+    /// ordered it. Before this existed the only character who ever put a question was whoever
+    /// happened to hold a shaky second-hand belief, and being asked redirects the answer to the
+    /// asker — so a soldier's account went to the boss and never to the capo who sent him.
+    ///
+    /// Deliberately separate from the corroboration generator in <see cref="FromRelationship"/>,
+    /// which refuses anything the asker established himself on the reasoning that there is nothing
+    /// to corroborate about your own eyes. That reasoning is right for corroboration and wrong here:
+    /// a delegator who finds traces that his own man wrecked a shopfront is not trying to confirm
+    /// what he saw, he is asking for an account of work he ordered. Which is exactly the case where
+    /// the executor has a reason to shade it — so the restriction was quietly removing the most
+    /// interesting exchange in the model.
+    ///
+    /// INFORMATION_AND_LEGIBILITY.md sanctions this directly: delegation changes information
+    /// topology, a subordinate assigned an operation may owe an account of it, and leaders can
+    /// request audits and seek corroboration.
+    ///
+    /// Note what this does *not* consult: no relationship dimension gates it, orders it, or scores
+    /// it. Whether the delegator trusts the man has no bearing on whether asking occurs to him —
+    /// relationship influence stays confined to utility, per the milestone's scoring-only ruling.
+    /// </summary>
+    private static IEnumerable<Candidate> FromDelegation(GeneratorContext ctx)
+    {
+        // Everyone who has executed work for him, whether or not that work is still running. The
+        // ordering is the order he first delegated to them, which is stable and not a dictionary
+        // traversal.
+        foreach (string executor in ctx.Actor.Execution.DelegatedExecutorIds)
+        {
+            // Something he holds about what that man has done. Ordered by how thin it is, so the
+            // account he is least sure of is the one he goes after first.
+            InformationRecord? about = null;
+            foreach (var b in ctx.Perceived.Beliefs
+                         .Where(b => b.IsHeld && b.Claim.Subject == executor)
+                         .OrderBy(b => b.Confidence)
+                         .ThenBy(b => b.Claim.ToString(), StringComparer.Ordinal))
+            {
+                // Spent when asked, like every other question, and not worth asking a man who has
+                // already given his version of this.
+                if (!CanAsk(ctx.RequestsMade, executor, b.Claim)) continue;
+                if (ctx.Perceived.HasAccountFrom(executor, b.Claim)) continue;
+                about = b;
+                break;
+            }
+
+            if (about is null) continue;
+
+            yield return new Candidate(
+                $"account:{executor}:{about.Claim}",
+                ActionKind.SeekCorroboration,
+                nameof(FromDelegation),
+                $"put it to {executor} directly and hear his account")
+            {
+                TargetId = executor,
+                Domain = ctx.Agenda.Domain,
+                AboutClaim = about.Claim,
+            };
+
+            // One question at a time. A generator that offered one per executor per claim would put
+            // the whole audit in front of him at once, which is not how a bounded candidate set works.
+            yield break;
         }
     }
 

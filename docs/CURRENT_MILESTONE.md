@@ -46,10 +46,15 @@ its first candidate scope.
 Open items the next scope decision should see. Fuller versions live in the milestone archives and
 `ROADMAP.md`'s technical-debt list.
 
-- **A delegator never receives an account from his own executor.** The only character who puts a
-  question is the boss, and being asked redirects the answer to the asker, so a soldier's account
-  goes past the capo who sent him. Structural, not a matter of degree. This is why milestone 004's
-  central distinction is still unobservable in play and why 006's `resentful-tommy` variant is inert.
+- **The delegator's question exists but never wins.** Milestone 006's correction added
+  `Generators.FromDelegation`, and the path from that question to a trust consequence is proven
+  end-to-end; it scores 0.74 against 0.96 in the accepted scenario and is never chosen. (An earlier
+  version of this item said a delegator never receives an account from his executor at all. That was
+  wrong — Tommy volunteers three Partial reports to Vincent. What never happens is a contradiction.)
+- **Self-protection is re-priced for a concealment already decided**, so "report while hiding the
+  same thing" wins indefinitely. Surfaced by 006's correction, deliberately not fixed inside it:
+  it needs a ruling and would move every baseline. It is what stands between the delegator's question
+  and the scenario exercising it.
 - **`resentful-tommy` makes the same decisions as baseline**, so `--compare`'s "five distinct
   histories" is a weaker signal than it reads.
 - **Trust cannot go negative.** Absence of trust and distrust are the same state.

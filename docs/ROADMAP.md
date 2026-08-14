@@ -43,12 +43,22 @@ Full accounts are in `docs/milestones/`.
   yet changes no decision because Salvatore never afterwards scores anything that reads that
   relationship. One organisation, five people and a single line of causation is running out of room.
   See `milestones/006-relational-consequence.md`.
-- **A delegator never receives an account from his own executor.** The only character who puts a
-  question is the boss, and being asked redirects the answer to the asker, so a soldier's account goes
-  past the capo who sent him. This is why milestone 004's central distinction is still unobservable in
-  play, and why 006's `resentful-tommy` variant is inert. It is structural: no configuration of trust,
-  obligation or grievance changes who asks. Fixing it means changing who seeks corroboration from
-  whom, which is behaviour code.
+- ~~**A delegator never receives an account from his own executor.**~~ **Corrected and partly
+  addressed 2026-08-14.** The original claim was wrong: Tommy volunteers three Partial reports to
+  Vincent. What never happens is a *contradiction*, because withholding asserts nothing. The
+  redirect-to-the-asker behaviour is real but applies only to answers, not to volunteered reports.
+  Milestone 006's correction added `Generators.FromDelegation`, so a delegator can now put a question
+  to the man he sent, and the end-to-end path from that question to a trust consequence is proven.
+- **The delegator's question never wins in the accepted scenario**, at 0.74 against 0.96. Two causes:
+  Tommy would conceal rather than deny even if asked, because he believes he was seen — which is the
+  model working — and the report that beats it is over-valued, which is not. See the next item.
+- **Self-protection is re-priced for a concealment already decided.** `Reporting.LastAddressed`
+  treats a withheld claim as settled for eligibility, but `Utility` still pays the full `+1.50`
+  self-protection bonus for withholding it again on every later report. Same shape as the
+  repeated-partial-report bug milestone 003 fixed, with the scoring half left undone. It is what
+  keeps "report while hiding the same thing" winning indefinitely, and it is the single thing
+  standing between the delegator's question and the scenario exercising it. **Deliberately not fixed
+  inside a corrective pass**; it needs a ruling and would move every baseline.
 - **`resentful-tommy` makes the same decisions as baseline.** It differs only in seeded state that
   reaches the trace summary, so `--compare`'s "five distinct histories" is a weaker signal than it
   reads. Kept because its directional asymmetry becomes live once the item above is addressed.

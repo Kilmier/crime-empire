@@ -63,10 +63,26 @@ public static class Relations
     private sealed class Relationship : IRelationship
     {
         private readonly List<Grievance> _grievances = new();
+        private readonly System.Collections.ObjectModel.ReadOnlyCollection<Grievance> _readOnly;
 
-        public Relationship(string otherId) => OtherId = otherId;
+        public Relationship(string otherId, bool stored)
+        {
+            OtherId = otherId;
+            Stored = stored;
+            _readOnly = _grievances.AsReadOnly();
+        }
 
         public string OtherId { get; }
+
+        /// <summary>
+        /// Whether this instance is the one held in a <see cref="SocialState"/>, as opposed to a
+        /// throwaway reading handed back for somebody the character has no relationship with.
+        ///
+        /// The mutation guard keys off this rather than off reference equality with a shared
+        /// sentinel, because absent readings are no longer a single shared object — each one carries
+        /// the id that was asked about.
+        /// </summary>
+        public bool Stored { get; }
 
         // Plain setters are safe here precisely because the type is private to Relations. Nothing
         // outside this class can obtain a reference of this type to call them on.
@@ -74,7 +90,14 @@ public static class Relations
         public double Fear { get; set; }
         public double Obligation { get; set; }
 
-        public IReadOnlyList<Grievance> Grievances => _grievances;
+        /// <summary>
+        /// Wrapped rather than handed out directly. <c>IReadOnlyList&lt;T&gt;</c> is an interface,
+        /// not a guarantee: returning the backing <c>List&lt;Grievance&gt;</c> as one let any caller
+        /// cast it straight back and add to it, so the "read-only" surface was read-only by
+        /// politeness. The wrapper cannot be cast to the list, and it is built once rather than per
+        /// access so a read stays allocation-free.
+        /// </summary>
+        public IReadOnlyList<Grievance> Grievances => _readOnly;
 
         public double GrievanceWeight
         {
@@ -98,31 +121,41 @@ public static class Relations
     /// The reading returned for somebody this character has no relationship with: zero on every
     /// dimension, which is what "no relationship" means, and identical in scoring to the empty
     /// record a get-or-create read would have inserted.
+    ///
+    /// A fresh instance per call rather than one shared sentinel, so the reading can carry the id
+    /// that was actually asked about. A shared object had to report <c>OtherId = ""</c>, which made
+    /// every absent read claim to be about nobody — wrong in itself, and actively misleading to any
+    /// caller that logged or grouped by it. It is never stored, so no relationship state is created
+    /// by asking.
     /// </summary>
-    internal static readonly IRelationship None = new Relationship("");
+    internal static IRelationship Absent(string otherId) => new Relationship(otherId, stored: false);
 
     /// <summary>Creates an empty relationship for storage. Called only by <see cref="SocialState.Ensure"/>.</summary>
-    internal static IRelationship Create(string otherId) => new Relationship(otherId);
+    internal static IRelationship Create(string otherId) => new Relationship(otherId, stored: true);
 
     /// <summary>
     /// The stored relationship as something this class can move.
     ///
-    /// The cast cannot fail for anything <see cref="Create"/> produced, and the sentinel check is a
+    /// The cast cannot fail for anything <see cref="Create"/> produced, and the stored check is a
     /// fail-closed guard rather than an expected path: every mutating route below goes through
-    /// <see cref="SocialState.Ensure"/>, which always returns a stored instance.
+    /// <see cref="SocialState.Ensure"/>, which always returns a stored instance. Mutating an absent
+    /// reading would change an object nothing holds, silently discarding the write.
     /// </summary>
     private static Relationship Writable(IRelationship rel)
     {
-        if (ReferenceEquals(rel, None))
-            throw new InvalidOperationException(
-                "The shared zero-valued relationship reading is not mutable. It is returned for a " +
-                "person the character has no relationship with; a mutation must establish a real " +
-                "relationship first, which every route in Relations does.");
+        var concrete = rel as Relationship
+            ?? throw new InvalidOperationException(
+                $"Relationship toward '{rel.OtherId}' was not created by Relations. " +
+                "Relationship state must not be supplied from outside this class.");
 
-        return rel as Relationship
-               ?? throw new InvalidOperationException(
-                   $"Relationship toward '{rel.OtherId}' was not created by Relations.Create. " +
-                   "Relationship state must not be supplied from outside this class.");
+        if (!concrete.Stored)
+            throw new InvalidOperationException(
+                $"The absent-relationship reading for '{rel.OtherId}' is not mutable. It is returned " +
+                "for a person the character has no relationship with and is held by nobody; a " +
+                "mutation must establish a stored relationship first, which every route in " +
+                "Relations does.");
+
+        return concrete;
     }
 
     private static double Clamp(double v) => Math.Clamp(v, 0.0, 1.0);

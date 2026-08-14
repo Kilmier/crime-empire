@@ -43,7 +43,7 @@ public sealed class SocialState
     /// record the old behaviour would have inserted.
     /// </summary>
     public IRelationship Toward(string otherId)
-        => _relationships.TryGetValue(otherId, out var r) ? r : Relations.None;
+        => _relationships.TryGetValue(otherId, out var r) ? r : Relations.Absent(otherId);
 
     /// <summary>The stored relationship, or null. Null means none has ever been established.</summary>
     internal IRelationship? Existing(string otherId)

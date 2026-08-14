@@ -112,27 +112,34 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Current — milestone 006 implementation. **Measured, not reviewed, not accepted.**
+### Current — milestone 006 correction. **Measured, not reviewed, not accepted.**
 
-These are measurements taken at the milestone-006 implementation commit. They are recorded here
-because a later change needs something to compare against; nothing about their presence implies the
-commit was reviewed. See `milestones/006-relational-consequence.md`.
+Measurements taken at the milestone-006 corrective commit, recorded because a later change needs
+something to compare against. Nothing about their presence implies the commit was reviewed. See
+`milestones/006-relational-consequence.md` and its appended correction.
 
-- Build: 0 warnings, 0 errors.
-- Tests: **226 passed**, 0 failed (was 172).
-- **Five** variants now, and the fifth is new: `resentful-tommy`.
-- Replay hashes `5FBD6055D1170D84` / `0FFCBC7BDE91C001` / `C6FAC9C86A966399` / `1A201BB1816562BF` /
-  `4223D4E9F7668C83` for baseline / cautious-vincent / watchful-boss / disloyal-vincent /
+- Build: **0 warnings, 0 errors — measured after `dotnet clean`.** The implementation commit reported
+  zero warnings from an incremental build that had not recompiled the test project, and there were
+  four. Take the clean build, or the number means nothing.
+- Tests: **236 passed**, 0 failed (226 at the implementation commit, 172 before the milestone).
+- **Five** variants; the fifth, `resentful-tommy`, was added by this milestone.
+- Replay hashes `5FD5FE9978E16E0C` / `0FFCBC7BDE91C001` / `346643410DA405F7` / `9785E00C1574AD1B` /
+  `4E1623AB04752FED` for baseline / cautious-vincent / watchful-boss / disloyal-vincent /
   resentful-tommy, each identical on both runs.
-- Decision counts 33 / 16 / 33 / 34 / 33.
+- Decision counts 33 / 16 / 33 / 34 / 33 — unchanged across both commits of this milestone.
 
-**The first four hashes are byte-identical to milestone 005's.** A milestone that added a social
-consequence, moved trust during every run, and put relationship state into both replay comparators
-changed no accepted history at all. That is not reassurance and should not be read as any: the
-conflict edge fires in all five variants and Salvatore's trust in Vincent really does fall from 0.50
-to 0.309 — it simply reaches no later decision, because he never afterwards scores a candidate that
-reads that relationship. The milestone archive treats this as its central finding rather than as a
+**Two things worth carrying out of these numbers.**
+
+At the implementation commit, all four pre-existing hashes were byte-identical to milestone 005's: a
+milestone that added a social consequence and moved trust during every run changed no accepted
+history. The conflict edge fires in all five variants and Salvatore's trust in Vincent falls from
+0.50 to 0.309 — it simply reaches no later decision. That is the milestone's central finding, not a
 clean bill of health.
+
+At the correction, four hashes moved with decision counts held fixed. The cause is the delegator's
+account question joining the candidate set and so appearing in the rendered trace; it was chosen zero
+times in every variant, verified directly. Counts fixed while hashes move is the signature of a
+candidate-set change rather than a choice change.
 
 Note also that extending the test comparators cannot move these hashes by construction: `--verify`
 hashes the rendered trace, which contains no relationship state. Snapshot coverage makes the tests
@@ -182,10 +189,11 @@ exercises the request channel, so it is the one that moves when the channel chan
 
 **Read the distinctness claim with one caveat.** `resentful-tommy` currently makes the same decisions
 as `baseline`; its hash differs only through seeded state reaching the trace summary. It was added to
-stage an executor denying his own act to his delegator and does not achieve that, for the structural
-reason in `ROADMAP.md`'s debt list. So "five configurations, five distinct histories" is at present a
-weaker statement than it appears, and a future change that made two variants converge behaviourally
-would not necessarily be caught by it.
+stage an executor denying his own act to his delegator and does not yet achieve that — the delegator
+can now put the question, but it loses the utility competition, for the reasons in `ROADMAP.md`'s
+debt list. So "five configurations, five distinct histories" is at present a weaker statement than it
+appears, and a future change that made two variants converge behaviourally would not necessarily be
+caught by it.
 
 ## Load-bearing regression categories
 
@@ -211,6 +219,11 @@ Future changes should retain coverage for:
 - A repeated identical account is not a fresh conflict, and does not cost trust twice.
 - The social consequence is applied at every receipt path, not only the report channel.
 - Player output never asserts that anyone lied, and never prints a relationship value.
+- A collection exposed as read-only cannot be cast back to something mutable.
+- An absent-relationship reading names the person it was asked about, creates nothing, and cannot be
+  written to.
+- A delegator's standing to ask his executor for an account survives the operation finishing.
+- Warning counts are measured after `dotnet clean`, never from an incremental build.
 
 ## Review checklist
 

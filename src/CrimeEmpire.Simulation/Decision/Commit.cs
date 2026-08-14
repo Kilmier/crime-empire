@@ -122,6 +122,10 @@ public static class Commit
                 var s = actor.Execution.Strategy!;
                 s.DelegatedToId = c.TargetId;
                 var sub = world.Get(c.TargetId!);
+
+                // Recorded on the character, not only on the instance. He is owed an account of
+                // this work after it finishes as much as during it — see DelegatedExecutorIds.
+                actor.Execution.RecordDelegation(sub.Id);
                 // The delegate learns enough to act, and no more. Information topology changes here.
                 //
                 // Through Receive, because handing a man a job is briefing him: it is an act of

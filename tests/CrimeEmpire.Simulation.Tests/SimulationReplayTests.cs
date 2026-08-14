@@ -172,7 +172,11 @@ public sealed class SimulationReplayTests
                       $"{character.Execution.Strategy?.OwnerId}|{character.Execution.Strategy?.LocalSequence}|" +
                       $"{character.Execution.Strategy?.StepIndex}|{character.Execution.Strategy?.NextAdvanceOrdinal}|" +
                       $"{character.Execution.Strategy?.PendingStepEventId}|" +
-                      string.Join(",", character.Execution.AttemptedConcealments.Select(a => a.ToString())));
+                      string.Join(",", character.Execution.AttemptedConcealments.Select(a => a.ToString())) +
+                      // Who has executed work for him gates the delegator's account question, so a
+                      // run that recorded a different set would go on to generate different
+                      // candidates. Insertion-ordered and never removed, so no sort is needed.
+                      "|" + string.Join(",", character.Execution.DelegatedExecutorIds));
 
             // Relationship state, milestone 006. Trust now moves during a run — a perceived account
             // conflict costs the listener trust in the speaker — and Utility.Loyalty reads trust,
@@ -237,7 +241,8 @@ public sealed class SimulationReplayTests
                       $"{character.Execution.Strategy?.TargetId}|{character.Execution.Strategy?.StepIndex}|" +
                       $"{character.Execution.Strategy?.NextAdvanceOrdinal}|" +
                       string.Join(",", character.Execution.AttemptedConcealments.Select(a =>
-                          $"{a.Kind}:{a.Subject}:{a.Object}")));
+                          $"{a.Kind}:{a.Subject}:{a.Object}")) +
+                      "|" + string.Join(",", character.Execution.DelegatedExecutorIds));
 
             // As above, minus the grievance timestamp: a DateTime is not derived from any global
             // counter, but it is free text as far as this comparator is concerned and the narrower

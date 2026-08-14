@@ -111,4 +111,25 @@ public sealed class ExecutionState
     /// are still there has a real reason to go again.
     /// </summary>
     public List<Claim> AttemptedConcealments { get; } = new();
+
+    /// <summary>
+    /// Everyone who has ever executed delegated work for this character, in the order they were
+    /// first handed something. Never removed.
+    ///
+    /// Deliberately outliving the strategy instance. Being owed an account of work you ordered does
+    /// not stop being true when the operation finishes — and the first version of the delegator's
+    /// question generator read <see cref="StrategyInstance.DelegatedToId"/> instead, which meant the
+    /// standing to ask existed only while the strategy was live. That is exactly the window in which
+    /// a man is too busy to ask: the question was offered only in competition with carrying on, lost
+    /// four-to-nothing every time, and had evaporated by the time he was free. The same principle
+    /// the architecture states for demotion applies here — do not discard state a later consequence
+    /// depends on.
+    /// </summary>
+    public List<string> DelegatedExecutorIds { get; } = new();
+
+    /// <summary>Records a delegation, ignoring a repeat of one already held.</summary>
+    public void RecordDelegation(string executorId)
+    {
+        if (!DelegatedExecutorIds.Contains(executorId)) DelegatedExecutorIds.Add(executorId);
+    }
 }

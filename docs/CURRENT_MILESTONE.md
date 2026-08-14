@@ -31,12 +31,19 @@ Do not infer milestone 005 from the candidate list in `CANONICAL_DESIGN_CONTEXT.
 deferred items below. Confirm scope with Matt and write it here before changing simulation
 behaviour.
 
-## Working rule while the automation reviews latest-only
+## Ordered review automation
 
-Do not land a docs commit immediately behind an implementation commit — the implementation is what
-gets skipped. Land the code, wait for the review, then record its outcome. And never write
-"verified" from a review report alone: a report can name a commit, quote its true test counts and
-hashes, and still be about a diff nobody read.
+The Codex monitor keeps an explicit reviewed-commit checkpoint. On each clean-tree run it enumerates
+every later commit oldest-first, reviews only the oldest unseen commit, reports that exact hash, and
+then advances the checkpoint to it. A later documentation commit therefore cannot hide an earlier
+implementation commit. If the checkpoint is no longer an ancestor of `HEAD`, the monitor reports
+the divergence instead of guessing at coverage. Non-`HEAD` commits are verified from an isolated
+temporary copy; the main working tree is never switched or modified.
+
+This removes the old requirement to pause between an implementation commit and its documentation
+commit merely to keep the first one visible. It does not change the acceptance rule: never write
+"verified" from a review report alone. A report must identify the exact commit actually reviewed,
+and Matt must confirm acceptance before the repository calls it verified or closed.
 
 ## Carried forward from milestone 004
 

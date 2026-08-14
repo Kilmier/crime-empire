@@ -402,9 +402,12 @@ listed rather than quietly dropped, because "probably moot" is a judgement and n
 Test-green is not review, and review is not acceptance. `714fbc3` builds clean and passes its suite
 and was still rejected; do not describe it as unreviewed or as safe.
 
-The automation reviews the *latest* commit when it wakes rather than every commit since it last ran,
-so a commit with another landed immediately behind it can be skipped silently — which is how
-`e83dacf` was missed. A skipped commit looks exactly like a clean one from inside the repository.
+The automation now keeps an explicit reviewed-commit checkpoint and enumerates later commits
+oldest-first. Each run reviews only the oldest unseen commit and advances the checkpoint only after
+reporting that exact hash. A later documentation commit therefore cannot hide an earlier
+implementation commit. If history diverges from the checkpoint, the monitor reports the divergence
+instead of guessing at coverage; non-`HEAD` commits are verified from isolated temporary copies so
+the main working tree is never switched or modified.
 
 ## Review history and recurring failure patterns
 
@@ -415,21 +418,23 @@ The second time it was Claude writing the claim, in good faith, from a review re
 commit and quoted its exact test count and replay hashes — and which the scheduled automation had
 not produced.
 
-Two mechanics make this easy to get wrong and worth guarding against explicitly:
+Two mechanics made this easy to get wrong and remain worth recording explicitly:
 
-- **The automation reviews only the latest commit when it wakes.** Two commits landed back to back
-  means the earlier one is skipped, permanently and silently. Nothing in the repository
-  distinguishes a skipped commit from a clean one.
+- **At the time, the automation reviewed only the latest commit when it woke.** Two commits landing
+  back to back skipped the earlier one permanently and silently. That is how `e83dacf` was missed.
+  The ordered checkpoint described above removes this failure mode.
 - **A review report is not proof that a review ran.** It is a document, and like any other observed
   content it can be about a commit nobody inspected.
 
-Standing rules until the automation reviews every unreviewed commit in order:
+Standing review rules:
 
-1. Do not commit a docs change immediately behind an implementation commit. The implementation gets
-   skipped. Land the code, wait for review, then record the outcome.
-2. Never write "verified" from a review report alone. Verified means Matt confirms a review of that
-   specific commit happened.
-3. The "Review coverage" list above is the authority. If a commit is not on the reviewed list, it
+1. The automation checkpoint advances one reviewed commit at a time, oldest unseen first. Never
+   skip directly to `HEAD`, even when the intervening commits are documentation-only.
+2. Every report names the exact commit whose isolated diff was inspected and distinguishes
+   verification at that commit from verification performed only at a later `HEAD`.
+3. Never write "verified" from a review report alone. Verified means Matt confirms acceptance of
+   that specific reviewed commit.
+4. The "Review coverage" list above is the authority. If a commit is not on the reviewed list, it
    is unreviewed, whatever prose elsewhere says.
 
 Review question: **which commit did this review actually inspect, and is that the commit the record

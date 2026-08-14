@@ -7,7 +7,9 @@ between agents; do not create a separate handoff document.
 
 ## Status
 
-**Milestone 004 is active and approved by Matt.**
+**Milestone 004 is approved but not yet started.** It is blocked behind the milestone-003 fifth
+correction — see "Review disposition" below. No provenance work begins until that corrective commit
+is reviewed.
 
 Milestone name: **Provenance Precision**
 
@@ -59,6 +61,23 @@ that preserves the distinctions already required by the simulation.
 The category names above may change during implementation if the existing acquisition paths reveal
 a more precise minimal vocabulary. Any semantic change must be recorded here and surfaced for
 review; do not silently collapse two acquisition modes back into one.
+
+### Decided by Matt
+
+**Provenance is allowed to change behavior.** Testimony behaves as testimony: a claim acquired by
+being told is not protected the way a claim acquired by seeing or doing is. Baseline movement is
+acceptable where it traces to a corrected acquisition category, per the section below; it is not
+acceptable anywhere else.
+
+**Authored participation is separate from being told that execution occurred.** These are two
+different acquisitions and must not share a category. Vincent ordering a beating and Vincent hearing
+from Tommy that the beating happened are not the same act of knowing: the first is his own decision
+and is what he has to conceal, the second is an account he could disbelieve. Collapsing them would
+either make a delegator's knowledge unshakeable or make his own order deniable to himself.
+
+The practical consequence for the vocabulary is that `Participant` covers authorship and personal
+involvement, while a delegator learning from his executor is `FirstHandTestimony` — currently
+`Strategies.ResolveViolence`, which records both as `Direct`.
 
 ## Explicitly out of scope
 
@@ -151,25 +170,25 @@ An unexplained baseline movement is a defect. An explained one is the milestone 
 
 ## Review disposition — Codex on `d142582`
 
-Four findings. Two accepted and fixed in the follow-up commit: the canonical briefs were stale in
-the same commit that created them, and the scope language contradicted itself. Both are corrected
-above.
+All four findings accepted.
 
-Two P1s **rejected**, recorded here so they are not re-raised without new evidence. Codex reported
-that `b8fe921` was rejected in review with two unresolved request-scoping defects, making the briefs'
-"verified" claim false and milestone 004 premature. The repository record says otherwise:
+The two P2s — briefs stale in the commit that created them, and self-contradicting scope language —
+are fixed above.
 
-- `docs/milestones/003-information-transmission.md:3` states Codex verified `b8fe921` on 2026-08-13
-  with no remaining findings, and `AGENTS.md` makes that archive authoritative for what is open.
-- The archive holds four correction sections — the original review, `cf22e5d`, `2a74a5d`,
-  `f97ef76` — and none for `b8fe921`.
-- The two named defects match the fourth correction's findings 12 and 13 ("withheld was merged with
-  never-said; the question was merged with the relationship"), which were findings against
-  `f97ef76`. `b8fe921` is the commit that fixed them.
+The two P1s were **initially rejected in error** and are now accepted. The rejection reasoned from
+the milestone-003 archive's "no remaining findings" line and from the fact that the named defects
+resembled the fourth correction's findings 12 and 13. Matt confirmed they are new downstream
+findings against `b8fe921`: `b8fe921` scoped the request to a claim, but neither the reply nor the
+already-asked guard was scoped with it. The archive line was itself the inaccuracy, and has been
+withdrawn; the two defects are recorded as the fifth correction in
+`docs/milestones/003-information-transmission.md` and fixed in the corrective commit.
 
-The likeliest reading is that the f97ef76 findings were re-surfaced against the commit that resolved
-them. If a genuine review of `b8fe921` exists that found new defects, then the archive's line 3 is
-false and milestone-003 closeout failed — a larger problem than the one reported, and Matt's call.
+The lesson worth keeping: the archive is authoritative for *what was recorded*, which is not the
+same as authoritative for *what is true*. Where a reviewer's account of its own findings conflicts
+with the record, the record can be the thing that is wrong, and resolving it needs Matt rather than
+a closer reading of the file.
+
+**Milestone 004 does not begin until that corrective commit is reviewed.**
 
 ## Deliberately carried forward
 

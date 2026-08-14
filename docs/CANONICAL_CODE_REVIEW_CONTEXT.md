@@ -1,8 +1,10 @@
 # Crime Empire — Canonical Code and Review Context
 
-Status snapshot: 2026-08-13 at repository commit `d142582` on `main`. Milestone 003 is complete and
-Codex-verified against implementation commit `b8fe921`. Milestone 004 (Provenance Precision) is
-active and approved; no implementation commits exist for it yet.
+Status snapshot: 2026-08-13 on `main`. Milestone 003 is complete but **not fully verified**: review
+of `b8fe921` returned two further P1 defects, recorded as the fifth correction in
+`milestones/003-information-transmission.md` and fixed in a corrective commit now awaiting review.
+An earlier version of this file called `b8fe921` verified with no remaining findings; that was
+wrong. Milestone 004 (Provenance Precision) is approved but blocked behind that review.
 
 ## Purpose and authority
 
@@ -119,7 +121,10 @@ dotnet run --project src\CrimeEmpire.Runner -- --variant disloyal-vincent --view
 dotnet run --project src\CrimeEmpire.Runner -- --variant baseline --viewpoint vincent --seed 42 --days 90
 ```
 
-### Verified baseline at `b8fe921`
+### Superseded baseline at `b8fe921`
+
+Recorded as verified at the time; the review of that commit in fact returned two P1 defects. Kept
+for comparison, not as the accepted baseline.
 
 - Build: 0 warnings, 0 errors.
 - Tests: 63 passed, 0 failed.
@@ -128,6 +133,23 @@ dotnet run --project src\CrimeEmpire.Runner -- --variant baseline --viewpoint vi
 - Four variants produce four distinct histories.
 - Decision counts: 13 / 16 / 13 / 43.
 - Report counts: 2 / 2 / 2 / 6.
+
+### Current baseline — milestone-003 fifth correction, awaiting review
+
+- Build: 0 warnings, 0 errors.
+- Tests: 73 passed, 0 failed.
+- Baseline replay hash: `17E91AAA09F72437` on both runs.
+- Disloyal replay hash: `76B31DDF574AFF8F` on both runs.
+- Four variants produce four distinct histories
+  (`17E91AAA09F72437` / `2B3538B949522221` / `22F156DCBE81C196` / `76B31DDF574AFF8F`).
+- Decision counts: 13 / 16 / 13 / 45.
+- Report counts: 2 / 2 / 2 / 7.
+
+The movement is confined to `disloyal-vincent`, the only variant that exercises the request channel:
+two more decisions and one more report, because a man who has already given one account can now be
+asked about a second matter, and because a reply is now scoped to the question rather than to
+whatever was most newsworthy. The other three variants are unchanged in shape; their hashes move
+only because the request line in the truth log now names its subject.
 - Working tree after closeout commit `b3c404b`: clean.
 
 Hashes are regression evidence for this snapshot, not permanent game-design requirements. A

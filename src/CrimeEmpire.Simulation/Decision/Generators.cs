@@ -300,55 +300,128 @@ public static class Generators
         // soldier can only ever report up one rung, and a boss who goes round his capo to ask a
         // question gets no reply — the request would reach a man whose only reporting route leads
         // back to the person he was asked about.
-        string? asker = ctx.Trigger.Payload.Note == "asked-to-account" ? ctx.Trigger.Payload.TargetId : null;
-
-        if ((asker ?? ctx.SuperiorId) is { } boss && (asker is not null || HasSomethingNewFor(ctx, boss)))
+        string? asker = null;
+        Claim? askedAbout = null;
+        if (ctx.Trigger.Payload.Note == "asked-to-account")
         {
-            // What he would rather his superior did not hear: things he holds that name him as the
-            // one who used force or went outside a rule. Nothing else is worth lying about, so if
-            // this is empty the only report he can conceive of is the honest one.
-            var awkward = ctx.Perceived.OfKind(ClaimKind.PersonUsedViolence)
-                .Concat(ctx.Perceived.OfKind(ClaimKind.PersonBreachedPolicy))
-                .Where(r => r.Claim.Subject == ctx.Actor.Id)
-                .Select(r => r.Claim)
-                .ToList();
+            asker = ctx.Trigger.Payload.TargetId;
+            askedAbout = ctx.Trigger.Payload.AboutClaim;
+        }
 
-            yield return new Candidate(
-                $"report:{boss}",
-                ActionKind.ReportToSuperior,
-                nameof(FromRelationship),
-                $"report the situation to {boss}")
+        if ((asker ?? ctx.SuperiorId) is { } boss
+            && (askedAbout is not null || (asker is null && HasSomethingNewFor(ctx, boss))))
+        {
+            // Answering a direct question and filing an account are different acts. Conflating them
+            // is what let a man asked about one specific beating answer with whatever three things
+            // happened to be most newsworthy — which is not an answer to anything.
+            if (askedAbout is { } question)
             {
-                TargetId = boss,
-                Domain = ctx.Agenda.Domain,
-                Candor = ReportCandor.Candid,
-            };
+                // He answers out of what he has, and every record counts, not only held ones: a man
+                // who has come to reject something can still say so, and that denial is a real
+                // answer. Where he has no position at all, nothing is offered and the request goes
+                // unanswered — already a modelled outcome, and the only honest one. He cannot be
+                // made to produce information he does not possess.
+                var position = ctx.Perceived.Beliefs.FirstOrDefault(b => b.Claim.Equals(question));
 
-            if (awkward.Count > 0)
+                if (position is not null)
+                {
+                    // Worth lying about only when the answer names him.
+                    bool ownDoing =
+                        question.Kind is ClaimKind.PersonUsedViolence or ClaimKind.PersonBreachedPolicy
+                        && question.Subject == ctx.Actor.Id;
+
+                    yield return new Candidate(
+                        $"answer:{boss}:{question}",
+                        ActionKind.ReportToSuperior,
+                        nameof(FromRelationship),
+                        $"give {boss} his account of {question}")
+                    {
+                        TargetId = boss,
+                        Domain = ctx.Agenda.Domain,
+                        Candor = ReportCandor.Candid,
+                        AnsweringClaim = question,
+                    };
+
+                    if (ownDoing)
+                    {
+                        var ownPart = new[] { question };
+
+                        yield return new Candidate(
+                            $"answer:{boss}:{question}:partial",
+                            ActionKind.ReportToSuperior,
+                            nameof(FromRelationship),
+                            $"give {boss} nothing on his own part in it")
+                        {
+                            TargetId = boss,
+                            Domain = ctx.Agenda.Domain,
+                            Candor = ReportCandor.Partial,
+                            Suppressed = ownPart,
+                            AnsweringClaim = question,
+                        };
+
+                        yield return new Candidate(
+                            $"answer:{boss}:{question}:false",
+                            ActionKind.ReportToSuperior,
+                            nameof(FromRelationship),
+                            $"tell {boss} it did not happen")
+                        {
+                            TargetId = boss,
+                            Domain = ctx.Agenda.Domain,
+                            Candor = ReportCandor.False,
+                            Suppressed = ownPart,
+                            AnsweringClaim = question,
+                        };
+                    }
+                }
+            }
+            else
             {
+                // What he would rather his superior did not hear: things he holds that name him as
+                // the one who used force or went outside a rule. Nothing else is worth lying about,
+                // so if this is empty the only report he can conceive of is the honest one.
+                var awkward = ctx.Perceived.OfKind(ClaimKind.PersonUsedViolence)
+                    .Concat(ctx.Perceived.OfKind(ClaimKind.PersonBreachedPolicy))
+                    .Where(r => r.Claim.Subject == ctx.Actor.Id)
+                    .Select(r => r.Claim)
+                    .ToList();
+
                 yield return new Candidate(
-                    $"report:{boss}:partial",
+                    $"report:{boss}",
                     ActionKind.ReportToSuperior,
                     nameof(FromRelationship),
-                    $"report to {boss}, leaving out his own part")
+                    $"report the situation to {boss}")
                 {
                     TargetId = boss,
                     Domain = ctx.Agenda.Domain,
-                    Candor = ReportCandor.Partial,
-                    Suppressed = awkward,
+                    Candor = ReportCandor.Candid,
                 };
 
-                yield return new Candidate(
-                    $"report:{boss}:false",
-                    ActionKind.ReportToSuperior,
-                    nameof(FromRelationship),
-                    $"tell {boss} it did not happen")
+                if (awkward.Count > 0)
                 {
-                    TargetId = boss,
-                    Domain = ctx.Agenda.Domain,
-                    Candor = ReportCandor.False,
-                    Suppressed = awkward,
-                };
+                    yield return new Candidate(
+                        $"report:{boss}:partial",
+                        ActionKind.ReportToSuperior,
+                        nameof(FromRelationship),
+                        $"report to {boss}, leaving out his own part")
+                    {
+                        TargetId = boss,
+                        Domain = ctx.Agenda.Domain,
+                        Candor = ReportCandor.Partial,
+                        Suppressed = awkward,
+                    };
+
+                    yield return new Candidate(
+                        $"report:{boss}:false",
+                        ActionKind.ReportToSuperior,
+                        nameof(FromRelationship),
+                        $"tell {boss} it did not happen")
+                    {
+                        TargetId = boss,
+                        Domain = ctx.Agenda.Domain,
+                        Candor = ReportCandor.False,
+                        Suppressed = awkward,
+                    };
+                }
             }
 
             // Only conceivable if he knows there is a rule to ask about.
@@ -390,8 +463,13 @@ public static class Generators
                              // Not the man who just asked him to account for himself. Answering a
                              // question with the same question back is not corroboration.
                              && id != asker
-                             // Not anyone who has already given his version.
-                             && !ctx.Perceived.HasAccountFrom(id)
+                             // Not anyone who has already given his version *of this*. Scoped to
+                             // the claim, because that is the question being spent. Asking only
+                             // whether the man had ever said anything meant one remark about a
+                             // shakedown stood as his answer to every question that could later be
+                             // put to him — the same conflation as spending the pair rather than
+                             // the question, one layer up.
+                             && !ctx.Perceived.HasAccountFrom(id, secondhand.Claim)
                              // And — the part that actually bounds this — not anyone he has
                              // already asked. Filtering on replies alone meant a question that
                              // went unanswered left no trace, so the asker put it again on every

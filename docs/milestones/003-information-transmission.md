@@ -1,9 +1,14 @@
 # Milestone 003 — Information Transmission Slice
 
-Status: **complete and verified.** Codex verified `b8fe921` on 2026-08-13 with no remaining
-findings. Reaching that took the original commit plus four corrective rounds; each is appended
-below rather than folded into the account above, so the reviews are readable in the order they
-happened.
+Status: **complete; a fifth correction is awaiting review.**
+
+This file previously said Codex had verified `b8fe921` with no remaining findings. That was wrong,
+and the claim is withdrawn rather than quietly deleted: the review of `b8fe921` returned two further
+defects, recorded in the fifth correction below. Both are downstream consequences of the fix in that
+commit, not repeats of the findings it resolved.
+
+Reaching this point took the original commit plus five corrective rounds; each is appended below
+rather than folded into the account above, so the reviews are readable in the order they happened.
 
 ## What was attempted
 
@@ -408,3 +413,57 @@ things am I now treating as one".
   that `AGENTS.md`'s canonical read list never mentioned `docs/milestones/`, so a reviewer
   verifying a corrective commit had nothing pointing them at the correction notes or the still-open
   items. Both entries in that list are now explicit.
+
+## Fifth correction — Codex verification findings on `b8fe921`
+
+Two, both P1, both downstream of the fix in `b8fe921` rather than survivals of the findings it
+resolved. `b8fe921` scoped the *request* to a claim; neither the reply nor the guard that bounds
+asking was scoped with it, so the subject stopped at the record and never reached the two places
+that consume it.
+
+**15. The question's subject never reached the man being asked.** `Commit.SeekCorroboration` stored
+`AboutClaim` on the `InformationRequest`, but the `asked-to-account` event it scheduled carried only
+`TargetId` and `Note`. `Generators.FromRelationship` could therefore recover who wanted a word and
+not what about, and `Reporting.Compose` composed the ordinary top-three account. A man asked about a
+specific beating replied with whatever three things were most newsworthy, which is not an answer to
+anything — and it made "did he answer what was asked" unrepresentable in the data.
+
+Fixed by carrying the claim on `EventPayload.AboutClaim`, reading it in the generator, and adding
+`Candidate.AnsweringClaim`, which restricts `Reporting.Compose` to that claim. The filter runs
+before the three-item cap, not after: a claim that is the entire point of the report must not lose
+its place to two more newsworthy ones. Answering candidates are generated only where the respondent
+holds a position on the claim — searching all records rather than held ones, so a man who has come
+to reject something can still say so, while a man with no position produces no candidate and the
+request goes unanswered. He cannot be made to produce information he does not possess.
+
+**16. The already-asked guard was scoped to the person, not the question.** The corroboration
+generator filtered on `!Perceived.HasAccountFrom(id)`, which tests sender identity alone, while
+`CanAsk` beside it was already claim-scoped. One account about a shakedown therefore stood as that
+man's answer to every question that could ever be put to him afterwards. Fixed with a claim-scoped
+`HasAccountFrom(senderId, claim)` overload on `Cognition` and `PerceivedSituation`. The sender-wide
+form remains and is still correct where the question really is "have I ever heard from this man" —
+`IntelligenceWriter`'s who-could-I-go-to list.
+
+### Tests
+
+Ten added. The two production fixes were mutation-checked by restoring each defect and confirming
+failure: dropping `AboutClaim` from the payload fails
+`A_reply_addresses_the_claim_that_was_actually_asked_about` on both variants, and reverting the
+claim-scoped guard fails `The_same_person_can_be_asked_about_more_than_one_matter`.
+
+The replay and pause/resume comparisons are asserted on their own content rather than by mutation,
+for the reason given under finding 14: the snapshot is the comparator, so removing a field from it
+makes the comparison blinder without failing anything. `Channel` in the transmission tests was in
+fact missing `About` and now carries it. The independent check is the truth log, which now names the
+subject of each request and so moves the runner's `--verify` hash if the subject is lost.
+
+Verification: build clean, 73/73 tests, both `--verify` runs deterministic, four distinct variant
+histories.
+
+### The pattern, again
+
+Findings 12 and 13 were "a correctness fix that collapses a distinction". These two are the next
+turn of the same screw: **a correctness fix that stops halfway along the path the value travels.**
+The subject was added to the request and not to the event, the reply, or the guard. The question to
+ask of the next fix in this area is not only "what two things am I now treating as one" but "every
+place this value is consumed — does it reach all of them".

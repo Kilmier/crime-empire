@@ -60,6 +60,15 @@ public sealed record Candidate(
     /// </summary>
     public Claim? AboutClaim { get; init; }
 
+    /// <summary>
+    /// The question this report is an answer to, when it is one.
+    ///
+    /// A man asked about one thing and a man filing his weekly account are doing different acts.
+    /// Set, <see cref="Org.Reporting.Compose"/> restricts the report to this claim, so an answer
+    /// addresses what was asked instead of whatever three things happened to be most newsworthy.
+    /// </summary>
+    public Claim? AnsweringClaim { get; init; }
+
     /// <summary>Claims the character must actually hold for this to be conceivable.</summary>
     public IReadOnlyList<Claim> RequiredKnowledge { get; init; } = Array.Empty<Claim>();
 

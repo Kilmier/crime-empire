@@ -58,6 +58,15 @@ public sealed class EventPayload
 
     public double Discoverability { get; init; }
 
+    /// <summary>
+    /// What the recipient of an <c>asked-to-account</c> event is being asked about.
+    ///
+    /// The request itself records a subject, but the event that wakes the respondent is what
+    /// carries it to him. Without this the man being asked knows only who wanted a word, and
+    /// answers with whatever was on his mind — which is not an answer to anything.
+    /// </summary>
+    public Domain.Claim? AboutClaim { get; init; }
+
     public static readonly EventPayload None = new();
 }
 

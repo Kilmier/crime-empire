@@ -53,6 +53,21 @@ public sealed class PerceivedSituation
         return false;
     }
 
+    /// <summary>
+    /// Whether this person has already given him his version <em>of this claim</em>.
+    ///
+    /// Scoped to the claim, because that is the question being spent. The sender-wide form above
+    /// answers "have I ever heard from this man", which is a different question and the wrong one
+    /// to gate corroboration on: one account about a shakedown would otherwise stand as his answer
+    /// about a beating he was never asked about.
+    /// </summary>
+    public bool HasAccountFrom(string senderId, Claim about)
+    {
+        foreach (var t in _testimony)
+            if (t.SenderId == senderId && t.Claim.Equals(about)) return true;
+        return false;
+    }
+
     /// <summary>Beliefs consulted so far during this deliberation, in order of first use.</summary>
     public IReadOnlyList<InformationRecord> Used => _used;
 

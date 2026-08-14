@@ -1,8 +1,11 @@
 # Crime Empire — Canonical Design Context
 
-Status snapshot: 2026-08-13, after milestone 003 was completed and verified at commit `b8fe921`.
-Repository state when this snapshot was prepared: `d142582` (`Open milestone 004 and add canonical
-context briefs`). Milestone 004 (Provenance Precision) is active and approved: make information
+Status snapshot: 2026-08-13, after milestone 003 was completed. It is **not fully verified**: review
+of `b8fe921` returned two further P1 defects, now recorded as the fifth correction in
+`milestones/003-information-transmission.md` and fixed in a corrective commit awaiting review. An
+earlier version of this file called that commit verified; that was wrong.
+
+Milestone 004 (Provenance Precision) is approved but blocked behind that review: make information
 provenance precise enough to distinguish participating, witnessing, discovering a trace, and being
 given a first-hand account. See `CURRENT_MILESTONE.md` for its authoritative scope.
 

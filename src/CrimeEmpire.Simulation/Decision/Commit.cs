@@ -152,15 +152,24 @@ public static class Commit
                 // Asking is a thing that happened. It belongs in the developer log alongside every
                 // other occurrence, and putting it there also brings it under the runner's
                 // determinism hash rather than leaving it as untracked state.
+                // Naming the subject here, not just the pair. This line is the independent check on
+                // request state: the replay snapshot is its own comparator and cannot catch a
+                // dropped field, whereas the runner's --verify hash covers the truth log by a
+                // different route and will move if the subject is lost.
                 world.Record("request", actor.Id, other.Id,
-                    $"{actor.Name} asked {other.Name} for his own account");
+                    $"{actor.Name} asked {other.Name} for his own account of {about}");
 
                 // He asks; the other man decides for himself what to say. Waking the other
                 // character is the whole point — a request that produced an answer directly would
                 // be truth synchronisation wearing a question mark.
                 world.Queue.Schedule(world.Now.AddDays(1), EventKind.RoleReview, other.Id,
                     $"{actor.Name} asked him directly what happened",
-                    new EventPayload { TargetId = actor.Id, Note = "asked-to-account" });
+                    new EventPayload
+                    {
+                        TargetId = actor.Id,
+                        Note = "asked-to-account",
+                        AboutClaim = about,
+                    });
                 reconsideration.Add($"{other.Name} gives his account, or avoids giving one");
                 return $"went to {other.Name} for his own account";
             }

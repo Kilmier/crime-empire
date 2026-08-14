@@ -196,6 +196,20 @@ public sealed class Cognition
     }
 
     /// <summary>
+    /// Whether this person has given him an account <em>of this claim</em>.
+    ///
+    /// The distinction matters wherever the question is "have I already heard him on this". Asking
+    /// only whether he has ever said anything treats one man's single remark about a shakedown as
+    /// his answer to every question that could ever be put to him.
+    /// </summary>
+    public bool HasAccountFrom(string senderId, Claim about)
+    {
+        foreach (var t in _testimony)
+            if (t.SenderId == senderId && t.Claim.Equals(about)) return true;
+        return false;
+    }
+
+    /// <summary>
     /// True when the accounts this character holds do not agree — either two sources said opposite
     /// things, or someone contradicted what he saw for himself. This is what the player-facing
     /// layer renders as "contradicted"; it is a property of the sources, not of the truth, and a

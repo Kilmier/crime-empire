@@ -1001,8 +1001,11 @@ public sealed class InformationTransmissionTests
             string.Join(",", r.Asserted.Select(a => $"{a.Claim}:{a.AssertedStance}")) +
             "|" + string.Join(",", r.Withheld));
 
+        // What was asked about, not only who was asked. The subject steers the reply, so a pause
+        // that changed it would otherwise compare equal — which is exactly the blindness this
+        // comparison exists to prevent.
         lines = lines.Concat(world.Requests.Select(q =>
-            $"request|{q.Id}|{q.At:O}|{q.AskerId}|{q.AskedId}"));
+            $"request|{q.Id}|{q.At:O}|{q.AskerId}|{q.AskedId}|{q.About}"));
 
         lines = lines.Concat(world.Characters.Values
             .OrderBy(c => c.Id, StringComparer.Ordinal)
@@ -1090,6 +1093,166 @@ public sealed class InformationTransmissionTests
             world, vincent, salvatore, candidate, Salience.Perceive(vincent, world.Now));
 
         Assert.Contains(report.Asserted, a => a.Claim.Equals(retracted) && a.AssertedStance == Stance.Rejects);
+    }
+
+    // ---------------------------------------------------------------- request scoping
+    //
+    // Five regressions against the defects found downstream of b8fe921: the request recorded a
+    // subject, but the event that woke the respondent did not carry it, so the reply was a generic
+    // account; and the "already heard from him" guard was scoped to the person rather than to the
+    // question, so one remark closed every future line of enquiry with that man.
+
+    /// <summary>
+    /// An answer is an answer to something. A reply composed from whatever was most newsworthy is
+    /// not a response to the question that prompted it, however truthful it is.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("disloyal-vincent")]
+    public void A_reply_addresses_the_claim_that_was_actually_asked_about(string variant)
+    {
+        var world = Run(variant);
+        int answered = 0;
+
+        foreach (var q in world.Requests)
+        {
+            // The request wakes him the next day; anything later is his own business, not a reply.
+            var reply = world.Reports
+                .Where(r => r.SenderId == q.AskedId && r.RecipientId == q.AskerId
+                            && r.At >= q.At && r.At <= q.At.AddDays(2))
+                .OrderBy(r => r.At)
+                .FirstOrDefault();
+
+            // Silence is a legitimate outcome and is asserted separately below.
+            if (reply is null) continue;
+            answered++;
+
+            var touched = reply.Asserted.Select(a => a.Claim).Concat(reply.Withheld).ToList();
+
+            Assert.True(touched.Contains(q.About),
+                $"[{variant}] {q.AskedId} was asked about {q.About} and replied about " +
+                $"{string.Join(", ", touched)}");
+
+            Assert.All(touched, c => Assert.Equal(q.About, c));
+        }
+
+        Assert.True(answered > 0, $"[{variant}] no request was ever answered, so nothing was proved");
+    }
+
+    /// <summary>
+    /// Two questions to one man are two questions. Spending the relationship rather than the
+    /// question meant a single account about a shakedown barred the asker from ever raising
+    /// anything else with him — the same conflation as spending the pair rather than the claim,
+    /// one layer up in the guard rather than in <see cref="Generators.CanAsk"/>.
+    /// </summary>
+    [Fact]
+    public void An_account_about_one_claim_does_not_bar_asking_about_another()
+    {
+        var at = Cast.Start;
+        var spoken = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
+        var unspoken = new Claim(ClaimKind.PoliceInvestigating, "tommy");
+
+        var cognition = new Cognition();
+        cognition.Receive(new ReportedClaim(spoken, Stance.Believes, 0.8), "tommy", at);
+
+        Assert.True(cognition.HasAccountFrom("tommy"),
+            "he has heard from the man about something");
+        Assert.True(cognition.HasAccountFrom("tommy", spoken),
+            "and that something is spent");
+        Assert.False(cognition.HasAccountFrom("tommy", unspoken),
+            "but a matter he has never raised with him must stay open");
+    }
+
+    /// <summary>
+    /// The same rule, proved through the running simulation rather than in isolation: the boss
+    /// puts more than one question to the same man over the course of a run.
+    /// </summary>
+    [Fact]
+    public void The_same_person_can_be_asked_about_more_than_one_matter()
+    {
+        var world = Run("disloyal-vincent");
+
+        var repeatedlyAsked = world.Requests
+            .GroupBy(q => (q.AskerId, q.AskedId))
+            .Where(g => g.Select(q => q.About).Distinct().Count() > 1)
+            .ToList();
+
+        Assert.True(repeatedlyAsked.Count > 0,
+            "no one was ever asked about a second matter, which is what the person-scoped guard did:\n"
+            + string.Join("\n", world.Requests.Select(q => $"{q.AskerId} -> {q.AskedId}: {q.About}")));
+    }
+
+    /// <summary>
+    /// Being asked does not conjure an answer. A man with no position on the matter has nothing to
+    /// say about it, and the request goes unanswered rather than being met from thin air.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("disloyal-vincent")]
+    public void A_respondent_never_answers_with_information_he_does_not_hold(string variant)
+    {
+        var world = Run(variant);
+
+        foreach (var report in world.Reports)
+        {
+            var sender = world.Get(report.SenderId);
+            foreach (var asserted in report.Asserted)
+                Assert.True(sender.Cognition.Find(asserted.Claim) is not null,
+                    $"[{variant}] {report.SenderId} asserted {asserted.Claim}, which he has no record of");
+        }
+
+        // And specifically for replies: he answered only where he had something to answer with.
+        foreach (var q in world.Requests)
+        {
+            var reply = world.Reports.FirstOrDefault(r =>
+                r.SenderId == q.AskedId && r.RecipientId == q.AskerId
+                && r.At >= q.At && r.At <= q.At.AddDays(2));
+
+            if (reply is null) continue;
+
+            Assert.True(world.Get(q.AskedId).Cognition.Find(q.About) is not null,
+                $"[{variant}] {q.AskedId} answered about {q.About} while holding no position on it");
+        }
+    }
+
+    /// <summary>
+    /// The subject has to survive into both comparators, or a run that asked different questions
+    /// would compare equal. The channel snapshot is asserted here; the replay snapshot asserts the
+    /// same thing about itself in <c>SimulationReplayTests</c>.
+    /// </summary>
+    [Fact]
+    public void Request_comparisons_carry_the_subject_that_was_asked_about()
+    {
+        var world = Run("disloyal-vincent");
+        Assert.NotEmpty(world.Requests);
+
+        string channel = Channel(world);
+        foreach (var q in world.Requests)
+            Assert.True(channel.Contains(q.About.ToString(), StringComparison.Ordinal),
+                $"the pause/resume comparison does not mention {q.About}, so a change to it would go unnoticed");
+    }
+
+    /// <summary>
+    /// The truth log is the independent check. The replay snapshot is its own comparator and cannot
+    /// fail when a field is dropped from it, whereas this line feeds the runner's --verify hash by
+    /// a different route and moves when the subject is lost.
+    /// </summary>
+    [Theory]
+    [InlineData("baseline")]
+    [InlineData("disloyal-vincent")]
+    public void The_developer_truth_log_records_what_each_request_was_about(string variant)
+    {
+        var world = Run(variant);
+
+        var asking = world.TruthLog.Where(e => e.Kind == "request").ToList();
+        Assert.Equal(world.Requests.Count, asking.Count);
+
+        foreach (var q in world.Requests)
+            Assert.True(
+                asking.Any(e => e.At == q.At
+                                && e.ActorId == q.AskerId
+                                && e.Summary.Contains(q.About.ToString(), StringComparison.Ordinal)),
+                $"[{variant}] no truth-log line names {q.About} as what {q.AskerId} asked about");
     }
 
     private static World Run(string variant)

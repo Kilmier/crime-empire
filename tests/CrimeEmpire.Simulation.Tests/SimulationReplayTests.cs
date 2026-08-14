@@ -15,6 +15,26 @@ public sealed class SimulationReplayTests
         Assert.Equal(Snapshot(first), Snapshot(second));
     }
 
+    /// <summary>
+    /// The snapshot has to name what each request was about.
+    ///
+    /// This cannot be mutation-checked the usual way — the snapshot is the comparator, so deleting
+    /// a field from it makes the comparison blinder without failing anything. Asserting the content
+    /// of the snapshot string is the only check that fails when the subject is dropped.
+    /// </summary>
+    [Fact]
+    public void The_snapshot_names_the_subject_of_every_request()
+    {
+        var world = Run(seed: 42, variant: "disloyal-vincent", days: 90);
+        Assert.NotEmpty(world.Requests);
+
+        string snapshot = Snapshot(world);
+        foreach (var request in world.Requests)
+            Assert.True(snapshot.Contains(request.About.ToString(), StringComparison.Ordinal),
+                $"the replay snapshot does not mention {request.About}, so a run that asked a " +
+                "different question would compare equal");
+    }
+
     [Fact]
     public void Pausing_and_resuming_does_not_change_the_history()
     {

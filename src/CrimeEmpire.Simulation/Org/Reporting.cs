@@ -126,7 +126,14 @@ public static class Reporting
         // snapshot.
         var sent = world.Reports.Where(r => r.SenderId == sender.Id).ToList();
 
+        // An answer is confined to the question. Without this a man asked about one specific thing
+        // composes the same general account as a man volunteering one, so the request's subject
+        // never reaches the reply and "did he answer what I asked" has no answer in the data.
+        //
+        // Note the filter runs before the cap, not after: a claim that is the entire point of the
+        // report must not lose its place to two more newsworthy ones.
         var positions = perceived.Beliefs
+            .Where(b => candidate.AnsweringClaim is not { } asked || b.Claim.Equals(asked))
             .OrderByDescending(b => NeedsConveying(sent, recipient.Id, b))
             .ThenByDescending(b => b.IsHeld)
             .ThenByDescending(b => b.Confidence)

@@ -1,8 +1,10 @@
 # Crime Empire — Review Ledger
 
 The hand-maintained record of which commits have been reviewed, what those reviews concluded, and
-the instruments a review runs against. It is the authority on review coverage: if a commit is not
-on the table below, its status is not established, whatever prose elsewhere says.
+the instruments a review runs against. It is the authority on review coverage up to its stated
+checkpoint: within that range, a commit not on the table below has no established status, whatever
+prose elsewhere says. Beyond the checkpoint the table is silent rather than authoritative — see the
+note above the table.
 
 **This file holds no active status and grants no permission.** What is being worked on lives in
 `CURRENT_MILESTONE.md`; what is not yet built lives in `ROADMAP.md`. Nothing here is a licence to
@@ -25,15 +27,27 @@ Standing rules:
    verification at that commit from verification performed only at a later `HEAD`.
 3. Never write "verified" from a review report alone. Verified means Matt confirms acceptance of
    that specific reviewed commit.
-4. The coverage table below is the record. Maintained by hand, which is why it is the authority
-   rather than the prose around it.
+4. The coverage table below is the record, through its stated checkpoint. Maintained by hand, which
+   is why it is the authority rather than the prose around it.
 
 Test-green is not review, and review is not acceptance. `714fbc3` built clean, passed its suite,
 and was still rejected on three P1 findings; do not describe such a commit as unreviewed or as safe.
 
 ## Commit and review coverage
 
-Oldest first — the order review takes them in. Every commit on `main` has a row.
+**Coverage checkpoint: `9703d83`.** The table is complete through that commit and says nothing
+about anything after it. Commits later than the checkpoint have no row yet; their absence means
+"not yet recorded here", not "unreviewed".
+
+The checkpoint exists because a tracked file cannot record the review of the commit that contains
+it — the row would have to describe an outcome that does not exist until after the commit is
+written. There is no version of this table that covers itself. So later review outcomes, and a
+moved checkpoint, are folded in during the next change that was authorized on its own merits.
+**Never create a commit whose only purpose is to record its own review, or the review of the commit
+before it.** That is the regress this checkpoint exists to avoid, and it also manufactures exactly
+the kind of commit that has twice gone unreviewed here.
+
+Oldest first — the order review takes them in.
 
 | Commit | What it did | Review status |
 |---|---|---|

@@ -14,11 +14,11 @@ iteration speed and understanding over process/documentation overhead.
 
 ## Current phase
 `docs/CURRENT_MILESTONE.md` is the only place that says what is active — read it rather than
-inferring a phase from this file. Completed milestones are in `docs/milestones/`, unbuilt work and
-candidate scopes in `docs/ROADMAP.md`, review coverage in `docs/REVIEW_LEDGER.md`.
+inferring a phase from this file. Completed milestones are in `docs/milestones/`, what is not yet
+built in `docs/ROADMAP.md`, review coverage in `docs/REVIEW_LEDGER.md`.
 
-Still true for the project as a whole: no Godot/engine work, no rendering, no persistence or
-save/load.
+The sequencing that governs any of it is settled, not a status: headless console sim core first, no
+Godot project yet — `docs/DESIGN_DECISIONS.md`, "Stack".
 
 ## Claude-Code-specific practice
 - Use Plan mode / propose an approach before writing code for anything nontrivial. This project is

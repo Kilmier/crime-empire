@@ -61,5 +61,5 @@ Open items the next scope decision should see. Fuller versions live in the miles
 - Godot / `net10.0` compatibility;
 - generalized rumor, evidence, prosecution, media, and public-information channels;
 - broader organizations, diplomacy, careers, corruption, and surveillance systems;
-- cleanup of stale `OPEN_CONCERNS.md` item 4 and the redundant test-project target framework,
-  unless Matt separately authorizes a documentation/maintenance change.
+- the redundant test-project target framework, unless Matt separately authorizes a
+  documentation/maintenance change.

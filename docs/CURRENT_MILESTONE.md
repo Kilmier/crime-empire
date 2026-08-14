@@ -7,14 +7,33 @@ do not create a separate handoff document.
 
 ## Status
 
-**No milestone is active.**
+**No milestone is active. Two are blocked on review that never happened.**
 
-Milestone 004 (Provenance Precision) is complete and awaiting Codex review. Its record is in
-`docs/milestones/004-provenance-precision.md`.
+Milestone 004 (Provenance Precision) is complete and test-green; its record is in
+`docs/milestones/004-provenance-precision.md`. Milestone 003's implementation is likewise complete
+and test-green. Neither has been reviewed:
+
+- `e83dacf` — milestone 003's final commit. Unreviewed.
+- `714fbc3` — milestone 004's implementation. Unreviewed.
+
+The review automation inspects only the latest commit when it wakes, so an implementation commit
+with a docs commit landed immediately behind it is skipped silently. That happened twice. Milestone
+003 was recorded as verified on 2026-08-13 on the strength of a review that had not run; Matt
+confirmed on 2026-08-14 that it had not.
+
+**Next step is review of `e83dacf`, then `714fbc3` — not new work.** Nothing here is closed, and
+milestone 004 rests on milestone 003.
 
 Do not infer milestone 005 from the candidate list in `CANONICAL_DESIGN_CONTEXT.md` or from the
 deferred items below. Confirm scope with Matt and write it here before changing simulation
 behaviour.
+
+## Working rule while the automation reviews latest-only
+
+Do not land a docs commit immediately behind an implementation commit — the implementation is what
+gets skipped. Land the code, wait for the review, then record its outcome. And never write
+"verified" from a review report alone: a report can name a commit, quote its true test counts and
+hashes, and still be about a diff nobody read.
 
 ## Carried forward from milestone 004
 

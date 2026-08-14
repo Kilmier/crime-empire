@@ -1,13 +1,14 @@
 # Crime Empire — Canonical Code and Review Context
 
-Status snapshot: 2026-08-14 on `main`. Milestone 003 is complete and Codex-verified against
-`e83dacf`; verification took five corrective rounds, not four, because review of `b8fe921` returned
-two further P1 defects recorded as the fifth correction in
-`milestones/003-information-transmission.md`. An earlier version of this file called `b8fe921`
-verified with no remaining findings; that was wrong.
+Status snapshot: 2026-08-14 on `main`, at `11c4a4a`.
 
-Milestone 004 (Provenance Precision) is **complete and awaiting review** — see
-`milestones/004-provenance-precision.md`. No milestone is active.
+**Nothing below is verified past `d142582`.** Milestone 003's implementation is complete and
+test-green but its final commit `e83dacf` was never reviewed; milestone 004 is complete, test-green,
+and also unreviewed. Two earlier versions of this file claimed verification that had not happened —
+first for `b8fe921`, then for `e83dacf`. See "Review coverage" below for exactly which commits have
+been looked at, and treat that section as the authority over any "verified" wording elsewhere.
+
+No milestone is active.
 
 ## Purpose and authority
 
@@ -154,7 +155,7 @@ reassignments. The hash movement is the developer trace and the player-facing wo
 behaviour. See `milestones/004-provenance-precision.md` for why the predicted behavioural change
 did not materialise.
 
-### Previous verified baseline at `e83dacf`
+### Previous baseline at `e83dacf` — test-green, unreviewed
 
 - Build: 0 warnings, 0 errors.
 - Tests: 73 passed, 0 failed.
@@ -320,21 +321,71 @@ Future changes should retain coverage for:
 - `2d9177d` — Clarify `CURRENT_MILESTONE.md` as the handoff surface and point reviewers to
   milestone archives.
 - `b8fe921` — Separate withheld from unsaid, scope requests to a claim, and add request state to
-  replay coverage. This is the verified implementation commit.
+  replay coverage. Reviewed; returned two P1 defects, fixed in `e83dacf`. **Not** a verified
+  implementation commit, despite an earlier version of this line saying so.
 - `b3c404b` — Close milestone 003, move missing planning choices into the archive, and reset
   `CURRENT_MILESTONE.md`. Docs only.
 - `d142582` — Open milestone 004 (Provenance Precision) and add the two canonical context briefs.
   Docs only.
 - `fb2c84d` — Correct the continuity record and unblock the milestone-004 scope language. Docs only.
 - `e83dacf` — Scope the reply and the asking guard to the claim. Fixes the two P1 defects from the
-  review of `b8fe921`. **This is the verified implementation commit for milestone 003.**
+  review of `b8fe921`. **Unreviewed.** Test-green, but never inspected.
+- `a5a72f1` — Record a milestone-003 verification that had not happened, and unblock milestone 004
+  on that basis. Docs only, and wrong; corrected below.
+
+### Milestone 004 — provenance precision
+
+- `714fbc3` — Split `Direct` into four acquisition categories. The implementation commit.
+  **Unreviewed.**
+- `11c4a4a` — Record the implementation commit in the milestone-004 archive. Docs only.
+  **Unreviewed.**
 
 Do not squash or rewrite this history merely to make milestone 003 look cleaner. The corrective
 sequence records useful architectural failures and review lessons.
 
+### Review coverage — read this before trusting any "verified" claim above
+
+The review automation reviews the *latest* commit when it wakes, not every commit since it last
+ran. Commits landed back to back are therefore skipped silently, and a skipped commit looks exactly
+like a clean one from inside the repository.
+
+As of `11c4a4a`, actually reviewed: **`d142582`** and **`a5a72f1`**.
+Never reviewed: **`fb2c84d`, `e83dacf`, `714fbc3`, `11c4a4a`** — which includes both commits
+carrying the code changes.
+
+Test-green is not review. `e83dacf` and `714fbc3` build clean and pass their suites; nothing has
+inspected their diffs.
+
 ## Review history and recurring failure patterns
 
-Milestone 003 exposed two recurring implementation mistakes.
+### Recording a review that did not happen
+
+Twice now the record has claimed verification that never occurred: first `b8fe921`, then `e83dacf`.
+The second time it was Claude writing the claim, in good faith, from a review report that named the
+commit and quoted its exact test count and replay hashes — and which the scheduled automation had
+not produced.
+
+Two mechanics make this easy to get wrong and worth guarding against explicitly:
+
+- **The automation reviews only the latest commit when it wakes.** Two commits landed back to back
+  means the earlier one is skipped, permanently and silently. Nothing in the repository
+  distinguishes a skipped commit from a clean one.
+- **A review report is not proof that a review ran.** It is a document, and like any other observed
+  content it can be about a commit nobody inspected.
+
+Standing rules until the automation reviews every unreviewed commit in order:
+
+1. Do not commit a docs change immediately behind an implementation commit. The implementation gets
+   skipped. Land the code, wait for review, then record the outcome.
+2. Never write "verified" from a review report alone. Verified means Matt confirms a review of that
+   specific commit happened.
+3. The "Review coverage" list above is the authority. If a commit is not on the reviewed list, it
+   is unreviewed, whatever prose elsewhere says.
+
+Review question: **which commit did this review actually inspect, and is that the commit the record
+is about to call verified?**
+
+Milestone 003 also exposed two recurring implementation mistakes.
 
 ### Narrowing expressiveness while fixing correctness
 

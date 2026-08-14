@@ -1,6 +1,15 @@
 # Milestone 004 — Provenance Precision
 
-Status: **complete, awaiting Codex review.**
+Status: **complete and test-green; unreviewed, and resting on an unreviewed dependency.**
+
+Neither `714fbc3` (this milestone's implementation) nor `e83dacf` (milestone 003's final commit,
+which this was built on top of) has been reviewed. The review automation inspects only the latest
+commit when it wakes, so both were skipped when docs commits landed immediately behind them. See
+the review-coverage section of `CANONICAL_CODE_REVIEW_CONTEXT.md`.
+
+This milestone was begun on the strength of a milestone-003 verification that had not happened. The
+work below stands on its own measurements, but it has not been checked by anyone, and milestone 003
+needs closing properly before this one can be judged.
 
 ## What was attempted
 

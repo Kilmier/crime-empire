@@ -1,9 +1,10 @@
 # Crime Empire — Canonical Design Context
 
-Status snapshot: 2026-08-13, after milestone 003 was completed and verified at commit `e83dacf`.
-Verification took five corrective rounds, not four: review of `b8fe921` returned two further P1
-defects, recorded as the fifth correction in `milestones/003-information-transmission.md`. An
-earlier version of this file called `b8fe921` verified; that was wrong.
+Status snapshot: 2026-08-14, at `11c4a4a`. Milestone 003's implementation is complete and test-green
+but **unreviewed**: its final commit `e83dacf` was never inspected, and an earlier version of this
+file called it verified on the strength of a review that had not run. Before that, the same line
+wrongly called `b8fe921` verified. `CANONICAL_CODE_REVIEW_CONTEXT.md`'s review-coverage section is
+the authority on what has actually been looked at.
 
 Milestone 004 (Provenance Precision) is **complete and awaiting review**. No milestone is active.
 It made information
@@ -277,7 +278,7 @@ Still unverified: Godot 4 C# compatibility with this exact .NET target.
 
 ### Milestone 003 — information transmission slice
 
-Completed and Codex-verified:
+Implemented and test-green; the final commit `e83dacf` is unreviewed, so this is not closed:
 
 - Observation and inference remain distinct from hidden world truth.
 - First-class reports, asserted and withheld claims, testimony, conflicts, and reconsideration.
@@ -287,7 +288,8 @@ Completed and Codex-verified:
 - Regression coverage for information leaks, report loops, duplicate accounts, recantation,
   request scope, pause/resume behavior, event ordering, and deterministic replay.
 
-The milestone required four corrective rounds. The recurring lessons were:
+The milestone required five corrective rounds, the fifth still unreviewed. The recurring lessons
+were:
 
 1. A correctness fix can accidentally narrow what the system can express.
 2. A correctness fix can collapse distinct states into one.

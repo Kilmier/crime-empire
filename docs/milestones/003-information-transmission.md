@@ -1,11 +1,21 @@
 # Milestone 003 — Information Transmission Slice
 
-Status: **complete and verified at `e83dacf`**, which Codex reviewed on 2026-08-13 with no findings.
+Status: **implementation complete and test-green; the final commit `e83dacf` is unreviewed.**
 
-An earlier version of this line said Codex had verified `b8fe921` with no remaining findings. That
-was wrong, and the claim is withdrawn rather than quietly deleted: the review of `b8fe921` returned
-two further defects, recorded as the fifth correction below and fixed in `e83dacf`. Both were
-downstream consequences of the fix in `b8fe921`, not repeats of the findings it resolved.
+This line has now been wrong twice, and both errors are left visible rather than tidied away.
+
+It first said Codex had verified `b8fe921` with no remaining findings. It had not: the review of
+`b8fe921` returned two further defects, recorded as the fifth correction below and fixed in
+`e83dacf`. Both were downstream consequences of the fix in `b8fe921`, not repeats of the findings it
+resolved.
+
+It then said Codex had verified `e83dacf` on 2026-08-13 with no findings. It had not. That was
+written from a review report naming the commit and quoting its exact test count and replay hashes,
+which turned out not to correspond to a review the automation ran — its latest-commit-only rule had
+skipped `e83dacf` entirely. Matt confirmed on 2026-08-14 that no review of `e83dacf` took place.
+The withdrawn account is kept below under the fifth correction, marked as withdrawn.
+
+**Milestone 003 is therefore not closed.** `e83dacf` needs an actual review of its diff.
 
 Reaching this point took the original commit plus five corrective rounds; each is appended below
 rather than folded into the account above, so the reviews are readable in the order they happened.
@@ -468,13 +478,28 @@ The subject was added to the request and not to the event, the reply, or the gua
 ask of the next fix in this area is not only "what two things am I now treating as one" but "every
 place this value is consumed — does it reach all of them".
 
-### Verification of the fifth correction
+### Verification of the fifth correction — WITHDRAWN
 
-Codex reviewed `e83dacf` on 2026-08-13 and returned no findings. Confirmed: build clean; 73/73
-tests; baseline replay deterministic at `17E91AAA09F72437` and disloyal at `76B31DDF574AFF8F`; four
-variants producing four distinct histories at 13 / 16 / 13 / 45 decisions; request subjects
-travelling the complete request-and-reply path; replies addressing only the requested claim; prior
-testimony blocking only the same question rather than every future one; and silence, withholding,
-denial and absence of knowledge remaining four distinct outcomes.
+The account in this section was written on 2026-08-13 and is **not true**. It is kept because the
+milestone archive is append-only and because how it came to be written is the useful part.
 
-Milestone 003 is closed with this correction. Milestone 004 is unblocked.
+> ~~Codex reviewed `e83dacf` on 2026-08-13 and returned no findings. Confirmed: build clean; 73/73
+> tests; baseline replay deterministic at `17E91AAA09F72437` and disloyal at `76B31DDF574AFF8F`;
+> four variants producing four distinct histories at 13 / 16 / 13 / 45 decisions; request subjects
+> travelling the complete request-and-reply path; replies addressing only the requested claim;
+> prior testimony blocking only the same question rather than every future one; and silence,
+> withholding, denial and absence of knowledge remaining four distinct outcomes.~~
+>
+> ~~Milestone 003 is closed with this correction. Milestone 004 is unblocked.~~
+
+Matt confirmed on 2026-08-14 that no review of `e83dacf` ever ran. The automation reviews only the
+latest commit when it wakes; `e83dacf` and the docs commit behind it landed back to back, so the
+scheduled run skipped straight past the implementation to `a5a72f1`.
+
+The measurements quoted above are real — the build, the tests, the hashes and the counts were all
+observed. What was not real was anybody inspecting the diff. That is the trap worth remembering: a
+correct-looking verification block can be assembled entirely from true measurements and still assert
+a review that did not happen. Test-green is not review.
+
+**Still outstanding:** a real review of `e83dacf`. Milestone 003 is not closed until then, and
+milestone 004 rests on it.

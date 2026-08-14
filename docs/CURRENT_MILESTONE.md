@@ -15,10 +15,10 @@ and gave `ConcealIncident` a state-based termination rule; its full record, incl
 accounting for the resulting behavioural movement, is in
 `docs/milestones/005-stable-occasion-identity-and-strategy-lifecycle-safety.md`.
 
-Review coverage through the ledger's checkpoint is in `REVIEW_LEDGER.md`, which is the authority on
-what has been looked at and what it concluded; do not infer status from prose anywhere else,
-including this file. Milestone 005's own commit is not yet in that table — see the ledger's own
-checkpoint note for why, and fold it in during the next change authorized on its own merits.
+`REVIEW_LEDGER.md` alone defines review coverage. Consult its checkpoint directly rather than
+inferring status from prose anywhere else, including this file — and do not restate here which
+commit is or isn't yet covered: that detail goes stale the instant the ledger's own checkpoint
+advances, which is exactly what happened to an earlier version of this paragraph.
 
 **Milestone 006 has not been chosen.** Do not infer it from the candidate list or technical-debt
 list in `ROADMAP.md`, or from the carried-forward items below. Confirm scope with Matt and write it

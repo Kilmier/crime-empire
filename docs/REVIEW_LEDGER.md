@@ -35,7 +35,7 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `90ff97c`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `5e2adc1`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
 "not yet recorded here", not "unreviewed".
 
@@ -86,7 +86,8 @@ Oldest first — the order review takes them in.
 | `221b5cf` | Bound the review ledger's coverage to an explicit checkpoint. Docs only | Reviewed, **no findings**. Accepted by Matt. |
 | `2e895a5` | Open milestone 005: Stable Occasion Identity and Strategy Lifecycle Safety. Docs only | Status not established. |
 | `f942871` | Milestone 005 implementation: causally local occasion keys, `ConcealIncident` termination | Reviewed and **rejected**: two P1 and three P2 — `ConcealIncident` redundancy scoped to `(Kind, TargetId)` instead of the incident; `ContinueStrategy` disturbing a live pending step; a `StrategyStep` with an unresolvable owner failing silently; a `ConcealIncident` candidate able to start unrecorded; the promised observation-key uniqueness test never written. Corrected by `90ff97c`. |
-| `90ff97c` | Correct milestone 005: incident-scoped redundancy, preserved scheduling, explicit executor resolution, fail-closed concealment identity | Reviewed and **rejected**: one P1 documentation finding — `ROADMAP.md` still listed the RNG-keying and `ConcealIncident`-runaway debt as unresolved and offered them as candidate scope 6, and this file's determinism checklist pointed at that stale entry. Retired in the documentation-only correction that follows this commit. |
+| `90ff97c` | Correct milestone 005: incident-scoped redundancy, preserved scheduling, explicit executor resolution, fail-closed concealment identity | Reviewed and **rejected**: one P1 documentation finding — `ROADMAP.md` still listed the RNG-keying and `ConcealIncident`-runaway debt as unresolved and offered them as candidate scope 6, and this file's determinism checklist pointed at that stale entry. Corrected by `5e2adc1`. |
+| `5e2adc1` | Retire resolved RNG/concealment debt claims and reconcile review coverage. Docs only | Reviewed and **rejected**: one P1 finding — `CURRENT_MILESTONE.md` lines 20–21 still said milestone 005's commit was missing from this table and should be folded in later, although this same commit had already added it and advanced the checkpoint through `90ff97c`. Corrected in the documentation-only pass that follows this commit. |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`. Both took their
 implementation plus every corrective round through review before acceptance.

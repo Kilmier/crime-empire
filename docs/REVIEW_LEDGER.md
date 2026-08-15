@@ -112,23 +112,24 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Current — milestone 006 correction. **Measured, not reviewed, not accepted.**
+### Current — milestone 006, second correction. **Measured, not reviewed, not accepted.**
 
-Measurements taken at the milestone-006 corrective commit, recorded because a later change needs
-something to compare against. Nothing about their presence implies the commit was reviewed. See
-`milestones/006-relational-consequence.md` and its appended correction.
+Measurements taken at the milestone-006 second corrective commit, recorded because a later change
+needs something to compare against. Nothing about their presence implies the commit was reviewed. See
+`milestones/006-relational-consequence.md` and its two appended corrections.
 
 - Build: **0 warnings, 0 errors — measured after `dotnet clean`.** The implementation commit reported
   zero warnings from an incremental build that had not recompiled the test project, and there were
   four. Take the clean build, or the number means nothing.
-- Tests: **236 passed**, 0 failed (226 at the implementation commit, 172 before the milestone).
+- Tests: **240 passed**, 0 failed (236 at the first correction, 226 at the implementation commit, 172
+  before the milestone).
 - **Five** variants; the fifth, `resentful-tommy`, was added by this milestone.
-- Replay hashes `5FD5FE9978E16E0C` / `0FFCBC7BDE91C001` / `346643410DA405F7` / `9785E00C1574AD1B` /
-  `4E1623AB04752FED` for baseline / cautious-vincent / watchful-boss / disloyal-vincent /
+- Replay hashes `527764207C2F93AF` / `3EBD1BD64F24A5CB` / `B896EB976D876B98` / `EB83C979FB8B3DFC` /
+  `BCB839C794DF6543` for baseline / cautious-vincent / watchful-boss / disloyal-vincent /
   resentful-tommy, each identical on both runs.
-- Decision counts 33 / 16 / 33 / 34 / 33 — unchanged across both commits of this milestone.
+- Decision counts 33 / 16 / 33 / 34 / 33 — unchanged across all three commits of this milestone.
 
-**Two things worth carrying out of these numbers.**
+**Three things worth carrying out of these numbers.**
 
 At the implementation commit, all four pre-existing hashes were byte-identical to milestone 005's: a
 milestone that added a social consequence and moved trust during every run changed no accepted
@@ -136,10 +137,17 @@ history. The conflict edge fires in all five variants and Salvatore's trust in V
 0.50 to 0.309 — it simply reaches no later decision. That is the milestone's central finding, not a
 clean bill of health.
 
-At the correction, four hashes moved with decision counts held fixed. The cause is the delegator's
-account question joining the candidate set and so appearing in the rendered trace; it was chosen zero
-times in every variant, verified directly. Counts fixed while hashes move is the signature of a
-candidate-set change rather than a choice change.
+At the first correction, four hashes moved with decision counts held fixed. The cause is the
+delegator's account question joining the candidate set and so appearing in the rendered trace; it was
+chosen zero times in every variant, verified directly.
+
+At the second correction, all five moved — including `cautious-vincent`, which had been byte-identical
+throughout milestone 005 and 006 until now. That variant has no delegation, but it does use the
+ordinary corroboration path, and correcting that path's scoring is the first change in either
+milestone that reaches it. **No chosen action or its score changed anywhere**, verified by diffing
+every `← chosen` line against the previous commit built in a scratch worktree; all five diffs are
+empty. Counts fixed while hashes move is the signature of a scoring-and-wording change rather than a
+choice change.
 
 Note also that extending the test comparators cannot move these hashes by construction: `--verify`
 hashes the rendered trace, which contains no relationship state. Snapshot coverage makes the tests
@@ -224,6 +232,10 @@ Future changes should retain coverage for:
   written to.
 - A delegator's standing to ask his executor for an account survives the operation finishing.
 - Warning counts are measured after `dotnet clean`, never from an incremental build.
+- A question is scored from the claim it is about, not from the weakest unrelated belief held.
+- A trace explanation never names a source the record does not have, and never says a character is
+  going behind somebody when the claim was self-acquired or when the source *is* the person asked.
+- Two generators proposing the same `(kind, target, claim)` question offer it once.
 
 ## Review checklist
 

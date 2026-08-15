@@ -305,18 +305,37 @@ public static class Utility
             }
         }
 
-        // Asking a second person costs standing — it says out loud that the first was not believed —
-        // and buys certainty in proportion to how shaky the account already is.
+        // Putting a question to somebody buys certainty about *the thing he is asking about*, and
+        // costs standing only if asking means going over the head of whoever told him.
+        //
+        // Both halves used to be wrong in the same way: the uncertainty term scanned every
+        // testimonial belief he held and priced the question off the weakest one, whatever the
+        // question was actually about. A man perfectly happy with his information on the matter in
+        // hand scored a large "he is not satisfied with the account he has" because something
+        // unrelated and thin was sitting in his head — and once a delegator could ask about a claim
+        // he had established himself, the term stopped having any connection to the candidate at
+        // all. The standing cost had the matching defect: it was charged unconditionally, so a man
+        // asking the very person named in a claim he found himself was recorded as going behind a
+        // source who did not exist.
         if (cand.Kind == ActionKind.SeekCorroboration && cand.TargetId is not null)
         {
-            double shakiest = 1.0;
-            foreach (var b in perceived.Beliefs)
-                if (b.IsHeld && b.SourceKind.IsTestimony())
-                    shakiest = Math.Min(shakiest, b.Confidence);
+            // Only what this question is about. A candidate of this kind without a subject is
+            // malformed — both generators set one — and scoring silently invents nothing for it.
+            if (cand.AboutClaim is { } asked && perceived.Position(asked) is { } position)
+            {
+                Add("uncertainty", 1.5 * (1 - position.Confidence),
+                    position.Confidence > 0.7
+                        ? "he is fairly sure of this already"
+                        : "he is not satisfied with the account he has");
 
-            Add("uncertainty", 1.5 * (1 - shakiest), "he is not satisfied with the account he has");
-            Add("relationship effects", -0.45 * proud,
-                "going behind the man who told him is an admission he does not trust him");
+                // Going behind somebody only means something when there is somebody to go behind.
+                // A claim he was told has a source whose word he is quietly declining to take; one
+                // he saw, did, found or worked out has none, and asking the man named in it for his
+                // version is an ordinary question rather than a slight.
+                if (position.SourceKind.IsTestimony() && position.SourceId != cand.TargetId)
+                    Add("relationship effects", -0.45 * proud,
+                        $"going behind {position.SourceId} is an admission he does not trust him");
+            }
         }
 
         // --- uncertainty ----------------------------------------------------------------------------

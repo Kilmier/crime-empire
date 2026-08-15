@@ -365,3 +365,122 @@ viewpoint commands run clean.
 Everything under "Deferred work" above stands, with two additions: the repeated self-protection
 scoring defect described under finding 3, and the fact that the delegator's question does not yet win
 in the accepted scenario. This was a corrective pass against six findings, not a reopening of scope.
+
+---
+
+## Second correction — Codex findings on `3ddd8a1`
+
+Status: **awaiting Codex review. Not verified.** The original six findings were accepted as
+sufficiently addressed, including the staged delegator proof under ruling 7. Five further findings,
+all accepted. Nothing above is rewritten.
+
+### 1. The sixteen rulings were never in the repository at all
+
+The first correction said they were "recoverable only from
+`git show 1fe5b9a^:docs/CURRENT_MILESTONE.md`." **That is wrong, and it is the same class of error it
+was written to fix.** `1fe5b9a^` is `711553c`, which predates the rulings entirely — its
+`CURRENT_MILESTONE.md` says no milestone is active. The rulings were written into the working copy
+during milestone 006's implementation and reset out of that file inside the same commit, so **no
+committed revision has ever contained them**; `git log --all -S` over the ruling text returns nothing.
+
+Their actual provenance: Matt issued them in the review conversation for this milestone — eleven when
+approving the scope in direction, five more when confirming it — and the table in the first
+correction is a **reconstruction from that conversation**, not a recovery from history. It is the only
+copy in the repository. That is worth stating plainly rather than implying a git command would
+produce them, because the whole point of reproducing them was that a reader should not have to take
+somebody's word for what the constraints were.
+
+### 2. `SeekCorroboration` was scored from the wrong belief
+
+The scorer scanned every testimonial belief the actor held and priced the question off the weakest
+one, whatever the question was about. Two consequences, both live:
+
+- A man perfectly confident about the matter in hand scored a large "he is not satisfied with the
+  account he has" because something unrelated and thin was sitting in his head.
+- Once `FromDelegation` could ask about a claim the actor had established himself, the term had no
+  connection to the candidate at all — the delegator's question was priced entirely off an unrelated
+  rumour.
+
+The standing cost had the matching defect: `-0.45 * proud` was charged unconditionally with the text
+"going behind the man who told him", so a delegator asking the very person named in a claim he found
+himself was recorded as going behind a source who did not exist.
+
+Both now read `cand.AboutClaim`. Uncertainty is `1.5 * (1 - confidence)` in the asked claim; the
+standing cost applies only when that claim is testimonial *and* the source is somebody other than the
+person being asked, and the explanation names them. Putting a question back to the man who told you
+is not going around him, which is now also true of the trace.
+
+### 3. Duplicate questions
+
+`GenerateAll` deduplicated by candidate id, and the two generators build different ids for what can
+be the same act — same target, same claim. Now deduplicated on `(kind, target, claim)` as well, first
+in generator order winning, which is fixed and therefore deterministic. Neither path was removed: a
+direct question to the man who did the work and an unsolicited partial report from him are different
+acts, and so are corroborating an account you were given and auditing your own executor. Only the
+overlap is collapsed, and a test drives both generators onto one claim to prove it.
+
+### 4. The recantation test's name contradicted its body
+
+`A_recantation_by_the_only_source_is_not_a_conflict` asserted, correctly, that it *is* one. The
+implementation was right and the description was wrong. Renamed to
+`A_source_taking_back_what_he_said_contradicts_the_belief_he_created`, with the reasoning stated:
+being told the opposite of your current position is a conflict whoever put you there, which keeps the
+rule about the listener's state rather than the speaker's history. It now also asserts that the prior
+the conflict names is the one that speaker's own earlier account created.
+
+### Tests
+
+Four added, **240 total** (was 236). Two of them failed on first run for the same reason, which is
+worth recording because it nearly produced two more tests that passed for the wrong reason:
+`Cognition.Learn` deliberately refuses to lower an existing confidence unless the incoming basis
+overrides, so a fixture that seeded 0.6 and then "set" 0.2 silently kept 0.6. Both now build the
+belief once, through a parameterised fixture, instead of overwriting it afterwards.
+
+Mutation checks, each caught by exactly the intended tests and then restored:
+
+| Mutation | Result |
+|---|---|
+| uncertainty scanned from the weakest testimony again | 2 failures — the unrelated-testimony and asked-confidence tests |
+| standing cost charged unconditionally | 1 — the trace-explanation test |
+| `(kind, target, claim)` deduplication removed | 1 — the duplicate-question test |
+
+### Behavioural movement
+
+**All five hashes move. Decision counts are unchanged** at 33 / 16 / 33 / 34 / 33, and **no chosen
+action or its score changed in any variant** — verified by diffing every `← chosen` line, including
+its score, against `3ddd8a1` built in a scratch worktree. All five diffs are empty.
+
+| Variant | Before | After |
+|---|---|---|
+| baseline | `5FD5FE9978E16E0C` | `527764207C2F93AF` |
+| cautious-vincent | `0FFCBC7BDE91C001` | `3EBD1BD64F24A5CB` |
+| watchful-boss | `346643410DA405F7` | `B896EB976D876B98` |
+| disloyal-vincent | `9785E00C1574AD1B` | `EB83C979FB8B3DFC` |
+| resentful-tommy | `4E1623AB04752FED` | `BCB839C794DF6543` |
+
+`cautious-vincent` moves for the first time in this milestone, and that is expected rather than
+alarming: it has no delegation, so `FromDelegation` never fires there, but it does use the ordinary
+corroboration path, and that path's scoring is what finding 2 corrected. It stops being a control for
+this change specifically because this change is the first one that reaches it.
+
+The movement is 23 differing trace lines in `baseline` and 14 in `cautious-vincent`, in three groups:
+
+1. **New "what he knew" entries.** Scoring now reads the asked claim through
+   `PerceivedSituation.Position`, which records the read, so the belief a question was priced from
+   appears in the decision's consulted list. The old code read the raw belief list and marked
+   nothing, so the trace scored off information it never declared consulting. This is the trace
+   becoming honest, not the character learning anything.
+2. **Delegation-question scores** — 0.25 → 0.75, 0.28 → 0.82, 0.69 → 0.76 — now priced on their own
+   claim rather than an unrelated one, with the ordering of the weighed-up list shifting to match.
+3. **Explanations naming the source**: "going behind the man who told him" → "going behind vincent",
+   "going behind the books". Same values, accurate text.
+
+The question still does not win anywhere, and nothing was tuned to make it: at its new score it
+remains below the report that beats it, for the reason recorded under the previous correction's
+finding 3, which is deliberately still unfixed.
+
+### Verification
+
+Clean build (`dotnet clean` first), **0 warnings, 0 errors**, 240/240 tests. `--verify` deterministic
+on all five variants; `--compare` reports five configurations and five distinct histories; both
+viewpoint commands run clean.

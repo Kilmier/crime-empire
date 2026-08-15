@@ -177,26 +177,37 @@ public sealed class RelationalConsequenceTests
     // that checked only one would miss the other.
 
     /// <summary>
-    /// Recantation. A man affirms something the listener does not hold, then takes it back. Neither
-    /// move contradicts a position the listener holds at the time, so neither is a conflict — the
-    /// listener acquires the claim from him and then follows him off it.
+    /// Recantation. A man tells the listener something the listener had no position on, and then
+    /// takes it back.
+    ///
+    /// The first move is not a conflict — there was nothing to contradict. The second is, and that
+    /// is the point worth pinning: by then the listener holds the claim, and it makes no difference
+    /// that he holds it on this same man's earlier say-so. Being told the opposite of your current
+    /// position is a conflict whoever put you there, which is what keeps the rule about the
+    /// listener's state rather than about the speaker's history.
+    ///
+    /// An earlier version of this test was named and documented as though neither move counted,
+    /// while its body asserted exactly what the body below asserts. The implementation was right and
+    /// the description was wrong.
     /// </summary>
     [Fact]
-    public void A_recantation_by_the_only_source_is_not_a_conflict()
+    public void A_source_taking_back_what_he_said_contradicts_the_belief_he_created()
     {
         var listener = Character("salvatore");
         Relations.Establish(listener, "tommy", trust: 0.80);
 
         var conflicts = new List<AccountConflict>();
-        Receive(listener, conflicts, Affirm(0.8), "tommy", At);
-        Receive(listener, conflicts, Denial(0.9), "tommy", At.AddDays(1));
+        Receive(listener, conflicts, Affirm(0.8), "tommy", At);          // news — nothing to contradict
+        Receive(listener, conflicts, Denial(0.9), "tommy", At.AddDays(1)); // takes it back — a conflict
 
-        // The second account reverses the first, and it is the listener's own standing belief —
-        // acquired from this same man — that it reverses. That is a conflict: he is being told the
-        // opposite of what he currently holds, and the model does not care that he holds it on the
-        // speaker's own earlier say-so.
-        Assert.Single(conflicts);
-        Assert.Equal(0.80 - Relations.ConflictTrustCost * conflicts[0].Strength,
+        var single = Assert.Single(conflicts);
+        Assert.Equal(Stance.Rejects, single.AssertedStance);
+
+        // And the prior it names is the one his own earlier account created.
+        Assert.Equal(SourceKind.FirstHandTestimony, single.PriorSourceKind);
+        Assert.Equal("tommy", single.PriorSourceId);
+
+        Assert.Equal(0.80 - Relations.ConflictTrustCost * single.Strength,
             listener.Social.Toward("tommy").Trust, 9);
     }
 
@@ -683,6 +694,86 @@ public sealed class RelationalConsequenceTests
         Assert.Equal(0.10, tommy.Social.Toward("vincent").Trust, 9);
     }
 
+    // ---------------------------------------------------------------- the question is scored on its subject
+
+    /// <summary>
+    /// The uncertainty behind a question is the uncertainty about the thing being asked, and nothing
+    /// else. The scorer used to scan every testimonial belief the actor held and price the question
+    /// off the weakest one, so an unrelated thin rumour sitting in his head made him keen to ask
+    /// about something he was perfectly confident of.
+    /// </summary>
+    [Fact]
+    public void An_unrelated_weak_testimony_does_not_change_the_delegator_question_score()
+    {
+        double without = DelegatorQuestionScore(unrelatedTestimonyConfidence: null);
+        double withThinRumour = DelegatorQuestionScore(unrelatedTestimonyConfidence: 0.05);
+        double withFirmRumour = DelegatorQuestionScore(unrelatedTestimonyConfidence: 0.95);
+
+        Assert.Equal(without, withThinRumour, 9);
+        Assert.Equal(without, withFirmRumour, 9);
+    }
+
+    /// <summary>The confidence that *does* move it is the one attached to the claim being asked about.</summary>
+    [Fact]
+    public void The_confidence_of_the_asked_claim_moves_the_question_score()
+    {
+        double thin = DelegatorQuestionScore(unrelatedTestimonyConfidence: null, askedConfidence: 0.20);
+        double solid = DelegatorQuestionScore(unrelatedTestimonyConfidence: null, askedConfidence: 0.90);
+
+        Assert.True(thin > solid,
+            $"a question about something he is unsure of should be worth more: {thin} was not above {solid}");
+        Assert.Equal(1.5 * (0.90 - 0.20), thin - solid, 9);
+    }
+
+    /// <summary>
+    /// And the trace has to say something true. Asking the man named in a claim you found yourself
+    /// is not going behind anybody, so that explanation must not appear — while asking a third party
+    /// about something you were told is, and must.
+    /// </summary>
+    [Fact]
+    public void The_trace_only_claims_he_is_going_behind_somebody_when_there_is_somebody_to_go_behind()
+    {
+        var selfAcquired = DelegatorQuestionBreakdown(SourceKind.Discovery, sourceId: "vincent");
+        Assert.DoesNotContain(selfAcquired.Components, c => c.Explanation.Contains("going behind"));
+        Assert.Contains(selfAcquired.Components, c => c.Name == "uncertainty");
+
+        var wasTold = DelegatorQuestionBreakdown(SourceKind.Report, sourceId: "salvatore");
+        var behind = Assert.Single(wasTold.Components, c => c.Explanation.Contains("going behind"));
+        Assert.Contains("salvatore", behind.Explanation);
+
+        // Nor when the man he would be going behind is the man he is asking — putting it back to the
+        // person who told you is not going around him.
+        var askingTheSource = DelegatorQuestionBreakdown(SourceKind.FirstHandTestimony, sourceId: "tommy");
+        Assert.DoesNotContain(askingTheSource.Components, c => c.Explanation.Contains("going behind"));
+    }
+
+    /// <summary>
+    /// Finding 3's audit. The two generators can propose the same question, and when they do it is
+    /// one act: the same target, the same claim, offered twice with different wording would spend
+    /// two of a bounded six slots saying the same thing.
+    /// </summary>
+    [Fact]
+    public void The_same_question_from_two_generators_is_offered_once()
+    {
+        // Make the two questions coincide: the claim about Tommy that Vincent would audit is also
+        // the shakiest thing anybody has told him, so both generators reach for it.
+        var (world, vincent, _) = Delegated(
+            vincentConfidence: 0.10, vincentBasis: SourceKind.Report, vincentSourceId: "salvatore");
+
+        var candidates = Generators.GenerateAll(Context(world, vincent));
+
+        var asking = candidates
+            .Where(c => c.Kind == ActionKind.SeekCorroboration
+                        && c.TargetId == "tommy"
+                        && c.AboutClaim is { } a && a.Equals(Beating))
+            .ToList();
+
+        Assert.Single(asking);
+
+        // Kept deterministically, and both generators still exist for the cases that do differ.
+        Assert.Equal("FromRelationship", asking[0].Generator);
+    }
+
     // ---------------------------------------------------------------- ruling 7: behavioural relevance
 
     /// <summary>
@@ -862,7 +953,27 @@ public sealed class RelationalConsequenceTests
     /// late March, staged directly so the exchange under test does not depend on fifty days of
     /// unrelated causation landing the same way.
     /// </summary>
-    private static (World World, Character Vincent, Character Tommy) Delegated()
+    /// <summary>
+    /// As <see cref="Delegated()"/>, but with the delegator's record of the beating set exactly as
+    /// asked.
+    ///
+    /// Parameterised rather than overwritten afterwards, because <see cref="Cognition.Learn"/>
+    /// deliberately refuses to lower an existing confidence unless the new basis overrides — so a
+    /// test that seeded 0.6 and then "set" 0.2 silently kept 0.6 and asserted against a fixture it
+    /// did not have. Two of these tests were written that way and passed for the wrong reason until
+    /// the numbers were checked.
+    /// </summary>
+    private static (World World, Character Vincent, Character Tommy) Delegated(
+        double vincentConfidence, SourceKind vincentBasis, string vincentSourceId = "vincent")
+    {
+        var staged = Delegated(seedVincentBelief: false);
+        staged.Vincent.Cognition.Learn(
+            Beating, Stance.Believes, vincentConfidence, vincentBasis, vincentSourceId, staged.World.Now);
+        return staged;
+    }
+
+    private static (World World, Character Vincent, Character Tommy) Delegated(
+        bool seedVincentBelief = true)
     {
         var world = Cast.Build(42, "resentful-tommy");
         var vincent = world.Get("vincent");
@@ -885,9 +996,41 @@ public sealed class RelationalConsequenceTests
         // He did it, and he knows he did. She found the traces afterwards, which is what Discovery
         // means and why it does not put her at the scene.
         tommy.Cognition.Learn(Beating, Stance.Knows, 1.0, SourceKind.Participant, tommy.Id, world.Now);
-        vincent.Cognition.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, vincent.Id, world.Now);
+        if (seedVincentBelief)
+            vincent.Cognition.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, vincent.Id, world.Now);
 
         return (world, vincent, tommy);
+    }
+
+    /// <summary>
+    /// Scores the delegator's question about the beating, optionally with an unrelated testimonial
+    /// belief of a given confidence also in the actor's head. Everything but the named variable is
+    /// held identical, including the noise stream.
+    /// </summary>
+    private static double DelegatorQuestionScore(
+        double? unrelatedTestimonyConfidence, double askedConfidence = 0.60)
+        => DelegatorQuestionBreakdown(
+            SourceKind.Discovery, "vincent", askedConfidence, unrelatedTestimonyConfidence).Total;
+
+    private static ScoreBreakdown DelegatorQuestionBreakdown(
+        SourceKind askedBasis,
+        string sourceId,
+        double askedConfidence = 0.60,
+        double? unrelatedTestimonyConfidence = null)
+    {
+        var (world, vincent, _) = Delegated(askedConfidence, askedBasis, sourceId);
+
+        if (unrelatedTestimonyConfidence is { } c)
+            vincent.Cognition.Learn(
+                new Claim(ClaimKind.PoliceInvestigating, "kane"),
+                Stance.Believes, c, SourceKind.Report, "salvatore", world.Now);
+
+        var ask = new Candidate("ask", ActionKind.SeekCorroboration, "test", "put it to him")
+        { TargetId = "tommy", Domain = Cast.Harbour, AboutClaim = Beating };
+
+        var ctx = Context(world, vincent);
+        return Utility.Score(ask, vincent.View, vincent.Psychology, ctx.Perceived, ctx.Agenda,
+            Rng.ForOccasion(world.Seed, "test|fixed"));
     }
 
     private static World Run(string variant)

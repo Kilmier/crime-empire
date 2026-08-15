@@ -57,7 +57,28 @@ public static class Generators
 
         // De-duplicate by id, keeping the first proposer.
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        return all.Where(c => seen.Add(c.Id)).ToList();
+        var deduped = all.Where(c => seen.Add(c.Id)).ToList();
+
+        // And again on what a question actually *is*, which its id does not capture.
+        //
+        // Two generators can propose the same question: FromRelationship offers to corroborate an
+        // account he was given, FromDelegation offers to put it to the man he sent. They build
+        // different ids and different wording, so the id pass above lets both through — but if they
+        // land on the same target and the same claim they are one act, and offering it twice would
+        // spend two of a bounded six slots saying the same thing, then record two rejections for it.
+        //
+        // Deduplicated on (kind, target, claim) rather than by removing either generator. A direct
+        // question to the man who did the work and an unsolicited partial report from him are
+        // different acts, and so are corroborating a rumour and auditing your own executor; the
+        // overlap is narrow and only the overlap is collapsed. First in generator order wins, which
+        // is fixed and therefore deterministic.
+        var asked = new HashSet<(ActionKind, string, Claim)>();
+        return deduped
+            .Where(c => c.Kind != ActionKind.SeekCorroboration
+                        || c.TargetId is null
+                        || c.AboutClaim is not { } about
+                        || asked.Add((c.Kind, c.TargetId, about)))
+            .ToList();
     }
 
     // ---------------------------------------------------------------- current intention

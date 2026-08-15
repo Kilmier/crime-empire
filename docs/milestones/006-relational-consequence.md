@@ -1,12 +1,22 @@
 # Milestone 006 — Relational Consequence of a Perceived Account Conflict
 
-Status: **implementation complete, awaiting Codex review. Not verified.** `REVIEW_LEDGER.md` is the
-record of when a review happens; nothing here should be read as one having happened.
+Status: **closed**, after two corrective rounds. Codex reviewed `404b416` with no findings and Matt
+accepted it on 2026-08-15; the closure record is at the foot of this file.
+
+Only this header is updated on closure, per `AGENTS.md` — the account below and the two appended
+corrections keep the status lines they carried when written, including the ones that say a review had
+not yet happened. Those were true at the time and are left standing rather than tidied, which is the
+same treatment milestones 004 and 005 record.
 
 Scope was proposed against head `711553c`, approved in direction by Matt with eleven binding
-revisions, and confirmed with five further rulings before implementation. All sixteen are reproduced
-in the scope section of this file's predecessor content below, because several of them narrowed what
-was originally proposed and the narrowed version is what was built.
+revisions, and confirmed with five further rulings before implementation.
+
+**On those sixteen rulings.** This paragraph originally claimed they were "reproduced in the scope
+section of this file's predecessor content below." They were not, and the first correction's own
+account of where to find them was wrong in turn. They are reproduced in the table under
+*Correction — Codex findings on `1fe5b9a`*, and their actual provenance is recorded under
+*Second correction*: they were issued in review conversation, never committed to any revision, and
+that table is the only copy of them in this repository.
 
 ## What was attempted
 
@@ -484,3 +494,74 @@ finding 3, which is deliberately still unfixed.
 Clean build (`dotnet clean` first), **0 warnings, 0 errors**, 240/240 tests. `--verify` deterministic
 on all five variants; `--compare` reports five configurations and five distinct histories; both
 viewpoint commands run clean.
+
+---
+
+## Closed
+
+Codex reviewed `404b416` with no findings. **Matt accepted it on 2026-08-15. Milestone 006 is
+closed.**
+
+### What it delivered
+
+A perceived account conflict — somebody asserting the opposite of a position a character holds — now
+costs the listener trust in the speaker. Perceived, never detected: deception, sincere disagreement,
+faulty memory and a false prior belief produce the identical shape, and the conflict record is built
+entirely from the listener's side, so nothing downstream can react to the truth of the matter because
+the truth of the matter is not in it. Directional, trust alone, one rule whatever the prior's
+provenance was, and never twice for the same account.
+
+`Domain/Relations.cs` is the only code that can create or change relationship state, enforced by the
+concrete type being private to it. Reads never create. Grievances live on the relationship.
+`Affection` is gone for having no behavioural purpose. Relationship and grievance state, and the
+delegation record that gates the executor question, are in both replay comparators. A delegator can
+put a question to the man he sent, and the path from that question to a trust consequence is proven
+end-to-end through production code.
+
+### Accepted state
+
+- Clean build, **0 warnings, 0 errors**, **240/240 tests** (172 before the milestone).
+- Replay hashes `527764207C2F93AF` / `3EBD1BD64F24A5CB` / `B896EB976D876B98` / `EB83C979FB8B3DFC` /
+  `BCB839C794DF6543`, deterministic across repeated runs, five variants producing five distinct
+  histories.
+- Decision counts 33 / 16 / 33 / 34 / 33 — **unchanged across all three commits of this milestone.**
+
+### Three rounds, and what they have in common
+
+| Round | Against | Outcome |
+|---|---|---|
+| Implementation | `1fe5b9a` | Six findings |
+| First correction | `3ddd8a1` | Original six addressed; five further findings |
+| Second correction | `404b416` | No findings. **Accepted.** |
+
+Milestone 004's rounds all found the same defect: a distinction drawn in one place and not carried
+through to another. This milestone's have a different shape, and it is worth naming because the habit
+that catches it is different. **Every round but the last found a claim that was true of the code and
+false of the record.** The grievance collection was read-only in its type name and not in its
+behaviour. The archive said it reproduced sixteen rulings it did not contain, then said they were
+recoverable from a revision that predates them. The build reported zero warnings from a compilation
+that had not read the file with the warnings in it. A test asserted one thing and was named for its
+opposite. A scorer priced a question off a belief the trace never admitted consulting.
+
+None of those were logic errors. Each was a description that had drifted from what it described, and
+each was invisible to the tests because the tests agreed with the code and only the words disagreed.
+The question this milestone leaves behind is therefore not milestone 004's *where else does this
+value get read* but: **what does this claim assert, and did anything actually check it?**
+
+### Carried forward
+
+- **The scenario is the binding constraint.** Three consecutive milestones have ended with a
+  mechanism the accepted scenario cannot demonstrate. 006's trust edge does fire — Salvatore's trust
+  in Vincent falls from 0.50 to 0.309 in every variant — but reaches no later decision.
+- **The delegator's question never wins**, at 0.74 against 0.96.
+- **Self-protection is re-priced for a concealment already decided**, which is what keeps the report
+  beating it. Surfaced, deliberately unfixed, and needing a ruling: it would move every baseline.
+- **Trust cannot go negative**; absence of trust and distrust are the same state.
+- `Relations.ConflictTrustCost = 0.35` joins the `FirstHandTestimony` and `Discovery` discounts as
+  provisional tuning.
+- `OPEN_CONCERNS.md` #3 stays open, now carrying this milestone's evidence.
+
+### Relevant commits
+
+- `1fe5b9a` — implementation. `3ddd8a1` and `404b416` — the two corrections. The closeout commit that
+  records this acceptance is not cited by hash here, for the reason milestone 001's archive gives.

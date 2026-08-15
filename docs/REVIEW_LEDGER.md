@@ -35,9 +35,19 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `5e2adc1`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `404b416`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
-"not yet recorded here", not "unreviewed".
+"not yet recorded here", not "unreviewed". **The milestone-006 closeout commit that moved this
+checkpoint is itself later than it, has no row, and still needs reviewing in its turn.**
+
+A note on the rule below, because this closeout sits close to it. That rule forbids a commit whose
+*only* purpose is to record its own review or the review of the commit before it, because such a
+commit is manufactured solely to update this table and then tends to go unreviewed. A milestone
+closeout is a step `AGENTS.md`'s lifecycle requires and Matt authorized on its own merits — it resets
+the current-milestone file and appends the closure record — so folding the outstanding rows in here
+is the intended path rather than the regress. The exposure is real all the same: this is a docs-only
+commit and exactly the kind that has twice been skipped, which is why the paragraph above says so
+explicitly instead of leaving its absence to be inferred.
 
 The checkpoint exists because a tracked file cannot record the review of the commit that contains
 it — the row would have to describe an outcome that does not exist until after the commit is
@@ -88,9 +98,13 @@ Oldest first — the order review takes them in.
 | `f942871` | Milestone 005 implementation: causally local occasion keys, `ConcealIncident` termination | Reviewed and **rejected**: two P1 and three P2 — `ConcealIncident` redundancy scoped to `(Kind, TargetId)` instead of the incident; `ContinueStrategy` disturbing a live pending step; a `StrategyStep` with an unresolvable owner failing silently; a `ConcealIncident` candidate able to start unrecorded; the promised observation-key uniqueness test never written. Corrected by `90ff97c`. |
 | `90ff97c` | Correct milestone 005: incident-scoped redundancy, preserved scheduling, explicit executor resolution, fail-closed concealment identity | Reviewed and **rejected**: one P1 documentation finding — `ROADMAP.md` still listed the RNG-keying and `ConcealIncident`-runaway debt as unresolved and offered them as candidate scope 6, and this file's determinism checklist pointed at that stale entry. Corrected by `5e2adc1`. |
 | `5e2adc1` | Retire resolved RNG/concealment debt claims and reconcile review coverage. Docs only | Reviewed and **rejected**: one P1 finding — `CURRENT_MILESTONE.md` lines 20–21 still said milestone 005's commit was missing from this table and should be folded in later, although this same commit had already added it and advanced the checkpoint through `90ff97c`. Corrected in the documentation-only pass that follows this commit. |
+| `711553c` | Replace `CURRENT_MILESTONE.md`'s stale commit-specific ledger note. Docs only; the correction to `5e2adc1`'s finding | Status not established. |
+| `1fe5b9a` | Milestone 006 implementation: perceived account conflicts, `Domain/Relations.cs`, relationship state in both replay comparators | Reviewed and **rejected**: six findings — a grievance collection castable back to something mutable, an absent reading that could be contaminated and reported no `OtherId`, the missing delegator-to-executor account path, absent state-machine tests, an archive citing sixteen rulings it did not contain, and a false zero-warning claim taken from an incremental build. Corrected by `3ddd8a1`. |
+| `3ddd8a1` | First 006 correction: relationship immutability, named absent reads, `Generators.FromDelegation` | Reviewed. The original six **accepted as sufficiently addressed**, including the staged delegator proof under ruling 7; **five further findings** — `SeekCorroboration` scored from the weakest unrelated testimony rather than its own `AboutClaim`, a trace claiming the actor was going behind a source that did not exist, undetected duplicate questions across two generators, a false provenance claim about the sixteen rulings, and a recantation test whose name contradicted its body. Corrected by `404b416`. |
+| `404b416` | Second 006 correction: claim-specific question scoring, `(kind, target, claim)` deduplication, corrected rulings provenance | Reviewed, **no findings**. **Matt accepted it on 2026-08-15. Milestone 006 closed.** |
 
-Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`. Both took their
-implementation plus every corrective round through review before acceptance.
+Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
+`404b416`. Each took its implementation plus every corrective round through review before acceptance.
 
 **On `fb2c84d`.** It was rejected and its findings were never written down, so what they were is not
 recoverable from this repository. Matt retired them as superseded and non-actionable on 2026-08-14:
@@ -112,10 +126,9 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Current — milestone 006, second correction. **Measured, not reviewed, not accepted.**
+### Accepted — milestone 006, `404b416`
 
-Measurements taken at the milestone-006 second corrective commit, recorded because a later change
-needs something to compare against. Nothing about their presence implies the commit was reviewed. See
+Codex reviewed it with no findings and Matt accepted it on 2026-08-15. See
 `milestones/006-relational-consequence.md` and its two appended corrections.
 
 - Build: **0 warnings, 0 errors — measured after `dotnet clean`.** The implementation commit reported
@@ -153,7 +166,10 @@ Note also that extending the test comparators cannot move these hashes by constr
 hashes the rendered trace, which contains no relationship state. Snapshot coverage makes the tests
 stricter and is invisible here.
 
-### Accepted — milestone 004, `1fe8a15`
+### Superseded — milestone 004, `1fe8a15`
+
+Kept because it is the last baseline before relationships moved at all. Milestone 006 replaced it as
+the current accepted state.
 
 - Build: 0 warnings, 0 errors.
 - Tests: 139 passed, 0 failed.

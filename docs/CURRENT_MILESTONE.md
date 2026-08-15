@@ -9,18 +9,15 @@ do not create a separate handoff document.
 
 **No milestone is active. Do not start one.**
 
-Milestones 001–006 are complete. The most recent, **006 — Relational Consequence of a Perceived
-Account Conflict**, gave a contradiction a directional social cost, put every relationship mutation
-behind `Domain/Relations.cs`, and brought relationship and grievance state into both replay
-comparators. Its full record, including what it found and what it failed to achieve, is in
-`docs/milestones/006-relational-consequence.md`.
+Milestones 001–006 are complete and accepted. The most recent, **006 — Relational Consequence of a
+Perceived Account Conflict**, gave a contradiction a directional social cost, put every relationship
+mutation behind `Domain/Relations.cs`, and brought relationship and grievance state into both replay
+comparators. It took its implementation and both corrective rounds through review; Codex reviewed
+`404b416` with no findings and Matt accepted it on 2026-08-15. Its full record, including what it
+found and what it failed to achieve, is in `docs/milestones/006-relational-consequence.md`.
 
-Milestone 006's implementation commit is **not reviewed and not accepted.** `REVIEW_LEDGER.md` alone
-defines review coverage; consult its checkpoint directly rather than inferring status from prose
-anywhere else, including this file. Its coverage table and checkpoint were deliberately left
-untouched by that commit — advancing a checkpoint is a status claim, and this record has been damaged
-before by status claims made in passing. What that commit did add to the ledger is a verification
-baseline, explicitly labelled as measured rather than reviewed.
+`REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
+inferring status from prose anywhere else, including this file.
 
 **Milestone 007 has not been chosen.** Do not infer it from the candidate list or technical-debt list
 in `ROADMAP.md`, or from the carried-forward items below. Confirm scope with Matt and write it here
@@ -40,6 +37,14 @@ ended with a correct, mutation-checked mechanism the accepted scenario cannot de
 One organisation, five people and a single line of causation is running out of room. Adding a fourth
 mechanism it also cannot show would be volume rather than progress. `ROADMAP.md` now carries this as
 its first candidate scope.
+
+**And a second lesson, about the record rather than the code.** Every corrective round in milestone
+006 but the last found a claim that was true of the code and false of the description of it: a
+collection read-only in its type name but not its behaviour, an archive citing rulings it did not
+contain, a zero-warning figure from a build that had not compiled the file with the warnings in it, a
+test named for the opposite of what it asserted. None were logic errors, and none were catchable by
+the tests, because the tests agreed with the code and only the words disagreed. The question to carry
+into the next milestone is **what does this claim assert, and did anything actually check it?**
 
 ## Carried forward
 

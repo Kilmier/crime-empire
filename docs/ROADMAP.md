@@ -14,10 +14,13 @@ neither the debt list nor the candidate list below is a licence to begin. Settle
 MVP vertical slice.
 
 Milestone 001 proved the kernel. Milestone 003 built the first narrow information slice of the
-emergence prototype, 004 made its provenance precise, and 006 closed the loop's return edge by giving
-a perceived account conflict a social consequence. The rest of the emergence prototype is not built,
-and the MVP has not begun. Milestone 002 was a framework migration, not a step along this sequence.
-Full accounts are in `docs/milestones/`.
+emergence prototype, 004 made its provenance precise, and 006 — **closed and accepted 2026-08-15** —
+gave a perceived account conflict a social consequence, which is the loop's return edge. The rest of
+the emergence prototype is not built, and the MVP has not begun. Milestone 002 was a framework
+migration, not a step along this sequence. Full accounts are in `docs/milestones/`.
+
+What 006 also established is where the difficulty now sits: the mechanisms work and the scenario
+cannot show them. That is why candidate 1 below is scenario reach rather than another mechanism.
 
 ## Known technical debt
 
@@ -107,7 +110,9 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    the scenario cannot exercise is volume, not progress.
 
 Provenance precision was a candidate and became milestone 004, which is closed. RNG keying and the
-concealment runaway were a candidate and became milestone 005, which is closed. "A scenario variant
-that contradicts a delegator's first-hand account" was candidate 5 and was attempted as part of
-milestone 006 — it **did not succeed**, for the structural reason recorded in the debt list above,
-and the underlying gap is still open.
+concealment runaway were a candidate and became milestone 005, which is closed. The relationship
+design pass was candidate 1 and became milestone 006 in its executable form — the schema document it
+was originally framed as remains unwritten and is candidate 2 below. "A scenario variant that
+contradicts a delegator's first-hand account" was candidate 5 and was attempted as part of milestone
+006 — it **did not succeed**, for the structural reason recorded in the debt list above, and the
+underlying gap is still open.

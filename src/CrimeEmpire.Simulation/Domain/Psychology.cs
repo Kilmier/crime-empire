@@ -65,18 +65,48 @@ public sealed class Psychology
     private readonly Dictionary<Trait, double> _traits;
     private readonly Dictionary<Drive, double> _drives;
 
+    /// <summary>
+    /// Values are clamped to <c>[0,1]</c> on the way in, at the one point where they enter the type.
+    ///
+    /// <b>This used to be documentation rather than enforcement, and something came to depend on
+    /// it.</b> Both indexers below have always said "in [0,1]"; nothing checked. Milestone 008's
+    /// corrective commit then removed <c>Math.Clamp</c> from <see cref="Decision.Utility.LoyaltyReading"/>
+    /// on the argument that the three weights total exactly 1.0 and every input is in range — which
+    /// was true of every scenario and false of the public API, so a caller passing
+    /// <c>Belonging = 5.0</c> got clamped behaviour before that commit and unclamped behaviour after
+    /// it. A prose range is not an invariant. Codex found it.
+    ///
+    /// Clamping rather than throwing, to match <see cref="Relations"/>, which clamps every
+    /// relationship dimension on every write. The two halves of a loyalty reading now enforce their
+    /// range the same way, which is what lets the reading be split into separately inspectable parts
+    /// without a clamp that could bind and could not be honestly apportioned.
+    ///
+    /// Both <c>With</c> overloads build a dictionary and delegate here, so this is the only gate that
+    /// needs to hold. Traits are clamped for the same reason: the range is stated on the indexer and
+    /// <c>Utility</c> reads them with coefficients that assume it — <c>1 - 0.55 * proud</c> changes
+    /// sign above 1.8.
+    /// </summary>
     public Psychology(
         IReadOnlyDictionary<Trait, double>? traits = null,
         IReadOnlyDictionary<Drive, double>? drives = null)
     {
-        _traits = traits is null ? new() : new(traits);
-        _drives = drives is null ? new() : new(drives);
+        _traits = Clamped(traits);
+        _drives = Clamped(drives);
     }
 
-    /// <summary>Trait intensity in [0,1]. Absent traits read as 0.</summary>
+    private static Dictionary<TKey, double> Clamped<TKey>(IReadOnlyDictionary<TKey, double>? source)
+        where TKey : notnull
+    {
+        var copy = new Dictionary<TKey, double>();
+        if (source is null) return copy;
+        foreach (var (key, value) in source) copy[key] = Math.Clamp(value, 0.0, 1.0);
+        return copy;
+    }
+
+    /// <summary>Trait intensity in [0,1], enforced by the constructor. Absent traits read as 0.</summary>
     public double this[Trait t] => _traits.TryGetValue(t, out var v) ? v : 0.0;
 
-    /// <summary>Drive weight in [0,1]. Absent drives read as 0.</summary>
+    /// <summary>Drive weight in [0,1], enforced by the constructor. Absent drives read as 0.</summary>
     public double this[Drive d] => _drives.TryGetValue(d, out var v) ? v : 0.0;
 
     public IEnumerable<(Trait Trait, double Value)> SignificantTraits()

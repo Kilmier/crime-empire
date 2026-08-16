@@ -10,17 +10,25 @@ do not create a separate handoff document.
 **No milestone is active. Do not start one.**
 
 Milestones 001–007 are complete and accepted. **Milestone 008 — Relationship Readers and the
-Executable Schema — is implemented and archived. Its implementation commit `7a9773b` was reviewed and
-returned one finding, which Matt accepted; one corrective commit followed and is awaiting Codex
-review. Milestone 008 is not accepted and not verified.** Its full record, including Matt's ten
-rulings reproduced verbatim and the correction appended at the foot, is in
-`docs/milestones/008-relationship-readers.md`.
+Executable Schema — is implemented and archived, and has been through two rejected review rounds.
+`7a9773b` returned one finding and `9a29342` returned two; Matt accepted all three, and a second
+corrective commit now awaits Codex review. Milestone 008 is not accepted and not verified.** Its full
+record, including Matt's ten rulings reproduced verbatim and both corrections appended at the foot, is
+in `docs/milestones/008-relationship-readers.md`.
 
-**The finding, in one line, because it is the third appearance of this project's signature defect:**
-ruling 3 required loyalty's four contributions to be separately inspectable, and three of them were
-emitted fused under a union flag — separately computed, then put back together on the way to the
-score. The corrective commit splits them, changes no behaviour, and pins the finding with a mutation
-that is literally the reviewed code.
+**The three findings, because the pattern across them matters more than any one.**
+
+- `7a9773b`: ruling 3 required loyalty's four contributions to be separately inspectable, and three
+  were emitted fused under a union flag — separately computed, then put back together on the way to
+  the score.
+- `9a29342`, first: **the recorded verification hashes were false.** They were measured before a late
+  widening of the diagnostic listing and never re-measured. The commit *did* verify itself, with a
+  diff that deliberately excluded the diagnostic block — the only place the change appeared.
+- `9a29342`, second: the unclamped bond rested on a range `Psychology` documented and never enforced,
+  so the removal of that clamp was a real behaviour change for any out-of-range caller.
+
+All three are the same family the milestone kept naming while producing it: **a claim that was true of
+the fixtures and false of the API, or true of an earlier moment and false of the committed one.**
 
 As with 006 and 007, the lifecycle reset this file inside the archiving commit, so **the archive is
 the only copy of milestone 008's rulings**. Ruling 10 kept the existing lifecycle deliberately; the

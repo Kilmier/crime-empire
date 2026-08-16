@@ -177,12 +177,16 @@ changed **no coefficient**; everything here is about shape.
   found. `Belonging` is a drive, not a relationship dimension: it is listed in the diagnostic for
   completeness and excluded from gross, net and the counterfactual, because a man with no
   relationships still has a need to belong.
-- **The bond is an unclamped sum, and the clamp it lost could never have fired.** The three weights
-  total exactly `1.0` and every input is in `[0,1]`, so `Math.Clamp(…, 0, 1)` was a guarantee by
-  politeness. It had to go because a clamp that binds cannot be split: there is no honest way to
-  apportion a clamped total among its parts. Removing it is what makes emitting the parts exactly
-  equal to emitting the sum, which is why the correction preserved every score, choice and downstream
-  figure.
+- **The bond is an unclamped sum, and every input to it is clamped at the point it enters its type.**
+  The three weights total exactly `1.0`; `Relations` clamps trust and obligation on every write, and
+  `Psychology`'s constructor clamps traits and drives, with both `With` overloads delegating to it. So
+  the sum is always in `[0,1]` and a clamp on the bond cannot bind. It had to go because a clamp that
+  binds cannot be split: there is no honest way to apportion a clamped total among its parts.
+  **`Psychology`'s half of that guarantee did not exist when the clamp was first removed** — the range
+  was stated on its indexers and enforced nowhere, so the public API admitted values that changed
+  behaviour across the removal. A prose range is not an invariant; enforce it where the value enters.
+- **Range enforcement clamps rather than throws**, matching `Relations`. Grievance is the deliberate
+  exception: it is outside the bond, unbounded, and must stay able to exceed it.
 - **A reader whose loyalty term is affine emits its constant separately, with no facet.** Retaliation
   risk and policy reluctance both read `−(a + b × loyalty) × …`; the `a` is not relational, because
   moving on anybody is a serious step and a rule weighs something whoever set it.

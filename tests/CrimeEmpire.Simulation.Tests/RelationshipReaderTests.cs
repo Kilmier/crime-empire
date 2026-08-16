@@ -133,6 +133,117 @@ public sealed class RelationshipReaderTests
         Assert.Equal(0.50, Utility.LoyaltyReading.GrievanceWeight, 9);
     }
 
+    // ================================================================ the range is a real invariant
+
+    /// <summary>
+    /// <see cref="Psychology"/>'s constructor clamps, at both ends, for traits and drives alike.
+    ///
+    /// The range was stated on the indexers and enforced nowhere, and milestone 008's corrective
+    /// commit then removed a clamp from <see cref="Utility.LoyaltyReading"/> on the argument that
+    /// every input was already in range. True of every scenario, false of the public API — so a
+    /// caller passing <c>Belonging = 5.0</c> got clamped behaviour before that commit and unclamped
+    /// behaviour after it. Documentation is not enforcement.
+    /// </summary>
+    [Theory]
+    [InlineData(5.0, 1.0)]
+    [InlineData(1.0000001, 1.0)]
+    [InlineData(-3.0, 0.0)]
+    [InlineData(-0.0000001, 0.0)]
+    [InlineData(0.4, 0.4)]
+    public void Psychology_clamps_out_of_range_values_in_its_constructor(double given, double expected)
+    {
+        var psy = new Psychology(
+            new Dictionary<Trait, double> { [Trait.Proud] = given },
+            new Dictionary<Drive, double> { [Drive.Belonging] = given });
+
+        Assert.Equal(expected, psy[Trait.Proud], 9);
+        Assert.Equal(expected, psy[Drive.Belonging], 9);
+    }
+
+    /// <summary>
+    /// And through <c>With</c>, which is the other public way a value gets in. It builds a dictionary
+    /// and delegates to the constructor, so one gate holds both — but that is an implementation
+    /// detail worth pinning rather than assuming, since a future <c>With</c> that mutated in place
+    /// would bypass it silently.
+    /// </summary>
+    [Theory]
+    [InlineData(5.0, 1.0)]
+    [InlineData(-3.0, 0.0)]
+    [InlineData(0.6, 0.6)]
+    public void Psychology_clamps_out_of_range_values_through_With(double given, double expected)
+    {
+        var basePsy = new Psychology();
+
+        Assert.Equal(expected, basePsy.With(Trait.Cautious, given)[Trait.Cautious], 9);
+        Assert.Equal(expected, basePsy.With(Drive.Belonging, given)[Drive.Belonging], 9);
+
+        // And chaining does not launder a bad value in behind the first call.
+        var chained = basePsy.With(Drive.Belonging, given).With(Trait.Aggressive, given);
+        Assert.Equal(expected, chained[Drive.Belonging], 9);
+        Assert.Equal(expected, chained[Trait.Aggressive], 9);
+    }
+
+    /// <summary>
+    /// The invariant the unclamped bond actually depends on, asserted through the public API rather
+    /// than argued from the scenario fixtures.
+    ///
+    /// Every route that can set a loyalty input is driven far out of range at both ends —
+    /// <c>Relations.Establish</c> for trust and obligation, <c>Psychology</c> for Belonging — and the
+    /// decomposed parts must each stay within their own weight and sum to a bond inside <c>[0,1]</c>.
+    /// If any of those gates stopped clamping, the bond could exceed 1 and the removal of its clamp
+    /// would become a real behaviour change.
+    /// </summary>
+    [Theory]
+    [InlineData(9.0, 9.0, 9.0)]
+    [InlineData(-9.0, -9.0, -9.0)]
+    [InlineData(9.0, -9.0, 9.0)]
+    [InlineData(1.0, 1.0, 1.0)]
+    public void Loyalty_parts_stay_in_range_through_the_public_api(
+        double trust, double obligation, double belonging)
+    {
+        var world = Cast.Build(42, "baseline");
+        var tommy = world.Get("tommy");
+
+        Relations.Establish(tommy, "vincent", trust: trust, obligation: obligation);
+        tommy.Psychology = new Psychology(
+            drives: new Dictionary<Drive, double> { [Drive.Belonging] = belonging });
+
+        var loyalty = Utility.Loyalty(tommy.View, tommy.Psychology, "vincent");
+
+        Assert.InRange(loyalty.TrustPart, 0.0, Utility.LoyaltyReading.TrustWeight);
+        Assert.InRange(loyalty.ObligationPart, 0.0, Utility.LoyaltyReading.ObligationWeight);
+        Assert.InRange(loyalty.BelongingPart, 0.0, Utility.LoyaltyReading.BelongingWeight);
+
+        // The bond is inside [0,1] without a clamp of its own, which is the whole premise.
+        Assert.InRange(loyalty.Value, 0.0, 1.0);
+        Assert.Equal(loyalty.TrustPart + loyalty.ObligationPart + loyalty.BelongingPart,
+                     loyalty.Value, 12);
+    }
+
+    /// <summary>
+    /// Grievance is deliberately outside all of this. It is not normalised, not clamped into the
+    /// bond, and can exceed it — which is the accepted milestone-008 design, not an oversight in the
+    /// invariant above.
+    /// </summary>
+    [Fact]
+    public void Grievance_is_outside_the_bond_and_is_not_clamped_with_it()
+    {
+        var world = Cast.Build(42, "baseline");
+        var tommy = world.Get("tommy");
+        Relations.Establish(tommy, "vincent", trust: 1.0, obligation: 1.0);
+        Relations.RaiseGrievance(tommy, new Grievance("vincent", "one", 3.0, At));
+        Relations.RaiseGrievance(tommy, new Grievance("vincent", "two", 4.0, At));
+
+        var loyalty = Utility.Loyalty(tommy.View, tommy.Psychology, "vincent");
+
+        Assert.InRange(loyalty.Value, 0.0, 1.0);
+        Assert.Equal(7.0, loyalty.Grievance, 9);
+        Assert.Equal(-0.50 * 7.0, loyalty.GrievancePart, 9);
+        Assert.True(Math.Abs(loyalty.GrievancePart) > loyalty.Value,
+            "grievance must be able to exceed the bond; clamping it into the bond is what " +
+            "milestone 008 removed");
+    }
+
     /// <summary>
     /// The invariant the whole split rests on: the three parts sum to the bond exactly.
     ///

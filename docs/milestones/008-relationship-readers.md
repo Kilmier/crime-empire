@@ -458,3 +458,151 @@ and carry no diagnostic output.
 No coefficient. Ruling 4's exclusions are untouched — no concealment, no `AdvanceConceal`, no
 `believedWitnesses`, no denial-outcome change, and no ruling on `0.9 × Loyalty` versus `0.4`. The
 deferred list above stands unaltered.
+
+---
+
+## Second correction — Codex findings on `9a29342`
+
+Status: **awaiting Codex review. Not verified.** Nothing above is rewritten, including the
+Behavioural-movement table in the first correction whose hashes these findings show to be wrong. The
+wrong figures stand where they were written and are corrected here, which is what the append-only rule
+is for: a reader must be able to see what the record said, not only what it should have said.
+
+**Two findings, both accepted.**
+
+### 1. The recorded verification hashes were false
+
+The first correction records these as the trace hashes at `9a29342`:
+
+| Variant | Recorded | Actual at `9a29342` |
+|---|---|---|
+| baseline | `20DD67E8CA4CB5AD` | **`6EB3F6B996CFC631`** |
+| cautious-vincent | `D2D070005176426D` | **`A8A1BBD12D5334C2`** |
+| watchful-boss | `6FC6D3243B0020E1` | **`DCEDCFF27928266F`** |
+| disloyal-vincent | `5A91CFE9F3532E63` | **`E164E0A74E2EC7DC`** |
+| resentful-tommy | `947BD13F07FE2AEA` | **`982EC77BD5C253CB`** |
+
+The same wrong figures were copied into `REVIEW_LEDGER.md`'s awaiting-review baseline. Both are
+corrected. The **chosen-action digests were right** — `38B7183ED2EEF34A` / `124E8FE932DD5A89` /
+`4F15ECD8B7A593BB` / `3D7F2B79BA4DC3E3` / `18B507EBBE4FBA7E` — as were the decision counts and the
+rel-read / rel-decided figures, which is the shape of the error: only the rendered trace moved.
+
+**The exact change that occurred after the measurement, established rather than guessed.** The
+corrective commit was built in two stages. The split was implemented first and `--compare` was run,
+producing the recorded hashes. Then `RelationshipComponents()` was widened from a predicate matching
+`Relational` facets or a non-zero relationship share, to `c => c.Reads != RelationshipFacet.None`, so
+that the Belonging contribution would be listed in the diagnostic block alongside the other three.
+That adds a `[Belonging …]` line to the trace for every candidate carrying one, and the trace is what
+`--verify` hashes. **`--compare` was never re-run after it.**
+
+This was confirmed by reverting that single predicate at `9a29342` and re-running: it reproduces
+`20DD67E8CA4CB5AD` / `D2D070005176426D` / `6FC6D3243B0020E1` / `5A91CFE9F3532E63` / `947BD13F07FE2AEA`
+exactly. Nothing else contributed.
+
+**The lesson is one this milestone had already written down and then repeated.** Its own first
+correction records milestone 006's false zero-warning claim — a real build, a real number, measured
+before the thing it was reported as measuring. This is the identical shape: a real `--compare`, real
+hashes, taken one edit too early and presented as the final state. The widening was a small,
+deliberate, late improvement, and *late and small* is exactly the profile of a change that gets
+measured before rather than after.
+
+What makes it worse than 006's is that the verification section of that same commit said the change
+had been checked. It had — by a line-by-line diff against `7a9773b` that **deliberately excluded the
+diagnostic block**, which is the only place the widening shows up. The exclusion was correct for the
+question it was asked (did behaviour change?) and it silently made the instrument blind to the one
+thing that had. Two checks were run, each sound, and the gap between them was the answer.
+
+**Carrying question:** *was this number measured after the last edit, or merely after an edit?*
+
+### 2. The unclamped bond rested on documentation, not enforcement
+
+`9a29342` removed `Math.Clamp` from `LoyaltyReading.Value`, arguing that the three weights total
+exactly `1.0` and every input is already in `[0,1]`. `Trust` and `Obligation` are — `Relations` clamps
+every relationship dimension on every write. **`Belonging` was not.** `Psychology` stated the range on
+its indexers and enforced it nowhere: neither the public constructor nor `With(Drive, double)` checked
+anything.
+
+So the public API admitted values for which `7a9773b` clamped and `9a29342` did not, which makes the
+removal a real behaviour change rather than the behaviour-neutral simplification it was recorded as. A
+caller passing `Belonging = 5.0` gets a bond of `1.25` where it used to get `1.0`. No scenario does
+this, which is why nothing failed — the same "true of every fixture, false of the API" gap the
+milestone's own facet work was about.
+
+**The fix, and why this one rather than restoring the clamp.** `Psychology`'s constructor now clamps
+to `[0,1]`, and both `With` overloads build a dictionary and delegate to it, so one gate holds every
+route in. That makes the stated range an actual invariant at the point the value enters the type,
+which is where the range was always claimed.
+
+Restoring `Math.Clamp` on the bond was the alternative and is the wrong fix for this milestone: a
+clamp that can bind cannot be split, because there is no honest way to apportion a clamped total among
+four separately inspectable parts. Enforcing upstream keeps the parts exactly summable — the accepted
+constraint — while making the premise true. Clamping rather than throwing matches `Relations`, which
+clamps rather than rejecting; both halves of a loyalty reading now enforce their range the same way.
+
+Traits are clamped by the same gate. The range is stated on that indexer too, and `Utility` reads
+traits with coefficients that assume it — `1 - 0.55 * proud` changes sign above `1.8`. Fixing drives
+and leaving traits would have been a half-measure on the identical defect.
+
+**Grievance is deliberately untouched by all of this**, per the accepted milestone-008 design: it is
+outside the bond, not normalised into it, and free to exceed it.
+`Grievance_is_outside_the_bond_and_is_not_clamped_with_it` pins that so a future tightening of the
+range cannot quietly sweep it in.
+
+### Tests
+
+Thirteen added, **305 total** (was 292):
+
+- `Psychology_clamps_out_of_range_values_in_its_constructor` — five cases, both ends, traits and
+  drives, including values just outside the boundary.
+- `Psychology_clamps_out_of_range_values_through_With` — three cases, both overloads, plus a chained
+  call so a future `With` that mutated in place rather than delegating cannot slip through.
+- `Loyalty_parts_stay_in_range_through_the_public_api` — four cases driving every input far out of
+  range at both ends through `Relations.Establish` and `Psychology`, asserting each part stays inside
+  its own weight, the bond stays inside `[0,1]` without a clamp of its own, and the parts still sum
+  to it exactly.
+- `Grievance_is_outside_the_bond_and_is_not_clamped_with_it`.
+
+Two mutation checks, each caught by exactly the intended tests and then restored:
+
+| Mutation | Result |
+|---|---|
+| the constructor stops clamping | 9 — every constructor, `With` and public-API range case |
+| clamped at the lower bound only (`Math.Max(value, 0)`) | 5 — precisely the upper-bound cases, and no others |
+
+**One thing deliberately not claimed.** Reintroducing `Math.Clamp` on the bond is now behaviour-neutral
+and no mutation catches it — which is the point of the fix rather than a gap in it. With the range
+enforced upstream the clamp cannot bind, so its presence or absence is unobservable. The property that
+is pinned is the one that matters: the parts sum to the bond, and the bond stays in range.
+
+### Behavioural movement
+
+**None.** The full rendered trace of all five variants is **byte-identical to `9a29342`**, verified by
+building that commit in a scratch worktree and diffing the complete output — not a filtered subset,
+which is the mistake finding 1 records. Every cast and variant value was already inside `[0,1]`, so
+the new gate clamps nothing that the scenario actually contains.
+
+Hashes are therefore Codex's figures, which are now the recorded ones:
+
+| Variant | Hash | Decisions | Rel. read | Rel. decided |
+|---|---|---|---|---|
+| baseline | `6EB3F6B996CFC631` | 38 | 19 | 2 |
+| cautious-vincent | `A8A1BBD12D5334C2` | 21 | 12 | 3 |
+| watchful-boss | `DCEDCFF27928266F` | 39 | 18 | 3 |
+| disloyal-vincent | `E164E0A74E2EC7DC` | 39 | 20 | 1 |
+| resentful-tommy | `982EC77BD5C253CB` | 38 | 19 | 3 |
+
+`--compare` reports **five distinct traces and five distinct chosen-action sequences**; the
+chosen-action digests are unchanged from `7a9773b` and `9a29342`.
+
+### Verification
+
+Clean build (`dotnet clean` first), **0 warnings, 0 errors**, **305/305 tests**. All five variants
+deterministic under `--verify`; `--compare` as above; both viewpoint commands run clean and contain no
+diagnostic output.
+
+### Preserved
+
+Every accepted milestone-008 constraint holds: one score component per facet; grievance outside the
+bond and separately inspectable; Belonging visible in the diagnostic and non-relational in the
+counterfactual; **no coefficient changed**; no concealment, denial, witness or milestone-009 work; no
+decision forced. The deferred list stands unaltered.

@@ -152,29 +152,42 @@ coherently.
 **Not accepted, not verified.** Recorded here as the current measured state so a reviewer has the
 figures; acceptance requires a review naming the commit and Matt confirming it.
 
-Codex reviewed the implementation commit `7a9773b` and returned **one finding**, which Matt accepted:
-three of loyalty's four contributions were emitted fused under a `Trust | Obligation | Belonging`
-union flag, so they were separately computed and not separately inspectable as ruling 3 required. The
-corrective commit splits them.
+Two review rounds so far, both rejected, both with the findings accepted by Matt:
+
+- **`7a9773b`** — one finding. Three of loyalty's four contributions were emitted fused under a
+  `Trust | Obligation | Belonging` union flag, so they were separately computed and not separately
+  inspectable as ruling 3 required. Corrected by `9a29342`, which splits them.
+- **`9a29342`** — two findings. Its recorded verification hashes were false, and the unclamped bond it
+  introduced rested on a documented range that nothing enforced. Corrected by the commit this
+  baseline describes.
 
 - Build: **0 warnings, 0 errors — measured after `dotnet clean`.**
-- Tests: **292 passed**, 0 failed (285 at `7a9773b`, 276 before the milestone).
+- Tests: **305 passed**, 0 failed (292 at `9a29342`, 285 at `7a9773b`, 276 before the milestone).
 - Five variants, deterministic on repeated runs.
 
 | Variant | Hash | Decisions | Reports | Requests | Conflicts | Rel. read | Rel. decided |
 |---|---|---|---|---|---|---|---|
-| baseline | `20DD67E8CA4CB5AD` | 38 | 6 | 5 | 2 | 19 | 2 |
-| cautious-vincent | `D2D070005176426D` | 21 | 2 | 4 | 3 | 12 | 3 |
-| watchful-boss | `6FC6D3243B0020E1` | 39 | 7 | 5 | 2 | 18 | 3 |
-| disloyal-vincent | `5A91CFE9F3532E63` | 39 | 6 | 5 | 2 | 20 | 1 |
-| resentful-tommy | `947BD13F07FE2AEA` | 38 | 7 | 5 | 2 | 19 | 3 |
+| baseline | `6EB3F6B996CFC631` | 38 | 6 | 5 | 2 | 19 | 2 |
+| cautious-vincent | `A8A1BBD12D5334C2` | 21 | 2 | 4 | 3 | 12 | 3 |
+| watchful-boss | `DCEDCFF27928266F` | 39 | 7 | 5 | 2 | 18 | 3 |
+| disloyal-vincent | `E164E0A74E2EC7DC` | 39 | 6 | 5 | 2 | 20 | 1 |
+| resentful-tommy | `982EC77BD5C253CB` | 38 | 7 | 5 | 2 | 19 | 3 |
 
-**The corrective commit changed no behaviour, and that was verified directly rather than argued.**
-`7a9773b` was built in a scratch worktree and every variant diffed line by line, excluding only the
-reason list and the diagnostic block: scores, choices, outcomes and end-of-run world state are
-**identical in all five**. Every chosen-action digest is byte-identical. Trace hashes move solely
-through the two excluded blocks. Hashes at `7a9773b` were `3BA97219464FC2E4` / `EC664E9FB52010B7` /
-`51AB00158218ACD0` / `709F0B6E4B90A2F4` / `3D91B931EC2DAF3B`.
+**These hashes replace the ones previously recorded here**, which were `20DD67E8CA4CB5AD` /
+`D2D070005176426D` / `6FC6D3243B0020E1` / `5A91CFE9F3532E63` / `947BD13F07FE2AEA` and were wrong. They
+were measured at `9a29342` before a late widening of the diagnostic listing and never re-measured
+after it; the full account, including how the cause was established, is in the second correction of
+`milestones/008-relationship-readers.md`. The chosen-action digests recorded alongside them were
+correct throughout.
+
+**The current commit changed no behaviour, verified against the full rendered trace rather than a
+filtered subset.** `9a29342` was built in a scratch worktree and every variant diffed in its entirety:
+**byte-identical in all five.** That method is deliberate — the previous round diffed a subset that
+excluded the diagnostic block, which was the only place its change appeared, and that is precisely how
+the false hashes survived a verification step.
+
+Hashes at `7a9773b` were `3BA97219464FC2E4` / `EC664E9FB52010B7` / `51AB00158218ACD0` /
+`709F0B6E4B90A2F4` / `3D91B931EC2DAF3B`.
 
 `--compare` reports **five distinct traces and five distinct chosen-action sequences**. That second
 figure was four at milestone 007, and the change is the milestone's behavioural result: at seed 42
@@ -394,6 +407,13 @@ Future changes should retain coverage for:
   only its own component. Separately computed then summed is not separately inspectable.
 - The bond is an unclamped sum of its parts, so emitting the parts equals emitting the sum. A clamp
   reintroduced there cannot be split honestly and must fail.
+- **Every input to the bond is clamped where it enters its type**, and that is enforced rather than
+  documented: `Relations` on relationship writes, `Psychology`'s constructor on traits and drives,
+  with `With` delegating to it. Regression tests drive both ends out of range through the public API.
+  Grievance is the deliberate exception and must stay able to exceed the bond.
+- **A verification figure is measured after the last edit, not merely after an edit.** Hashes recorded
+  from a run that predates a later trace-affecting change are false verification, whatever else in the
+  commit was checked. A diff that filters out the region a change touches cannot substitute.
 - Belonging appears in the diagnostic listing but contributes zero to gross, net and the
   counterfactual. It is a drive, not relationship state.
 - Every retained relationship dimension is read by some decision in a natural run of all five
@@ -559,6 +579,20 @@ author wrote the row from what he had been told rather than from what had happen
 announced a review to him, so he wrote that none had occurred, when the review had happened, had
 rejected the commit, and was the reason he was writing the row at all. The rejection was visible in
 the work he was doing and invisible in the sentence he wrote about it.
+
+**A seventh, at `9a29342`, and it is a false *verification* rather than a false review.** The archive
+and this file both recorded five trace hashes that the commit does not produce. They were real
+measurements from a real `--compare`, taken before a small, late, deliberate change to the diagnostic
+listing and never re-taken. The commit was not unverified — it verified itself with a line-by-line
+diff against its parent that **excluded the diagnostic block**, correctly for the question "did
+behaviour change?" and fatally for the question "are these the hashes?". Two sound checks, and the
+answer lived in the gap between them.
+
+This is milestone 006's zero-warning claim in a new costume, and the milestone that reproduced it had
+already written that lesson into its own archive. Neither vigilance nor a checklist caught it; what
+would have caught it is a rule. **Re-measure after the last edit, and never report a figure from a run
+that predates any change to what it measures.** Carrying question: *was this measured after the last
+edit, or merely after an edit?*
 
 That is worth separating from the two mechanics below, because neither explains it. Reviews were
 being taken in order, and no gate went stale. **A row is a claim about the world, and "I was not told

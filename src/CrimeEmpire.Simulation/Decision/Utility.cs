@@ -223,17 +223,25 @@ public static class Utility
         /// <summary>
         /// The bond, as the sum of its three parts.
         ///
-        /// <b>No clamp, and the clamp it lost could never have fired.</b> It used to read
+        /// <b>No clamp, because every input is clamped before it gets here.</b> It used to read
         /// <c>Math.Clamp(…, 0, 1)</c>. The three weights total exactly <c>1.0</c>; <c>Trust</c> and
         /// <c>Obligation</c> are clamped to <c>[0,1]</c> by <see cref="CrimeSim.Domain.Relations"/> on
-        /// every write, and <c>Belonging</c> is a drive documented in the same range. The sum is
-        /// therefore always in <c>[0,1]</c> and the clamp was a guarantee by politeness.
+        /// every write, and <c>Belonging</c> is clamped to the same range by
+        /// <see cref="Psychology"/>'s constructor, through which both <c>With</c> overloads pass. The
+        /// sum is therefore always in <c>[0,1]</c>.
+        ///
+        /// <b>That last clause was documentation and not enforcement when this clamp was first
+        /// removed.</b> <c>Psychology</c> stated the range on its indexers and checked nothing, so a
+        /// caller passing <c>Belonging = 5.0</c> would have been clamped before the removal and not
+        /// after it — a real behaviour change hidden behind a prose guarantee. Codex found it; the
+        /// constructor now enforces the range that argument depends on.
         ///
         /// It mattered here because a clamp that binds cannot be split: there would be no honest way
         /// to say how much of a clamped total each part contributed. Removing it is what makes
         /// emitting the parts separately exactly equal to emitting the sum, which is why totals,
         /// choices and every downstream figure are preserved. Pinned by
-        /// <c>The_parts_sum_to_the_bond_across_the_whole_range</c>.
+        /// <c>The_parts_sum_to_the_bond_across_the_whole_range</c> and by
+        /// <c>Loyalty_parts_stay_in_range_through_the_public_api</c>.
         /// </summary>
         public double Value => TrustPart + ObligationPart + BelongingPart;
 

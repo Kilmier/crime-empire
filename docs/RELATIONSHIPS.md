@@ -170,9 +170,15 @@ grievance — is emitted as its own component at each reader's own coefficient, 
 moves one component and no other. Separately computed and then summed is not separately inspectable;
 the first implementation fused three of them under a union flag and Codex found it.
 
-The bond is an unclamped sum of its three parts. The weights total exactly `1.0` and every input is in
-`[0,1]`, so the clamp it used to carry could never bind — and a clamp that binds cannot be split,
-because there is no honest way to apportion a clamped total among its parts.
+The bond is an unclamped sum of its three parts. The weights total exactly `1.0`, and every input is
+clamped to `[0,1]` where it enters its type — `Relations` on every relationship write, `Psychology`'s
+constructor for traits and drives — so a clamp on the bond could not bind, and a clamp that binds
+cannot be split, because there is no honest way to apportion a clamped total among its parts.
+
+`Psychology`'s half of that was documentation rather than enforcement until Codex found it: the range
+was stated on the indexers and checked nowhere, which made the bond's unclamped sum a real behaviour
+change for any caller passing an out-of-range drive. **Grievance is the deliberate exception and stays
+one** — it is outside the bond, unbounded, and must remain able to exceed it.
 
 This exists because the obvious alternative was measured and found wrong. The only previous way to ask
 "how much of this score came from a relationship" was to filter components named `relationship

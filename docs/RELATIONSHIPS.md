@@ -164,7 +164,15 @@ through the scoring path, and it is excluded from the relationship counterfactua
 
 ## How a contribution is measured
 
-Every score component records the facet it was **derived from**, set where the value is computed.
+Every score component records the facet it was **derived from**, set where the value is computed, and
+**carries exactly one facet**. Each of loyalty's four contributions — trust, obligation, Belonging,
+grievance — is emitted as its own component at each reader's own coefficient, so moving one dimension
+moves one component and no other. Separately computed and then summed is not separately inspectable;
+the first implementation fused three of them under a union flag and Codex found it.
+
+The bond is an unclamped sum of its three parts. The weights total exactly `1.0` and every input is in
+`[0,1]`, so the clamp it used to carry could never bind — and a clamp that binds cannot be split,
+because there is no honest way to apportion a clamped total among its parts.
 
 This exists because the obvious alternative was measured and found wrong. The only previous way to ask
 "how much of this score came from a relationship" was to filter components named `relationship

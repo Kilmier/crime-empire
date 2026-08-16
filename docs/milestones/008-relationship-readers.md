@@ -327,3 +327,134 @@ mechanism milestones 006 and 007 both recorded and which ruling 10 deliberately 
 | 8 | Production-path diagnostic: gross, net, margin, counterfactual; developer-facing | **Completed.** `ScoreBreakdown` diagnostics, trace block, `--compare` counts; leak-checked against both viewpoint commands. |
 | 9 | Choice-changing measured both ways, never engineered; zero is an honest result | **Completed.** 1–3 per variant, reported by `--compare` and asserted. The one natural fork is recorded with its fragility and its seed-dependence. |
 | 10 | One implementation-and-archive commit; no separate scope commit; reproduce the rulings before the reset | **Completed.** Rulings reproduced above; `CURRENT_MILESTONE.md` reset in this same commit. |
+
+---
+
+## Correction — Codex finding on `7a9773b`
+
+Status: **awaiting Codex review. Not verified.** Nothing above is rewritten; the account of what the
+milestone originally did stands, including the row in the table above that claims ruling 3 was
+completed. It was completed in part, and the part it missed is this finding.
+
+**One finding, accepted by Matt.**
+
+### The finding
+
+Ruling 3 required that **trust, obligation, Belonging and grievance remain separately inspectable
+through the scoring path**. The implementation emitted grievance as its own component and fused the
+other three into a single component tagged `Trust | Obligation | Belonging`. They were separately
+*computed* — `LoyaltyReading` held all four apart — and then put back together at the emission site,
+so nothing downstream could say how much of a score was trust and how much was obligation.
+
+**Two of four separately inspectable, described as four.** The union flag made it look tagged while
+answering none of the questions the tagging exists for.
+
+This is the repository's signature defect and its third named appearance: *a distinction drawn in one
+place and dropped on the way to the next.* Milestone 004 produced it four times. What makes this
+instance worth recording is that it happened **inside the correction for the same pattern** — the
+facets were introduced in this very milestone precisely because aggregating by component name
+conflated things, and the first use of them conflated three things under one flag.
+
+### What the corrective commit did
+
+**Four contributions, four components, one facet each.** `AddLoyaltyParts` replaces `AddLoyalty` and
+emits `TrustPart`, `ObligationPart`, `BelongingPart` and `GrievancePart` separately at every loyalty
+reader, each at that reader's own coefficient.
+
+**The clamp had to go, and could never have fired.** `Loyalty.Value` was
+`Math.Clamp(0.45·T + 0.30·O + 0.25·B, 0, 1)`. A clamp that binds cannot be split: there is no honest
+way to apportion a clamped total among its parts. It could not bind — the three weights total exactly
+`1.0`, `Trust` and `Obligation` are clamped to `[0,1]` by `Relations` on every write, and `Belonging`
+is a drive documented in the same range, so the sum is always in `[0,1]`. Removing it is what makes
+emitting the parts exactly equal to emitting the sum. Pinned by
+`The_parts_sum_to_the_bond_across_the_whole_range`, driven at the corners.
+
+**The two affine readers gained an explicit non-relational base.** `Retaliate`'s risk was
+`−(1.3 + 2.2·loyalty)·nerve` and policy reluctance was `−(0.6 + 1.2·loyalty)·scale`. The constant is
+not relational — moving on anybody is a serious step, and a rule weighs something whoever set it — so
+it is now its own component with no facet, and the loyalty-dependent part is split into four.
+
+**`BareValue` was removed.** With Belonging emitted as its own component carrying its own
+relationship-free value, nothing read it. A member with no reader goes, which is the rule that removed
+`Affection`.
+
+**The diagnostic lists Belonging as context.** `RelationshipComponents()` now returns every component
+with any facet, so all four contributions to a loyalty term are visible together. Belonging's
+`RelationshipShare` is zero, so it contributes nothing to gross, net or the counterfactual — shown,
+never counted. Sweeping Belonging into a figure reported as relational is the exact conflation the
+facets were introduced to end.
+
+### Everything preserved, verified against `7a9773b` directly
+
+`7a9773b` was built in a scratch worktree and every variant diffed line by line, excluding only the
+reason list and the diagnostic block:
+
+| Variant | Scores, choices, outcomes, world state |
+|---|---|
+| baseline | **identical** |
+| cautious-vincent | **identical** |
+| watchful-boss | **identical** |
+| disloyal-vincent | **identical** |
+| resentful-tommy | **identical** |
+
+All five chosen-action digests are byte-identical — `38B7183ED2EEF34A` / `124E8FE932DD5A89` /
+`4F15ECD8B7A593BB` / `3D7F2B79BA4DC3E3` / `18B507EBBE4FBA7E`. Decision counts, "rel. read" (19 / 12 /
+18 / 20 / 19) and "rel. decided" (2 / 3 / 3 / 1 / 3) are all unchanged, as is
+**5 distinct traces · 5 distinct chosen-action sequences**.
+
+Trace hashes move, and only through the two excluded blocks:
+
+| Variant | `7a9773b` | corrective commit |
+|---|---|---|
+| baseline | `3BA97219464FC2E4` | `20DD67E8CA4CB5AD` |
+| cautious-vincent | `EC664E9FB52010B7` | `D2D070005176426D` |
+| watchful-boss | `51AB00158218ACD0` | `6FC6D3243B0020E1` |
+| disloyal-vincent | `709F0B6E4B90A2F4` | `5A91CFE9F3532E63` |
+| resentful-tommy | `3D91B931EC2DAF3B` | `947BD13F07FE2AEA` |
+
+### One consequence worth stating rather than discovering later
+
+**The readable reason list shows fewer relationship lines: 10 in baseline, down from 14.**
+Splitting one component into three makes each smaller, and more of them fall under `Significant()`'s
+`0.15` cutoff. Where the trace used to say *"reporting maintains standing with his superior
+(relationship effects +0.54)"* it now says *"reporting keeps him right with a man he trusts (+0.25)"*
+and drops the obligation and belonging shares.
+
+Nothing is lost — the diagnostic block prints all of them with no cutoff, immediately below. And the
+line that survives is more informative than the one it replaced, because it names which binding is
+doing the work. But it is a real cost to the narrative quality the architecture document asks that
+line to carry, and it is the direct price of the ruling. Recorded so the next person to look at the
+reason list knows it was paid deliberately.
+
+### Tests
+
+Six added, **292 total** (was 285). Four are new:
+`A_reader_reports_all_four_contributions_as_separate_components`,
+`Moving_one_dimension_moves_only_its_own_component`,
+`No_component_carries_more_than_one_facet` (across all five variants), and
+`The_parts_sum_to_the_bond_across_the_whole_range` (a five-case theory).
+`A_partial_report_keeps_both_considerations_and_they_largely_cancel` was rewritten to sum each
+consideration across its four facets and to assert the two phrase-sets are disjoint.
+
+Two mutation checks, each caught by exactly the intended tests and then restored:
+
+| Mutation | Result |
+|---|---|
+| the three bond parts re-fused into one component under a union flag | 3 — the four-component, independent-movement and one-facet tests |
+| the candour phrases reused from the standing consideration | exactly 1 — the two-considerations test |
+
+**The first mutation is literally the code as it stood at `7a9773b`.** Those three tests would have
+failed against the reviewed commit, which is what makes them a pin on the finding rather than a
+description of the fix.
+
+### Verification
+
+Clean build (`dotnet clean` first), **0 warnings, 0 errors**, **292/292 tests**. All five variants
+deterministic under `--verify`; `--compare` reports five and five; both viewpoint commands run clean
+and carry no diagnostic output.
+
+### Not changed
+
+No coefficient. Ruling 4's exclusions are untouched — no concealment, no `AdvanceConceal`, no
+`believedWitnesses`, no denial-outcome change, and no ruling on `0.9 × Loyalty` versus `0.4`. The
+deferred list above stands unaltered.

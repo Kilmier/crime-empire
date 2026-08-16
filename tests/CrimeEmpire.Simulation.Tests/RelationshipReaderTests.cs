@@ -127,18 +127,57 @@ public sealed class RelationshipReaderTests
         // The bond is positive and the grievance is a separate negative offset, not folded in.
         Assert.True(loyalty.Value > 0,
             "the bond floored to zero, which is the clamp this ruling removed");
-        Assert.Equal(-0.50 * 0.60, loyalty.GrievanceOffset, 9);
+        Assert.Equal(-0.50 * 0.60, loyalty.GrievancePart, 9);
 
         // The coefficient is preserved exactly. Milestone 008 was forbidden to tune it.
         Assert.Equal(0.50, Utility.LoyaltyReading.GrievanceWeight, 9);
     }
 
     /// <summary>
-    /// And at a reader: two components, separately named and separately tagged, at that reader's own
-    /// coefficient. Before this, one number arrived and nothing downstream could take it apart.
+    /// The invariant the whole split rests on: the three parts sum to the bond exactly.
+    ///
+    /// The bond used to be <c>Math.Clamp(…, 0, 1)</c>, and a clamp that binds cannot be split —
+    /// there is no honest way to say how much of a clamped total each part contributed. It could
+    /// never bind: the weights total exactly 1.0, `Trust` and `Obligation` are clamped to [0,1] by
+    /// `Relations` on every write, and `Belonging` is a drive in the same range. Removing it is what
+    /// makes emitting the parts separately equal to emitting the sum, which is why the corrective
+    /// commit preserved every total, choice and downstream figure.
+    ///
+    /// Driven at the corners rather than at the seeded values, because the corner is where a clamp
+    /// would have shown up.
+    /// </summary>
+    [Theory]
+    [InlineData(0.0, 0.0, 0.0)]
+    [InlineData(1.0, 1.0, 1.0)]
+    [InlineData(1.0, 0.0, 0.0)]
+    [InlineData(0.0, 1.0, 1.0)]
+    [InlineData(0.45, 0.35, 0.35)]
+    public void The_parts_sum_to_the_bond_across_the_whole_range(
+        double trust, double obligation, double belonging)
+    {
+        var loyalty = new Utility.LoyaltyReading(trust, obligation, belonging, Grievance: 0);
+
+        Assert.Equal(loyalty.TrustPart + loyalty.ObligationPart + loyalty.BelongingPart,
+                     loyalty.Value, 12);
+
+        // And the sum stays inside [0,1], which is why the clamp was redundant rather than merely
+        // inconvenient.
+        Assert.InRange(loyalty.Value, 0.0, 1.0);
+    }
+
+    /// <summary>
+    /// Ruling 3 in full, and the corrective commit's subject: at a reader, <b>four</b> contributions
+    /// arrive as four components, each carrying exactly one facet.
+    ///
+    /// The first implementation emitted three of them fused into a single component tagged
+    /// <c>Trust | Obligation | Belonging</c>. They were separately computed and not separately
+    /// inspectable, so nothing downstream could say how much of a score was trust and how much was
+    /// obligation — which is the distinction the ruling exists to preserve. That is this project's
+    /// signature defect: a value taken apart in one place and put back together on the way to the
+    /// next.
     /// </summary>
     [Fact]
-    public void A_reader_reports_the_bond_and_the_grievance_as_two_components()
+    public void A_reader_reports_all_four_contributions_as_separate_components()
     {
         var world = Cast.Build(42, "baseline");
         var tommy = world.Get("tommy");
@@ -149,20 +188,94 @@ public sealed class RelationshipReaderTests
         { TargetId = "vincent", Domain = Cast.Harbour };
 
         var breakdown = Score(tommy, candidate, world);
-        var channel = breakdown.RelationshipComponents().ToList();
-
-        var bond = channel.Single(c => c.Reads.HasFlag(RelationshipFacet.Trust));
-        var grievance = channel.Single(c => c.Reads == RelationshipFacet.Grievance);
-
-        Assert.NotEqual(bond.Explanation, grievance.Explanation);
-
         var loyalty = Utility.Loyalty(tommy.View, tommy.Psychology, "vincent");
-        Assert.Equal(0.7 * loyalty.Value, bond.Value, 9);
-        Assert.Equal(0.7 * loyalty.GrievanceOffset, grievance.Value, 9);
 
-        // The grievance is entirely relational; the bond is not, because Belonging is a drive.
-        Assert.Equal(grievance.Value, grievance.RelationshipShare, 9);
-        Assert.Equal(0.7 * loyalty.BareValue, bond.RelationshipFreeValue, 9);
+        // Exactly one component per facet, and each carries that facet alone — never a union.
+        var trust = breakdown.Components.Single(c => c.Reads == RelationshipFacet.Trust);
+        var obligation = breakdown.Components.Single(c => c.Reads == RelationshipFacet.Obligation);
+        var belonging = breakdown.Components.Single(c => c.Reads == RelationshipFacet.Belonging);
+        var grievance = breakdown.Components.Single(c => c.Reads == RelationshipFacet.Grievance);
+
+        // Each is that reader's coefficient applied to that contribution alone.
+        Assert.Equal(0.7 * loyalty.TrustPart, trust.Value, 9);
+        Assert.Equal(0.7 * loyalty.ObligationPart, obligation.Value, 9);
+        Assert.Equal(0.7 * loyalty.BelongingPart, belonging.Value, 9);
+        Assert.Equal(0.7 * loyalty.GrievancePart, grievance.Value, 9);
+
+        // Four distinct explanations. Identical text would have folded them back together in `Add`,
+        // which is the same defect wearing a different hat.
+        var explanations = new[] { trust, obligation, belonging, grievance }
+            .Select(c => c.Explanation).ToList();
+        Assert.Equal(4, explanations.Distinct().Count());
+
+        // Belonging alone survives the counterfactual: it is a drive, not something owed to anybody.
+        Assert.Equal(0.0, trust.RelationshipFreeValue, 9);
+        Assert.Equal(0.0, obligation.RelationshipFreeValue, 9);
+        Assert.Equal(0.0, grievance.RelationshipFreeValue, 9);
+        Assert.Equal(belonging.Value, belonging.RelationshipFreeValue, 9);
+        Assert.Equal(0.0, belonging.RelationshipShare, 9);
+    }
+
+    /// <summary>
+    /// Each facet moves independently: changing one dimension moves its own component and no other.
+    ///
+    /// This is what "separately inspectable" has to mean to be worth anything. A fused component
+    /// would pass every assertion about totals and fail this one.
+    /// </summary>
+    [Fact]
+    public void Moving_one_dimension_moves_only_its_own_component()
+    {
+        double Component(RelationshipFacet facet, double trust, double obligation, double grievance)
+        {
+            var world = Cast.Build(42, "baseline");
+            var tommy = world.Get("tommy");
+            Relations.Establish(tommy, "vincent", trust: trust, obligation: obligation);
+            if (grievance > 0)
+                Relations.RaiseGrievance(tommy, new Grievance("vincent", "held", grievance, At));
+
+            var candidate = new Candidate(
+                "report:vincent", ActionKind.ReportToSuperior, "test", "report in")
+            { TargetId = "vincent", Domain = Cast.Harbour };
+
+            return Score(tommy, candidate, world).Components
+                .Where(c => c.Reads == facet).Sum(c => c.Value);
+        }
+
+        // Raising trust alone moves the trust component and leaves the other three untouched.
+        Assert.NotEqual(Component(RelationshipFacet.Trust, 0.10, 0.05, 0.60),
+                        Component(RelationshipFacet.Trust, 0.90, 0.05, 0.60));
+        Assert.Equal(Component(RelationshipFacet.Obligation, 0.10, 0.05, 0.60),
+                     Component(RelationshipFacet.Obligation, 0.90, 0.05, 0.60), 9);
+        Assert.Equal(Component(RelationshipFacet.Grievance, 0.10, 0.05, 0.60),
+                     Component(RelationshipFacet.Grievance, 0.90, 0.05, 0.60), 9);
+
+        // And raising obligation alone moves obligation, not trust.
+        Assert.NotEqual(Component(RelationshipFacet.Obligation, 0.10, 0.05, 0.60),
+                        Component(RelationshipFacet.Obligation, 0.10, 0.95, 0.60));
+        Assert.Equal(Component(RelationshipFacet.Trust, 0.10, 0.05, 0.60),
+                     Component(RelationshipFacet.Trust, 0.10, 0.95, 0.60), 9);
+    }
+
+    /// <summary>
+    /// No component anywhere in a natural run carries more than one facet.
+    ///
+    /// The general form of the finding, asserted across all five variants rather than at one staged
+    /// candidate — because the defect was in a shared helper and appeared at every loyalty reader at
+    /// once.
+    /// </summary>
+    [Fact]
+    public void No_component_carries_more_than_one_facet()
+    {
+        foreach (var variant in Variants.All)
+            foreach (var d in Run(variant).Decisions)
+                foreach (var s in d.Scored)
+                    foreach (var c in s.Components)
+                    {
+                        int facets = System.Numerics.BitOperations.PopCount((uint)c.Reads);
+                        Assert.True(facets <= 1,
+                            $"{variant}: \"{c.Explanation}\" carries {c.Reads}. A component that " +
+                            "reads several dimensions cannot report any of them separately.");
+                    }
     }
 
     // ================================================================ the two report considerations
@@ -196,14 +309,36 @@ public sealed class RelationshipReaderTests
         var breakdown = Score(vincent, candidate, world);
         var loyalty = Utility.Loyalty(vincent.View, vincent.Psychology, "salvatore");
 
-        var standing = breakdown.Components.Single(
-            c => c.Explanation == "reporting maintains standing with his superior");
-        var candorCost = breakdown.Components.Single(
-            c => c.Explanation == "it is not what he owes the man");
+        // Each consideration is now four components, one per contribution. Listed explicitly rather
+        // than matched by prefix, because the pairing is what the test is about: these two sets must
+        // never share a phrase, or `Add` would fold them back into one.
+        string[] standingSet =
+        {
+            "reporting keeps him right with a man he trusts",
+            "reporting keeps him right with a man he owes",
+            "reporting in is part of belonging to the outfit",
+            "what he holds against the man takes the good out of reporting to him",
+        };
+        string[] candorSet =
+        {
+            "he is holding out on a man he trusts",
+            "he is holding out on a man he owes",
+            "an account with a hole in it is not what belonging asks",
+            "what he holds against him makes the omission sit easier",
+        };
+        Assert.Empty(standingSet.Intersect(candorSet));
 
-        // Both coefficients unchanged by milestone 008.
-        Assert.Equal(0.7 * loyalty.Value, standing.Value, 9);
-        Assert.Equal(-0.5 * loyalty.Value, candorCost.Value, 9);
+        double standing = breakdown.Components
+            .Where(c => standingSet.Contains(c.Explanation)).Sum(c => c.Value);
+        double candorCost = breakdown.Components
+            .Where(c => candorSet.Contains(c.Explanation)).Sum(c => c.Value);
+
+        // Both considerations survive, and both coefficients are unchanged — by milestone 008 and by
+        // its corrective commit. The bond and the grievance are summed here only to compare against
+        // the coefficient; they arrive as separate components, which its own test asserts.
+        double whole = loyalty.Value + loyalty.GrievancePart;
+        Assert.Equal(0.7 * whole, standing, 9);
+        Assert.Equal(-0.5 * whole, candorCost, 9);
 
         // The cancellation the old aggregate hid: they very nearly annihilate.
         Assert.True(breakdown.RelationshipGross() > 2 * Math.Abs(breakdown.RelationshipNet()),

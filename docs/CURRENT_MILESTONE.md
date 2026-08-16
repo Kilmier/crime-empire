@@ -10,9 +10,17 @@ do not create a separate handoff document.
 **No milestone is active. Do not start one.**
 
 Milestones 001–007 are complete and accepted. **Milestone 008 — Relationship Readers and the
-Executable Schema — is implemented and archived, and is awaiting Codex review. It is not accepted and
-not verified.** Its full record, including Matt's ten rulings reproduced verbatim, is in
+Executable Schema — is implemented and archived. Its implementation commit `7a9773b` was reviewed and
+returned one finding, which Matt accepted; one corrective commit followed and is awaiting Codex
+review. Milestone 008 is not accepted and not verified.** Its full record, including Matt's ten
+rulings reproduced verbatim and the correction appended at the foot, is in
 `docs/milestones/008-relationship-readers.md`.
+
+**The finding, in one line, because it is the third appearance of this project's signature defect:**
+ruling 3 required loyalty's four contributions to be separately inspectable, and three of them were
+emitted fused under a union flag — separately computed, then put back together on the way to the
+score. The corrective commit splits them, changes no behaviour, and pins the finding with a mutation
+that is literally the reviewed code.
 
 As with 006 and 007, the lifecycle reset this file inside the archiving commit, so **the archive is
 the only copy of milestone 008's rulings**. Ruling 10 kept the existing lifecycle deliberately; the

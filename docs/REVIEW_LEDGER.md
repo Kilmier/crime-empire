@@ -147,22 +147,34 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Awaiting review — milestone 008
+### Awaiting review — milestone 008, corrective commit
 
 **Not accepted, not verified.** Recorded here as the current measured state so a reviewer has the
 figures; acceptance requires a review naming the commit and Matt confirming it.
 
+Codex reviewed the implementation commit `7a9773b` and returned **one finding**, which Matt accepted:
+three of loyalty's four contributions were emitted fused under a `Trust | Obligation | Belonging`
+union flag, so they were separately computed and not separately inspectable as ruling 3 required. The
+corrective commit splits them.
+
 - Build: **0 warnings, 0 errors — measured after `dotnet clean`.**
-- Tests: **285 passed**, 0 failed (276 before the milestone).
+- Tests: **292 passed**, 0 failed (285 at `7a9773b`, 276 before the milestone).
 - Five variants, deterministic on repeated runs.
 
 | Variant | Hash | Decisions | Reports | Requests | Conflicts | Rel. read | Rel. decided |
 |---|---|---|---|---|---|---|---|
-| baseline | `3BA97219464FC2E4` | 38 | 6 | 5 | 2 | 19 | 2 |
-| cautious-vincent | `EC664E9FB52010B7` | 21 | 2 | 4 | 3 | 12 | 3 |
-| watchful-boss | `51AB00158218ACD0` | 39 | 7 | 5 | 2 | 18 | 3 |
-| disloyal-vincent | `709F0B6E4B90A2F4` | 39 | 6 | 5 | 2 | 20 | 1 |
-| resentful-tommy | `3D91B931EC2DAF3B` | 38 | 7 | 5 | 2 | 19 | 3 |
+| baseline | `20DD67E8CA4CB5AD` | 38 | 6 | 5 | 2 | 19 | 2 |
+| cautious-vincent | `D2D070005176426D` | 21 | 2 | 4 | 3 | 12 | 3 |
+| watchful-boss | `6FC6D3243B0020E1` | 39 | 7 | 5 | 2 | 18 | 3 |
+| disloyal-vincent | `5A91CFE9F3532E63` | 39 | 6 | 5 | 2 | 20 | 1 |
+| resentful-tommy | `947BD13F07FE2AEA` | 38 | 7 | 5 | 2 | 19 | 3 |
+
+**The corrective commit changed no behaviour, and that was verified directly rather than argued.**
+`7a9773b` was built in a scratch worktree and every variant diffed line by line, excluding only the
+reason list and the diagnostic block: scores, choices, outcomes and end-of-run world state are
+**identical in all five**. Every chosen-action digest is byte-identical. Trace hashes move solely
+through the two excluded blocks. Hashes at `7a9773b` were `3BA97219464FC2E4` / `EC664E9FB52010B7` /
+`51AB00158218ACD0` / `709F0B6E4B90A2F4` / `3D91B931EC2DAF3B`.
 
 `--compare` reports **five distinct traces and five distinct chosen-action sequences**. That second
 figure was four at milestone 007, and the change is the milestone's behavioural result: at seed 42
@@ -377,6 +389,13 @@ Future changes should retain coverage for:
 - A score component's relationship derivation is read from the facet it was tagged with at the point
   of computation, never from its component name. A term named "relationship effects" that reads only
   a trait must be tagged `None` and must not appear in the relationship channel.
+- **No score component carries more than one facet.** Each of loyalty's four contributions — trust,
+  obligation, Belonging, grievance — is emitted as its own component, and moving one dimension moves
+  only its own component. Separately computed then summed is not separately inspectable.
+- The bond is an unclamped sum of its parts, so emitting the parts equals emitting the sum. A clamp
+  reintroduced there cannot be split honestly and must fail.
+- Belonging appears in the diagnostic listing but contributes zero to gross, net and the
+  counterfactual. It is a drive, not relationship state.
 - Every retained relationship dimension is read by some decision in a natural run of all five
   variants. A dimension with no reader is removed rather than given a purpose to justify keeping it.
 - Grievance is applied outside the clamped loyalty sum, as its own named component at each reader.

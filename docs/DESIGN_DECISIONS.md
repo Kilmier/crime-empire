@@ -170,10 +170,22 @@ changed **no coefficient**; everything here is about shape.
   `0.50` coefficient is preserved exactly and remains provisional tuning. A cap on grievance was
   considered as the alternative remedy and **explicitly rejected**, so whether one is wanted is open,
   not answered.
-- **Loyalty is derived and is read as parts, never as a scalar.** Trust, obligation, Belonging and
-  grievance stay separately inspectable all the way through the scoring path. `Belonging` is a drive,
-  not a relationship dimension, and is excluded from the relationship counterfactual: a man with no
+- **Loyalty is derived, and each of its four contributions is emitted as its own score component
+  carrying exactly one facet.** Trust, obligation, Belonging and grievance stay separately inspectable
+  all the way through the scoring path — separately *computed* is not enough, and the first
+  implementation fused three of them under a `Trust | Obligation | Belonging` union flag, which Codex
+  found. `Belonging` is a drive, not a relationship dimension: it is listed in the diagnostic for
+  completeness and excluded from gross, net and the counterfactual, because a man with no
   relationships still has a need to belong.
+- **The bond is an unclamped sum, and the clamp it lost could never have fired.** The three weights
+  total exactly `1.0` and every input is in `[0,1]`, so `Math.Clamp(…, 0, 1)` was a guarantee by
+  politeness. It had to go because a clamp that binds cannot be split: there is no honest way to
+  apportion a clamped total among its parts. Removing it is what makes emitting the parts exactly
+  equal to emitting the sum, which is why the correction preserved every score, choice and downstream
+  figure.
+- **A reader whose loyalty term is affine emits its constant separately, with no facet.** Retaliation
+  risk and policy reluctance both read `−(a + b × loyalty) × …`; the `a` is not relational, because
+  moving on anybody is a serious step and a rule weighs something whoever set it.
 - **A report carries two distinct relationship considerations, and both are kept.** The standing
   reporting buys (`+0.7 × loyalty`) and the relationship cost of the candour selected (`+0.8` candid,
   `−0.5` partial, `−1.4` false) are not one effect. On a partial report they net to `0.2 × loyalty`,

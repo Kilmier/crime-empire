@@ -83,10 +83,22 @@ public sealed record ScoreBreakdown(
     // printed no relationship line at all for a candidate whose net relationship contribution was the
     // number being reported. A cutoff that hides a cancelling pair hides exactly the cancellation.
 
-    /// <summary>Every component that read relationship state, in emission order. No cutoff.</summary>
+    /// <summary>
+    /// Every component derived from a named facet, in emission order. No cutoff.
+    ///
+    /// <b>Includes <see cref="RelationshipFacet.Belonging"/>, which is not relationship state.</b>
+    /// It is listed because it is the fourth contribution to loyalty and a reader decomposing a
+    /// loyalty term needs to see all four — but its <see cref="ScoreComponent.RelationshipShare"/> is
+    /// zero, so it contributes nothing to <see cref="RelationshipGross"/>,
+    /// <see cref="RelationshipNet"/>, or the counterfactual. Shown as context, never counted as
+    /// relational. Sweeping Belonging into a figure reported as relational is precisely the
+    /// conflation the facets were introduced to end.
+    ///
+    /// Components with no facet are excluded, which is what keeps <c>SeekCorroboration</c>'s
+    /// "going behind X" — a pure trait term named "relationship effects" — out of the channel.
+    /// </summary>
     public IEnumerable<ScoreComponent> RelationshipComponents()
-        => Components.Where(c => (c.Reads & RelationshipFacet.Relational) != 0
-                                 || c.RelationshipShare != 0);
+        => Components.Where(c => c.Reads != RelationshipFacet.None);
 
     /// <summary>
     /// The sum of the absolute gross values of the relationship components.
@@ -184,18 +196,46 @@ public static class Utility
         /// </summary>
         public const double GrievanceWeight = 0.50;
 
-        /// <summary>What binds him, before anything he holds against the man.</summary>
-        public double Value => Math.Clamp(
-            TrustWeight * Trust + ObligationWeight * Obligation + BelongingWeight * Belonging, 0, 1);
+        // The four contributions, kept apart all the way to the score.
+        //
+        // Milestone 008 originally computed these, summed them, and handed every reader one number
+        // tagged `Trust | Obligation | Belonging`. That satisfied the letter of "grievance is its own
+        // contribution" and missed the rest of ruling 3: three of the four were separately *computed*
+        // and not separately *inspectable*, which is this project's signature defect — a distinction
+        // drawn in one place and dropped on the way to the next. Codex found it. Readers now emit one
+        // component per contribution.
+
+        /// <summary>What trust in this person is worth toward the bond.</summary>
+        public double TrustPart => TrustWeight * Trust;
+
+        /// <summary>What he owes this person, toward the bond.</summary>
+        public double ObligationPart => ObligationWeight * Obligation;
 
         /// <summary>
-        /// The same figure for a man with no relationship at all. Belonging survives, because a need
-        /// to belong is psychology and is not owed to anybody in particular.
+        /// What his need to belong contributes. A drive, not a relationship dimension — it survives
+        /// the relationship counterfactual, because a man with nobody still wants to belong.
         /// </summary>
-        public double BareValue => Math.Clamp(BelongingWeight * Belonging, 0, 1);
+        public double BelongingPart => BelongingWeight * Belonging;
 
         /// <summary>What he holds against the man, as a negative offset. Never clamped away.</summary>
-        public double GrievanceOffset => -GrievanceWeight * Grievance;
+        public double GrievancePart => -GrievanceWeight * Grievance;
+
+        /// <summary>
+        /// The bond, as the sum of its three parts.
+        ///
+        /// <b>No clamp, and the clamp it lost could never have fired.</b> It used to read
+        /// <c>Math.Clamp(…, 0, 1)</c>. The three weights total exactly <c>1.0</c>; <c>Trust</c> and
+        /// <c>Obligation</c> are clamped to <c>[0,1]</c> by <see cref="CrimeSim.Domain.Relations"/> on
+        /// every write, and <c>Belonging</c> is a drive documented in the same range. The sum is
+        /// therefore always in <c>[0,1]</c> and the clamp was a guarantee by politeness.
+        ///
+        /// It mattered here because a clamp that binds cannot be split: there would be no honest way
+        /// to say how much of a clamped total each part contributed. Removing it is what makes
+        /// emitting the parts separately exactly equal to emitting the sum, which is why totals,
+        /// choices and every downstream figure are preserved. Pinned by
+        /// <c>The_parts_sum_to_the_bond_across_the_whole_range</c>.
+        /// </summary>
+        public double Value => TrustPart + ObligationPart + BelongingPart;
 
         public bool HasGrievance => Grievance > 1e-9;
     }
@@ -239,18 +279,29 @@ public static class Utility
             else parts.Add(new ScoreComponent(name, value, why, reads, withoutRelationship));
         }
 
-        // Loyalty is read as parts and emitted as parts. Two components, always in this order:
-        // what binds him, and what he holds against the man. Ruling 3 — grievance is its own named
-        // contribution at every reader, not a term buried inside a clamped scalar.
-        const RelationshipFacet Bond =
-            RelationshipFacet.Trust | RelationshipFacet.Obligation | RelationshipFacet.Belonging;
-
-        void AddLoyalty(string name, double coefficient, LoyaltyReading loyalty, string why,
-                        string grievanceWhy)
+        // Loyalty is read as parts and emitted as parts — one component per contribution, each
+        // carrying exactly one facet. Ruling 3 in full: trust, obligation, Belonging and grievance
+        // are each separately inspectable through the scoring path, not merely separately computed
+        // before being summed.
+        //
+        // Every explanation must be distinct per consideration as well as per facet. A report
+        // candidate passes through two readers — the standing reporting buys, and the cost of the
+        // candour selected — and `Add` folds on (name, explanation), so reusing a phrase between them
+        // would silently merge two contributions ruling 2 requires to stay apart.
+        //
+        // Belonging alone survives the counterfactual: it is a drive, and a man with no relationships
+        // still has one.
+        void AddLoyaltyParts(
+            string name, double coefficient, LoyaltyReading loyalty,
+            string trustWhy, string obligationWhy, string belongingWhy, string grievanceWhy)
         {
-            Add(name, coefficient * loyalty.Value, why, Bond, coefficient * loyalty.BareValue);
+            Add(name, coefficient * loyalty.TrustPart, trustWhy, RelationshipFacet.Trust, 0);
+            Add(name, coefficient * loyalty.ObligationPart, obligationWhy,
+                RelationshipFacet.Obligation, 0);
+            Add(name, coefficient * loyalty.BelongingPart, belongingWhy,
+                RelationshipFacet.Belonging, coefficient * loyalty.BelongingPart);
             if (loyalty.HasGrievance)
-                Add(name, coefficient * loyalty.GrievanceOffset, grievanceWhy,
+                Add(name, coefficient * loyalty.GrievancePart, grievanceWhy,
                     RelationshipFacet.Grievance, 0);
         }
 
@@ -287,13 +338,17 @@ public static class Utility
         switch (cand.Kind)
         {
             case ActionKind.DelegateStrategy when cand.TargetId is not null:
-                AddLoyalty("relationship effects", 0.9, Loyalty(actor, psy, cand.TargetId),
-                    $"he expects {cand.TargetId} to carry it out for him",
+                AddLoyaltyParts("relationship effects", 0.9, Loyalty(actor, psy, cand.TargetId),
+                    $"he trusts {cand.TargetId} to carry it out for him",
+                    $"what he owes {cand.TargetId} makes handing it over natural",
+                    "putting work through his own people is what belonging looks like",
                     $"what he holds against {cand.TargetId} makes him a worse bet");
                 break;
             case ActionKind.ReportToSuperior when cand.TargetId is not null:
-                AddLoyalty("relationship effects", 0.7, Loyalty(actor, psy, cand.TargetId),
-                    "reporting maintains standing with his superior",
+                AddLoyaltyParts("relationship effects", 0.7, Loyalty(actor, psy, cand.TargetId),
+                    "reporting keeps him right with a man he trusts",
+                    "reporting keeps him right with a man he owes",
+                    "reporting in is part of belonging to the outfit",
                     "what he holds against the man takes the good out of reporting to him");
                 break;
             case ActionKind.Retaliate when cand.TargetId is not null:
@@ -371,18 +426,19 @@ public static class Utility
             // Moving on someone you are bound to is dangerous in proportion to how bound you are.
             var loyalty = Loyalty(actor, psy, cand.TargetId);
             double nerve = 1 - 0.4 * aggressive;
-            Add("perceived personal risk", -(1.3 + 2.2 * loyalty.Value) * nerve,
-                "going after him would be a serious step",
-                Bond, -(1.3 + 2.2 * loyalty.BareValue) * nerve);
 
-            // The grievance half, separated. It reduces the danger rather than adding to it, which
-            // is the point: a man with something against you is closer to moving on you. Buried
-            // inside the old clamped scalar this was invisible, and floored out entirely once the
-            // sum hit zero.
-            if (loyalty.HasGrievance)
-                Add("perceived personal risk", -2.2 * loyalty.GrievanceOffset * nerve,
-                    "what he holds against him makes the step feel less serious",
-                    RelationshipFacet.Grievance, 0);
+            // The flat part of the danger is not relational: moving on anybody is a serious step.
+            Add("perceived personal risk", -1.3 * nerve,
+                "going after him would be a serious step");
+
+            // And the part that depends on how bound to him he is, one component per binding.
+            // Grievance reduces the danger rather than adding to it, which is the point: a man with
+            // something against you is closer to moving on you.
+            AddLoyaltyParts("perceived personal risk", -2.2 * nerve, loyalty,
+                "he would be moving on a man he trusts",
+                "he would be moving on a man he owes",
+                "moving on his own would cost him his place",
+                "what he holds against him makes the step feel less serious");
         }
 
         if (cand.Kind is ActionKind.Concede or ActionKind.Refuse)
@@ -424,16 +480,19 @@ public static class Utility
             var loyalty = Loyalty(actor, psy, cand.PolicyIssuerId);
             // Pride reduces deference: a proud man discounts a rule he did not set.
             double scale = cand.BreachesPolicyStrength * (1 - 0.55 * proud) * 2.4;
-            Add("reluctance to breach policy", -(0.6 + 1.2 * loyalty.Value) * scale,
+
+            // The rule weighs something regardless of who set it.
+            Add("reluctance to breach policy", -0.6 * scale,
                 proud > 0.5
                     ? $"the ban weighs on him less than it should, because it is not his rule"
-                    : $"it would defy {cand.PolicyIssuerId}'s standing instruction",
-                Bond, -(0.6 + 1.2 * loyalty.BareValue) * scale);
+                    : $"it would defy {cand.PolicyIssuerId}'s standing instruction");
 
-            if (loyalty.HasGrievance)
-                Add("reluctance to breach policy", -1.2 * loyalty.GrievanceOffset * scale,
-                    $"what he holds against {cand.PolicyIssuerId} makes the rule easier to step over",
-                    RelationshipFacet.Grievance, 0);
+            // And more, or less, according to what binds him to the man who set it.
+            AddLoyaltyParts("reluctance to breach policy", -1.2 * scale, loyalty,
+                $"the rule comes from a man he trusts",
+                $"the rule comes from a man he owes",
+                "stepping over his own outfit's rule sits badly with him",
+                $"what he holds against {cand.PolicyIssuerId} makes the rule easier to step over");
         }
 
         // --- what to say when reporting -------------------------------------------------------------
@@ -481,8 +540,10 @@ public static class Utility
                 case ReportCandor.Candid when stakes > 0:
                     Add("self-protection", -2.0 * stakes,
                         "telling him straight means handing over the part that damns him");
-                    AddLoyalty("relationship effects", 0.8, loyalty,
-                        "he would rather his superior heard it from him than from someone else",
+                    AddLoyaltyParts("relationship effects", 0.8, loyalty,
+                        "he would rather a man he trusts heard it from him than from someone else",
+                        "a man he owes has a straight account coming to him",
+                        "coming clean is what belonging asks of him",
                         "what he holds against him takes the value out of coming clean");
                     break;
 
@@ -490,8 +551,10 @@ public static class Utility
                     Add("self-protection", protection, "what he leaves out cannot be held against him");
                     Add("perceived personal risk", -1.1 * believedWitnesses,
                         "an account with a hole in it invites the question he cannot answer");
-                    AddLoyalty("relationship effects", -0.5, loyalty,
-                        "it is not what he owes the man",
+                    AddLoyaltyParts("relationship effects", -0.5, loyalty,
+                        "he is holding out on a man he trusts",
+                        "he is holding out on a man he owes",
+                        "an account with a hole in it is not what belonging asks",
                         "what he holds against him makes the omission sit easier");
                     break;
 
@@ -508,8 +571,10 @@ public static class Utility
                         believedWitnesses > 0.4
                             ? "he thinks there were people on that street who saw him"
                             : "he does not think anyone can put him there");
-                    AddLoyalty("relationship effects", -1.4, loyalty,
-                        "he would be lying to his own boss",
+                    AddLoyaltyParts("relationship effects", -1.4, loyalty,
+                        "he would be lying to a man he trusts",
+                        "he would be lying to a man he owes",
+                        "lying to his own is the opposite of belonging",
                         "what he holds against him makes lying to him sit easier");
                     break;
             }

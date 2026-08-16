@@ -123,13 +123,22 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   shops need two owners. Codex found the breach and Matt accepted it as a bounded scenario-fixture
   exception on 2026-08-16, stating that it authorizes neither broader cast growth nor relaxed scope
   discipline. A seventh character needs its own ruling first.
-- **Candidate descriptions are developer-shaped, and the player now reads them.** They are generated
-  only from the actor's `PerceivedSituation`, so they cannot carry a fact he lacks — but they name raw
-  ids (`have tommy handle …`, `strong-arm bellini-grocery`) and embed `Claim.ToString()`, which prints
-  a truth-log `EventId` as a `#7` correlation suffix. Honest and ugly. The fix is a player-facing
-  description vocabulary, which is a milestone-sized decision rather than a tidy-up — and changing
-  `Claim.ToString()` instead would move every accepted trace hash for a wording reason. Surfaced by
-  milestone 009 and deliberately outside it.
+- ~~**Candidate descriptions are developer-shaped, and the player now reads them.**~~ **Retired
+  2026-08-16 by milestone 009's first correction, and the deferral was wrong.** The reasoning had been
+  that a player-facing description vocabulary would be "a second implementation to drift against the
+  first" — the wrong comparison, since the developer description and the player description are not
+  two implementations of one thing but two different things. `PlayerOption` now builds the wording
+  from the candidate's typed fields, so no generator string and no truth-log `EventId` reaches the
+  player, and the interface reads properly besides.
+- **The timing of a pause is itself observable, and the occasion fix does not close it.** The
+  controlled character is woken when a delegated operation blocks or completes, so a player sees him
+  stop on the day it happened even though the interface says nothing about why. Closing it would mean
+  not waking him, which changes autonomous behaviour. Surfaced by milestone 009's first correction.
+- **`Generators.FromRelationship` draws a corroboration target from the whole organisation's
+  membership**, not from people the character has heard of — `ctx.OrgMemberIds` is rank-blind and
+  belief-blind. Inert in a three-member outfit and wrong in principle, and more visible since the
+  player-facing option wording resolves ids to names. Pre-existing; surfaced, not introduced, by
+  milestone 009.
 - **The player cannot see why an option is unavailable.** Rejected candidates are hidden per milestone
   009's scope, which is right for utility scores and arguably wrong for "he does not know that the
   bakery is holding out" — the single most legible line in a decision trace, and the one that proves

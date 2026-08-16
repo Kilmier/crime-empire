@@ -50,6 +50,14 @@ public sealed class SimulationSession
     private PendingDecision? _pending;
 
     /// <summary>
+    /// Opaque option token to candidate id, for the decision currently in front of the player.
+    ///
+    /// Rebuilt with each pause and never outlives one, so a token from an earlier decision cannot be
+    /// applied to a later one.
+    /// </summary>
+    private readonly Dictionary<string, string> _optionIds = new(StringComparer.Ordinal);
+
+    /// <summary>
     /// The player-facing calendar, which is not <see cref="World.Now"/>.
     ///
     /// <c>World.Now</c> is the time of the last event actually processed; this is how far the player
@@ -201,8 +209,14 @@ public sealed class SimulationSession
     /// an NPC chooses. There is no player action implementation and no player-only branch anywhere
     /// beneath this call.
     ///
-    /// An id that names something not open to him throws, and throws before anything is mutated, so
-    /// a rejected choice leaves the session exactly where it was and the player can choose again.
+    /// A token that names nothing open to him throws, and throws before anything is mutated, so a
+    /// rejected choice leaves the session exactly where it was and the player can choose again.
+    ///
+    /// <paramref name="optionId"/> is the opaque token from <see cref="PendingOption.Id"/>, not a
+    /// candidate id — see <see cref="PendingOption"/> for why the candidate id does not cross the
+    /// boundary. The token is translated back here and the translated id is then put to
+    /// <see cref="Pipeline.Resolve"/>, which remains the sole authority on whether an action was open
+    /// to him: this method never decides that question and never falls back to a default.
     /// </summary>
     public void Choose(string optionId)
     {
@@ -210,13 +224,17 @@ public sealed class SimulationSession
             throw new InvalidOperationException(
                 "nothing is waiting on a choice; the controlled character is not mid-deliberation.");
 
-        // Resolve validates the id against the candidates that survived his own filters and throws
-        // before touching any state. Nulling the pending decision only after it returns is what
-        // makes a rejected choice recoverable rather than wedging the session.
-        Pipeline.Resolve(prepared, optionId);
+        if (!_optionIds.TryGetValue(optionId, out string? candidateId))
+            throw new SimulationInvariantException(
+                $"'{optionId}' is not one of the options {prepared.Actor.Id} was offered at " +
+                $"{prepared.At:O}. A choice names an option from the pending decision it answers.");
 
-        _prepared = null;
-        _pending = null;
+        // Resolve validates the candidate against the ones that survived his own filters and throws
+        // before touching any state. Clearing the pending decision only after it returns is what
+        // makes a rejected choice recoverable rather than wedging the session.
+        Pipeline.Resolve(prepared, candidateId);
+
+        ClearPending();
         Resume();
     }
 
@@ -236,8 +254,7 @@ public sealed class SimulationSession
 
         Pipeline.Resolve(prepared, null);
 
-        _prepared = null;
-        _pending = null;
+        ClearPending();
         Resume();
     }
 
@@ -257,7 +274,7 @@ public sealed class SimulationSession
             if (step.Status == StepStatus.AwaitingChoice)
             {
                 _prepared = step.Awaiting;
-                _pending = Project(step.Awaiting!);
+                _pending = Project(step.Awaiting!, _optionIds, NameIn(_world));
                 Reached(_world.Now);
                 return;
             }
@@ -296,19 +313,73 @@ public sealed class SimulationSession
                 "how long somebody took to answer.");
     }
 
+    private void ClearPending()
+    {
+        _prepared = null;
+        _pending = null;
+        _optionIds.Clear();
+    }
+
+    /// <summary>Display names, which are public knowledge. The only thing the world is asked for here.</summary>
+    private static Func<string, string> NameIn(World world)
+        => id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id;
+
     /// <summary>
-    /// The player-facing projection of a stopped deliberation. Reads
-    /// <see cref="PreparedDecision.Available"/> and three descriptive strings, and nothing else —
-    /// see <see cref="PendingDecision"/> for what each is and why it is admissible.
+    /// The player-facing projection of a stopped deliberation.
+    ///
+    /// <b>Nothing authored by a generator or a scheduler crosses here.</b> The occasion and the focus
+    /// come from <see cref="PlayerOccasion"/>'s closed vocabulary and are null when nothing can
+    /// honestly be said; each option's wording comes from <see cref="PlayerOption"/>, built from the
+    /// candidate's typed fields; and each option's id is an opaque token rather than the candidate id.
+    /// The three things that used to pass through verbatim — <c>Trigger.Cause</c>,
+    /// <c>Agenda.Description</c> and <c>Candidate.Description</c> — were all developer text, and the
+    /// first two carried a delegated operation's outcome to an owner nobody had told.
+    ///
+    /// Internal rather than private so a staged test can drive it directly with a world it built,
+    /// which is the only way to exercise the delegated-outcome case deterministically.
     /// </summary>
-    private static PendingDecision Project(PreparedDecision prepared) => new(
-        prepared.At,
-        prepared.Actor.Id,
-        prepared.Actor.Name,
-        prepared.Actor.RoleTitle,
-        prepared.Trigger.Cause,
-        prepared.Agenda.Description,
-        prepared.Available
-            .Select(c => new PendingOption(c.Id, c.Description))
-            .ToList());
+    internal static PendingDecision Project(
+        PreparedDecision prepared,
+        IDictionary<string, string> optionIds,
+        Func<string, string> name)
+    {
+        optionIds.Clear();
+
+        var options = new List<PendingOption>(prepared.Available.Count);
+        foreach (var candidate in prepared.Available)
+        {
+            string token = Token(candidate.Id);
+
+            // Fail closed. Two candidates sharing a token would make one of them unchoosable and the
+            // other choosable under somebody else's name; 48 bits makes it vanishingly unlikely and
+            // silence about it would make it undiagnosable.
+            if (!optionIds.TryAdd(token, candidate.Id))
+                throw new SimulationInvariantException(
+                    $"option token collision at {prepared.Actor.Id}'s decision: '{candidate.Id}' and " +
+                    $"'{optionIds[token]}' both hash to '{token}'.");
+
+            options.Add(new PendingOption(token, PlayerOption.Describe(candidate, name)));
+        }
+
+        return new PendingDecision(
+            prepared.At,
+            prepared.Actor.Id,
+            prepared.Actor.Name,
+            prepared.Actor.RoleTitle,
+            PlayerOccasion.For(prepared.Trigger.Kind),
+            PlayerOccasion.Focus(prepared.Agenda, prepared.Trigger.Kind),
+            options);
+    }
+
+    /// <summary>
+    /// A stable, meaningless handle for a candidate.
+    ///
+    /// Deterministic, because identical inputs must produce identical runs and a token the player
+    /// pressed has to mean the same thing on a replay. Opaque, because the candidate id is developer
+    /// data — it embeds <c>Claim.ToString()</c>, which prints the truth-log <c>EventId</c>.
+    /// </summary>
+    private static string Token(string candidateId)
+        => Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(candidateId)))[..12].ToLowerInvariant();
 }

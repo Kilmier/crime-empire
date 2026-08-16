@@ -14,7 +14,7 @@ public sealed record PlayerPerson(string Id, string Name);
 /// number.
 /// </summary>
 public sealed record PlayerBelief(
-    Claim Claim,
+    PlayerClaim Claim,
     string Statement,
     DateTime AcquiredAt,
     DateTime ReconsideredAt,
@@ -31,11 +31,15 @@ public sealed record PlayerAccount(string SourceId, string SourceName, bool Affi
 /// one of his own — listed among them rather than above them as the answer.
 /// </summary>
 public sealed record PlayerDisagreement(
-    Claim Claim,
+    PlayerClaim Claim,
     string Statement,
     string? OwnBasis,
     bool OwnPositionHeld,
-    IReadOnlyList<PlayerAccount> Accounts);
+    IReadOnlyList<PlayerAccount> Accounts)
+{
+    /// <summary>Frozen at construction — see <see cref="Frozen"/>.</summary>
+    public IReadOnlyList<PlayerAccount> Accounts { get; init; } = Frozen.List(Accounts);
+}
 
 /// <summary>
 /// How he takes one person. His own attitude outward, never anything about what they make of him,
@@ -46,7 +50,11 @@ public sealed record PlayerAttitude(
     string PersonName,
     string Standing,
     string? Wariness,
-    IReadOnlyList<string> Grievances);
+    IReadOnlyList<string> Grievances)
+{
+    /// <summary>Frozen at construction — see <see cref="Frozen"/>.</summary>
+    public IReadOnlyList<string> Grievances { get; init; } = Frozen.List(Grievances);
+}
 
 /// <summary>
 /// Everything one character could tell you, at one moment, as immutable data.
@@ -60,7 +68,10 @@ public sealed record PlayerAttitude(
 ///
 /// It is a snapshot rather than a live view on purpose. A UI holding a reference into the running
 /// world would be one property access away from the truth log; a record built once and handed over
-/// cannot become more revealing later.
+/// cannot become more revealing later. <b>Every collection below is frozen at construction</b> — an
+/// <c>IReadOnlyList&lt;T&gt;</c> backed by a <c>List&lt;T&gt;</c> is read-only by politeness and can
+/// be cast straight back, which is the same defect milestone 006 fixed on relationship grievances and
+/// milestone 009's review found again here.
 /// </summary>
 public sealed record PlayerSnapshot(
     DateTime Date,
@@ -72,7 +83,15 @@ public sealed record PlayerSnapshot(
     IReadOnlyList<PlayerDisagreement> Disagreements,
     IReadOnlyList<PlayerAttitude> Attitudes,
     IReadOnlyList<PlayerBelief> Unsettled,
-    IReadOnlyList<PlayerPerson> Silent);
+    IReadOnlyList<PlayerPerson> Silent)
+{
+    public IReadOnlyList<PlayerBelief> Known { get; init; } = Frozen.List(Known);
+    public IReadOnlyList<PlayerBelief> Recent { get; init; } = Frozen.List(Recent);
+    public IReadOnlyList<PlayerDisagreement> Disagreements { get; init; } = Frozen.List(Disagreements);
+    public IReadOnlyList<PlayerAttitude> Attitudes { get; init; } = Frozen.List(Attitudes);
+    public IReadOnlyList<PlayerBelief> Unsettled { get; init; } = Frozen.List(Unsettled);
+    public IReadOnlyList<PlayerPerson> Silent { get; init; } = Frozen.List(Silent);
+}
 
 /// <summary>
 /// The one place that decides what a viewpoint character may be shown.
@@ -110,7 +129,8 @@ public static class PlayerView
         {
             bool contested = who.Cognition.IsContested(r.Claim);
             return new PlayerBelief(
-                r.Claim,
+                // The predicate crosses, the truth-log counter does not. See PlayerClaim.
+                PlayerClaim.Of(r.Claim),
                 PlayerNarration.Describe(r.Claim, Name),
                 r.AcquiredAt,
                 r.ReconsideredAt,
@@ -163,7 +183,7 @@ public static class PlayerView
                 .ToList();
 
             disagreements.Add(new PlayerDisagreement(
-                claim,
+                PlayerClaim.Of(claim),
                 PlayerNarration.Describe(claim, Name),
                 ownBasis,
                 own?.IsHeld ?? false,

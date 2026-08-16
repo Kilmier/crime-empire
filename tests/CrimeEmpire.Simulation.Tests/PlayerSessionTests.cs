@@ -1,5 +1,5 @@
-using System.Globalization;
 using System.Reflection;
+using System.Text;
 using CrimeSim.Decision;
 using CrimeSim.Domain;
 using CrimeSim.Scenario;
@@ -208,10 +208,14 @@ public sealed class PlayerSessionTests
         Assert.Equal(Controlled, pending.ActorId);
         Assert.NotEmpty(pending.Options);
 
-        // Ordinal id order, never rank order.
-        Assert.Equal(
-            pending.Options.Select(o => o.Id).OrderBy(id => id, StringComparer.Ordinal).ToList(),
-            pending.Options.Select(o => o.Id).ToList());
+        // Ordinal candidate-id order, never rank order. Asserted against the candidates rather than
+        // against the tokens the player sees: the tokens are hashes and carry no order of their own,
+        // which is the whole point of them, so the neutrality of the ordering is a property of what
+        // they stand for. That the order is independent of rank is asserted separately, by
+        // The_option_the_character_would_have_taken_is_not_always_offered_first.
+        var available = PreparedOf(session).Available.Select(c => c.Id).ToList();
+        Assert.Equal(available.OrderBy(id => id, StringComparer.Ordinal).ToList(), available);
+        Assert.Equal(available.Count, pending.Options.Count);
 
         // Resolve it and read the record the pipeline wrote: everything offered was scored, and
         // nothing that was rejected was offered.
@@ -219,7 +223,7 @@ public sealed class PlayerSessionTests
 
         var record = session.World.Decisions.Last(d => d.ActorId == Controlled);
         var scoredIds = record.Scored.Select(s => s.Candidate.Id).ToHashSet(StringComparer.Ordinal);
-        var offeredIds = pending.Options.Select(o => o.Id).ToHashSet(StringComparer.Ordinal);
+        var offeredIds = available.ToHashSet(StringComparer.Ordinal);
 
         Assert.True(scoredIds.SetEquals(offeredIds),
             $"offered [{string.Join(", ", offeredIds)}] against scored [{string.Join(", ", scoredIds)}]");
@@ -337,11 +341,18 @@ public sealed class PlayerSessionTests
         var pending = RunToFirstPause(session);
         int decisionsBefore = session.World.Decisions.Count;
 
-        // Something his own filters ruled out at this very deliberation — the strongest form of the
-        // claim, because it is an option that genuinely occurred to somebody and was refused, not a
-        // string that never named anything.
-        Assert.Throws<SimulationInvariantException>(() => session.Choose(RejectedOptionOf(session)));
-        Assert.Throws<SimulationInvariantException>(() => session.Choose("no-such-candidate"));
+        // Options carry opaque tokens, so the raw candidate id is not a key the session accepts —
+        // and neither is anything else that was not offered.
+        string rejectedCandidateId = RejectedOptionOf(session);
+        Assert.Throws<SimulationInvariantException>(() => session.Choose(rejectedCandidateId));
+        Assert.Throws<SimulationInvariantException>(() => session.Choose("no-such-option"));
+
+        // And the guarantee that matters underneath it: the pipeline itself refuses a candidate its
+        // own filters ruled out at this very deliberation. Asserted against `Pipeline.Resolve`
+        // directly, because that is where actor parity is enforced — the session's token map is an
+        // indirection in front of it, not a second answer to the same question.
+        Assert.Throws<SimulationInvariantException>(
+            () => Pipeline.Resolve(PreparedOf(session), rejectedCandidateId));
 
         Assert.Equal(SessionStatus.AwaitingChoice, session.Status);
         Assert.Equal(decisionsBefore, session.World.Decisions.Count);
@@ -350,11 +361,39 @@ public sealed class PlayerSessionTests
         // fast-forward it interrupted, so other characters decide things too — the claim is that
         // *his* decision was recorded and records what he chose, not that exactly one thing
         // happened.
+        var available = PreparedOf(session).Available.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
         session.Choose(pending.Options[0].Id);
 
         var his = session.World.Decisions[decisionsBefore];
         Assert.Equal(Controlled, his.ActorId);
-        Assert.Equal(pending.Options[0].Id, his.Chosen!.Candidate.Id);
+        Assert.Contains(his.Chosen!.Candidate.Id, available);
+    }
+
+    /// <summary>
+    /// The option token is a handle, not a name. It must reveal nothing about the candidate — in
+    /// particular not the truth-log <c>EventId</c> that <c>Claim.ToString()</c> prints into candidate
+    /// ids — and it must be stable, because a token the player pressed has to mean the same thing on
+    /// an identical replay.
+    /// </summary>
+    [Fact]
+    public void Option_tokens_are_opaque_and_stable()
+    {
+        var first = SimulationSession.Start(Seed, "baseline", Controlled);
+        var second = SimulationSession.Start(Seed, "baseline", Controlled);
+
+        var a = RunToFirstPause(first);
+        var b = RunToFirstPause(second);
+
+        Assert.Equal(a.Options.Select(o => o.Id), b.Options.Select(o => o.Id));
+
+        var candidateIds = PreparedOf(first).Available.Select(c => c.Id).ToList();
+        Assert.NotEmpty(candidateIds);
+
+        foreach (var option in a.Options)
+        {
+            Assert.DoesNotContain(option.Id, candidateIds);
+            Assert.Matches("^[0-9a-f]{12}$", option.Id);
+        }
     }
 
     /// <summary>
@@ -420,11 +459,15 @@ public sealed class PlayerSessionTests
     /// The wording is computed from the production narrator rather than hardcoded, so a renderer
     /// that changed its phrasing cannot slip past a test that pinned the old prose.
     /// </summary>
+    /// <b>Every player-facing surface is checked, not only the snapshot at the end.</b> Milestone
+    /// 009's review found the leak in the pending decision rather than in the snapshot, so the
+    /// transcript below accumulates every pending decision the run produces — occasion, focus and
+    /// every option's wording — alongside a snapshot taken at each pause and at the end.
     [Theory]
     [InlineData("vincent")]
     [InlineData("salvatore")]
     [InlineData("tommy")]
-    public void A_hidden_fact_never_reaches_the_player_snapshot(string viewpoint)
+    public void A_hidden_fact_never_reaches_any_player_surface(string viewpoint)
     {
         var session = SimulationSession.Start(Seed, "baseline", Controlled, viewpoint);
 
@@ -436,9 +479,28 @@ public sealed class PlayerSessionTests
         // True of the world and held by nobody: the bakery is refusing and it has never been said.
         var unspoken = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Bakery);
 
+        var surface = new StringBuilder();
+        var claimsShown = new List<PlayerClaim>();
+
+        void Capture()
+        {
+            var snap = session.Snapshot();
+            surface.AppendLine(Flatten(snap));
+            surface.AppendLine(IntelligenceWriter.Render(snap));
+            claimsShown.AddRange(snap.Known.Concat(snap.Recent).Concat(snap.Unsettled).Select(b => b.Claim));
+            claimsShown.AddRange(snap.Disagreements.Select(d => d.Claim));
+
+            if (session.Pending is { } pending) surface.AppendLine(Flatten(pending));
+        }
+
+        Capture();
         session.AdvanceTo(End);
         while (session.Status == SessionStatus.AwaitingChoice)
+        {
+            Capture();
             session.Choose(session.Pending!.Options[^1].Id);
+        }
+        Capture();
 
         var who = session.World.Get(viewpoint);
         Assert.False(who.Cognition.Holds(planted), "the planted fact leaked into the character's own head");
@@ -447,17 +509,191 @@ public sealed class PlayerSessionTests
         string Name(string id) =>
             session.World.Find(id)?.Name ?? session.World.Businesses.GetValueOrDefault(id)?.Name ?? id;
 
-        var snapshot = session.Snapshot();
-        string surface = Flatten(snapshot) + "\n" + IntelligenceWriter.Render(snapshot);
-
+        string text = surface.ToString();
         foreach (var hidden in new[] { planted, unspoken })
         {
-            Assert.DoesNotContain(PlayerNarration.Describe(hidden, Name), surface, StringComparison.Ordinal);
-            Assert.DoesNotContain(snapshot.Known, b => b.Claim.Equals(hidden));
-            Assert.DoesNotContain(snapshot.Recent, b => b.Claim.Equals(hidden));
-            Assert.DoesNotContain(snapshot.Unsettled, b => b.Claim.Equals(hidden));
-            Assert.DoesNotContain(snapshot.Disagreements, d => d.Claim.Equals(hidden));
+            Assert.DoesNotContain(PlayerNarration.Describe(hidden, Name), text, StringComparison.Ordinal);
+            Assert.DoesNotContain(claimsShown, c => c.Matches(hidden));
         }
+    }
+
+    /// <summary>
+    /// The P1 finding, as a staged proof: an owner whose delegated operation fails learns nothing
+    /// from being woken about it.
+    ///
+    /// <c>Strategies.Blocked</c> schedules <see cref="EventKind.StrategyBlocked"/> addressed to the
+    /// strategy's owner, with the cause "Bellini's grocery held out against force" — the executor's
+    /// operational outcome, written by the scheduler, for a man who was not there and has been told
+    /// nothing. Milestone 009 shipped that string straight into the pending decision as its occasion,
+    /// and into its focus as well, because <c>AgendaSelection</c> sets a RespondToTrigger agenda's
+    /// description to the trigger cause verbatim.
+    ///
+    /// Staged rather than taken from a natural run, because the case has to be exercised on demand
+    /// and with the owner and executor definitely distinct — and it drives the real
+    /// <see cref="Runner.Step"/> and the real projection, not a reconstruction of them.
+    /// </summary>
+    [Fact]
+    public void A_delegated_failure_tells_its_owner_nothing_until_somebody_does()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+
+        // He set it going and handed the execution to Tommy. He is the owner; Tommy is the one there.
+        vincent.Execution.Strategy = new StrategyInstance
+        {
+            OwnerId = vincent.Id,
+            LocalSequence = vincent.StrategyCount++,
+            Kind = StrategyKind.SecureTribute,
+            Domain = Cast.Harbour,
+            TargetId = Cast.Grocery,
+            Method = CoercionMethod.Force,
+            StartedAt = world.Now,
+            Deadline = world.Now.AddDays(30),
+            DelegatedToId = "tommy",
+        };
+        vincent.Execution.RecordDelegation("tommy");
+
+        const string leak = "Bellini's grocery held out against force";
+        var blocked = world.Queue.Schedule(
+            world.Now, EventKind.StrategyBlocked, vincent.Id, leak,
+            new EventPayload { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute });
+
+        // Drive the real loop until that event is the one being handled.
+        StepResult step;
+        do
+        {
+            step = Runner.Step(world, world.Now.AddDays(1), Controlled);
+            Assert.NotEqual(StepStatus.Exhausted, step.Status);
+        }
+        while (step.Event?.Id != blocked.Id);
+
+        Assert.Equal(StepStatus.AwaitingChoice, step.Status);
+        var pending = SimulationSession.Project(
+            step.Awaiting!,
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id);
+
+        // He was not there, nobody has told him, and no discovery roll was made — so the interface
+        // says nothing about why he is thinking, rather than reading him the scheduler's sentence.
+        Assert.Null(pending.Occasion);
+        Assert.Null(pending.Focus);
+        Assert.DoesNotContain(leak, Flatten(pending), StringComparison.Ordinal);
+        Assert.DoesNotContain("held out", Flatten(pending), StringComparison.OrdinalIgnoreCase);
+
+        // And the same for what he can be shown of the world.
+        var snapshot = PlayerView.Build(world, vincent.Id, world.Now);
+        Assert.DoesNotContain(leak, Flatten(snapshot) + IntelligenceWriter.Render(snapshot), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The same claim for a completion, which is the harder half: <c>Strategies.Complete</c> clears
+    /// the owner's strategy before the event is handled, so "did he execute it himself" is not a
+    /// question the projection can still answer. That is why the rule is silence for both kinds
+    /// rather than a condition evaluated per kind — two rules for one question is how the
+    /// distinction gets dropped between them.
+    /// </summary>
+    [Fact]
+    public void A_delegated_completion_tells_its_owner_nothing_either()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+
+        const string leak = "SecureTribute finished: the cleanup made things worse";
+        var complete = world.Queue.Schedule(
+            world.Now, EventKind.StrategyComplete, vincent.Id, leak,
+            new EventPayload { Strategy = StrategyKind.ConcealIncident, Note = "the cleanup made things worse" });
+
+        StepResult step;
+        do
+        {
+            step = Runner.Step(world, world.Now.AddDays(1), Controlled);
+            Assert.NotEqual(StepStatus.Exhausted, step.Status);
+        }
+        while (step.Event?.Id != complete.Id);
+
+        Assert.Equal(StepStatus.AwaitingChoice, step.Status);
+        var pending = SimulationSession.Project(
+            step.Awaiting!,
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            id => world.Find(id)?.Name ?? id);
+
+        Assert.Null(pending.Occasion);
+        Assert.Null(pending.Focus);
+        Assert.DoesNotContain("cleanup", Flatten(pending), StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The structural version of the finding, over natural runs: <b>no string a scheduler or a
+    /// generator authored reaches a player-facing surface</b>.
+    ///
+    /// Every decision record carries the exact cause text of the event that woke it, so a full run
+    /// yields the whole vocabulary of authored trigger causes actually used — and the assertion is
+    /// against that, not against a hand-written list of the ones somebody thought of. The same for
+    /// candidate descriptions, which are the generators' developer wording.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(AllVariants))]
+    public void No_authored_developer_string_reaches_a_player_surface(string variant)
+    {
+        var session = SimulationSession.Start(Seed, variant, Controlled);
+        var surface = new StringBuilder();
+
+        session.AdvanceTo(End);
+        while (session.Status == SessionStatus.AwaitingChoice)
+        {
+            surface.AppendLine(Flatten(session.Pending!));
+            session.ResolveAutomatically();
+        }
+        surface.AppendLine(Flatten(session.Snapshot()));
+
+        string text = surface.ToString();
+        Assert.NotEqual(0, text.Length);
+
+        var authored = session.World.Decisions.Select(d => d.Trigger)
+            .Concat(session.World.Decisions.SelectMany(d => d.Generated).Select(c => c.Description))
+            .Concat(session.World.Decisions.SelectMany(d => d.Rejected).Select(r => r.Reason))
+            .Concat(session.World.Decisions.Select(d => d.Agenda.Reason))
+            .Where(s => s.Length > 12)
+            .Distinct(StringComparer.Ordinal);
+
+        foreach (var developerText in authored)
+            Assert.DoesNotContain(developerText, text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The occasion vocabulary is closed and fails closed. Anything not explicitly admitted — which
+    /// includes both strategy-outcome kinds today, and any event kind added later — produces no
+    /// occasion at all, so a new kind is mute until somebody decides what a character necessarily
+    /// knows about it.
+    /// </summary>
+    [Fact]
+    public void The_occasion_vocabulary_is_closed_and_silent_by_default()
+    {
+        var admitted = new[]
+        {
+            EventKind.AssignmentDelivered, EventKind.RoleReview,
+            EventKind.Incident, EventKind.PressureThreshold,
+        };
+
+        foreach (var kind in Enum.GetValues<EventKind>())
+        {
+            string? occasion = PlayerOccasion.For(kind);
+            if (admitted.Contains(kind)) Assert.False(string.IsNullOrEmpty(occasion), $"{kind} lost its occasion");
+            else Assert.Null(occasion);
+        }
+
+        Assert.Null(PlayerOccasion.For(EventKind.StrategyBlocked));
+        Assert.Null(PlayerOccasion.For(EventKind.StrategyComplete));
+
+        // A RespondToTrigger agenda's description *is* the trigger cause, so it never passes even on
+        // an admitted kind — the same value arriving through a second field is the shape this whole
+        // correction is about.
+        var respond = new Agenda(AgendaKind.RespondToTrigger, "some authored cause", "why");
+        Assert.Null(PlayerOccasion.Focus(respond, EventKind.Incident));
+
+        var assignment = new Agenda(AgendaKind.FulfilAssignment, "restore the harbour tribute", "why");
+        Assert.Equal("restore the harbour tribute", PlayerOccasion.Focus(assignment, EventKind.AssignmentDelivered));
+        Assert.Null(PlayerOccasion.Focus(assignment, EventKind.StrategyBlocked));
     }
 
     /// <summary>
@@ -476,9 +712,15 @@ public sealed class PlayerSessionTests
         var snapshot = session.Snapshot();
         var known = PlayerView.KnownPeople(session.World, who).ToHashSet(StringComparer.Ordinal);
 
-        foreach (var b in snapshot.Known) Assert.True(who.Cognition.Holds(b.Claim));
-        foreach (var b in snapshot.Recent) Assert.True(who.Cognition.Holds(b.Claim));
-        foreach (var b in snapshot.Unsettled) Assert.True(who.Cognition.Holds(b.Claim));
+        // Matched on the predicate, since the boundary drops the truth-log counter. A held record
+        // whose predicate matches is the strongest statement available here, and it is the one that
+        // matters: the claim is his.
+        bool HeHolds(PlayerClaim shown)
+            => who.Cognition.Records.Any(r => r.IsHeld && shown.Matches(r.Claim));
+
+        foreach (var b in snapshot.Known) Assert.True(HeHolds(b.Claim));
+        foreach (var b in snapshot.Recent) Assert.True(HeHolds(b.Claim));
+        foreach (var b in snapshot.Unsettled) Assert.True(HeHolds(b.Claim));
 
         foreach (var a in snapshot.Attitudes) Assert.Contains(a.PersonId, known);
         foreach (var p in snapshot.Silent) Assert.Contains(p.Id, known);
@@ -528,19 +770,91 @@ public sealed class PlayerSessionTests
         {
             typeof(World), typeof(WorldEvent), typeof(DecisionRecord), typeof(ScoreBreakdown),
             typeof(ScoreComponent), typeof(PreparedDecision), typeof(Candidate), typeof(Rejection),
-            typeof(Report), typeof(InformationRequest), typeof(Character), typeof(Cognition),
-            typeof(SocialState), typeof(IRelationship), typeof(StepResult), typeof(Agenda),
+            typeof(Report), typeof(ReportedClaim), typeof(InformationRequest), typeof(Character),
+            typeof(CharacterView), typeof(Cognition), typeof(SocialState), typeof(IRelationship),
+            typeof(StepResult), typeof(ScheduledEvent), typeof(EventPayload), typeof(Agenda),
+            typeof(Psychology), typeof(InformationRecord), typeof(Testimony),
+
+            // Milestone 009's second correction. Claim carries EventId — a truth-log counter with no
+            // player-facing meaning — so the boundary hands out PlayerClaim instead.
+            typeof(Claim),
         };
 
-        foreach (var surface in new[] { typeof(SimulationSession), typeof(PendingDecision), typeof(PlayerSnapshot) })
+        // Recursive, because a forbidden type one hop further in is just as reachable. The first
+        // version of this test walked one level and would have passed with `Claim` sitting on
+        // PlayerBelief, which is exactly where it was.
+        var seen = new HashSet<Type>();
+        var queue = new Queue<Type>(new[] { typeof(SimulationSession), typeof(PendingDecision), typeof(PlayerSnapshot) });
+
+        while (queue.Count > 0)
         {
+            var surface = queue.Dequeue();
+            if (!seen.Add(surface)) continue;
+
             foreach (var member in surface.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
             {
                 foreach (var type in TypesReferencedBy(member))
+                {
                     Assert.False(forbidden.Contains(type),
                         $"{surface.Name}.{member.Name} exposes {type.Name} to whatever holds it");
+
+                    // Follow anything of ours; the framework's own types are not the risk.
+                    if (type.Assembly == typeof(SimulationSession).Assembly) queue.Enqueue(type);
+                }
             }
         }
+
+        // The walk has to have actually gone somewhere, or an empty crawl would pass silently.
+        Assert.Contains(typeof(PlayerBelief), seen);
+        Assert.Contains(typeof(PlayerAttitude), seen);
+        Assert.Contains(typeof(PendingOption), seen);
+    }
+
+    /// <summary>
+    /// The DTOs are immutable in fact, not by politeness.
+    ///
+    /// An <c>IReadOnlyList&lt;T&gt;</c> backed by a <c>List&lt;T&gt;</c> can be cast straight back and
+    /// mutated — the same defect milestone 006 fixed on relationship grievances, found again on the
+    /// player boundary. Checked against real instances rather than declared types, because the
+    /// declared type is exactly what is honest and the runtime type is what is not.
+    /// </summary>
+    [Fact]
+    public void Every_collection_on_the_player_boundary_is_genuinely_read_only()
+    {
+        var session = SimulationSession.Start(Seed, "baseline", Controlled);
+        var pending = RunToFirstPause(session);
+        var snapshot = session.Snapshot();
+
+        int checkedCollections = 0;
+
+        void Walk(object? value, string path)
+        {
+            if (value is null || value is string) return;
+            var type = value.GetType();
+
+            if (value is System.Collections.IEnumerable sequence)
+            {
+                checkedCollections++;
+                Assert.False(value is System.Collections.IList { IsReadOnly: false },
+                    $"{path} is a {type.Name}, which a consumer can cast back and mutate");
+                Assert.False(type.IsArray, $"{path} is an array, whose elements can be replaced");
+
+                foreach (var item in sequence) Walk(item, $"{path}[]");
+                return;
+            }
+
+            if (type.Assembly != typeof(SimulationSession).Assembly) return;
+
+            foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                if (property.GetIndexParameters().Length == 0)
+                    Walk(property.GetValue(value), $"{path}.{property.Name}");
+        }
+
+        Walk(snapshot, nameof(PlayerSnapshot));
+        Walk(pending, nameof(PendingDecision));
+
+        Assert.True(checkedCollections >= 8,
+            $"only {checkedCollections} collections were reached, so this proves very little");
     }
 
     // ================================================================= helpers
@@ -628,6 +942,12 @@ public sealed class PlayerSessionTests
 
     private static string Flatten(PlayerSnapshot s)
         => string.Join('\n', Phrases(s));
+
+    /// <summary>Every string a pending decision puts in front of the player.</summary>
+    private static string Flatten(PendingDecision d)
+        => string.Join('\n', new[] { d.ActorName, d.ActorRole, d.Occasion, d.Focus }
+            .Concat(d.Options.Select(o => o.Description))
+            .Where(s => !string.IsNullOrEmpty(s)));
 
     private static IEnumerable<Type> TypesReferencedBy(MemberInfo member) => member switch
     {

@@ -128,6 +128,17 @@ Oldest first — the order review takes them in.
 | `9a29342` | First 008 correction: one component per facet at every loyalty reader | Reviewed and **rejected**: two findings — the verification hashes recorded in the archive and this file were false, having been measured before a late widening of the diagnostic listing and never re-measured; and the unclamped bond it introduced rested on a `[0,1]` range that `Psychology` documented on its indexers and enforced nowhere, so the clamp removal was a real behaviour change for any out-of-range caller. Matt accepted both. Corrected by `7e0700e`. |
 | `7e0700e` | Second 008 correction: true hashes with the cause established, and range enforcement in `Psychology`'s constructor | Reviewed, **no findings**. **Matt accepted the corrected milestone 008 implementation. Milestone 008 closed.** |
 
+### Beyond the checkpoint
+
+The checkpoint stays at `7e0700e` and **cannot advance yet**, because `3f08685` sits between it and
+everything below with no established outcome. These rows are recorded here rather than in the table
+so that the table's completeness claim stays true.
+
+| Commit | What it did | Review status |
+|---|---|---|
+| `3f08685` | Close milestone 008: record the review history and advance the checkpoint. Docs only | **Not reviewed.** No outcome established. It is the next commit review should take. |
+| `901d345` | Milestone 009 implementation and archive: Godot playable shell, session boundary, prepare/resolve split | Reviewed and **rejected**: three findings, one P1 — `PendingDecision.Occasion` passed `ScheduledEvent.Cause` straight through, so a `StrategyBlocked` or `StrategyComplete` handed the owner of a *delegated* operation its outcome before anybody had told him; the player-facing DTOs backed `IReadOnlyList<T>` with castable `List<T>` and left raw `Claim`/`EventId` reachable; and the Godot self-test printed `CE-SELFTEST FAILED` while exiting 0. Matt accepted all three. Corrected by the commit this section is part of. |
+
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
 `404b416`; milestone 007 through `974a88a`; milestone 008 through `7e0700e`. Note the difference in
 shape: 003, 004, 006 and 008 each took their implementation plus every corrective round through review
@@ -166,19 +177,23 @@ coherently.
 
 ### Measured, not accepted — milestone 009, this commit
 
-**This section records measurements, not a review outcome.** Milestone 009's commit is later than the
-coverage checkpoint, has no row in the table above, and has not been reviewed by anybody. Neither has
-`3f08685`, which closed milestone 008. Do not read anything below as verification in this file's
-sense — Matt's acceptance of a named commit is the only thing that is.
+**This section records measurements, not a review outcome.** Milestone 009's implementation commit
+`901d345` was reviewed and **rejected** on three findings (see "Beyond the checkpoint" above); this
+commit is its first correction and **has not been reviewed by anybody**. Neither has `3f08685`, which
+closed milestone 008. Do not read anything below as verification in this file's sense — Matt's
+acceptance of a named commit is the only thing that is.
 
 Milestone 009 added a Godot playable shell and an engine-neutral session boundary. **It changed no
-simulation behaviour**, and that is the claim its verification is built to falsify.
+simulation behaviour**, and that is the claim its verification is built to falsify. The correction
+changed no simulation behaviour either: it closed a leak in the player boundary, made the DTOs
+genuinely immutable and opaque, and gave the Godot self-test an exit code.
 
 - Build: **0 warnings, 0 errors** across four projects — measured after deleting every `bin`, `obj`
   and `.godot` directory, not after `dotnet clean`, because `dotnet clean` on a multi-targeting
   solution is not obviously equivalent and the cheaper check is the one that has produced a false
   zero here twice.
-- Tests: **343 passed**, 0 failed (305 before the milestone; 38 added).
+- Tests: **353 passed**, 0 failed (343 at `901d345`; 305 before the milestone).
+- **All 30 viewpoint renders byte-identical to `901d345`** as well as to `3f08685`.
 - **All five accepted trace hashes, chosen-action digests, decision counts, report counts, request
   counts, conflict counts, and both relationship columns are unchanged** from the milestone 008
   baseline below. Nothing moved.
@@ -518,6 +533,28 @@ Added by milestone 009:
   `Character`, `Cognition` or `Agenda`**, asserted by reflection over their public members.
 - **The Godot interface's own text is checked, not just the data behind it** — collected from the live
   node tree across every screen the run builds, headlessly, through the same methods a person sees.
+
+Added by milestone 009's first correction:
+
+- **No string authored by a scheduler or a generator reaches a player-facing surface.** Asserted over
+  natural runs against the whole vocabulary the run actually used — every `DecisionRecord.Trigger`,
+  every generated `Candidate.Description`, every `Rejection.Reason`, every `Agenda.Reason` — never
+  against a hand-written list of the ones somebody thought of.
+- **The occasion vocabulary is closed and silent by default.** Every `EventKind` outside an explicit
+  allow-list yields no occasion, so a new event kind is mute until somebody rules on it. A
+  `RespondToTrigger` agenda's `Description` never passes, because it *is* the trigger cause.
+- **A delegated operation's failure or completion tells its owner nothing until somebody does.**
+  Staged with owner and executor distinct, driving the real `Runner.Step` and the real projection.
+- **The hidden-fact check covers pending decisions and rendered UI strings**, at every pause, not only
+  a snapshot at the end.
+- **Every collection on the player boundary is genuinely read-only**, checked against real instances
+  at runtime rather than declared types — a `List<T>` behind an `IReadOnlyList<T>` can be cast back.
+- **The player-facing type graph is walked recursively**, not one level. `Claim` is forbidden in it:
+  it carries `EventId`, a truth-log counter, and the boundary hands out `PlayerClaim` instead.
+- **Option ids are opaque, stable tokens**, not candidate ids, and `Pipeline.Resolve` remains the sole
+  authority on whether an action was open to the character.
+- **The Godot self-test exits nonzero when it fails**, verified by sabotage rather than by reading the
+  code.
 
 ## Review checklist
 

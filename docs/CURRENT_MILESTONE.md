@@ -7,8 +7,16 @@ do not create a separate handoff document.
 
 ## Status
 
-**No milestone is active. Do not start one.** Milestone 009 is implemented and **awaiting Codex
-review**; milestone 010 has not been chosen and must not be inferred.
+**No milestone is active. Do not start one.** Milestone 009 is implemented, **was reviewed and
+rejected once, and is corrected and awaiting re-review**; milestone 010 has not been chosen and must
+not be inferred.
+
+Codex rejected `901d345` on three findings, all accepted by Matt: the pending decision passed
+`ScheduledEvent.Cause` through, so a delegated operation's failure or completion reached its owner
+before anybody had told him (P1); the player-facing DTOs were castable back to mutable lists and left
+raw `Claim`/`EventId` reachable; and the Godot self-test printed a failure while exiting 0. All three
+are corrected, with the P1 fix pinned by a mutation check — reverting it fails seven tests. Full
+account in `docs/milestones/009-godot-playable-shell.md`, "Correction 1".
 
 Milestones 001–008 are complete and accepted. The most recent, **009 — Godot Playable Shell**, is
 implemented and closed but **not reviewed and not accepted by anybody**. It added a Godot 4.7.1 .NET
@@ -17,16 +25,16 @@ prepare/resolve split in the decision pipeline so a person can answer one charac
 through the same commit path an NPC uses. Full record, including Matt's authorized scope reproduced
 verbatim and thirteen rulings, is in `docs/milestones/009-godot-playable-shell.md`.
 
-**It changed no simulation behaviour.** All five trace hashes, all five chosen-action digests, every
-decision, report, request and conflict count, and both relationship columns are unchanged from
-milestone 008's accepted baseline, and all 30 viewpoint renders are byte-identical to `3f08685`.
-Tests went 305 → 343.
+**It changed no simulation behaviour**, and neither did the correction. All five trace hashes, all
+five chosen-action digests, every decision, report, request and conflict count, and both relationship
+columns are unchanged from milestone 008's accepted baseline, and all 30 viewpoint renders are
+byte-identical to both `3f08685` and `901d345`. Tests went 305 → 343 → 353.
 
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
 inferring status from prose anywhere else, including this file. **The checkpoint still stands at
-`7e0700e`** and milestone 009 did not move it. Two commits are now beyond it with no row and no
-established status: `3f08685`, which closed milestone 008, and milestone 009's own
-implementation-and-archive commit. Review takes them in that order.
+`7e0700e`** and cannot advance, because `3f08685` sits between it and everything later with no
+established outcome. Three commits are now beyond it: `3f08685` (unreviewed), `901d345` (reviewed and
+rejected), and this correction (unreviewed). Review takes them in that order.
 
 ## What milestone 009 found, because it should shape the next scope decision
 
@@ -54,9 +62,19 @@ then answers his boss about the grocery — and ninety days later the harbour is
 started. The autonomous Vincent breaches the policy and the grocery pays. Same character, same
 beliefs, same options; a different history because somebody else answered the last question.
 
-Question to carry: **is this a rule the type system keeps, or a rule somebody has to remember?**
-Milestone 009 got `World` out of the UI's reach with `internal` and got console text out of the UI's
-reach with a project reference. It did not get `Cast.Build` out of reach, and said so.
+**And the boundary's first version was wrong in the way this project is reliably wrong.** Its ruling 7
+argued that every deliberation-waking cause is authored from the waking character's own side — an
+enumeration of the schedulers that existed, presented as a structural guarantee. Two of them hand the
+*owner* of a delegated operation its outcome, so a player controlling Vincent read "Bellini's grocery
+held out against force" on a day nobody had told him anything. The replacement enumerates nothing: a
+closed vocabulary, silent by default, so being wrong now requires adding an entry rather than merely
+adding an event.
+
+Question to carry: **is this claim true of the thing I am saying it about, or only of the instances of
+it I happened to look at?** And its sibling, which the correction also turned on: **is this a rule the
+type system keeps, or a rule somebody has to remember?** Milestone 009 got `World` out of the UI's
+reach with `internal` and console text out with a project reference; it did not get `Cast.Build` out
+of reach, and said so.
 
 ## Carried forward
 
@@ -66,9 +84,12 @@ touched none of it.**
 
 New from milestone 009:
 
-- **Candidate descriptions are developer-shaped and the player now reads them** — raw ids, and a
-  `#EventId` correlation suffix from `Claim.ToString()`. Honest, ugly, and not fixable without either
-  a second description vocabulary or moving every accepted trace hash.
+- **The timing of a pause is observable even when the occasion is not.** The controlled character is
+  woken when a delegated operation blocks or completes, so a player sees him stop on the day it
+  happened. Closing it means not waking him, which changes autonomous behaviour.
+- **`Generators.FromRelationship` draws a corroboration target from the whole organisation's
+  membership**, not from people the character has heard of. Pre-existing, inert at this cast size, and
+  more visible now that option wording resolves ids to names.
 - **The player cannot see why an option is unavailable.** Right for utility scores; arguably wrong for
   "he does not know that the bakery is holding out", which is the line that proves the simulation is
   belief-limited rather than merely claiming to be.

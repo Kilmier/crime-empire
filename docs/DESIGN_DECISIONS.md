@@ -230,6 +230,24 @@ settles nothing about presentation.
   either ordering is a utility score with the number filed off. Rejected candidates, score components,
   the noise draw, salience notes and the agenda's `Reason` (which embeds a numeric pressure value) do
   not cross the boundary.
+- **No string authored by a scheduler or a generator crosses the boundary, and the vocabulary that
+  replaces them is silent by default.** Settled by milestone 009's first correction, which found the
+  original arrangement leaking: `PendingDecision.Occasion` was `ScheduledEvent.Cause`, and
+  `Strategies.Blocked` and `Strategies.Complete` address their events to a strategy's *owner* while
+  describing what its *executor* did — so a delegated operation's outcome reached a man nobody had
+  told. The same string arrived through `Focus` as well, because `AgendaSelection` sets a
+  `RespondToTrigger` agenda's description to the trigger cause verbatim. `PlayerOccasion` now owns a
+  closed vocabulary keyed on `EventKind` whose **default is null**, so an event kind is mute until
+  somebody rules that a character necessarily knows about it, and `PlayerOption` builds each option's
+  wording from the candidate's typed fields. The general rule: a player-facing surface names what it
+  may say, rather than filtering what it must not.
+- **The boundary is opaque as well as immutable.** Every collection on a player-facing record is
+  frozen in its `init` accessor, because an `IReadOnlyList<T>` backed by a `List<T>` is read-only by
+  politeness — the same defect milestone 006 fixed on `IRelationship.Grievances`. `Claim` does not
+  cross: its `EventId` is `WorldEvent.Id`, a truth-log counter with no player-facing meaning, so
+  `PlayerClaim` carries the predicate and drops the counter. Option ids are opaque stable tokens
+  rather than candidate ids, which embed `Claim.ToString()`. The claim *predicate* is canon-supported
+  — `INFORMATION_AND_LEGIBILITY.md`, "Player Intelligence Entry" — and the counter is not.
 - **A deliberation with nothing open to him does not pause.** It resolves on the autonomous path,
   recording "nothing was open to him". A pause always offers a real choice; one option is a decision,
   none is not.

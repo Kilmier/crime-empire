@@ -329,8 +329,17 @@ public partial class Game : Control
         }
 
         yield return Plain($"{pending.ActorName}, {pending.ActorRole}");
-        yield return Faint($"{pending.At.ToString("d MMM yyyy", CultureInfo.InvariantCulture)} — {pending.Occasion}");
-        yield return Faint($"on his mind: {pending.Focus}");
+
+        // Both are nullable, and a null is not a gap to fill with something plausible. It means the
+        // simulation cannot say he knows why he is thinking about this — a delegated operation that
+        // failed while he was elsewhere, and nobody has told him yet. The panel says nothing, and the
+        // options are still his own.
+        yield return Faint(pending.Occasion is { } occasion
+            ? $"{pending.At.ToString("d MMM yyyy", CultureInfo.InvariantCulture)} — {occasion}"
+            : pending.At.ToString("d MMM yyyy", CultureInfo.InvariantCulture));
+
+        if (pending.Focus is { } focus) yield return Faint($"on his mind: {focus}");
+
         yield return new HSeparator();
 
         foreach (var option in pending.Options)
@@ -371,6 +380,22 @@ public partial class Game : Control
     /// the other.
     /// </summary>
     private void RunSelfTest()
+    {
+        try
+        {
+            SelfTest();
+        }
+        catch (Exception ex)
+        {
+            // A throw is a failure, not a crash to be read out of a log by eye. Milestone 009's
+            // review found the same gap in the success path: a check whose result nothing can act on
+            // is not a check.
+            GD.PrintErr($"CE-SELFTEST FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void SelfTest()
     {
         GD.Print("CE-SELFTEST begin");
 
@@ -418,11 +443,21 @@ public partial class Game : Control
         GD.Print("== CE-UI-TEXT-BEGIN ==");
         GD.Print(transcript.ToString());
         GD.Print("== CE-UI-TEXT-END ==");
-        GD.Print(choices > 0 && decisionScreens > 0
-            ? "CE-SELFTEST ok"
-            : "CE-SELFTEST FAILED — the run never rendered a decision, so it proves nothing");
 
-        GetTree().Quit();
+        // The exit code is the result. Printing a failure and exiting 0 makes the check unusable
+        // from a script, which is what a verification step is for — found by milestone 009's review.
+        bool proved = choices > 0 && decisionScreens > 0 && session.Date >= end;
+        if (proved)
+        {
+            GD.Print("CE-SELFTEST ok");
+            GetTree().Quit();
+            return;
+        }
+
+        GD.PrintErr(
+            "CE-SELFTEST FAILED — the run did not reach the end of the scenario having rendered and " +
+            "answered a decision, so it proves nothing");
+        GetTree().Quit(1);
     }
 
     private static bool SelfTestRequested()

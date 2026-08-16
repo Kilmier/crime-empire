@@ -349,3 +349,153 @@ next change authorized on its own merits. What can be recorded here is what it i
 `3f08685`, which closed milestone 008 and is itself later than the review checkpoint and unreviewed.
 
 Milestone 008's accepted state remains `7e0700e` and is untouched by anything here.
+
+---
+
+## Correction 1 — the occasion leaked, the DTOs were mutable, and the self-test could not fail
+
+Appended 2026-08-16. Nothing above is rewritten; this is what the record now says.
+
+Codex reviewed `901d345` and **rejected it on three findings**, all accepted by Matt. The Godot shell
+builds and runs, and the autonomous behaviour was never in question — every hash in the section above
+still stands unchanged. What was wrong was the boundary itself.
+
+### Finding 1 (P1) — `Trigger.Cause` handed a delegated operation's outcome to an owner nobody had told
+
+**Ruling 7 above is wrong, and it is worth stating why rather than quietly replacing it.** It argued
+that every deliberation-waking cause is authored from the waking character's own side, and shipped
+`ScheduledEvent.Cause` into `PendingDecision.Occasion` on the strength of that. The argument was made
+by enumerating the schedulers and finding them safe. Two are not:
+
+- `Strategies.Blocked` schedules `StrategyBlocked` **addressed to the strategy's owner** with the
+  cause `"Bellini's grocery held out against force"`.
+- `Strategies.Complete` schedules `StrategyComplete` with `"… finished: the cleanup made things
+  worse"`.
+
+When the work was delegated, the owner was not there, nobody has told him, and no discovery roll has
+been made. Those sentences are the *executor's* operational outcome. Handing them over is precisely
+the leak `Strategies.ResolveViolence` has a long comment refusing to commit — "authority does not
+deliver knowledge" — arriving through the interface instead of through the simulation.
+
+**And the same string reached the player through a second field.** `AgendaSelection.Select` sets a
+`RespondToTrigger` agenda's `Description` to `trigger.Cause` verbatim, and `Focus` was
+`Agenda.Description`. So the fix had to be a suppression of both, not a sanitising pass over one
+property. That is the ledger's *stops halfway along the path a value travels*, and this milestone
+produced it while its own ruling 6 was busy excluding `Agenda.Reason` for a numeric leak — the same
+object, inspected for one hazard and passed for another.
+
+**The fix is that nothing a scheduler authored crosses the boundary at all.** `PlayerOccasion` owns a
+closed vocabulary keyed on `EventKind`, and **the default is silence**: a kind not named there
+produces no occasion, so a future event kind is mute until somebody decides what a character
+necessarily knows about it. Fail-closed rather than fail-open is the whole difference from the ruling
+it replaces. `Focus` passes `Agenda.Description` only for the four agenda kinds whose description is
+structurally the character's own, and never for `RespondToTrigger`.
+
+`StrategyComplete` and `StrategyBlocked` are silent **unconditionally** rather than conditionally on
+whether he executed the work himself. The condition is available for `StrategyBlocked`, where the
+instance is still live, and not for `StrategyComplete`, where `Strategies.Complete` has already
+cleared it by the time the event is handled. Two rules for one question is how the distinction gets
+dropped between them.
+
+Three tests, and the mutation check that matters: **reverting `Project` to pass `Trigger.Cause` and
+`Agenda.Description` fails seven of them** — both staged proofs and the structural check in all five
+variants.
+
+- `A_delegated_failure_tells_its_owner_nothing_until_somebody_does` — stages Vincent as owner with
+  Tommy executing, drives the real `Runner.Step` and the real projection, asserts the occasion and
+  focus are null and the outcome wording appears nowhere.
+- `A_delegated_completion_tells_its_owner_nothing_either` — the harder half, for the reason above.
+- `No_authored_developer_string_reaches_a_player_surface` — structural, over natural runs of all five
+  variants. Every decision record carries the exact cause text of the event that woke it, so the
+  assertion is against **the whole vocabulary of authored strings the run actually used** — trigger
+  causes, candidate descriptions, rejection reasons and agenda reasons — rather than a hand-written
+  list of the ones somebody thought of. That is what makes it survive a new scheduler.
+- `The_occasion_vocabulary_is_closed_and_silent_by_default` — enumerates `EventKind` and asserts the
+  allow-list, so adding a kind cannot silently admit it.
+
+**The hidden-fact check now covers every player surface, not the finished snapshot.**
+`A_hidden_fact_never_reaches_any_player_surface` accumulates each pending decision — occasion, focus
+and every option's wording — and a snapshot at every pause, and asserts over the union. The old
+version only looked at the snapshot at the end, which is exactly why it never saw this.
+
+**A residual this does not close, stated rather than left implied.** The *timing* of a pause is
+observable: the player is stopped on the day a delegated operation fails, even though the interface
+says nothing about why. Closing that would mean not waking the controlled character, which would
+change autonomous behaviour. Recorded in `ROADMAP.md`.
+
+### Finding 2 — the boundary was neither immutable nor opaque
+
+Three things, all real:
+
+**Castable collections.** Every `IReadOnlyList<T>` on the player-facing records was handed a
+`List<T>`, so a consumer could cast it back and mutate the snapshot it was given. This is the defect
+milestone 006 fixed on `IRelationship.Grievances`, reproduced on the new boundary — and the header
+comment explaining why that one was wrapped was in the repository the whole time. Every collection is
+now frozen in an `init` accessor, so the guarantee is a property of the type rather than a habit of
+whatever built it.
+
+**A one-level reflection test.** The original walked the public members of three types and stopped.
+`Every_collection_on_the_player_boundary_is_genuinely_read_only` now walks real instances recursively
+and checks runtime types, and `The_session_surface_exposes_no_developer_state` walks the type graph
+transitively. The recursive version **caught something the author had not intended**: `PlayerClaim`
+had a public `Matches(Claim)`, which put `Claim` back into the surface as a parameter. Made internal.
+
+**Raw `Claim` and its `EventId`.** The DTO graph carried `Claim` directly, including
+`Claim.EventId` — `WorldEvent.Id`, a monotonic counter over the truth log, which `REVIEW_LEDGER.md`
+already treats as developer correlation data. There is no canon-supported reason for the counter:
+`INFORMATION_AND_LEGIBILITY.md`'s "Player Intelligence Entry" makes *claims* player-facing, and the
+counter is not part of a claim's meaning. So `PlayerClaim` carries the predicate and drops the
+counter, and `Claim` is on the forbidden list.
+
+The same counter was reaching the player as **text**, which ruling 8 deferred as cosmetic. The review
+disagreed and is right — `answer:salvatore:PersonUsedViolence(tommy -> bellini-grocery#7)` was both
+the option's id and, interpolated, its description. Both are fixed:
+
+- `PendingOption.Id` is now an **opaque token**, a stable 48-bit hash of the candidate id.
+  Deterministic, so an identical replay produces identical tokens; meaningless, so it reveals
+  nothing. `SimulationSession.Choose` translates it back and then puts the candidate id to
+  `Pipeline.Resolve`, **which remains the sole authority on whether an action was open to him** — the
+  token map is an indirection in front of that question, never a second answer to it.
+- `PendingOption.Description` is built by `PlayerOption` from the candidate's typed fields — kind,
+  strategy, method, target, candour, and the claim a question or answer is about — with any claim
+  going through `PlayerNarration.Describe`. Nothing a generator wrote reaches the player.
+
+Ruling 8's reasoning was that a player-facing description vocabulary would be "a second
+implementation to drift against the first". That was the wrong comparison: the developer description
+and the player description are not two implementations of one thing, they are two different things,
+and pretending otherwise is what let a truth-log counter reach a player. The side effect is that the
+interface reads properly now — *have Tommy Nardo take it on*, not *have tommy handle SecureTribute(harbour, target=bellini-grocery, method=Force)*.
+
+### Finding 3 — the self-test printed a failure and exited 0
+
+`CE-SELFTEST FAILED` was a string in a log that no script could act on, which makes the check
+decorative. It now exits 1, and so does an unhandled exception during the run. Verified by sabotage:
+zeroing the loop bound makes the process exit 1.
+
+### Verification of this correction
+
+Measured after deleting every `bin`, `obj` and `.godot` directory.
+
+- **Every accepted baseline is unchanged.** Trace hashes `6EB3F6B996CFC631` / `A8A1BBD12D5334C2` /
+  `DCEDCFF27928266F` / `E164E0A74E2EC7DC` / `982EC77BD5C253CB`; chosen-action digests
+  `38B7183ED2EEF34A` / `124E8FE932DD5A89` / `4F15ECD8B7A593BB` / `3D7F2B79BA4DC3E3` /
+  `18B507EBBE4FBA7E`; decisions 38 / 21 / 39 / 39 / 38; conflicts 2 / 3 / 2 / 2 / 2; "rel. read"
+  19 / 12 / 18 / 20 / 19; "rel. chose" 2 / 3 / 3 / 1 / 3. `--compare` still reports five distinct
+  traces and five distinct chosen-action sequences.
+- **All 30 viewpoint renders byte-identical to `901d345`**, which is what makes the `PlayerClaim`
+  change a boundary change rather than a rendering one.
+- Build 0 warnings, 0 errors across four projects. Tests **353 passed**, 0 failed (343 at `901d345`).
+- Godot headless self-test exits 0, makes 4 choices, renders 4 decision screens; its UI text contains
+  no `#`-suffixed counter, no decimal number, no scheduler wording (`held out against`, `finished:`,
+  `handed him the harbour`), no raw entity id, and none of the fixture's hidden bakery fact.
+
+### The lesson, which is the same one three milestones have now written down
+
+**Ruling 7 was an enumeration presented as a structural guarantee.** It said "every cause is authored
+from the waking character's own side" after checking the schedulers that existed, and that sentence
+would have gone on being cited long after somebody added a scheduler that made it false. The
+replacement does not enumerate anything: it names what may be said and stays silent about everything
+else, so being wrong now requires somebody to add an entry rather than merely to add an event.
+
+Carrying question, unchanged from milestone 008 and answered wrong here: **is this claim true of the
+thing I am saying it about, or only of the instances of it I happened to look at?**

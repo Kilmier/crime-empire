@@ -14,6 +14,11 @@ awaiting Codex review.** Its full record, including its scope, the ten rulings i
 reproduced verbatim, what it achieved, and the two things it deliberately did not, is in
 `docs/milestones/007-scenario-reach.md`.
 
+The rulings were written into *this* file before implementation, as instructed, and the lifecycle then
+reset it inside the same commit — so no committed revision of this file contains them and the archive
+is their only copy. That is a process gap, not a lost record; it is described under the archive's
+first correction, and it will recur for any milestone that archives and resets in one commit.
+
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
 inferring status from prose anywhere else, including this file. Its "Current — milestone 007" baseline
 section is explicitly **not** an acceptance, and the last accepted baseline remains milestone 006's.

@@ -2,8 +2,8 @@
 
 Status: **awaiting Codex review. Not verified.** Scope was proposed against head `6355347`, revised
 once on eight binding rulings, and authorized with two further corrections. The rulings are
-reproduced verbatim at the foot of this file; they were also written into `CURRENT_MILESTONE.md`
-before implementation began, so unlike milestone 006's they exist in a committed revision.
+reproduced verbatim at the foot of this file, which is the only committed copy of them — see the
+correction immediately below before relying on any other account of where they live.
 
 ## What was attempted
 
@@ -294,10 +294,41 @@ it?* — found two more.
 
 ---
 
+## Correction — the rulings' provenance, found immediately after `974a88a`
+
+**The header of this file originally claimed the rulings "were also written into
+`CURRENT_MILESTONE.md` before implementation began, so unlike milestone 006's they exist in a
+committed revision." That was false in the half that mattered, and it is corrected above rather than
+quietly deleted.**
+
+What actually happened. The rulings were written into `CURRENT_MILESTONE.md` in the working tree
+before implementation, exactly as instructed, and the milestone was built to that file. The lifecycle
+then required that file to be reset on completion, and the reset happened **inside the same commit**.
+So `git show 974a88a:docs/CURRENT_MILESTONE.md` does not contain them, no earlier revision does
+either, and `git log --all -S` over the ruling text returns one commit and one file: this archive.
+
+That is the identical mechanism milestone 006's second correction identified — the intent was
+carried out, the record does not show it, and the sentence describing the record was written from the
+intent rather than from the record. The claim "unlike milestone 006's" is the worst part of it: it
+asserted a procedural improvement that did not occur.
+
+Two things follow, and both are worth stating rather than leaving to be inferred.
+
+**The rulings are safe.** They are reproduced verbatim below, in a committed file, which is what the
+instruction was for. Nothing has to be recovered from conversation, which is where milestone 006's
+had to come from.
+
+**But the mechanism that loses them is still there.** Any milestone whose closeout resets
+`CURRENT_MILESTONE.md` in the same commit that archives it will do this again. Writing the rulings
+into the current-milestone file does not durably record them unless that file is committed *before*
+implementation, in its own commit — which the lifecycle does not currently ask for. Recorded here as
+a process gap rather than acted on: changing the milestone lifecycle is not within this milestone's
+scope, and `AGENTS.md` is Matt's to change.
+
 ## The rulings, reproduced verbatim
 
-Issued by Matt in review conversation, in two rounds, and written into `CURRENT_MILESTONE.md` before
-implementation rather than reconstructed afterwards.
+Issued by Matt in review conversation, in two rounds. This is the only copy of them in the
+repository — see the correction above.
 
 ### Round 1 — approval subject to one D1 revision and two clarifications
 

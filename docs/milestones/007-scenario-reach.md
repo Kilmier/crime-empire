@@ -1,9 +1,20 @@
 # Milestone 007 — Scenario Reach
 
+Status: **closed.** Codex reviewed `974a88a` and returned one finding — the sixth character — which
+Matt accepted on 2026-08-16 as a bounded scenario-fixture exception. The closure record is at the
+foot of this file.
+
+**The original status paragraph follows, restored verbatim.** It contains a claim that is false, and
+the first correction below explains why. It is left standing rather than replaced, per `AGENTS.md`'s
+append-only rule: overwriting the words the record actually carried is precisely what that rule
+exists to prevent, and doing it in the archive of a milestone whose own correction was about a
+description drifting from what it described would have been the same error twice. Commit `46a5651`
+did rewrite this paragraph, which was wrong; this commit restores it.
+
 Status: **awaiting Codex review. Not verified.** Scope was proposed against head `6355347`, revised
 once on eight binding rulings, and authorized with two further corrections. The rulings are
-reproduced verbatim at the foot of this file, which is the only committed copy of them — see the
-correction immediately below before relying on any other account of where they live.
+reproduced verbatim at the foot of this file; they were also written into `CURRENT_MILESTONE.md`
+before implementation began, so unlike milestone 006's they exist in a committed revision.
 
 ## What was attempted
 
@@ -296,10 +307,14 @@ it?* — found two more.
 
 ## Correction — the rulings' provenance, found immediately after `974a88a`
 
-**The header of this file originally claimed the rulings "were also written into
-`CURRENT_MILESTONE.md` before implementation began, so unlike milestone 006's they exist in a
-committed revision." That was false in the half that mattered, and it is corrected above rather than
-quietly deleted.**
+**The header of this file claims the rulings "were also written into `CURRENT_MILESTONE.md` before
+implementation began, so unlike milestone 006's they exist in a committed revision." That is false in
+the half that mattered.**
+
+The header still says it, and should. Commit `46a5651` found this error and then rewrote the header
+to fix it, which was the wrong remedy for an append-only record and is itself corrected in the
+closing commit: the original wording is restored above and this correction is what stands against it.
+A reader must be able to see what the record said, not only what it should have said.
 
 What actually happened. The rulings were written into `CURRENT_MILESTONE.md` in the working tree
 before implementation, exactly as instructed, and the milestone was built to that file. The lifecycle
@@ -407,3 +422,105 @@ repository — see the correction above.
 | 8 | Question wins, conflict reaches Vincent, relationship change is decision-relevant, zeroing the cost removes it, and the two terms are distinguished | **Completed.** 0.0440 → 0.0063, mutation-checked, and choice-changing is separately measured and answered no. |
 | R2.1 | Per-claim completion, then maximum | **Completed.** `Protection_is_completed_per_claim_before_the_maximum_is_taken`, with its own mutation. |
 | R2.2 | Compare `prior.ReconsideredAt`, not the nullable field | **Completed.** |
+
+---
+
+## Closed
+
+Codex reviewed `974a88a` and returned **one finding**. Matt accepted it on 2026-08-16 and closed
+milestone 007.
+
+### The finding, and the bounded acceptance it received
+
+**Adding Nunzio violated the milestone's own stated "no new characters" exclusion.** The finding is
+correct as stated: the exclusion was written into `CURRENT_MILESTONE.md` before implementation, the
+sixth character was added anyway, and no ruling had been sought for it beforehand. It was recorded in
+this archive under D3 at the time rather than passed over, which is why the review found a disclosure
+and not a discrepancy — but a departure recorded after the fact is still a departure taken without
+authority.
+
+Matt's ruling, in his words: he accepts it **as a narrow scenario-fixture exception because the
+second business requires a distinct owner**, and this **does not authorize broader cast growth or
+relaxed scope discipline**.
+
+The technical necessity behind it stands on the record: `AdvanceTribute` resolves a demand through the
+owner's own decision rather than a roll made on his behalf, and `Commit`'s concede and refuse paths
+find a business by owner — so sharing Marco between two shops would have had him answering for the
+wrong one. The cast is six and is not a precedent for seven.
+
+The process lesson is the one worth carrying, and it is not "the character was wrong". It is that an
+exclusion is a ruling, and noticing mid-implementation that one has to give is a reason to stop and
+ask, not a reason to proceed and annotate. `PROJECT_CONTEXT.md` names maximalist scope as this
+project's recurring failure mode; this is the small, well-argued version of it, which is the version
+that gets through.
+
+### Accepted state
+
+Measured at `974a88a`; the two later commits are documentation only and change none of it.
+
+- Clean build (`dotnet clean` first), **0 warnings, 0 errors**, **276/276 tests** (240 before the
+  milestone).
+- Replay hashes `26C7D3195DBCD67F` / `F0067A8493E74516` / `83327839749FE63C` / `837273496CBB7DCC` /
+  `09F26760FB80EFB1`, deterministic across repeated runs.
+- Decisions 38 / 21 / 39 / 39 / 38; reports 6 / 2 / 7 / 6 / 6; requests 5 / 4 / 5 / 5 / 5; perceived
+  conflicts 2 / 3 / 2 / 2 / 2.
+- `--compare`: **five distinct traces, four distinct chosen-action sequences**, with the convergence
+  named.
+- Eleven mutation checks, each caught by exactly the intended tests and then restored.
+
+### What it delivered
+
+Concealment is worth only the protection a report newly buys, priced per `(sender, recipient, claim)`
+from message content rather than from `Report.Candor`, most recent treatment winning, completed per
+claim before the maximum is taken. No coefficient changed: `1.9` was decomposed into the `1.5` that
+silence buys and the `0.4` a denial adds. Report eligibility stayed a separate question, so a
+sender's change of mind cannot refund protection already spent.
+
+Identical words stopped counting as repetition when the listener has independently moved since that
+speaker's preceding account — and then count exactly once.
+
+A second contested business keeps the organisational shortfall alive past the first collection. The
+boss is deliberately not told about it, so the shortfall is objective while his account of its cause
+is not.
+
+In play, for the first time in the project: the delegator's question wins, the executor answers his
+delegator, a briefing contradicts the capo, and a decision he takes afterwards is scored differently
+for it — `relationship effects` moving from **0.0440 to 0.0063**, which vanishes when
+`ConflictTrustCost` is zero.
+
+### Three rounds, and what they have in common
+
+| Round | Against | Outcome |
+|---|---|---|
+| Implementation | `974a88a` | One finding — the undeclared sixth character. **Accepted as a bounded exception.** |
+| Self-found correction | `46a5651` | The rulings-provenance claim, found by re-reading the archive against `git log -S`. Its remedy rewrote an append-only header and was itself wrong. |
+| Closeout | this commit | Header restored verbatim; correction retained; review and acceptance recorded. |
+
+Milestone 006's rounds all found a claim true of the code and false of the record. This milestone's
+found something narrower and more awkward: **twice, the work was right and the authority for it was
+not.** The sixth character was necessary and undeclared. The rulings were recorded and the record of
+where they were recorded was written from intent rather than from `git`. Both were caught, one by
+review and one by re-reading — and in both the tempting remedy was to make the record look as though
+nothing had happened. The question to carry: **did I have permission for this, or only a good reason
+for it?**
+
+### Carried forward
+
+- The trust edge reaches a score and moves it by about four hundredths of a point. The most useful
+  open figure the project has, and it belongs to `OPEN_CONCERNS.md` #3.
+- Concealment does not quiet the witnesses it is named for, which is what still stands between an
+  executor answering his delegator and an executor denying to him.
+- `believedWitnesses` is scanned globally rather than scoped to the incident.
+- `resentful-tommy` still chooses identically to `baseline`, now measured rather than assumed.
+- Salvatore is no longer contradicted at all; the boss-side path is covered only by staged unit tests.
+- The bakery is never collected from — nobody in the organisation knows it is refusing.
+- Negative trust, the concealment MVP rule, the empty-domain label, and the three tuning guesses.
+- **The lifecycle still loses rulings.** Writing them into `CURRENT_MILESTONE.md` does not durably
+  record them when the archive-and-reset happen in one commit. Recorded, not acted on: `AGENTS.md` is
+  Matt's.
+
+### Relevant commits
+
+- `974a88a` — implementation and archive. `46a5651` — the rulings-provenance correction, whose remedy
+  this commit corrects in turn. The closeout commit that records this acceptance is not cited by hash
+  here, for the reason milestone 001's archive gives.

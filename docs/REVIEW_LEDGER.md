@@ -35,10 +35,15 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `404b416`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `46a5651`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
-"not yet recorded here", not "unreviewed". **The milestone-006 closeout commit that moved this
+"not yet recorded here", not "unreviewed". **The milestone-007 closeout commit that moved this
 checkpoint is itself later than it, has no row, and still needs reviewing in its turn.**
+
+Two rows added with this move say "status not established", and that is the honest reading rather
+than an oversight: the milestone-006 closeout and milestone 007's own rulings-provenance correction
+are both documentation commits that nobody has inspected. Milestone 007 was accepted on the strength
+of a review of `974a88a`, its implementation commit — not of everything standing beneath it.
 
 A note on the rule below, because this closeout sits close to it. That rule forbids a commit whose
 *only* purpose is to record its own review or the review of the commit before it, because such a
@@ -102,9 +107,15 @@ Oldest first — the order review takes them in.
 | `1fe5b9a` | Milestone 006 implementation: perceived account conflicts, `Domain/Relations.cs`, relationship state in both replay comparators | Reviewed and **rejected**: six findings — a grievance collection castable back to something mutable, an absent reading that could be contaminated and reported no `OtherId`, the missing delegator-to-executor account path, absent state-machine tests, an archive citing sixteen rulings it did not contain, and a false zero-warning claim taken from an incremental build. Corrected by `3ddd8a1`. |
 | `3ddd8a1` | First 006 correction: relationship immutability, named absent reads, `Generators.FromDelegation` | Reviewed. The original six **accepted as sufficiently addressed**, including the staged delegator proof under ruling 7; **five further findings** — `SeekCorroboration` scored from the weakest unrelated testimony rather than its own `AboutClaim`, a trace claiming the actor was going behind a source that did not exist, undetected duplicate questions across two generators, a false provenance claim about the sixteen rulings, and a recantation test whose name contradicted its body. Corrected by `404b416`. |
 | `404b416` | Second 006 correction: claim-specific question scoring, `(kind, target, claim)` deduplication, corrected rulings provenance | Reviewed, **no findings**. **Matt accepted it on 2026-08-15. Milestone 006 closed.** |
+| `6355347` | Close milestone 006: record Codex's clean review and Matt's acceptance. Docs only | Status not established. |
+| `974a88a` | Milestone 007 implementation: concealment priced on protection newly bought, repetition against a moved listener, a second contested business, structured behavioural digest | Reviewed. **One finding** — adding a sixth character breached the milestone's own "no new characters" exclusion. **Matt accepted it on 2026-08-16** as a bounded scenario-fixture exception, the second business requiring a distinct owner; explicitly not a licence for broader cast growth. **Milestone 007 closed.** |
+| `46a5651` | Correct milestone 007's account of where its rulings are recorded. Docs only | Status not established. Its finding was right and its remedy was not — it rewrote an append-only archive header, which the closeout commit restores. |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
-`404b416`. Each took its implementation plus every corrective round through review before acceptance.
+`404b416`; milestone 007 through `974a88a`. Note the difference in shape: 003, 004 and 006 each took
+their implementation plus every corrective round through review before acceptance, while 007 needed no
+corrective round to its code and was accepted at its implementation commit with one finding ruled on
+rather than fixed. Its two documentation commits are unreviewed and are recorded as such.
 
 **On `fb2c84d`.** It was rejected and its findings were never written down, so what they were is not
 recoverable from this repository. Matt retired them as superseded and non-actionable on 2026-08-14:
@@ -126,10 +137,13 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Current — milestone 007, implementation commit. **Not reviewed, not accepted.**
+### Accepted — milestone 007, `974a88a`
 
-This is the state of the working tree, not a baseline anyone has signed off. The last **accepted**
-baseline is milestone 006's, below, and it stays there until Matt accepts a milestone-007 commit.
+Codex reviewed it and returned one finding — the sixth character, `nunzio`, breaching the milestone's
+own "no new characters" exclusion. Matt accepted it on 2026-08-16 as a bounded scenario-fixture
+exception, on the grounds that the second business requires a distinct owner, and stated explicitly
+that it authorizes neither broader cast growth nor relaxed scope discipline. See
+`milestones/007-scenario-reach.md` and its two corrections.
 
 - Build: **0 warnings, 0 errors — measured after `dotnet clean`.**
 - Tests: **276 passed**, 0 failed (240 before the milestone).
@@ -157,10 +171,12 @@ the page only on Vincent's *second* concealing report, and he no longer files it
 not get better at firing; it started firing on the one character who has decisions that read a
 relationship. See `milestones/007-scenario-reach.md`.
 
-### Accepted — milestone 006, `404b416`
+### Superseded — milestone 006, `404b416`
 
 Codex reviewed it with no findings and Matt accepted it on 2026-08-15. See
-`milestones/006-relational-consequence.md` and its two appended corrections.
+`milestones/006-relational-consequence.md` and its two appended corrections. Superseded as the
+current accepted state by milestone 007 on 2026-08-16, and kept because it is the last baseline
+before the fixture gained a second business and before concealment stopped being paid for twice.
 
 - Build: **0 warnings, 0 errors — measured after `dotnet clean`.** The implementation commit reported
   zero warnings from an incremental build that had not recompiled the test project, and there were

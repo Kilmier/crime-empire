@@ -16,7 +16,7 @@ MVP vertical slice.
 Milestone 001 proved the kernel. Milestone 003 built the first narrow information slice of the
 emergence prototype, 004 made its provenance precise, and 006 — **closed and accepted 2026-08-15** —
 gave a perceived account conflict a social consequence, which is the loop's return edge. Milestone
-007 — **implemented, not yet reviewed** — made that edge reach a later decision in the accepted
+007 — **closed and accepted 2026-08-16** — made that edge reach a later decision in the accepted
 scenario. The rest of the emergence prototype is not built, and the MVP has not begun. Milestone 002
 was a framework migration, not a step along this sequence. Full accounts are in `docs/milestones/`.
 
@@ -44,8 +44,8 @@ decision margins of the order of one. The constraint has moved from "can it be s
   discount of `0.10` are not derived figures, and nothing yet distinguishes them behaviourally from
   neighbouring values. `Relations.ConflictTrustCost` of `0.35` now has one measured consequence and it
   is a small one — see the item below.
-- ~~**The scenario is the binding constraint.**~~ **Addressed 2026-08-15 by milestone 007**
-  (implemented, not yet reviewed). A second contested business keeps the organisational shortfall
+- ~~**The scenario is the binding constraint.**~~ **Addressed by milestone 007, closed and accepted
+  2026-08-16.** A second contested business keeps the organisational shortfall
   alive past the first collection, which produces a second assignment briefing; that briefing
   contradicts the capo, and the trust it costs is read by a decision he takes afterwards. The
   delegator's question, competitive since 006 and never chosen, now wins in play in four of five
@@ -77,8 +77,8 @@ decision margins of the order of one. The constraint has moved from "can it be s
   Milestone 006's correction added `Generators.FromDelegation`, so a delegator can now put a question
   to the man he sent, and the end-to-end path from that question to a trust consequence is proven.
 - ~~**The delegator's question never wins in the accepted scenario.**~~ and
-  ~~**Self-protection is re-priced for a concealment already decided.**~~ **Retired 2026-08-15,
-  resolved by milestone 007** (implemented, not yet reviewed). Concealment is now worth only the
+  ~~**Self-protection is re-priced for a concealment already decided.**~~ **Retired by milestone 007,
+  closed and accepted 2026-08-16.** Concealment is now worth only the
   protection a report newly buys, priced per `(sender, recipient, claim)` from message content, and
   the question wins in play in baseline, watchful-boss, disloyal-vincent and resentful-tommy —
   `cautious-vincent` has no delegation, so there is nobody to ask about. **Not retired by that:** the
@@ -92,6 +92,16 @@ decision margins of the order of one. The constraint has moved from "can it be s
   contradicts you is indistinguishable from a stranger. A schema question for the design pass.
 - The test project redundantly declares `TargetFramework` despite the centralized build property in
   `Directory.Build.props`. Carried since milestone 002.
+- **The cast is six, and six is a ceiling rather than a trend.** `nunzio` was added by milestone 007
+  against that milestone's own written "no new characters" exclusion, because `AdvanceTribute`
+  resolves a demand through the owner's own decision and `Commit` finds a business by owner, so two
+  shops need two owners. Codex found the breach and Matt accepted it as a bounded scenario-fixture
+  exception on 2026-08-16, stating that it authorizes neither broader cast growth nor relaxed scope
+  discipline. A seventh character needs its own ruling first.
+- **The milestone lifecycle does not durably record rulings.** Written into `CURRENT_MILESTONE.md`
+  before implementation and reset out of it by the archive-and-close commit, they survive only in the
+  archive that reproduces them. Milestone 006 lost its set this way and milestone 007 nearly repeated
+  it. Fixing it means changing `AGENTS.md`, which is Matt's call and has not been made.
 
 ## Not yet implemented
 

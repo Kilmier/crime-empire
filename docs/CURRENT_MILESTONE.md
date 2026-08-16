@@ -9,19 +9,26 @@ do not create a separate handoff document.
 
 **No milestone is active. Do not start one.**
 
-Milestones 001–006 are complete and accepted. **Milestone 007 — Scenario Reach is implemented and
-awaiting Codex review.** Its full record, including its scope, the ten rulings it was built to
-reproduced verbatim, what it achieved, and the two things it deliberately did not, is in
-`docs/milestones/007-scenario-reach.md`.
+Milestones 001–007 are complete and accepted. The most recent, **007 — Scenario Reach**, made the
+mechanisms built in 004–006 produce an observable behavioural consequence in the accepted scenario:
+the delegator's question wins, the executor answers him, a briefing contradicts the capo, and a
+decision he takes afterwards is scored differently for it. Codex reviewed `974a88a` and returned one
+finding — a sixth character added against the milestone's own "no new characters" exclusion — which
+Matt accepted on 2026-08-16 as a **bounded scenario-fixture exception**, the second business requiring
+a distinct owner. That acceptance authorizes neither broader cast growth nor relaxed scope
+discipline. Its full record is in `docs/milestones/007-scenario-reach.md`.
 
-The rulings were written into *this* file before implementation, as instructed, and the lifecycle then
-reset it inside the same commit — so no committed revision of this file contains them and the archive
-is their only copy. That is a process gap, not a lost record; it is described under the archive's
-first correction, and it will recur for any milestone that archives and resets in one commit.
+Two things about that record, both described in its own corrections rather than only here. The
+rulings were written into *this* file before implementation, as instructed, and the lifecycle reset it
+inside the same commit — so no committed revision of this file contains them and the archive is their
+only copy. And the first attempt to record that fact rewrote the archive's append-only header, which
+the closeout commit restores verbatim. The rulings are safe; the mechanism that loses them is still
+there and will recur for any milestone that archives and resets in one commit.
 
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
-inferring status from prose anywhere else, including this file. Its "Current — milestone 007" baseline
-section is explicitly **not** an acceptance, and the last accepted baseline remains milestone 006's.
+inferring status from prose anywhere else, including this file. Note what was and was not reviewed:
+milestone 007 was accepted on a review of its implementation commit. Its two documentation commits
+carry no established status, and the milestone-006 closeout still carries none either.
 
 **Milestone 008 has not been chosen.** Do not infer it from the candidate list or technical-debt list
 in `ROADMAP.md`, or from the carried-forward items below. Confirm scope with Matt and write it here
@@ -46,12 +53,19 @@ Salvatore, who has no scored decision that reads a relationship, and changed not
 mechanism landing on Vincent, who reports upward, is measurable. A relationship schema that says how
 dimensions are stored and updated without saying which decisions read them will not predict this.
 
-**And the recurring lesson took a new form.** Milestone 006's rounds all found a claim that was true
-of the code and false of the record. This milestone found two tests asserting against a *relationship
-the model did not have* — one inferring that a report was a reply from a two-day window, one requiring
-testimony behind a belief seeded from a source outside the cast. Both passed for years and stopped the
-moment surrounding behaviour moved. The question to carry: **is this assertion checking a link the
-simulation actually records, or one the test is inferring?**
+**And the recurring lesson took two new forms.** Milestone 006's rounds all found a claim that was
+true of the code and false of the record. This milestone found two tests asserting against a
+*relationship the model did not have* — one inferring that a report was a reply from a two-day window,
+one requiring testimony behind a belief seeded from a source outside the cast. Both passed for a long
+time and stopped the moment surrounding behaviour moved. The question to carry: **is this assertion
+checking a link the simulation actually records, or one the test is inferring?**
+
+The review found the second form, and it is about authority rather than accuracy. **Twice in this
+milestone the work was right and the permission for it was not.** A sixth character was necessary and
+undeclared against a written exclusion; the rulings were properly recorded and the account of where
+they were recorded was written from intent rather than from `git`. Both were caught, and in both the
+tempting remedy was to make the record read as though nothing had happened. Second question to carry:
+**did I have permission for this, or only a good reason for it?**
 
 ## Carried forward
 
@@ -82,6 +96,12 @@ Open items the next scope decision should see. Fuller versions live in the miles
 - **Tuning guesses**: the `FirstHandTestimony` suspicion discount of `0.15`, the `Discovery` discount
   of `0.10`, and `Relations.ConflictTrustCost` of `0.35` — the last now with a measured consequence.
 - The empty-domain label, `ConcealIncident(, target=...)`.
+- **The cast is six and that is a ceiling, not a trend.** Nunzio exists because `AdvanceTribute`
+  resolves a demand through the owner's own decision and `Commit` finds a business by owner, so two
+  shops need two owners. Matt accepted him as a bounded exception to a written exclusion; a seventh
+  character needs its own ruling before, not after.
+- **The lifecycle loses rulings.** Writing them into this file does not durably record them when the
+  archive and the reset land in one commit. `AGENTS.md` is Matt's to change; recorded, not acted on.
 
 ## Longer-standing deferrals
 
@@ -108,8 +128,11 @@ itself, and nothing that will notice a commit unless somebody points a review at
 - The coverage table in `REVIEW_LEDGER.md` is the record. It is maintained by hand, which is why it
   is the authority rather than the prose around it.
 
-Two commits currently sit later than that table's checkpoint and have no row: the milestone-006
-closeout, and milestone 007's implementation-and-archive commit. Both still need reviewing in turn.
+The checkpoint now stands at `46a5651`. The milestone-007 closeout commit that moved it is itself
+later than it, has no row, and needs reviewing in its turn — as do the two documentation commits the
+move recorded as "status not established": the milestone-006 closeout `6355347` and milestone 007's
+rulings-provenance correction `46a5651`. Milestone 007 is accepted on the strength of a review of
+`974a88a`, and that is the only milestone-007 commit anyone has inspected.
 
 Never write "verified" or "closed" from a review report alone. A report must name the exact commit
 reviewed, and Matt must confirm acceptance. That rule exists because the record twice claimed a

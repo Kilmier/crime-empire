@@ -35,19 +35,25 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `6ba0737`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `7e0700e`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
 "not yet recorded here", not "unreviewed". **The commit that moved this checkpoint is itself later
 than it, has no row, and still needs reviewing in its turn.**
 
-**Every commit in the range `6355347`–`6ba0737` inclusive has an established outcome.** The bound
+**Every commit in the range `6355347`–`7e0700e` inclusive has an established outcome.** The bound
 matters: "onward" would claim an outcome for commits that do not exist yet, which is the same
 open-ended promise this file's first version made when it said every commit had a row. Older rows
 before that range carry "status not established"; that is longstanding and untouched here.
 
 Milestone 007 was accepted on the strength of a review of `974a88a`, its implementation commit. Read
-the six rows at the foot together rather than singly: one implementation commit accepted, and five
+the six rows in its group together rather than singly: one implementation commit accepted, and five
 documentation commits of which four were rejected.
+
+**Milestone 008 was accepted on the strength of a review of `7e0700e`, its second corrective commit —
+not of its implementation commit.** Its code went through three review rounds: `7a9773b` rejected on
+one finding, `9a29342` rejected on two, `7e0700e` clean and accepted. That is the shape milestones
+003, 004 and 006 had and 007 did not, and the difference matters when reading the rows: for 008,
+*implementation commit reviewed* and *milestone accepted* name different commits.
 
 A note on the rule below, because this closeout sits close to it. That rule forbids a commit whose
 *only* purpose is to record its own review or the review of the commit before it, because such a
@@ -117,15 +123,26 @@ Oldest first — the order review takes them in.
 | `1c6889f` | Close milestone 007: restore the archive header, record the review and its bounded acceptance. Docs only | Reviewed and **rejected**: one documentation finding — it recorded `46a5651` as "status not established" when that commit had in fact been reviewed and rejected, and that very review is what produced `1c6889f`. A false review-history claim, which is the failure this file exists to stop. Corrected by `53e912e`. |
 | `53e912e` | Record the real review history of milestone 007's documentation commits. Docs only | Reviewed, **no findings**. **Matt accepted it.** He also directed that no commit be made merely to record this review, so it was folded in at the next change authorized on its own merits — which is the rule below working as intended rather than an oversight. |
 | `6ba0737` | Restore milestone 006's archive header and reconcile review coverage. Docs only | Reviewed and **rejected**: three findings, two P1 and one P2 — the corrective note was inserted below the restored intro instead of appended at the end of the file, so the archive still carried a hunk above EOF; "every commit from `6355347` onward has an established outcome" was unbounded and claimed an outcome for commits that do not exist yet; and the recurring-failure section still said "Five patterns" after a sixth was added. Corrected by the commit that follows this one. |
+| `b8e5ed4` | Append milestone 006's corrective note at EOF and bound the coverage claim. Docs only | Reviewed, **no findings**. **Matt accepted it.** It was deliberately left beyond the checkpoint at the time, to be folded in at the next independently authorized documentation change rather than by a standalone bookkeeping commit — which is this closeout. |
+| `7a9773b` | Milestone 008 implementation: facet-tagged relationship contributions, grievance unbundled from the clamped loyalty, developer-facing diagnostic, `docs/RELATIONSHIPS.md` | Reviewed and **rejected**: one finding — ruling 3 required trust, obligation, Belonging and grievance to be separately inspectable, and three of the four were emitted fused into a single component tagged `Trust \| Obligation \| Belonging`. Separately computed, then reassembled at the emission site. Matt accepted the finding. Corrected by `9a29342`. |
+| `9a29342` | First 008 correction: one component per facet at every loyalty reader | Reviewed and **rejected**: two findings — the verification hashes recorded in the archive and this file were false, having been measured before a late widening of the diagnostic listing and never re-measured; and the unclamped bond it introduced rested on a `[0,1]` range that `Psychology` documented on its indexers and enforced nowhere, so the clamp removal was a real behaviour change for any out-of-range caller. Matt accepted both. Corrected by `7e0700e`. |
+| `7e0700e` | Second 008 correction: true hashes with the cause established, and range enforcement in `Psychology`'s constructor | Reviewed, **no findings**. **Matt accepted the corrected milestone 008 implementation. Milestone 008 closed.** |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
-`404b416`; milestone 007 through `974a88a`. Note the difference in shape: 003, 004 and 006 each took
-their implementation plus every corrective round through review before acceptance, while 007 needed no
-corrective round to its code and was accepted at its implementation commit with one finding ruled on
-rather than fixed. **Its corrective rounds were all documentation**, and two of them were rejected —
-one for rewriting an append-only header, one for misreporting that rejection as no review at all.
-Milestone 007's accepted status rests on `974a88a` and is unaffected by either. Milestone 006's rests
-on `404b416` and is likewise unaffected by its own closeout being rejected.
+`404b416`; milestone 007 through `974a88a`; milestone 008 through `7e0700e`. Note the difference in
+shape: 003, 004, 006 and 008 each took their implementation plus every corrective round through review
+before acceptance, while 007 needed no corrective round to its code and was accepted at its
+implementation commit with one finding ruled on rather than fixed. **Its corrective rounds were all
+documentation**, and two of them were rejected — one for rewriting an append-only header, one for
+misreporting that rejection as no review at all. Milestone 007's accepted status rests on `974a88a`
+and is unaffected by either. Milestone 006's rests on `404b416` and is likewise unaffected by its own
+closeout being rejected.
+
+**Milestone 008 is the first whose code was rejected twice.** `7a9773b` fused three of four
+contributions it was required to keep apart; `9a29342` fixed that and reported hashes its own build did
+not produce, on a premise its own API did not enforce. Both rejections were of the code and its
+verification, not of the design, and neither disturbed anything accepted earlier. The milestone's
+accepted state is `7e0700e` and nothing before it.
 
 **On `fb2c84d`.** It was rejected and its findings were never written down, so what they were is not
 recoverable from this repository. Matt retired them as superseded and non-actionable on 2026-08-14:
@@ -147,12 +164,13 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Awaiting review — milestone 008, corrective commit
+### Accepted — milestone 008, `7e0700e`
 
-**Not accepted, not verified.** Recorded here as the current measured state so a reviewer has the
-figures; acceptance requires a review naming the commit and Matt confirming it.
+Codex reviewed it with **no findings**, and **Matt accepted the corrected milestone 008
+implementation on 2026-08-16. Milestone 008 is closed.** See
+`milestones/008-relationship-readers.md` and its two appended corrections.
 
-Two review rounds so far, both rejected, both with the findings accepted by Matt:
+Two earlier rounds were rejected, both with the findings accepted by Matt:
 
 - **`7a9773b`** — one finding. Three of loyalty's four contributions were emitted fused under a
   `Trust | Obligation | Belonging` union flag, so they were separately computed and not separately
@@ -180,7 +198,7 @@ after it; the full account, including how the cause was established, is in the s
 `milestones/008-relationship-readers.md`. The chosen-action digests recorded alongside them were
 correct throughout.
 
-**The current commit changed no behaviour, verified against the full rendered trace rather than a
+**`7e0700e` changed no behaviour, verified against the full rendered trace rather than a
 filtered subset.** `9a29342` was built in a scratch worktree and every variant diffed in its entirety:
 **byte-identical in all five.** That method is deliberate — the previous round diffed a subset that
 excluded the diagnostic block, which was the only place its change appeared, and that is precisely how
@@ -208,7 +226,11 @@ and it is the only variant in which nobody holds a grievance against anybody. Se
 **Decision, request and conflict counts are unchanged** from milestone 007. `resentful-tommy`'s
 reports rose 6 → 7, downstream of the fork.
 
-### Accepted — milestone 007, `974a88a`
+### Superseded — milestone 007, `974a88a`
+
+Superseded as the current accepted state by milestone 008 on 2026-08-16, and kept because it is the
+last baseline before relationship contributions were split by facet and before grievance left the
+clamped loyalty sum.
 
 Codex reviewed it and returned one finding — the sixth character, `nunzio`, breaching the milestone's
 own "no new characters" exclusion. Matt accepted it on 2026-08-16 as a bounded scenario-fixture

@@ -606,3 +606,113 @@ Every accepted milestone-008 constraint holds: one score component per facet; gr
 bond and separately inspectable; Belonging visible in the diagnostic and non-relational in the
 counterfactual; **no coefficient changed**; no concealment, denial, witness or milestone-009 work; no
 decision forced. The deferred list stands unaltered.
+
+---
+
+## Closed
+
+Codex reviewed `7e0700e` with **no findings**. **Matt accepted the corrected milestone 008
+implementation on 2026-08-16. Milestone 008 is closed.**
+
+### What it delivered
+
+The reader side of the relationship model, and the instrument that measures it.
+
+Loyalty is derived and emitted as its parts: trust, obligation, Belonging and grievance each arrive at
+every reader as their own score component carrying exactly one facet, at that reader's own
+coefficient. Grievance left the clamped sum it used to be buried inside — where, once it exceeded a
+character's bond, further grievance was free and further trust was worthless — and is now applied
+separately at the same provisional `0.50`. The bond is an unclamped sum whose inputs are clamped where
+they enter their types, `Relations` for relationship dimensions and `Psychology` for traits and
+drives.
+
+A report's two relationship considerations — the standing reporting buys and the cost of the candour
+selected — are both kept at their existing coefficients and made separately identifiable, having
+previously been indistinguishable once summed and invisible once rendered.
+
+A component records the facet it was **derived from**, set where the value is computed, because
+aggregating by component name was measured to be wrong: 36% of components named `relationship effects`
+read no relationship state at all. The developer-facing diagnostic reports gross, net, candidate margin
+and a like-for-like counterfactual with no significance cutoff, and never reaches player-facing output.
+
+`docs/RELATIONSHIPS.md` is the prototype schema, written last from measured results — the document
+`OPEN_CONCERNS.md` #3 asked for, which that item now cites as narrowed rather than retired.
+
+**No coefficient in the model was changed by this milestone.**
+
+### Accepted state
+
+Measured at `7e0700e` after `dotnet clean`.
+
+- Build: **0 warnings, 0 errors.**
+- Tests: **305 passed**, 0 failed (292 at `9a29342`, 285 at `7a9773b`, 276 before the milestone).
+- Five variants, deterministic across repeated runs.
+
+| Variant | Hash | Decisions | Reports | Requests | Conflicts | Rel. read | Rel. decided |
+|---|---|---|---|---|---|---|---|
+| baseline | `6EB3F6B996CFC631` | 38 | 6 | 5 | 2 | 19 | 2 |
+| cautious-vincent | `A8A1BBD12D5334C2` | 21 | 2 | 4 | 3 | 12 | 3 |
+| watchful-boss | `DCEDCFF27928266F` | 39 | 7 | 5 | 2 | 18 | 3 |
+| disloyal-vincent | `E164E0A74E2EC7DC` | 39 | 6 | 5 | 2 | 20 | 1 |
+| resentful-tommy | `982EC77BD5C253CB` | 38 | 7 | 5 | 2 | 19 | 3 |
+
+- `--compare`: **five distinct traces, five distinct chosen-action sequences** — the second figure was
+  four at milestone 007.
+- Ten mutation checks across the three rounds, each caught by exactly the intended tests and restored.
+
+**The hashes in the first correction's Behavioural-movement table are wrong and are left standing**,
+corrected in the second correction above. That is the append-only rule doing its job: a reader can see
+what the record claimed as well as what it should have claimed.
+
+### Three rounds, and what they have in common
+
+| Round | Against | Outcome |
+|---|---|---|
+| Implementation | `7a9773b` | One finding — three of four contributions emitted fused under a union flag |
+| First correction | `9a29342` | Two findings — false verification hashes; an unenforced range beneath an unclamped bond |
+| Second correction | `7e0700e` | No findings. **Accepted.** |
+
+Milestone 006's rounds each found a claim true of the code and false of the record. Milestone 007's
+found work that was right and authority that was not. **This milestone's found the same defect three
+times in three costumes: a claim true of one context and false of the one it was stated in.**
+
+Ruling 3 said four contributions must be separately inspectable; they were separately *computed*, and
+the claim was true of `LoyaltyReading` and false of what reached the score. The hashes were true of a
+build one edit earlier and false of the commit they were recorded in. The `[0,1]` range was true of
+every scenario fixture and false of the public API — and the argument for removing a clamp rested on
+it.
+
+The sharpest version is that **the first correction verified itself and the verification was blind in
+exactly the right place.** It diffed against its parent with the diagnostic block excluded — correct
+for "did behaviour change?", and the diagnostic block was the only place its change appeared. Two
+sound checks, and the answer lived in the gap between them.
+
+The question this milestone leaves behind is therefore not 006's *did anything actually check this?*
+nor 007's *did I have permission?* but: **is this claim true of the thing I am saying it about, or
+only of something adjacent to it?**
+
+### Carried forward
+
+- **The relationship channel is load-bearing** — removing relationship state changes the winner at
+  1–3 decisions in every variant. Milestone 007's `0.0377` measured the weakest path in it, not the
+  channel.
+- **A soldier who resents his capo conceals rather than reporting to him**, at seed 42, with a 0.0279
+  margin against ±0.05 noise and present at only two of six seeds tested. Real, and not robust.
+- **Concealment does not quiet the witnesses it is named for**, and `believedWitnesses` is scanned
+  globally. Untouched per ruling 4; the milestone-009 candidate.
+- **The `0.9 × Loyalty` versus `0.4` denial-premium question is unruled**, deliberately.
+- **Obligation is read but never moves**; **nothing raises trust**; **`GrievanceWeight` is unbounded**,
+  a cap having been considered and explicitly rejected in favour of unbundling.
+- **Negative trust and decay are deferred, not retired**, each with a stated condition for return.
+- `Relations.ConflictTrustCost` (0.35) and `LoyaltyReading.GrievanceWeight` (0.50) remain provisional
+  tuning, alongside the `FirstHandTestimony` and `Discovery` discounts.
+- **`AGENTS.md` does not mention `docs/RELATIONSHIPS.md`.** Flagged and not taken: no ruling authorized
+  editing `AGENTS.md`.
+- **The lifecycle still loses rulings** when the archive and the reset land in one commit. Mitigated
+  here by reproducing them in this archive; unfixed as a process.
+
+### Relevant commits
+
+- `7a9773b` — implementation and archive. `9a29342` and `7e0700e` — the two corrections. The closeout
+  commit that records this acceptance is not cited by hash here, for the reason milestone 001's
+  archive gives: a commit cannot contain its own hash.

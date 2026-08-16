@@ -17,7 +17,7 @@ Milestone 001 proved the kernel. Milestone 003 built the first narrow informatio
 emergence prototype, 004 made its provenance precise, and 006 — **closed and accepted 2026-08-15** —
 gave a perceived account conflict a social consequence, which is the loop's return edge. Milestone
 007 — **closed and accepted 2026-08-16** — made that edge reach a later decision in the accepted
-scenario. Milestone 008 — **implemented, awaiting review** — settled the reader side of the
+scenario. Milestone 008 — **closed and accepted 2026-08-16** — settled the reader side of the
 relationship schema and built the instrument that measures it. The rest of the emergence prototype is
 not built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
 sequence. Full accounts are in `docs/milestones/`.

@@ -15,12 +15,16 @@ MVP vertical slice.
 
 Milestone 001 proved the kernel. Milestone 003 built the first narrow information slice of the
 emergence prototype, 004 made its provenance precise, and 006 — **closed and accepted 2026-08-15** —
-gave a perceived account conflict a social consequence, which is the loop's return edge. The rest of
-the emergence prototype is not built, and the MVP has not begun. Milestone 002 was a framework
-migration, not a step along this sequence. Full accounts are in `docs/milestones/`.
+gave a perceived account conflict a social consequence, which is the loop's return edge. Milestone
+007 — **implemented, not yet reviewed** — made that edge reach a later decision in the accepted
+scenario. The rest of the emergence prototype is not built, and the MVP has not begun. Milestone 002
+was a framework migration, not a step along this sequence. Full accounts are in `docs/milestones/`.
 
-What 006 also established is where the difficulty now sits: the mechanisms work and the scenario
-cannot show them. That is why candidate 1 below is scenario reach rather than another mechanism.
+006 established where the difficulty sat: the mechanisms worked and the scenario could not show them.
+007 was the scenario-reach answer to that, and its own finding is the next thing to weigh — the edge
+now reaches a score, and what it contributes there is about four hundredths of a point against
+decision margins of the order of one. The constraint has moved from "can it be shown at all" to
+"is it worth anything once it is".
 
 ## Known technical debt
 
@@ -36,35 +40,54 @@ cannot show them. That is why candidate 1 below is scenario reach rather than an
   an MVP placeholder, not a permanent design — see that archive's deferred work and
   `CURRENT_MILESTONE.md`'s carried-forward items. Retiring the keying defect and the runaway does not
   retire that provisional concern.
-- **Tuning guesses.** The `FirstHandTestimony` suspicion discount of `0.15`, the `Discovery`
-  discount of `0.10`, and milestone 006's `Relations.ConflictTrustCost` of `0.35` are not derived
-  figures, and nothing yet distinguishes them behaviourally from neighbouring values.
-- **The scenario is the binding constraint, and this is now the most important item on this list.**
-  Three consecutive milestones have ended with a correct, mutation-checked mechanism the accepted
-  scenario cannot demonstrate: 004's provenance distinction, 005's concealment termination, and 006's
-  trust edge — which fires in every variant and moves Salvatore's trust in Vincent from 0.50 to 0.309,
-  yet changes no decision because Salvatore never afterwards scores anything that reads that
-  relationship. One organisation, five people and a single line of causation is running out of room.
-  See `milestones/006-relational-consequence.md`.
+- **Tuning guesses.** The `FirstHandTestimony` suspicion discount of `0.15` and the `Discovery`
+  discount of `0.10` are not derived figures, and nothing yet distinguishes them behaviourally from
+  neighbouring values. `Relations.ConflictTrustCost` of `0.35` now has one measured consequence and it
+  is a small one — see the item below.
+- ~~**The scenario is the binding constraint.**~~ **Addressed 2026-08-15 by milestone 007**
+  (implemented, not yet reviewed). A second contested business keeps the organisational shortfall
+  alive past the first collection, which produces a second assignment briefing; that briefing
+  contradicts the capo, and the trust it costs is read by a decision he takes afterwards. The
+  delegator's question, competitive since 006 and never chosen, now wins in play in four of five
+  variants. See `milestones/007-scenario-reach.md`.
+- **The trust edge reaches a score and barely moves it, and this is now the most useful open number.**
+  Two conflicts take Vincent's trust in Salvatore from 0.45 to 0.031; the `relationship effects`
+  component on his next report to that boss moves from 0.0440 to 0.0063. Decision-relevant,
+  emphatically not choice-changing. `Utility.Loyalty` weights trust at `0.45` and subtracts `0.5 ×`
+  any grievance, so a standing grievance of 0.35 absorbs most of a full trust collapse before it
+  reaches a score. Whether the answer is a larger `ConflictTrustCost`, different loyalty weights, or
+  neither is a schema question — `OPEN_CONCERNS.md` #3.
+- **Concealment does not quiet the witnesses it is named for.** `AdvanceConceal`'s first step is
+  "quiet the witnesses" and moves only `LegalExposure`; the concealer's own belief that he was seen is
+  untouched. `Utility` prices a denial almost entirely on that belief, so this is what stands between
+  the executor answering his delegator — which now happens — and an executor *denying* to him, which
+  still does not. Surfaced by milestone 007 and deliberately outside it.
+- **`believedWitnesses` is scanned globally.** `Utility` maxes over every `WitnessSawIncident` the
+  actor holds, regardless of which incident he would be concealing — the same defect shape as the
+  `SeekCorroboration` scan `404b416` fixed, and the same load-bearing category in `REVIEW_LEDGER.md`.
+  It changes nothing in the current scenario, which is why milestone 007 excluded it rather than
+  folding a behaviour-neutral fix into a pass that already moved every baseline.
+- **The bakery is never collected from.** Nobody in the organisation knows it is refusing — deliberate,
+  and the asymmetry that leaves the capo room to think rather than a second errand — but it means a
+  second collection cycle is present in the fixture and unexercised.
 - ~~**A delegator never receives an account from his own executor.**~~ **Corrected and partly
   addressed 2026-08-14.** The original claim was wrong: Tommy volunteers three Partial reports to
   Vincent. What never happens is a *contradiction*, because withholding asserts nothing. The
   redirect-to-the-asker behaviour is real but applies only to answers, not to volunteered reports.
   Milestone 006's correction added `Generators.FromDelegation`, so a delegator can now put a question
   to the man he sent, and the end-to-end path from that question to a trust consequence is proven.
-- **The delegator's question never wins in the accepted scenario**, at 0.74 against 0.96. Two causes:
-  Tommy would conceal rather than deny even if asked, because he believes he was seen — which is the
-  model working — and the report that beats it is over-valued, which is not. See the next item.
-- **Self-protection is re-priced for a concealment already decided.** `Reporting.LastAddressed`
-  treats a withheld claim as settled for eligibility, but `Utility` still pays the full `+1.50`
-  self-protection bonus for withholding it again on every later report. Same shape as the
-  repeated-partial-report bug milestone 003 fixed, with the scoring half left undone. It is what
-  keeps "report while hiding the same thing" winning indefinitely, and it is the single thing
-  standing between the delegator's question and the scenario exercising it. **Deliberately not fixed
-  inside a corrective pass**; it needs a ruling and would move every baseline.
-- **`resentful-tommy` makes the same decisions as baseline.** It differs only in seeded state that
-  reaches the trace summary, so `--compare`'s "five distinct histories" is a weaker signal than it
-  reads. Kept because its directional asymmetry becomes live once the item above is addressed.
+- ~~**The delegator's question never wins in the accepted scenario.**~~ and
+  ~~**Self-protection is re-priced for a concealment already decided.**~~ **Retired 2026-08-15,
+  resolved by milestone 007** (implemented, not yet reviewed). Concealment is now worth only the
+  protection a report newly buys, priced per `(sender, recipient, claim)` from message content, and
+  the question wins in play in baseline, watchful-boss, disloyal-vincent and resentful-tommy —
+  `cautious-vincent` has no delegation, so there is nobody to ask about. **Not retired by that:** the
+  executor still answers rather than denies, for the concealment-step reason above.
+- **`resentful-tommy` still makes the same decisions as baseline**, and this is now measured rather
+  than assumed: `--compare` computes a chosen-action digest from structured decision fields and
+  reports "5 distinct traces · 4 distinct chosen-action sequences", naming the convergence. Kept,
+  untuned and un-recut. Its asymmetry becomes live only when a denial can win, which is the
+  concealment-step item above.
 - **Trust cannot go negative.** Absence of trust and distrust are the same state, so a stranger who
   contradicts you is indistinguishable from a stranger. A schema question for the design pass.
 - The test project redundantly declares `TargetFramework` despite the centralized build property in
@@ -75,7 +98,7 @@ cannot show them. That is why candidate 1 below is scenario reach rather than an
 - **Persistence.** SQLite is selected (`DESIGN_DECISIONS.md` §Stack) but not implemented. Save/load
   is absent.
 - **Relevance tiering.** Active / Supporting / Background promotion and demotion are designed in
-  `SIMULATION_ARCHITECTURE.md` and not implemented. The five-character cast makes this a non-issue
+  `SIMULATION_ARCHITECTURE.md` and not implemented. The six-character cast makes this a non-issue
   at present scale, which also means it is unvalidated.
 - **Godot.** Godot 4 C# compatibility with `net10.0` is unverified. No Godot project exists, so
   nothing is broken today; if it turns out incompatible, multi-targeting or keeping the
@@ -93,14 +116,15 @@ cannot show them. That is why candidate 1 below is scenario reach rather than an
 Candidates only. They are not ordered by priority and must not be read as a queue — confirm scope
 with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation behaviour.
 
-1. **Scenario reach** — give the fixture enough room to demonstrate the mechanisms already built,
-   rather than adding another one it cannot show. Milestone 006's central finding argues this is now
-   the highest-value scope; the delegator-to-executor question path in the debt list above is the
-   smallest concrete instance of it.
-2. **Relationship design pass** — settle the relationship schema (`OPEN_CONCERNS.md` #3). Milestone
-   006 supplied the first executable evidence it was always conditioned on, and that item now records
-   what the kernel showed and what a document would still have to decide. Not automatically next:
-   whether to write it now or gather more evidence first is Matt's call.
+1. **Relationship design pass** — settle the relationship schema (`OPEN_CONCERNS.md` #3). Milestone
+   006 supplied the first executable evidence it was always conditioned on; 007 supplied the second
+   and more pointed kind — how far a trust movement actually carries into a score, and how much of it
+   a standing grievance absorbs first. Not automatically next: whether to write it now or gather more
+   evidence first is Matt's call.
+2. **A denial that can win** — the concealment step that does not quiet its witnesses, and the global
+   `believedWitnesses` scan. Together they are what keeps an executor from ever denying to his
+   delegator, which is the one exchange in the model that milestone 004's provenance distinction was
+   built for and that no accepted run has produced.
 3. **Persistence / SQLite** — begin storing the information and decision data now worth querying.
 4. **Godot / .NET compatibility spike** — cheaply settle an engine constraint before any UI work.
    Gates nothing today and its fallback is recorded above; worth a standalone commit rather than a
@@ -112,7 +136,8 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
 Provenance precision was a candidate and became milestone 004, which is closed. RNG keying and the
 concealment runaway were a candidate and became milestone 005, which is closed. The relationship
 design pass was candidate 1 and became milestone 006 in its executable form — the schema document it
-was originally framed as remains unwritten and is candidate 2 below. "A scenario variant that
-contradicts a delegator's first-hand account" was candidate 5 and was attempted as part of milestone
-006 — it **did not succeed**, for the structural reason recorded in the debt list above, and the
-underlying gap is still open.
+was originally framed as remains unwritten and is candidate 1 above. Scenario reach was candidate 1
+and became milestone 007. "A scenario variant that contradicts a delegator's first-hand account" was
+candidate 5, was attempted inside milestone 006 and did not succeed, and is now **half** achieved:
+milestone 007 makes the delegator ask and the executor answer, in play, but the executor answers
+honestly. What remains of it is candidate 2 above.

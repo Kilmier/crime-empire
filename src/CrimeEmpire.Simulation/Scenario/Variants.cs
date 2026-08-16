@@ -82,17 +82,24 @@ public static class Variants
                 // WHAT THIS DOES NOT DO, and the name reflects it. It was added to make an executor
                 // deny his own act to his delegator — milestone 004's central distinction, still
                 // provable only in unit tests. It does not achieve that, and it is not named as
-                // though it does. Tommy never gives Vincent an account at all: the only character
-                // who puts the question is Salvatore, and being asked redirects the answer to the
-                // asker, so the soldier's account goes to the boss and never to the capo who sent
-                // him. That is structural, not a matter of degree — no configuration of trust,
-                // obligation or grievance changes who asks. Fixing it means changing who seeks
-                // corroboration from whom, which is behaviour code and a milestone of its own.
+                // though it does.
                 //
-                // It is kept because the directional asymmetry above is worth having as a fixture
-                // and becomes live the moment a delegator-to-executor question path exists. Note
-                // its limitation honestly when reading --compare: it currently produces the same
-                // decisions as baseline.
+                // The reason recorded here was itself wrong twice over and is corrected rather than
+                // quietly deleted. It said Tommy never gives Vincent an account at all, and that
+                // fixing it would need a milestone of its own. Both are false. Tommy volunteers
+                // accounts to Vincent — withholding asserts nothing, which is why no *contradiction*
+                // followed — and milestone 006's `Generators.FromDelegation` gave a delegator the
+                // standing to ask, which milestone 007's scoring correction then let him actually
+                // use: Vincent puts the question in play, on 6 April in the accepted run.
+                //
+                // What still does not happen is the denial. Tommy answers, and answers honestly,
+                // because he believes the street saw him and `Utility` prices a denial almost
+                // entirely on that belief. Cutting his side of the pair does not change it: at
+                // loyalty zero the denial still loses by a wide margin. So this variant continues to
+                // make the same decisions as baseline, and `--compare` now says so in its own right
+                // rather than leaving a trace hash to imply otherwise. It is kept, untuned and
+                // uncut, because the asymmetry is a real fixture and manufacturing distinctness
+                // would be inventing a result.
                 var tommy = world.Get("tommy");
                 Relations.Establish(tommy, "vincent", trust: 0.10, obligation: 0.05);
                 Relations.RaiseGrievance(tommy,

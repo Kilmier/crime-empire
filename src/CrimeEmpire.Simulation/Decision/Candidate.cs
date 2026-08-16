@@ -50,8 +50,15 @@ public sealed record Candidate(
     /// </summary>
     public ReportCandor? Candor { get; init; }
 
-    /// <summary>Claims a deceptive report would suppress or deny. Populated with Candor.</summary>
-    public IReadOnlyList<Claim> Suppressed { get; init; } = Array.Empty<Claim>();
+    /// <summary>
+    /// Claims a deceptive report would suppress or deny, each carrying what this recipient has
+    /// already been given about it. Populated with Candor.
+    ///
+    /// The prior state is on the claim rather than in a second list, so a scorer cannot pair the
+    /// wrong two together, and so it cannot be dropped on the way from the generator that knows the
+    /// sender's message history to the scorer that prices what a further concealment is worth.
+    /// </summary>
+    public IReadOnlyList<SuppressedClaim> Suppressed { get; init; } = Array.Empty<SuppressedClaim>();
 
     /// <summary>
     /// What a <see cref="ActionKind.SeekCorroboration"/> is about. A question has a subject; a

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
+using CrimeSim.Decision;
 using CrimeSim.Trace;
 
 int seed = 42;
@@ -67,6 +68,13 @@ if (compare)
 {
     Console.WriteLine($"Variant comparison at seed {seed}, {days} days\n");
     var hashes = new List<string>();
+
+    // What each configuration actually *did*, from structured decision fields. Kept separate from
+    // the trace hash because they answer different questions and the difference has been misreported:
+    // the hash covers wording and scores as well, so two variants that chose the identical action at
+    // every decision were being counted as distinct histories.
+    var behaviour = new List<string>();
+
     foreach (var v in Variants.All)
     {
         var world = Cast.Build(seed, v);
@@ -74,8 +82,12 @@ if (compare)
         string text = TraceWriter.Render(world, v, false);
         hashes.Add(Hash(text));
 
+        string actions = string.Join('\n', world.Decisions.Select(d => d.ChosenActionSignature()));
+        behaviour.Add(actions);
+
         var violence = world.TruthLog.Where(e => e.Kind == "violence").ToList();
         var grocery = world.Businesses[Cast.Grocery];
+        var bakery = world.Businesses[Cast.Bakery];
         var vincent = world.Get("vincent");
         var kane = world.Get("kane");
 
@@ -85,14 +97,27 @@ if (compare)
         bool breached = violence.Count > 0 || vincent.Execution.Strategy?.BreachedPolicyId is not null;
         Console.WriteLine($"  {"",-18} policy:     {(breached ? "breached" : "held")}");
         Console.WriteLine($"  {"",-18} grocery:    {(grocery.PayingTribute ? "paying" : "not paying")}, resistance {grocery.Resistance:0.00}");
+        Console.WriteLine($"  {"",-18} bakery:     {(bakery.PayingTribute ? "paying" : "not paying")}, resistance {bakery.Resistance:0.00}");
+        Console.WriteLine($"  {"",-18} conflicts:  {world.AccountConflicts.Count} perceived");
         Console.WriteLine($"  {"",-18} Kane knows: {kane.Cognition.Records.Count(r => r.IsHeld)} things");
-        Console.WriteLine($"  {"",-18} hash:       {Hash(text)}");
+        Console.WriteLine($"  {"",-18} trace:      {Hash(text)}");
+        Console.WriteLine($"  {"",-18} actions:    {Hash(actions)}");
         Console.WriteLine();
     }
 
-    Console.WriteLine(hashes.Distinct().Count() == hashes.Count
-        ? $"{hashes.Count} configurations, {hashes.Count} distinct histories."
-        : "WARNING — variants converged on identical histories. Traits are not doing any work.");
+    int distinctTraces = hashes.Distinct().Count();
+    int distinctBehaviour = behaviour.Distinct().Count();
+
+    Console.WriteLine($"{hashes.Count} configurations · {distinctTraces} distinct traces · " +
+                      $"{distinctBehaviour} distinct chosen-action sequences.");
+
+    if (distinctTraces < hashes.Count)
+        Console.WriteLine("WARNING — variants produced identical traces. Traits are not doing any work.");
+    else if (distinctBehaviour < hashes.Count)
+        Console.WriteLine(
+            $"NOTE — {hashes.Count - distinctBehaviour} configuration(s) chose the same actions as " +
+            "another throughout, differing only in scores, wording or seeded state. The trace count " +
+            "above is the weaker claim of the two; read the action count for behaviour.");
     return 0;
 }
 

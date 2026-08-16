@@ -165,7 +165,7 @@ public sealed class DirectAnswerTests
         {
             TargetId = salvatore.Id,
             Candor = ReportCandor.False,
-            Suppressed = new[] { Beating },
+            Suppressed = new[] { new SuppressedClaim(Beating, PriorDisclosureState.NeverAddressed) },
             AnsweringClaim = Beating,
         };
 
@@ -196,7 +196,7 @@ public sealed class DirectAnswerTests
         {
             TargetId = salvatore.Id,
             Candor = ReportCandor.False,
-            Suppressed = new[] { Beating },
+            Suppressed = new[] { new SuppressedClaim(Beating, PriorDisclosureState.NeverAddressed) },
             AnsweringClaim = Beating,
         };
 

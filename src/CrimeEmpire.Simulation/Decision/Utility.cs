@@ -266,10 +266,14 @@ public static class Utility
             foreach (var w in perceived.OfKind(ClaimKind.WitnessSawIncident))
                 believedWitnesses = Math.Max(believedWitnesses, w.Confidence);
 
-            // The weight of what he would be hiding, as he holds it.
+            // The weight of what he would be hiding, as he holds it. Used only by the Candid branch
+            // below, which prices the cost of handing it over — a cost history cannot discount,
+            // because disclosing it is still the first time he would have disclosed it.
             double stakes = cand.Suppressed.Count == 0
                 ? 0
-                : cand.Suppressed.Max(perceived.Confidence);
+                : cand.Suppressed.Max(s => perceived.Confidence(s.Claim));
+
+            double protection = SelfProtection(candor, cand.Suppressed, perceived);
 
             switch (candor)
             {
@@ -281,7 +285,7 @@ public static class Utility
                     break;
 
                 case ReportCandor.Partial:
-                    Add("self-protection", 1.5 * stakes, "what he leaves out cannot be held against him");
+                    Add("self-protection", protection, "what he leaves out cannot be held against him");
                     Add("perceived personal risk", -1.1 * believedWitnesses,
                         "an account with a hole in it invites the question he cannot answer");
                     Add("relationship effects", -0.5 * loyalty, "it is not what he owes the man");
@@ -295,7 +299,7 @@ public static class Utility
                     // penalty on lying. A large constant here would mean no configuration of any
                     // character could ever choose this, which is not a deterrent, it is a
                     // candidate that exists only to be rejected.
-                    Add("self-protection", 1.9 * stakes, "a flat denial buries it, if it holds");
+                    Add("self-protection", protection, "a flat denial buries it, if it holds");
                     Add("perceived personal risk", -(0.25 + 3.0 * believedWitnesses) * (1 + cautious),
                         believedWitnesses > 0.4
                             ? "he thinks there were people on that street who saw him"
@@ -365,6 +369,75 @@ public static class Utility
         double noise = rng.Range(-0.05, 0.05);
 
         return new ScoreBreakdown(cand, subtotal + noise, noise, parts);
+    }
+
+    // ---------------------------------------------------------------- concealment value
+    /// <summary>What silence is worth about a matter this recipient has heard nothing on.</summary>
+    private const double OmissionProtection = 1.5;
+
+    /// <summary>
+    /// The extra a denial buys over silence. An omission leaves the fact sitting there to be found;
+    /// a denial that holds buries it.
+    ///
+    /// Not a new coefficient. <c>OmissionProtection + DenialPremium</c> is 1.9, exactly the figure a
+    /// first-time denial has always scored — the two are what that number was always the sum of, now
+    /// separated so the second can be charged when only the first has already been bought.
+    /// </summary>
+    private const double DenialPremium = 0.4;
+
+    /// <summary>
+    /// What this report's concealment is worth <em>beyond what the sender already holds</em>.
+    ///
+    /// The defect this replaces: self-protection was paid in full on every report, so a man who had
+    /// already kept something from his boss was paid again for keeping it from him a second, third
+    /// and fourth time, and "report while hiding the same thing" won indefinitely. It is the same
+    /// shape as the repeated-partial-report bug milestone 003 fixed in
+    /// <see cref="Reporting.LastAddressed"/>, with the scoring half left undone: eligibility called
+    /// the matter settled while scoring called it freshly at stake.
+    ///
+    /// Four states and two acts, per <see cref="PriorDisclosureState"/>:
+    ///
+    ///  - <b>nothing said</b> — omission buys <c>1.5</c>, denial buys <c>1.9</c>;
+    ///  - <b>already withheld</b> — omitting again buys nothing, since the silence is already his;
+    ///    escalating to a denial still buys the premium;
+    ///  - <b>already disclosed</b> — the recipient has the claim, so omitting it later buys nothing;
+    ///    denying it is a fresh attempt to bury something he holds, and buys the premium;
+    ///  - <b>already denied</b> — the recipient has the denial. Neither act buys anything.
+    ///
+    /// <b>Per claim to completion, then the maximum.</b> Each suppressed claim's value is computed
+    /// whole and the largest wins. Taking separate maxima of the omission and premium halves and
+    /// adding them would let the two come from different claims and report a figure that no single
+    /// concealment actually buys.
+    ///
+    /// Reads the actor's own perceived confidence for the stakes, so this remains a judgement about
+    /// what he thinks he is hiding, not about what is true.
+    /// </summary>
+    private static double SelfProtection(
+        ReportCandor candor, IReadOnlyList<SuppressedClaim> suppressed, PerceivedSituation perceived)
+    {
+        double best = 0;
+
+        foreach (var s in suppressed)
+        {
+            double stakes = perceived.Confidence(s.Claim);
+            double value = candor switch
+            {
+                ReportCandor.Partial => s.Prior == PriorDisclosureState.NeverAddressed
+                    ? OmissionProtection * stakes
+                    : 0,
+                ReportCandor.False => s.Prior switch
+                {
+                    PriorDisclosureState.NeverAddressed => (OmissionProtection + DenialPremium) * stakes,
+                    PriorDisclosureState.Denied => 0,
+                    _ => DenialPremium * stakes,
+                },
+                _ => 0,
+            };
+
+            if (value > best) best = value;
+        }
+
+        return best;
     }
 
     /// <summary>Which drives an option serves or sacrifices. Weights, not goals.</summary>

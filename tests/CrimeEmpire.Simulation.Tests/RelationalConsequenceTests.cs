@@ -400,27 +400,53 @@ public sealed class RelationalConsequenceTests
     /// that a change to it should be explained rather than absorbed.
     /// </summary>
     [Theory]
-    [InlineData("baseline", 1)]
-    [InlineData("cautious-vincent", 2)]
-    [InlineData("watchful-boss", 1)]
-    [InlineData("disloyal-vincent", 1)]
-    [InlineData("resentful-tommy", 1)]
+    [InlineData("baseline", 2)]
+    [InlineData("cautious-vincent", 3)]
+    [InlineData("watchful-boss", 2)]
+    [InlineData("disloyal-vincent", 2)]
+    [InlineData("resentful-tommy", 2)]
     public void The_scenario_produces_the_expected_number_of_conflicts(string variant, int expected)
         => Assert.Equal(expected, Run(variant).AccountConflicts.Count);
 
     /// <summary>
-    /// And the trust movement those conflicts caused is real, not merely recorded. Salvatore starts
-    /// at 0.50 toward Vincent in every variant and is contradicted by him once.
+    /// And the trust movement those conflicts caused is real, not merely recorded.
+    ///
+    /// <b>The direction changed in milestone 007, and the change is the point rather than an
+    /// accident.</b> This test previously asserted that Salvatore ends below his starting 0.50 toward
+    /// Vincent, which held because Vincent filed four concealing reports and his rejection of
+    /// <c>BusinessRefusesTribute</c> reached the page on the second. He no longer files that second
+    /// report: it existed only because withholding the same claim was being paid for afresh every
+    /// time. So the boss is no longer contradicted, and the capo is — twice, by assignment briefings
+    /// that re-assert a claim he has personally watched become false.
+    ///
+    /// Vincent is also the character who has decisions that read the relationship, which is what the
+    /// milestone was for. The staged boss-side cases above (<c>A_denial_of_something_he_holds_is_a_conflict</c>,
+    /// <c>Only_the_listener_relationship_moves</c>, and the delegation and assignment path tests)
+    /// keep that direction covered at unit level, so retargeting this one loses no rule.
     /// </summary>
     [Theory]
     [InlineData("baseline")]
+    [InlineData("cautious-vincent")]
     [InlineData("watchful-boss")]
     [InlineData("disloyal-vincent")]
     [InlineData("resentful-tommy")]
-    public void The_boss_trusts_his_capo_less_after_being_contradicted(string variant)
+    public void The_capo_trusts_his_boss_less_after_being_contradicted(string variant)
     {
         var world = Run(variant);
-        Assert.True(world.Get("salvatore").Social.Toward("vincent").Trust < 0.50);
+        var vincent = world.Get("vincent");
+
+        double started = variant switch
+        {
+            "watchful-boss" => 0.70,
+            "disloyal-vincent" => 0.05,
+            _ => 0.45,
+        };
+
+        Assert.Contains(world.AccountConflicts,
+            c => c.ListenerId == "vincent" && c.Conflict.SpeakerId == "salvatore");
+        Assert.True(vincent.Social.Toward("salvatore").Trust < started,
+            $"[{variant}] vincent's trust in salvatore is " +
+            $"{vincent.Social.Toward("salvatore").Trust:0.000}, not below its starting {started:0.00}");
     }
 
     /// <summary>

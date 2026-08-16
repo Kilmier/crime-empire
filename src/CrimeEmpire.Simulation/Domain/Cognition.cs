@@ -198,10 +198,39 @@ public sealed class Cognition
         // collapsed Participant and Witness onto one value, so "I did it" and "I saw it" — which
         // are different accounts of the same events, and differ in whether he is confessing —
         // counted as the same man saying the same thing twice.
-        bool verbatimRepeat = latestFromSender is { } last
-            ? last.AssertedStance == asserted.AssertedStance
-              && Math.Abs(last.AssertedConfidence - asserted.AssertedConfidence) < 1e-9
-              && last.ClaimedBasis == asserted.ClaimedBasis
+        bool sameWordsAsLastTime = latestFromSender is { } last
+            && last.AssertedStance == asserted.AssertedStance
+            && Math.Abs(last.AssertedConfidence - asserted.AssertedConfidence) < 1e-9
+            && last.ClaimedBasis == asserted.ClaimedBasis;
+
+        // Whether this character has moved on the matter since that earlier account.
+        //
+        // Repetition is a property of the exchange, not of the speaker alone. Keyed on the words by
+        // themselves, a man could be re-told something he had since come to reject and it counted as
+        // nothing — his boss re-issuing a briefing after he had found out for himself that the shop
+        // was paying registered as somebody clearing his throat. That is the same defect shape as the
+        // self-protection one: a settled/unsettled judgement made from one side of an exchange that
+        // has two.
+        //
+        // "Independently" falls out of the structure rather than needing its own check: the
+        // comparison is against this speaker's *latest* account, and that account set the
+        // reconsideration stamp itself, so the only way the stamp can be later is movement from
+        // somewhere else.
+        //
+        // One conflict, then inert again. The disagreement branch below stamps the record at `at` and
+        // the testimony added above carries the same `at`, so the next identical account finds them
+        // equal and returns as a repeat. `<=` rather than `<` means same-instant movement does not
+        // re-arm, which is conservative and deterministic.
+        //
+        // ReconsideredAt, never the nullable LastReconsideredAt: a record nobody has revisited has
+        // no reconsideration stamp, and comparing null against an account timestamp would treat a
+        // never-revisited belief as one that had moved.
+        bool movedSinceThatAccount = latestFromSender is { } previous
+            && prior is not null
+            && prior.ReconsideredAt > previous.At;
+
+        bool verbatimRepeat = latestFromSender is not null
+            ? sameWordsAsLastTime && !movedSinceThatAccount
             : prior?.SourceId == senderId && prior.IsHeld == affirms && !prior.Contested;
 
         // Whether he has moved. A reversal is worth a change of confidence; firming up or

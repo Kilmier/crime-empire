@@ -378,7 +378,15 @@ public static class Generators
 
                     if (couldDeceive)
                     {
-                        var ownPart = new[] { question };
+                        // What this recipient already has from him about it. Read here, where his own
+                        // sent reports are in scope, and carried on the candidate — Utility scores
+                        // from PerceivedSituation and never sees a report log.
+                        var ownPart = new[]
+                        {
+                            new SuppressedClaim(
+                                question,
+                                Reporting.PriorDisclosure(ctx.ReportsSent, recipient, question)),
+                        };
 
                         yield return new Candidate(
                             $"answer:{recipient}:{question}:partial",
@@ -416,7 +424,8 @@ public static class Generators
                 var awkward = ctx.Perceived.OfKind(ClaimKind.PersonUsedViolence)
                     .Concat(ctx.Perceived.OfKind(ClaimKind.PersonBreachedPolicy))
                     .Where(r => r.Claim.Subject == ctx.Actor.Id)
-                    .Select(r => r.Claim)
+                    .Select(r => new SuppressedClaim(
+                        r.Claim, Reporting.PriorDisclosure(ctx.ReportsSent, recipient, r.Claim)))
                     .ToList();
 
                 yield return new Candidate(

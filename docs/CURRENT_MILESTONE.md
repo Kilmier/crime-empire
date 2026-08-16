@@ -9,71 +9,79 @@ do not create a separate handoff document.
 
 **No milestone is active. Do not start one.**
 
-Milestones 001–006 are complete and accepted. The most recent, **006 — Relational Consequence of a
-Perceived Account Conflict**, gave a contradiction a directional social cost, put every relationship
-mutation behind `Domain/Relations.cs`, and brought relationship and grievance state into both replay
-comparators. It took its implementation and both corrective rounds through review; Codex reviewed
-`404b416` with no findings and Matt accepted it on 2026-08-15. Its full record, including what it
-found and what it failed to achieve, is in `docs/milestones/006-relational-consequence.md`.
+Milestones 001–006 are complete and accepted. **Milestone 007 — Scenario Reach is implemented and
+awaiting Codex review.** Its full record, including its scope, the ten rulings it was built to
+reproduced verbatim, what it achieved, and the two things it deliberately did not, is in
+`docs/milestones/007-scenario-reach.md`.
 
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
-inferring status from prose anywhere else, including this file.
+inferring status from prose anywhere else, including this file. Its "Current — milestone 007" baseline
+section is explicitly **not** an acceptance, and the last accepted baseline remains milestone 006's.
 
-**Milestone 007 has not been chosen.** Do not infer it from the candidate list or technical-debt list
+**Milestone 008 has not been chosen.** Do not infer it from the candidate list or technical-debt list
 in `ROADMAP.md`, or from the carried-forward items below. Confirm scope with Matt and write it here
 before changing simulation behaviour.
 
-## What milestone 006 found, because it should shape the next scope decision
+## What milestone 007 found, because it should shape the next scope decision
 
-**The scenario is now the binding constraint, not the mechanisms.** Three consecutive milestones have
-ended with a correct, mutation-checked mechanism the accepted scenario cannot demonstrate:
+**The edge now reaches a decision, and what it contributes there is very small.** Two perceived
+account conflicts take Vincent's trust in Salvatore from 0.45 to 0.031. The `relationship effects`
+component on his next report to that boss moves from **0.0440 to 0.0063** — non-zero, entirely
+attributable to the conflicts, and about four hundredths of a point against decision margins in this
+scenario of the order of one. Decision-relevant; emphatically not choice-changing.
 
-- 004's provenance distinction — no variant contradicts a delegator's first-hand account;
-- 005's concealment termination — the candidate is considered but never wins;
-- 006's trust edge — it *does* fire in every variant, and Salvatore's trust in Vincent really falls
-  from 0.50 to 0.309, but he never afterwards scores anything that reads that relationship, so no
-  history changes.
+Most of the movement is absorbed before it arrives: `Utility.Loyalty` weights trust at `0.45` and
+subtracts `0.5 ×` any grievance, so Vincent's standing grievance of 0.35 eats more than a full
+collapse of trust. **The open question has moved** from "can a relationship consequence be shown at
+all" — which 004, 005 and 006 could not answer in play — to "is it worth anything once it is shown".
+That is a schema question and it belongs to `OPEN_CONCERNS.md` #3, which now carries this evidence.
 
-One organisation, five people and a single line of causation is running out of room. Adding a fourth
-mechanism it also cannot show would be volume rather than progress. `ROADMAP.md` now carries this as
-its first candidate scope.
+**Which relationship a mechanism lands on decides whether it matters.** 006's conflict fell on
+Salvatore, who has no scored decision that reads a relationship, and changed nothing. The identical
+mechanism landing on Vincent, who reports upward, is measurable. A relationship schema that says how
+dimensions are stored and updated without saying which decisions read them will not predict this.
 
-**And a second lesson, about the record rather than the code.** Every corrective round in milestone
-006 but the last found a claim that was true of the code and false of the description of it: a
-collection read-only in its type name but not its behaviour, an archive citing rulings it did not
-contain, a zero-warning figure from a build that had not compiled the file with the warnings in it, a
-test named for the opposite of what it asserted. None were logic errors, and none were catchable by
-the tests, because the tests agreed with the code and only the words disagreed. The question to carry
-into the next milestone is **what does this claim assert, and did anything actually check it?**
+**And the recurring lesson took a new form.** Milestone 006's rounds all found a claim that was true
+of the code and false of the record. This milestone found two tests asserting against a *relationship
+the model did not have* — one inferring that a report was a reply from a two-day window, one requiring
+testimony behind a belief seeded from a source outside the cast. Both passed for years and stopped the
+moment surrounding behaviour moved. The question to carry: **is this assertion checking a link the
+simulation actually records, or one the test is inferring?**
 
 ## Carried forward
 
 Open items the next scope decision should see. Fuller versions live in the milestone archives and
 `ROADMAP.md`'s technical-debt list.
 
-- **The delegator's question exists but never wins.** Milestone 006's correction added
-  `Generators.FromDelegation`, and the path from that question to a trust consequence is proven
-  end-to-end; it scores 0.74 against 0.96 in the accepted scenario and is never chosen. (An earlier
-  version of this item said a delegator never receives an account from his executor at all. That was
-  wrong — Tommy volunteers three Partial reports to Vincent. What never happens is a contradiction.)
-- **Self-protection is re-priced for a concealment already decided**, so "report while hiding the
-  same thing" wins indefinitely. Surfaced by 006's correction, deliberately not fixed inside it:
-  it needs a ruling and would move every baseline. It is what stands between the delegator's question
-  and the scenario exercising it.
-- **`resentful-tommy` makes the same decisions as baseline**, so `--compare`'s "five distinct
-  histories" is a weaker signal than it reads.
+- **The trust edge reaches a score and barely moves it** — the numbers above. The most useful open
+  figure the project has.
+- **Concealment does not quiet the witnesses it is named for.** `AdvanceConceal`'s first step is
+  "quiet the witnesses" and moves only `LegalExposure`. `Utility` prices a denial almost entirely on
+  whether the actor believes he was seen, so this is what stands between the executor answering his
+  delegator — which now happens in play — and an executor *denying* to him, which still never does.
+- **`believedWitnesses` is scanned globally**, not scoped to the incident being concealed. Same defect
+  shape as the `SeekCorroboration` scan `404b416` fixed. Changes nothing today, which is why 007
+  excluded it.
+- **`resentful-tommy` still makes the same decisions as baseline.** Now measured rather than assumed:
+  `--compare` reports five distinct traces and four distinct chosen-action sequences and names the
+  convergence. Kept, untuned and un-recut.
+- **Salvatore is no longer contradicted at all.** 006's conflict reached the page only on Vincent's
+  second concealing report, which 007 correctly stopped him filing. Not a regression — the mechanism
+  moved to a listener who does something with it — but the boss-side path is now covered only by
+  staged unit tests.
+- **The bakery is never collected from.** Nobody in the organisation knows it is refusing, which is
+  the asymmetry that leaves the capo room to think; it does mean a second collection cycle sits in the
+  fixture unexercised.
 - **Trust cannot go negative.** Absence of trust and distrust are the same state.
-- **The concealment MVP rule is a placeholder, not a permanent design**, and its termination is
-  proven only by dedicated tests, not by the accepted scenario.
+- **The concealment MVP rule is a placeholder, not a permanent design.**
 - **Tuning guesses**: the `FirstHandTestimony` suspicion discount of `0.15`, the `Discovery` discount
-  of `0.10`, and `Relations.ConflictTrustCost` of `0.35`.
+  of `0.10`, and `Relations.ConflictTrustCost` of `0.35` — the last now with a measured consequence.
 - The empty-domain label, `ConcealIncident(, target=...)`.
 
 ## Longer-standing deferrals
 
-- the relationship-design document — **possible milestone 007, not authorized.** `OPEN_CONCERNS.md`
-  #3 now records the executable evidence it was always conditioned on, and what a document would
-  still have to decide;
+- the relationship-design document — `OPEN_CONCERNS.md` #3, now carrying two milestones' worth of
+  executable evidence. **Not authorized.**
 - relevance tiering and its continuous-calendar engineering risk;
 - persistence and SQLite;
 - Godot / `net10.0` compatibility — cheap, gates nothing today, worth a standalone commit rather than
@@ -94,6 +102,9 @@ itself, and nothing that will notice a commit unless somebody points a review at
   land back to back, both still need reviewing, in order.
 - The coverage table in `REVIEW_LEDGER.md` is the record. It is maintained by hand, which is why it
   is the authority rather than the prose around it.
+
+Two commits currently sit later than that table's checkpoint and have no row: the milestone-006
+closeout, and milestone 007's implementation-and-archive commit. Both still need reviewing in turn.
 
 Never write "verified" or "closed" from a review report alone. A report must name the exact commit
 reviewed, and Matt must confirm acceptance. That rule exists because the record twice claimed a

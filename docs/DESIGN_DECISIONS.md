@@ -81,7 +81,15 @@ report channel is reviewed against — `REVIEW_LEDGER.md` cites this section rat
 - **A partial report distinguishes claims asserted, deliberately withheld, and omitted only because
   the bounded message was full.** Withholding settles a claim until the sender's own position moves;
   cap-omission leaves it outstanding.
-- **Repeated identical accounts do not compound confidence.**
+- **Repeated identical accounts do not compound confidence — unless the listener independently
+  reconsidered that claim after the speaker's preceding account.** After such intervening movement
+  the repeated words may create **one** new conflict; further identical repetitions are inert again.
+  Refined by milestone 007, which found the guard keyed on the speaker's words alone: a listener who
+  had since disproved the claim for himself could be told it again and it counted as nothing, so a
+  boss re-issuing a briefing after his capo had watched the shop start paying registered as somebody
+  clearing his throat. Both halves are structural rather than second rules — the comparison is against
+  the speaker's *latest* account, which set the reconsideration stamp itself, and the conflict branch
+  re-stamps the record so the next identical account finds nothing new.
 - **A source changing their account is meaningful**: recantation or contradiction updates
   reconsideration and remains communicable onward.
 - **Corroboration counts distinct sources across the whole testimony history**, not the record's
@@ -93,6 +101,18 @@ report channel is reviewed against — `REVIEW_LEDGER.md` cites this section rat
 - **A speaker's claimed basis is separate from what he privately holds.** Only the claimed basis may
   reach the listener; the actual basis is developer truth. Repeating someone's testimony makes it
   hearsay — a chain cannot launder itself back into first-hand at each hop.
+
+- **Concealment is worth only the protection a report newly buys.** Settled by milestone 007; see
+  `milestones/007-scenario-reach.md`. What a recipient has already been given about a claim is a fact
+  about *messages*, recorded per `(sender, recipient, claim)` as never addressed / withheld /
+  disclosed affirmatively / denied, and read from the asserted stance rather than from
+  `Report.Candor` — a candid rejection and a deceptive denial both put the denying stance in front of
+  him. The most recent treatment counts, so denial is not absorbing. Withholding again what he has
+  already withheld buys nothing; escalating from silence to a denial still buys the difference;
+  denying again what he has already denied buys nothing. Protection is completed per claim before the
+  maximum is taken, never as separate maxima added. **Report eligibility is a separate question** —
+  `NeedsConveying` may re-arm a report when the sender's own position moves, and that must not refund
+  protection he has already spent.
 
 The player-facing view is constrained to match: it reads only the viewpoint character's cognition,
 testimony and known relationships; never enumerates the authoritative roster to reveal unknown

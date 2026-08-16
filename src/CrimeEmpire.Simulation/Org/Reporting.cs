@@ -89,6 +89,75 @@ public static class Reporting
         return addressed is null || belief.ReconsideredAt > addressed;
     }
 
+    /// <summary>
+    /// What this recipient has already been given by this sender about this claim — the input to
+    /// marginal concealment value in <see cref="Decision.Utility"/>.
+    ///
+    /// <b>Most recent treatment wins.</b> The question being answered is what this recipient
+    /// currently has from this sender, because protection is what a message <em>newly</em> buys.
+    /// <see cref="PriorDisclosureState.Denied"/> is therefore not absorbing: a man who denied
+    /// something and later came clean has given his recipient a new position, and denying it again
+    /// has to talk him back out of it. Milestone 006's affirm → deny → affirm finding is why that
+    /// sequence is pinned by a test rather than left to intuition.
+    ///
+    /// <b>Assertion outranks withholding within one report.</b> A denial is written to both
+    /// <see cref="Report.Asserted"/> and <see cref="Report.Withheld"/> — he suppressed his real
+    /// position <em>and</em> asserted its opposite — so the assertion is what the recipient actually
+    /// received and is what this reports.
+    ///
+    /// Public and parameterised for the same reason as <see cref="Generators.CanAsk"/>: a rule buried
+    /// inside a generator's LINQ is a rule nothing can test, and this project has already had two
+    /// regression tests that passed against a hand-written copy of the predicate rather than the
+    /// predicate itself.
+    /// </summary>
+    public static PriorDisclosureState PriorDisclosure(
+        IEnumerable<Report> reportsSent, string recipientId, Claim claim)
+    {
+        DateTime latestAt = default;
+        long latestId = -1;
+        var state = PriorDisclosureState.NeverAddressed;
+
+        foreach (var r in reportsSent)
+        {
+            if (r.RecipientId != recipientId) continue;
+            if (TreatmentIn(r, claim) is not { } treatment) continue;
+
+            // Ordered explicitly rather than trusting the caller's enumeration order. Ties on time
+            // break on report id, which is allocated from world state and is monotonic, so "most
+            // recent" is total and deterministic even for two reports composed in the same instant.
+            if (latestId >= 0 && (r.At < latestAt || (r.At == latestAt && r.Id <= latestId))) continue;
+
+            latestAt = r.At;
+            latestId = r.Id;
+            state = treatment;
+        }
+
+        return state;
+    }
+
+    /// <summary>
+    /// How one report treated one claim, or null if it did not address it at all.
+    ///
+    /// Read from message content — which claims were asserted, in which direction, and which were
+    /// withheld. Never from <see cref="Report.Candor"/>, which records what the sender was trying to
+    /// do rather than what the recipient ended up holding.
+    /// </summary>
+    private static PriorDisclosureState? TreatmentIn(Report report, Claim claim)
+    {
+        foreach (var a in report.Asserted)
+        {
+            if (!a.Claim.Equals(claim)) continue;
+            return a.AssertedStance is Stance.Rejects or Stance.Doubts
+                ? PriorDisclosureState.Denied
+                : PriorDisclosureState.DisclosedAffirmatively;
+        }
+
+        foreach (var w in report.Withheld)
+            if (w.Equals(claim)) return PriorDisclosureState.Withheld;
+
+        return null;
+    }
+
     private static DateTime? Latest(
         IEnumerable<Report> reportsSent, string recipientId, Func<Report, bool> mentions)
     {
@@ -139,7 +208,7 @@ public static class Reporting
         // hide a real inconsistency in whoever built the candidate, and SIMULATION_ARCHITECTURE.md
         // asks for exactly the opposite: fail visibly in development rather than silently
         // corrupting history.
-        if (candor == ReportCandor.False && !suppressed.Any(c => WouldDeny(c, candidate, perceived)))
+        if (candor == ReportCandor.False && !suppressed.Any(c => WouldDeny(c.Claim, candidate, perceived)))
         {
             throw new ArgumentException(
                 $"Report candour is False but nothing would be denied. {sender.Id} -> {recipient.Id}, " +
@@ -184,7 +253,7 @@ public static class Reporting
 
         foreach (var b in positions)
         {
-            bool awkward = suppressed.Any(s => s.Equals(b.Claim));
+            bool awkward = suppressed.Any(s => s.Claim.Equals(b.Claim));
 
             if (awkward && candor == ReportCandor.Partial)
             {
@@ -249,7 +318,8 @@ public static class Reporting
             candor,
             asserted,
             withheld,
-            framing);
+            framing,
+            candidate.AnsweringClaim);
     }
 
     /// <summary>

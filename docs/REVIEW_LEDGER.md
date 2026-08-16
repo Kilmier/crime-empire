@@ -126,6 +126,37 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Current — milestone 007, implementation commit. **Not reviewed, not accepted.**
+
+This is the state of the working tree, not a baseline anyone has signed off. The last **accepted**
+baseline is milestone 006's, below, and it stays there until Matt accepts a milestone-007 commit.
+
+- Build: **0 warnings, 0 errors — measured after `dotnet clean`.**
+- Tests: **276 passed**, 0 failed (240 before the milestone).
+- Five variants, deterministic on repeated runs.
+
+| Variant | Hash | Decisions | Reports | Requests | Conflicts |
+|---|---|---|---|---|---|
+| baseline | `26C7D3195DBCD67F` | 38 | 6 | 5 | 2 |
+| cautious-vincent | `F0067A8493E74516` | 21 | 2 | 4 | 3 |
+| watchful-boss | `83327839749FE63C` | 39 | 7 | 5 | 2 |
+| disloyal-vincent | `837273496CBB7DCC` | 39 | 6 | 5 | 2 |
+| resentful-tommy | `09F26760FB80EFB1` | 38 | 6 | 5 | 2 |
+
+`--compare` reports **five distinct traces and four distinct chosen-action sequences**, and names the
+convergence. That second figure is new and is the honest one: `resentful-tommy` chooses the identical
+action at every decision as `baseline`, which the trace hash alone could never have told you.
+
+**Read the report counts as the milestone's clearest signal.** Baseline fell from eleven reports to
+six. Five of the eleven existed only because withholding the same claim from the same man was being
+paid for as a fresh gain on every report.
+
+**And read the conflict counts against milestone 006's.** The count rose, but the listener changed:
+Salvatore is no longer contradicted at all, and Vincent is contradicted twice. 006's conflict reached
+the page only on Vincent's *second* concealing report, and he no longer files it. The mechanism did
+not get better at firing; it started firing on the one character who has decisions that read a
+relationship. See `milestones/007-scenario-reach.md`.
+
 ### Accepted — milestone 006, `404b416`
 
 Codex reviewed it with no findings and Matt accepted it on 2026-08-15. See
@@ -195,9 +226,9 @@ Kept for comparison only. The prose analysis of why each moved lives in the mile
 
 ### The scenario these baselines measure
 
-The harbour scenario: one organization, one contested district, one pressured business, a
-five-person cast. Vincent is aggressive, proud, under revenue pressure and carrying a grievance;
-whether he escalates is a scoring outcome, not a scripted event. The four variants are the
+The harbour scenario: one organization, one contested district, **two** pressured businesses, a
+six-person cast. Vincent is aggressive, proud, under revenue pressure and carrying a grievance;
+whether he escalates is a scoring outcome, not a scripted event. The five variants are the
 falsification fixture —
 
 - `baseline` — Vincent as written;
@@ -211,13 +242,21 @@ They produce distinct histories, which is what demonstrates that traits and rela
 affect behaviour without directly triggering actions. `disloyal-vincent` is the only variant that
 exercises the request channel, so it is the one that moves when the channel changes.
 
-**Read the distinctness claim with one caveat.** `resentful-tommy` currently makes the same decisions
-as `baseline`; its hash differs only through seeded state reaching the trace summary. It was added to
-stage an executor denying his own act to his delegator and does not yet achieve that — the delegator
-can now put the question, but it loses the utility competition, for the reasons in `ROADMAP.md`'s
-debt list. So "five configurations, five distinct histories" is at present a weaker statement than it
-appears, and a future change that made two variants converge behaviourally would not necessarily be
-caught by it.
+**The distinctness claim now states its own caveat.** `resentful-tommy` still makes the same decisions
+as `baseline`; its hash differs only through seeded state reaching the trace summary. Since milestone
+007, `--compare` computes a chosen-action digest from structured decision fields and reports trace
+distinctness and behavioural distinctness separately — five and four — so the weaker of the two claims
+can no longer be read as the stronger one. A future change that made two variants converge
+behaviourally is caught by the second figure.
+
+The variant was added to stage an executor denying his own act to his delegator, and still does not
+achieve it. The delegator now asks and the executor now answers, in play; he answers honestly, because
+he believes the street saw him. See `ROADMAP.md` for what would have to change.
+
+**Also note the second business is never collected from.** Nobody in the organisation knows it is
+refusing — deliberately, since that asymmetry is what leaves the capo room to question his own man
+rather than be handed a second errand — so its collection path is present in the fixture and
+unexercised.
 
 ## Load-bearing regression categories
 
@@ -252,6 +291,23 @@ Future changes should retain coverage for:
 - A trace explanation never names a source the record does not have, and never says a character is
   going behind somebody when the claim was self-acquired or when the source *is* the person asked.
 - Two generators proposing the same `(kind, target, claim)` question offer it once.
+- Concealment is worth only the protection a report newly buys, per `(sender, recipient, claim)`,
+  read from asserted stance rather than from `Report.Candor`, most recent treatment winning.
+- A sender's belief moving may make a claim reportable again; it never refunds protection he has
+  already spent.
+- Concealment protection is completed per claim before the maximum is taken — never separate maxima
+  added, which could combine halves from different claims.
+- Identical words are inert unless the listener independently moved since that speaker's preceding
+  account, and then count exactly once.
+- A report records the question it answers; whether something is a reply is never inferred from
+  timing.
+- Behavioural distinctness between configurations is computed from structured chosen-decision fields,
+  never from rendered trace text, and is reported separately from trace distinctness.
+- Business ordering in the harbour is explicit: the grocery sorts first and the first collection cycle
+  runs on it.
+- A relationship movement that reaches no decision score is not a demonstrated consequence —
+  decision-relevance is asserted by a counterfactual through the production scorer, not by the
+  movement existing.
 
 ## Review checklist
 
@@ -363,6 +419,15 @@ were made testable through production helpers such as `Generators.CanAsk`. Note 
 a snapshot-field addition cannot be mutation-checked the same way, since deleting a field merely
 weakens the comparator — request actions are also written to the truth log so runner verification
 gives an independent deterministic signal.
+
+Milestone 007 found two more of a slightly different shape, and the difference is worth naming.
+Neither copied a rule; each asserted against a **relationship the model did not have**. One treated
+any report from the asked person to the asker within two days as the reply to a question, and duly
+reported a man as having answered something he held no position on. The other required every held
+belief to be self-acquired or backed by testimony, which a scenario-seeded belief from a source
+outside the cast can never satisfy — it passed only because another character happened to speak about
+that same claim later in the run, and stopped the moment that report stopped being filed.
+*Is this assertion checking a link the simulation actually records, or one the test is inferring?*
 
 **Recording a review that did not happen.** See below; it is the pattern this file exists to stop.
 

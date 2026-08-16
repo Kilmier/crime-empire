@@ -5,7 +5,7 @@ using CrimeSim.Org;
 using CrimeSim.Sim;
 
 /// <summary>
-/// The harbour scenario: one organisation, one contested district, five people.
+/// The harbour scenario: one organisation, one contested district, six people, two businesses.
 ///
 /// Deliberately small. The question this spike answers is whether the decision pipeline produces
 /// motivated behaviour, and a bigger cast makes it harder to tell whether an odd trace came from
@@ -14,12 +14,36 @@ using CrimeSim.Sim;
 /// Nothing here scripts an escalation. Vincent is given aggression, pride, a revenue problem and a
 /// grievance; whether he breaks his boss's rule is a scoring outcome, and the variants exist to
 /// check that it is genuinely contingent on those inputs.
+///
+/// <b>Why there are two businesses (milestone 007).</b> With one, the whole run had exactly one
+/// collection cycle: the grocery paid, <c>RevenueLoss</c> dropped half a point, nothing was left to
+/// tick it back over <see cref="Org.Organization"/>'s review threshold, and the last third of the
+/// simulation was a boss choosing to do nothing eleven times. Three consecutive milestones had ended
+/// with a correct mechanism the scenario could not demonstrate, and the reason was structural rather
+/// than any mechanism's fault — one line of causation has nowhere to put a second event. A second
+/// contested business keeps the organisational condition alive, which produces a second assignment,
+/// a second briefing, and a second delegation, and those are where relationships get read.
+///
+/// The second shop needs an owner because <c>AdvanceTribute</c> resolves a demand through the
+/// owner's own decision rather than a roll on his behalf. Sharing Marco would have been worse than
+/// a sixth character: <c>Commit</c>'s concede and refuse paths find a business by owner and would
+/// have had him answering for the wrong shop.
 /// </summary>
 public static class Cast
 {
     public const string OrgId = "greco-family";
     public const string Harbour = "harbour";
     public const string Grocery = "bellini-grocery";
+
+    /// <summary>
+    /// The second contested business, and the one nobody has told the boss about.
+    ///
+    /// Sorts after <see cref="Grocery"/>, and that is determinism-relevant rather than incidental:
+    /// <c>World.BusinessesIn</c> orders by id, and <c>FromResponsibility</c> falls back to the first
+    /// visible target when the character believes no particular business is holding out. Pinned by a
+    /// test rather than left to a naming coincidence.
+    /// </summary>
+    public const string Bakery = "dorato-bakery";
 
     public static readonly DateTime Start = new(1987, 3, 2, 8, 0, 0, DateTimeKind.Utc);
 
@@ -123,6 +147,27 @@ public static class Cast
                 }),
         };
 
+        var nunzio = new Character
+        {
+            Id = "nunzio",
+            Name = "Nunzio Dorato",
+            RoleTitle = "baker",
+            Capabilities = new Capabilities(
+                new Dictionary<Skill, double> { [Skill.Persuasion] = 0.35, [Skill.Discretion] = 0.40 },
+                crew: 0, cash: 2600, authority: 0, districts: new[] { Harbour }),
+            Psychology = new Psychology(
+                // Softer than Marco on pride and harder on security: two shopkeepers who fold at
+                // different points make the second cycle a second experiment rather than a replay.
+                // Nothing here is tuned toward an outcome — the collection has to win its own
+                // scoring competition against his wealth drive exactly as the first one did.
+                new Dictionary<Trait, double> { [Trait.Cautious] = 0.70, [Trait.Proud] = 0.35, [Trait.Suspicious] = 0.45 },
+                new Dictionary<Drive, double>
+                {
+                    [Drive.Wealth] = 0.65, [Drive.Security] = 0.65,
+                    [Drive.Status] = 0.25, [Drive.Belonging] = 0.40,
+                }),
+        };
+
         var kane = new Character
         {
             Id = "kane",
@@ -146,7 +191,7 @@ public static class Cast
                 }),
         };
 
-        foreach (var c in new[] { salvatore, vincent, tommy, marco, kane })
+        foreach (var c in new[] { salvatore, vincent, tommy, marco, nunzio, kane })
             world.Characters[c.Id] = c;
 
         // ---------------------------------------------------------------- affiliations
@@ -189,6 +234,17 @@ public static class Cast
             Resistance = 0.55,
         };
 
+        world.Businesses[Bakery] = new Business
+        {
+            Id = Bakery,
+            Name = "Dorato's bakery",
+            DistrictId = Harbour,
+            OwnerId = "nunzio",
+            MonthlyRevenue = 3100,
+            PayingTribute = false,
+            Resistance = 0.50,
+        };
+
         // ---------------------------------------------------------------- institution
         org.Offices.Add(new Office { Title = "capo, harbour", Domain = Harbour, Authority = 2, HolderId = "vincent" });
         org.Conditions[OrgCondition.RevenueLoss] = 0.55;
@@ -209,6 +265,21 @@ public static class Cast
         // believing this, on the word of a bookkeeper nobody models. "the books" is a source
         // outside the cast, which is what makes it a report rather than something he found — and
         // what makes it corroboratable, since a thing you were told is a thing worth checking.
+        //
+        // NOTE WHAT HE IS NOT TOLD. The bakery is also refusing, and nobody has mentioned it to him.
+        // The organisational condition below is objective — the family's takings really are short by
+        // both shops — while his account of *why* names only one of them. That is the truth/knowledge
+        // distinction the whole project rests on, applied to an organisation's own books, and it is
+        // the fixture's most productive asymmetry: he goes on telling his capo the grocery will not
+        // pay after his capo has personally watched it start paying, because the shortfall he can see
+        // has a cause he cannot.
+        //
+        // It was first written the other way, with both shops in his head, and that is worth
+        // recording because the difference was not cosmetic. Knowing about the bakery handed Vincent
+        // a fresh collection job on the same wake where he would otherwise have gone to ask his own
+        // man for an account — so the delegator's question, freed by milestone 007's scoring fix, was
+        // immediately crowded out by a second errand. Partial knowledge is not a workaround here; it
+        // is the thing that leaves him room to think.
         salvatore.Cognition.Learn(new Claim(ClaimKind.BusinessRefusesTribute, Grocery),
             Stance.Believes, 0.75, SourceKind.Report, "the books", Start);
         salvatore.Cognition.Learn(new Claim(ClaimKind.TargetIsVulnerable, Grocery),

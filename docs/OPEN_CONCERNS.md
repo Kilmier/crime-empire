@@ -57,10 +57,26 @@ What the kernel has now shown:
   relationship state made the read-creates hazard visible and made the conflict edge a three-line
   change at each of three call sites rather than a convention.
 
+**Updated again 2026-08-15 with milestone 007's evidence, and still not retired.** 006 showed trust
+moves; 007 shows how far that movement carries, which is the more useful number and the less
+flattering one.
+
+- **The movement reaches a score, and is roughly a fortieth of a decision margin.** A capo
+  contradicted twice by his boss goes from 0.45 trust to 0.031, and the `relationship effects`
+  component on his next report to that boss moves from 0.0440 to 0.0063. Decision-relevant, and
+  nowhere near choice-changing. `Utility.Loyalty` weights trust at 0.45 and subtracts half of any
+  grievance, so a standing grievance of 0.35 absorbs most of a full trust collapse before it reaches
+  a score at all. Whether that is the right shape is a schema question, not a tuning one.
+- **Which relationship a mechanism lands on decides whether it matters at all.** 006's conflict fell
+  on a character with no relationship-reading decisions and changed nothing; the identical mechanism
+  landing on one who reports upward is measurable. A schema that says how dimensions are stored and
+  updated without saying which decisions read them will not predict this.
+
 What is still unanswered, and is what a document would have to settle: decay and its rate; whether
 respect, resentment and attraction are separate dimensions or derived; whether provenance should
 weight the social consequence (milestone 006 deliberately used one rule and preserved the provenance
-so this can be decided on evidence); and negative trust.
+so this can be decided on evidence); negative trust; and whether loyalty's weights leave trust enough
+room to matter once a grievance exists.
 
 ### 4. ~~Trait/value vocabulary must be closed, but the concrete list still isn't committed~~
 **Retired 2026-08-14.** Milestone 001 closed the list in `Domain/Psychology.cs` and it is now

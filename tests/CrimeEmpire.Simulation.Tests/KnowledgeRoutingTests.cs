@@ -101,6 +101,18 @@ public sealed class KnowledgeRoutingTests
         foreach (var who in world.Characters.Values.Where(c => c.Social.OrganizationId == org.Id))
         foreach (var held in who.Cognition.Records.Where(r => r.IsHeld))
         {
+            // Same exemption the sibling test above documents, and for the same reason: a source
+            // outside the cast is a scenario fixture, not the organisation acting as a channel. The
+            // bookkeeper who told Salvatore the takings were short is not a character and cannot
+            // testify, so no testimony will ever back that record.
+            //
+            // It was absent here and the test passed anyway, because Vincent happened to give him an
+            // account of that same claim later in the run. Milestone 007 stopped Vincent filing that
+            // second report — it existed only because concealment was being re-paid for — and the
+            // omission surfaced immediately. The rule under test is "rank is not a channel"; a
+            // fixture sourced to somebody who does not exist was never within it.
+            if (world.Find(held.SourceId) is null) continue;
+
             bool ownDoing = held.SourceKind.IsSelfAcquired() || held.SourceKind == SourceKind.Inference;
             bool wasTold = who.Cognition.Testimony.Any(t => t.Claim.Equals(held.Claim));
 

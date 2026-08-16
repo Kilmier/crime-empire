@@ -248,7 +248,7 @@ public sealed class InformationTransmissionTests
         {
             TargetId = Viewpoint,
             Candor = ReportCandor.False,
-            Suppressed = new[] { breach },
+            Suppressed = new[] { new SuppressedClaim(breach, PriorDisclosureState.NeverAddressed) },
         };
         var denial = Reporting.Compose(
             world, vincent, salvatore, candidate, Salience.Perceive(vincent, world.Now));
@@ -280,40 +280,53 @@ public sealed class InformationTransmissionTests
     /// <summary>
     /// A source contradicting him leaves the disagreement standing and attributable, rather than
     /// one account quietly overwriting the other.
+    ///
+    /// Read against Vincent rather than the boss from milestone 007 onward. The contradiction in the
+    /// accepted scenario now runs down the chain instead of up it: Vincent no longer files the
+    /// repeated concealing report whose rejection used to reach Salvatore, and his boss's assignment
+    /// briefings re-assert a claim Vincent has personally watched become false. The rule being pinned
+    /// — a disagreement stays standing and stays attributable to who said what — is unchanged.
     /// </summary>
     [Fact]
     public void A_contradicting_source_leaves_a_conflict_that_is_still_attributable()
     {
         var world = Run("disloyal-vincent");
-        var salvatore = world.Get(Viewpoint);
+        var contradicted = world.Get("vincent");
 
-        var contested = salvatore.Cognition.Testimony
+        var contested = contradicted.Cognition.Testimony
             .Select(t => t.Claim)
             .Distinct()
-            .Where(salvatore.Cognition.IsContested)
+            .Where(contradicted.Cognition.IsContested)
             .ToList();
 
         Assert.NotEmpty(contested);
 
         foreach (var claim in contested)
         {
-            var accounts = salvatore.Cognition.AccountsOf(claim).ToList();
+            var accounts = contradicted.Cognition.AccountsOf(claim).ToList();
             Assert.NotEmpty(accounts);
 
             // Every account still names who gave it. A conflict nobody can be held to is not
             // usable evidence about anything.
             Assert.All(accounts, a => Assert.False(string.IsNullOrEmpty(a.SenderId)));
 
-            var own = salvatore.Cognition.Find(claim);
+            var own = contradicted.Cognition.Find(claim);
             bool disagreesWithHim = own is not null && accounts.Any(a => a.Affirms != own.IsHeld);
             bool sourcesDisagree = accounts.Any(a => a.Affirms) && accounts.Any(a => !a.Affirms);
             Assert.True(disagreesWithHim || sourcesDisagree);
         }
 
         // And the player is shown it as a disagreement, not handed a resolution.
-        string view = IntelligenceWriter.Render(world, Viewpoint);
+        string view = IntelligenceWriter.Render(world, "vincent");
         Assert.Contains("ACCOUNTS THAT DO NOT AGREE", view, StringComparison.Ordinal);
-        Assert.Contains("contradicted", view, StringComparison.Ordinal);
+
+        // The "contradicted" label replaces a confidence label, so it can only appear against a
+        // claim he still holds. Here he has come to *reject* the contested claim, which puts it in
+        // the disagreements section and out of what he has — so the word is legitimately absent.
+        // Asserting it unconditionally, as this test did while it read the boss, passes or fails on
+        // which side of the argument the viewpoint character happened to end up on.
+        bool holdsAContestedClaim = contested.Any(c => contradicted.Cognition.Find(c) is { IsHeld: true });
+        Assert.Equal(holdsAContestedClaim, view.Contains("contradicted", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -1151,26 +1164,26 @@ public sealed class InformationTransmissionTests
         var world = Run(variant);
         int answered = 0;
 
-        foreach (var q in world.Requests)
+        // Replies identified by what the report itself records, not by who sent what to whom inside a
+        // two-day window. That window matched a volunteered account against an unrelated question and
+        // asserted a link the model did not have; silence is a legitimate outcome, and a man
+        // answering nothing while happening to file something else must not read as an answer.
+        foreach (var reply in world.Reports.Where(r => r.AnsweringClaim is not null))
         {
-            // The request wakes him the next day; anything later is his own business, not a reply.
-            var reply = world.Reports
-                .Where(r => r.SenderId == q.AskedId && r.RecipientId == q.AskerId
-                            && r.At >= q.At && r.At <= q.At.AddDays(2))
-                .OrderBy(r => r.At)
-                .FirstOrDefault();
-
-            // Silence is a legitimate outcome and is asserted separately below.
-            if (reply is null) continue;
+            var asked = reply.AnsweringClaim!.Value;
             answered++;
+
+            Assert.Contains(world.Requests,
+                q => q.AskedId == reply.SenderId && q.AskerId == reply.RecipientId
+                     && q.About.Equals(asked) && q.At <= reply.At);
 
             var touched = reply.Asserted.Select(a => a.Claim).Concat(reply.Withheld).ToList();
 
-            Assert.True(touched.Contains(q.About),
-                $"[{variant}] {q.AskedId} was asked about {q.About} and replied about " +
+            Assert.True(touched.Contains(asked),
+                $"[{variant}] {reply.SenderId} was asked about {asked} and replied about " +
                 $"{string.Join(", ", touched)}");
 
-            Assert.All(touched, c => Assert.Equal(q.About, c));
+            Assert.All(touched, c => Assert.Equal(asked, c));
         }
 
         Assert.True(answered > 0, $"[{variant}] no request was ever answered, so nothing was proved");
@@ -1287,16 +1300,17 @@ public sealed class InformationTransmissionTests
         }
 
         // And specifically for replies: he answered only where he had something to answer with.
-        foreach (var q in world.Requests)
+        //
+        // Matched on the report's own record of the question it answers, not on who sent what to
+        // whom within two days. The proximity version of this reported a man as having answered a
+        // question he held no position on, when he had in fact ignored it and volunteered an
+        // unrelated account the following evening — a test asserting against a link the model did
+        // not have, and passing until the surrounding behaviour moved.
+        foreach (var reply in world.Reports.Where(r => r.AnsweringClaim is not null))
         {
-            var reply = world.Reports.FirstOrDefault(r =>
-                r.SenderId == q.AskedId && r.RecipientId == q.AskerId
-                && r.At >= q.At && r.At <= q.At.AddDays(2));
-
-            if (reply is null) continue;
-
-            Assert.True(world.Get(q.AskedId).Cognition.Find(q.About) is not null,
-                $"[{variant}] {q.AskedId} answered about {q.About} while holding no position on it");
+            var asked = reply.AnsweringClaim!.Value;
+            Assert.True(world.Get(reply.SenderId).Cognition.Find(asked) is not null,
+                $"[{variant}] {reply.SenderId} answered about {asked} while holding no position on it");
         }
     }
 

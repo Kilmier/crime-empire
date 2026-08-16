@@ -46,7 +46,7 @@ public sealed class DisclosedProvenanceTests
         {
             TargetId = salvatore.Id,
             Candor = ReportCandor.False,
-            Suppressed = new[] { Beating },
+            Suppressed = new[] { new SuppressedClaim(Beating, PriorDisclosureState.NeverAddressed) },
             AnsweringClaim = Beating,
         };
 

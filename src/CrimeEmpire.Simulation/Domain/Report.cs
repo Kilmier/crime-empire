@@ -95,6 +95,60 @@ public readonly record struct ReportedClaim(
 }
 
 /// <summary>
+/// What one recipient has already been given, by one sender, about one claim.
+///
+/// This is a fact about <em>messages</em>, not about beliefs. It exists because concealment was being
+/// re-priced as a fresh gain on every report: `Reporting.LastAddressed` correctly treated a withheld
+/// claim as settled for eligibility, while `Utility` went on paying the full self-protection bonus
+/// for withholding it again, so "report while hiding the same thing" won indefinitely.
+///
+/// The two questions are deliberately separate and must stay so. Report <em>eligibility</em> asks
+/// whether the sender's own position has moved since he last spoke, and a moved position legitimately
+/// re-arms a report. Marginal concealment <em>value</em> asks what a message newly buys, and a
+/// sender's change of mind cannot make his recipient un-hear something. Deriving this state from
+/// belief timestamps would let reconsideration refund protection already spent.
+///
+/// Note what it is not derived from: <see cref="Report.Candor"/>. A candid rejection and a deceptive
+/// denial put the same denying stance in front of the recipient, and both have to count; keying on
+/// candour would have caught only the liar.
+/// </summary>
+public enum PriorDisclosureState
+{
+    /// <summary>
+    /// He has said nothing either way to this recipient about this claim — including a claim that
+    /// never reached the page because the length cap cut it. Cap-omission is not concealment: he
+    /// decided nothing about it, so it buys nothing and costs nothing.
+    /// </summary>
+    NeverAddressed,
+
+    /// <summary>He kept it back without saying anything contrary. The recipient has silence.</summary>
+    Withheld,
+
+    /// <summary>He asserted it. The recipient already has the claim from him.</summary>
+    DisclosedAffirmatively,
+
+    /// <summary>
+    /// He asserted the opposite — whether sincerely, having come to reject it, or as a lie. The
+    /// recipient has already heard the denying stance from him.
+    /// </summary>
+    Denied,
+}
+
+/// <summary>
+/// One claim a deceptive report would suppress, carrying what this recipient has already been given
+/// about it.
+///
+/// The prior state travels <em>with</em> the claim rather than beside it. Milestone 004 produced the
+/// same defect four times — a distinction drawn in one place and dropped on the way to the next — and
+/// two parallel collections indexed by position is the shape that invites it.
+/// </summary>
+public readonly record struct SuppressedClaim(Claim Claim, PriorDisclosureState Prior)
+{
+    public override string ToString()
+        => Prior == PriorDisclosureState.NeverAddressed ? Claim.ToString() : $"{Claim} [{Prior}]";
+}
+
+/// <summary>
 /// One character having asked another to account for one particular thing.
 ///
 /// Recorded because asking is an act with a cost and a consequence, not a poll. Without it,
@@ -130,8 +184,22 @@ public sealed record Report(
     ReportCandor Candor,
     IReadOnlyList<ReportedClaim> Asserted,
     IReadOnlyList<Claim> Withheld,
-    string Framing)
+    string Framing,
+    Claim? AnsweringClaim = null)
 {
+    /// <summary>
+    /// The question this report was an answer to, when it was one; null when he volunteered it.
+    ///
+    /// Recorded because otherwise nothing links a reply to its request, and "did he answer what he
+    /// was asked" could only be guessed at from timing. A test did exactly that — treating any report
+    /// from the asked person to the asker within two days as the reply — and reported a man as having
+    /// answered a question he had no position on, when what he had actually done was volunteer an
+    /// unrelated account the next evening. A proximity heuristic standing in for a link the model
+    /// does not have is the false-assurance pattern this repository already has two examples of.
+    /// </summary>
+    public Claim? AnsweringClaim { get; init; } = AnsweringClaim;
+
     public override string ToString()
-        => $"{SenderId} -> {RecipientId} [{Candor}] {Asserted.Count} asserted, {Withheld.Count} withheld";
+        => $"{SenderId} -> {RecipientId} [{Candor}] {Asserted.Count} asserted, {Withheld.Count} withheld"
+           + (AnsweringClaim is { } q ? $", answering {q}" : "");
 }

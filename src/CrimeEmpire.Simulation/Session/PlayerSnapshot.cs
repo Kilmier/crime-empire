@@ -239,20 +239,22 @@ public static class PlayerView
     }
 
     /// <summary>
-    /// The people this character has any reason to know exist, in id order.
+    /// The people this character could name, in id order.
     ///
-    /// Assembled strictly from his own head: whoever appears in a claim he holds, whoever has
-    /// given him an account, whoever he has a relationship with, and whoever he holds a grievance
-    /// against. The world is consulted only to ask whether an id names a person at all — "the
-    /// books" and a grocery are not people to go and ask — which resolves references he already
-    /// has rather than introducing new ones.
+    /// <b>The derivation lives in <see cref="Acquaintance.KnownTo"/></b>, one layer down, and this
+    /// is a delegation rather than a copy: candidate generation asks the same question, through
+    /// <c>GeneratorContext.AcquaintedIds</c>, and must get the same answer. It is what the character
+    /// holds — whoever appears in a claim he holds, gave him an account, he has a relationship with,
+    /// or he holds a grievance against — widened <b>only</b> by the holders of his own organisation's
+    /// named posts, <c>Organization.Offices</c> and <c>BossId</c>.
     ///
-    /// <b>The derivation itself lives in <see cref="Acquaintance.HeardOf"/></b>, one layer down,
-    /// because candidate generation needs the same answer to the same question and had been getting
-    /// a different one — it read the authoritative organisation roster. Milestone 009's second
-    /// correction moved the rule rather than copying it: the player view and the generators are two
-    /// readers of one derivation, and the reason this is worth insisting on is that the copy would
-    /// have drifted silently and only shown up as a leak.
+    /// Note what it is not widened by: the organisation roster, and no authority scan standing in for
+    /// an office. Milestone 009's second correction widened it by <c>Pipeline.SuperiorOf</c> and
+    /// <c>SubordinatesOf</c> — which are that roster under another name — and was rejected for it;
+    /// the third correction settled the rule above. Do not read the derivation off
+    /// <see cref="Acquaintance.HeardOf"/>, which is the cognition-only half and is `internal`
+    /// precisely because a test that compared this method against it, while the generators used the
+    /// wider set, is how that leak survived the correction written to close it.
     ///
     /// Public so tests can assert that no name outside this set ever reaches any surface.
     /// </summary>

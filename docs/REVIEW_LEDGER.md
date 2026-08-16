@@ -598,9 +598,10 @@ Added by milestone 009's second correction:
 - **The filter admits as well as excludes.** One claim naming a stranger makes him approachable, and a
   soldier can still name his own capo — a rule that narrowed what can honestly be expressed would be
   its own defect.
-- **"Who has this character heard of" has one derivation.** `Acquaintance.HeardOf` is it;
-  `PlayerView.KnownPeople` delegates to it rather than repeating it, asserted for every character in
-  every variant after a full run.
+- ~~**"Who has this character heard of" has one derivation.** `Acquaintance.HeardOf` is it.~~
+  **Superseded by the third correction's category below**, which names `Acquaintance.KnownTo`.
+  `HeardOf` is the cognition-only half and is now `internal`; a live regression category pointing at
+  it would be the rejected rule left standing as though it were the rule.
 - **Requests are checked at the moment each one is made**, by stepping the run — never against the
   asker's acquaintance set at the end, which is a superset and made the check very nearly vacuous.
 

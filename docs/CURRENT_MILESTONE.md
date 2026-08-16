@@ -102,19 +102,18 @@ touched none of it.**
 
 New from milestone 009:
 
-- **Membership is not knowledge; a named office is.** Settled by the third correction:
-  `Acquaintance.KnownTo` widens what a character has heard of by the holders of his own
-  organisation's explicit posts — `Organization.Offices` and `BossId` — and by nothing else. A
-  soldier holding no office is unreachable for corroboration until somebody actually names him, which
-  in `cautious-vincent` never happens for Tommy. **What remains open is whether that is the right
-  answer**, not where the line is drawn: an outfit in which the boss cannot name his own soldiers is
-  a defensible reading of imperfect information and an odd reading of an organisation.
+- **Membership is not knowledge; a named office is.** **Settled by the third correction, and the
+  boundary is implemented** — `Acquaintance.KnownTo` is the one derivation both `PlayerView` and
+  candidate generation read: what the character holds in cognition and social state, widened only by
+  the holders of his own organisation's `Organization.Offices` and `BossId`. Neither
+  `Generators.FromRelationship` nor anything else selects a target from the organisation roster any
+  more, and no authority scan stands in for an office. **What is carried forward is the design
+  question, not the rule**: a soldier holding no office is unreachable for corroboration until
+  somebody actually names him, which in `cautious-vincent` never happens for Tommy, and whether an
+  outfit whose boss cannot name his own soldiers is the right model is unanswered.
 - **The timing of a pause is observable even when the occasion is not.** The controlled character is
   woken when a delegated operation blocks or completes, so a player sees him stop on the day it
   happened. Closing it means not waking him, which changes autonomous behaviour.
-- **`Generators.FromRelationship` draws a corroboration target from the whole organisation's
-  membership**, not from people the character has heard of. Pre-existing, inert at this cast size, and
-  more visible now that option wording resolves ids to names.
 - **The player cannot see why an option is unavailable.** Right for utility scores; arguably wrong for
   "he does not know that the bakery is holding out", which is the line that proves the simulation is
   belief-limited rather than merely claiming to be.

@@ -31,15 +31,23 @@ public sealed record GeneratorContext(
     // roster. Anything that turns a member into a target must intersect it with AcquaintedIds first;
     // see that field.
     IReadOnlyList<string> OrgMemberIds,
-    // Everyone he has heard of, plus the office relationships he is party to — the belief-limited
-    // half of the pair above. See Decision/Acquaintance.cs.
+    // Everyone this character could name — the belief-limited half of the pair above, and the only
+    // half a target may be drawn from. It is Acquaintance.KnownTo and nothing else: what he holds in
+    // cognition and social state, widened ONLY by the holders of his own organisation's named posts
+    // (Organization.Offices and BossId). See Decision/Acquaintance.cs.
     //
-    // Milestone 009's second correction added this because the corroboration generator picked its
-    // target straight out of OrgMemberIds: a character could put a question to somebody whose
-    // existence nothing in his head established, and the player-facing option then resolved that id
-    // into a visible name. Belief-limited candidate generation is the rule the architecture states
-    // — "reject unknown, impossible, or unavailable candidates" — and a target is exactly the kind of
-    // thing that can be unknown.
+    // NOT the roster, and no authority scan standing in for an office. Milestone 009's second
+    // correction widened this by Pipeline.SuperiorOf and SubordinatesOf, calling them office
+    // relationships; those are scans of world.Characters at a neighbouring Authority, which is
+    // OrgMemberIds under another name, and it was rejected for it. The third correction settled the
+    // rule above — an office relationship is only an office relationship if it comes from an office.
+    //
+    // Why the field exists at all: the corroboration generator used to pick its target straight out
+    // of OrgMemberIds, so a character could put a question to somebody whose existence nothing in his
+    // head established, and the player-facing option then resolved that id into a visible name.
+    // Belief-limited candidate generation is the rule the architecture states — "reject unknown,
+    // impossible, or unavailable candidates" — and a target is exactly the kind of thing that can be
+    // unknown.
     IReadOnlyList<string> AcquaintedIds,
     // Reports this character has already sent. Needed so that "report in" stops being a live
     // option once he has said everything he has — otherwise a standing responsibility wakes him
@@ -531,9 +539,10 @@ public static class Generators
 
         if (secondhand is not null)
         {
-            // Whom he could actually go to: in the outfit, and somebody he has heard of. The second
-            // half is the belief limit — without it the roster itself proposed the target, so a man
-            // could go and put a question to somebody he had no way of knowing existed.
+            // Whom he could actually go to: in the outfit, and somebody he could name. The second
+            // half is the belief limit — Acquaintance.KnownTo, not the roster and not an authority
+            // scan over it — without which the roster itself proposed the target, so a man could go
+            // and put a question to somebody he had no way of knowing existed.
             var acquainted = new HashSet<string>(ctx.AcquaintedIds, StringComparer.Ordinal);
 
             string? other = ctx.OrgMemberIds

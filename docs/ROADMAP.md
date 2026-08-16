@@ -138,13 +138,20 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   stop on the day it happened even though the interface says nothing about why. Closing it would mean
   not waking him, which changes autonomous behaviour. Surfaced by milestone 009's first correction.
 - ~~**`Generators.FromRelationship` draws a corroboration target from the whole organisation's
-  membership.**~~ **Retired 2026-08-16 by milestone 009's second correction, and the deferral's
-  reasoning was wrong.** It said "inert in a three-member outfit"; that was never measured and was
-  false. In `cautious-vincent` there is no violence, so nothing ever names Tommy to Salvatore, and
-  Salvatore was going to him for an account anyway. `Decision/Acquaintance.cs` is now the single
-  derivation of who a character has heard of, `GeneratorContext.AcquaintedIds` carries it, and
-  `PlayerView.KnownPeople` delegates to it instead of repeating it. `cautious-vincent`'s baseline
-  moved and the new figures are in `REVIEW_LEDGER.md`.
+  membership.**~~ **Retired 2026-08-16 by milestone 009's THIRD correction.** Two things are worth
+  keeping about how it got there.
+
+  The original deferral said "inert in a three-member outfit"; that was never measured and was false.
+  In `cautious-vincent` there is no violence, so nothing ever names Tommy to Salvatore, and Salvatore
+  was going to him for an account anyway. The second correction fixed that much — `cautious-vincent`'s
+  baseline moved, and the new figures are in `REVIEW_LEDGER.md` — **but it was rejected and did not
+  retire this item**, because it widened the set back by `Pipeline.SuperiorOf` and
+  `Pipeline.SubordinatesOf`, which are authority scans over the same roster.
+
+  The implemented rule is the third correction's: `Acquaintance.KnownTo` is the single derivation,
+  read by both `GeneratorContext.AcquaintedIds` and `PlayerView.KnownPeople`, and it is the
+  character's own cognition and social state widened **only** by the holders of his organisation's
+  `Organization.Offices` and `BossId`. No roster and no authority scan reaches a target.
 - **Whether an outfit whose boss cannot name his own soldiers is the right model.** The line is drawn
   explicitly by milestone 009's third correction: a named post is knowledge — `Organization.Offices`
   and `BossId` — and a headcount is not. The model has held that position since milestone 003, when

@@ -20,10 +20,15 @@ using CrimeSim.Domain;
 /// <see cref="PlayerOccasion"/> makes about the scheduler.
 ///
 /// <b>Every input is already belief-limited.</b> Candidates are generated from the actor's
-/// <see cref="PerceivedSituation"/>, so a field read here cannot name a fact he lacks. The one soft
-/// edge is that <c>Generators.FromRelationship</c> draws a corroboration target from the whole
-/// organisation's membership rather than from people he has heard of; that was true of the developer
-/// description too and is recorded in `ROADMAP.md` rather than widened or quietly patched here.
+/// <see cref="PerceivedSituation"/>, so a field read here cannot name a fact he lacks, and a
+/// corroboration target comes from <see cref="Acquaintance.KnownTo"/> — his own cognition and
+/// social state, widened only by the holders of his organisation's named posts. So resolving an id
+/// to a display name here cannot put a stranger's name in front of anybody.
+///
+/// That was not true when this file was written: <c>Generators.FromRelationship</c> then drew its
+/// target from the whole organisation roster, and this comment recorded it as a soft edge deferred
+/// to `ROADMAP.md`. Milestone 009's review called it a P1 — correctly, since rendering the name is
+/// the half that reaches a person — and its third correction closed it upstream.
 /// </summary>
 internal static class PlayerOption
 {

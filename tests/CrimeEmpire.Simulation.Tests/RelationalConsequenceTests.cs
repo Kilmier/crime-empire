@@ -1133,8 +1133,11 @@ public sealed class RelationalConsequenceTests
 
         var ctx = Context(world, vincent);
         var rng = Rng.ForOccasion(world.Seed, "test|fixed");
+        // Milestone 008: read through the facet rather than the component name. See the note on the
+        // same migration in ScenarioReachTests — a third of the components carrying that name read
+        // no relationship state, and the name also swept in the Belonging share of loyalty.
         return Utility.Score(candidate, vincent.View, vincent.Psychology, ctx.Perceived, ctx.Agenda, rng)
-            .Components.Where(p => p.Name == "relationship effects").Sum(p => p.Value);
+            .RelationshipNet();
     }
 
     /// <summary>

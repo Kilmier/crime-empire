@@ -91,8 +91,28 @@ if (compare)
         var vincent = world.Get("vincent");
         var kane = world.Get("kane");
 
+        // Milestone 008, ruling 9. How often the relationship channel actually decided a winner,
+        // measured by re-ranking each decision on scores with relationship state removed. Reported
+        // in both directions and never engineered: nothing in milestone 008 tuned a coefficient, and
+        // a zero here would have been the honest result rather than a failure.
+        int channelDecided = 0, relationshipRead = 0;
+        foreach (var d in world.Decisions)
+        {
+            if (d.Scored.Count == 0) continue;
+            if (d.Scored.Any(s => s.RelationshipGross() > 1e-9)) relationshipRead++;
+            if (d.Scored.Count < 2) continue;
+
+            var withoutRelationships = d.Scored
+                .OrderByDescending(s => s.TotalWithoutRelationships())
+                .ThenBy(s => s.Candidate.Id, StringComparer.Ordinal)
+                .First();
+            if (!ReferenceEquals(withoutRelationships, d.Scored[0])) channelDecided++;
+        }
+
         Console.WriteLine($"  {v,-18} {Variants.Describe(v)}");
         Console.WriteLine($"  {"",-18} decisions:  {world.Decisions.Count}");
+        Console.WriteLine($"  {"",-18} rel. read:  {relationshipRead} decision(s) weighed relationship state");
+        Console.WriteLine($"  {"",-18} rel. chose: {channelDecided} decision(s) would have chosen differently without it");
         Console.WriteLine($"  {"",-18} violence:   {(violence.Count == 0 ? "none" : $"{violence.Count} incident(s)")}");
         bool breached = violence.Count > 0 || vincent.Execution.Strategy?.BreachedPolicyId is not null;
         Console.WriteLine($"  {"",-18} policy:     {(breached ? "breached" : "held")}");

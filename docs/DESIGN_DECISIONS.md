@@ -149,6 +149,50 @@ the API around it; the relationship *schema* is explicitly not settled and stays
 - **The trait-vocabulary rule applies to relationship dimensions too**: `Affection` was removed for
   having no stated behavioural purpose rather than given one to justify keeping it.
 
+## Relationships — the reader side, settled by milestone 008
+
+See `docs/RELATIONSHIPS.md`, which is the prototype schema document `OPEN_CONCERNS.md` #3 asked for,
+and `milestones/008-relationship-readers.md` for the measurements behind each entry. Milestone 008
+changed **no coefficient**; everything here is about shape.
+
+- **The executable relationship vocabulary is closed, and this is the list.** `Trust`, `Fear`,
+  `Obligation`, and relationship-keyed `Grievances`. Each is retained only because a decision reads
+  it, asserted by a test across all five variants rather than argued from the call sites. No
+  speculative dimension is admissible on the strength of sounding like something people have —
+  respect, resentment and attraction are out until a reader exists. This is the same rule that closed
+  the trait vocabulary in milestone 001 and removed `Affection` in 006. — `Domain/Relations.cs`,
+  `docs/RELATIONSHIPS.md`.
+- **Grievance is outside the clamped loyalty sum.** `Loyalty.Value` is
+  `clamp(0.45·Trust + 0.30·Obligation + 0.25·Belonging, 0, 1)`; grievance is applied by each reader as
+  its own named component at `−0.50 × weight × that reader's coefficient`. Inside the clamp, a
+  character whose grievance exceeded his bond floored at zero, so further grievance was free and
+  further trust was worthless — a bitter subordinate and an indifferent one scored identically. The
+  `0.50` coefficient is preserved exactly and remains provisional tuning. A cap on grievance was
+  considered as the alternative remedy and **explicitly rejected**, so whether one is wanted is open,
+  not answered.
+- **Loyalty is derived and is read as parts, never as a scalar.** Trust, obligation, Belonging and
+  grievance stay separately inspectable all the way through the scoring path. `Belonging` is a drive,
+  not a relationship dimension, and is excluded from the relationship counterfactual: a man with no
+  relationships still has a need to belong.
+- **A report carries two distinct relationship considerations, and both are kept.** The standing
+  reporting buys (`+0.7 × loyalty`) and the relationship cost of the candour selected (`+0.8` candid,
+  `−0.5` partial, `−1.4` false) are not one effect. On a partial report they net to `0.2 × loyalty`,
+  which is why a full collapse of trust was worth 0.0377 there. Merging them is forbidden: a mutation
+  that preserves the net exactly is caught only by the test that asserts the distinction.
+- **A score component records the facet it was derived from, set where the value is computed.**
+  Aggregating by component name is forbidden and was measured to be wrong: of 168 components named
+  `relationship effects` across the five variants, 61 — 36% — read no relationship state at all
+  (`SeekCorroboration`'s "going behind X" is `−0.45 × proud`). A label is not a derivation.
+- **The relationship diagnostic reports gross and net with no cutoff, and is developer-facing.**
+  `Significant()`'s 0.15 threshold is right for a human-readable reason list and wrong for a
+  measurement: on the decision milestone 007's finding was taken from, both halves of the report pair
+  fall under it. A cutoff that hides a cancelling pair hides exactly the cancellation. The
+  counterfactual reuses the breakdown's own noise draw rather than re-scoring, because a fresh ±0.05
+  draw is larger than the effect being measured.
+- **Negative trust and decay are deferred, not retired**, each with the condition that brings it
+  back: a decision that reads distrust differently from indifference, and a calendar/tier timescale to
+  decay against. — milestone 008 rulings 5 and 6.
+
 ## Stack
 
 - **Simulation core**: C#, plain classes, engine-agnostic, unit-testable from the command line.

@@ -95,6 +95,8 @@ public static class TraceWriter
             if (missed is not null)
                 sb.AppendLine($"     · and {missed.Reason.ToLowerInvariant()}");
 
+            AppendRelationshipDiagnostic(sb, d);
+
             sb.AppendLine($"   → {d.Outcome}");
             if (d.Reconsideration.Count > 0)
                 sb.AppendLine($"   → he will think again if: {string.Join("; ", d.Reconsideration)}");
@@ -106,6 +108,64 @@ public static class TraceWriter
 
         sb.AppendLine();
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// The relationship channel for this decision. DEVELOPER-FACING — milestone 008, ruling 8.
+    ///
+    /// Three things the reason list above cannot say, all of which milestone 007's central finding
+    /// turned out to need:
+    ///
+    ///  - <b>gross as well as net.</b> A partial report to a superior carries two loyalty
+    ///    considerations pulling opposite ways, `+0.7` for the standing reporting buys and `-0.5` for
+    ///    what an omission costs. Net they are `0.2 * loyalty`. Only the net was ever visible, so a
+    ///    large pair that nearly cancels was indistinguishable from a character who barely weighed
+    ///    the relationship at all.
+    ///  - <b>no cutoff.</b> The reason list drops anything under 0.15. On the 11 May decision the
+    ///    007 finding was measured on, both halves fall under it, so the trace printed no
+    ///    relationship line at all for the candidate whose relationship contribution was the number
+    ///    being reported. A cutoff that hides a cancelling pair hides exactly the cancellation.
+    ///  - <b>the counterfactual.</b> What this candidate would score for a man with no relationships,
+    ///    and whether the ranking would differ — which is the only form in which "does this matter"
+    ///    has an answer.
+    ///
+    /// Printed only when something actually read relationship state, so decisions the channel does
+    /// not touch stay readable.
+    /// </summary>
+    private static void AppendRelationshipDiagnostic(StringBuilder sb, DecisionRecord d)
+    {
+        if (d.Scored.Count == 0) return;
+        if (!d.Scored.Any(s => s.RelationshipGross() > 1e-9)) return;
+
+        var counterfactualWinner = d.Scored
+            .OrderByDescending(s => s.TotalWithoutRelationships())
+            .ThenBy(s => s.Candidate.Id, StringComparer.Ordinal)
+            .First();
+        bool channelDecided = !ReferenceEquals(counterfactualWinner, d.Scored[0]);
+
+        sb.AppendLine("   relationship channel (developer diagnostic; no cutoff applied)");
+
+        // The chosen candidate and its nearest rival. Enough to see what the channel did to the
+        // decision without printing the whole set.
+        foreach (var s in d.Scored.Take(2))
+        {
+            double margin = s.Total - d.Scored[0].Total;
+            sb.AppendLine(
+                $"     {s.Candidate.Id,-46} gross {s.RelationshipGross(),7:0.0000}" +
+                $"  net {s.RelationshipNet(),8:+0.0000;-0.0000;0.0000}" +
+                $"  margin {margin,8:+0.0000;-0.0000;0.0000}" +
+                $"  without-relationships {s.TotalWithoutRelationships(),7:0.0000}");
+
+            foreach (var c in s.RelationshipComponents())
+                sb.AppendLine(
+                    $"       [{c.Reads,-33}] {c.Value,8:+0.0000;-0.0000}" +
+                    $" (relational {c.RelationshipShare,8:+0.0000;-0.0000;0.0000})  {c.Explanation}");
+        }
+
+        if (channelDecided)
+            sb.AppendLine(
+                $"     ⚠ the relationship channel decided this: without it, " +
+                $"\"{counterfactualWinner.Candidate.Id}\" would have won.");
     }
 
     private static string Past(Candidate c) => c.Kind switch

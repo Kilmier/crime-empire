@@ -9,118 +9,81 @@ do not create a separate handoff document.
 
 **No milestone is active. Do not start one.**
 
-Milestones 001–007 are complete and accepted. The most recent, **007 — Scenario Reach**, made the
-mechanisms built in 004–006 produce an observable behavioural consequence in the accepted scenario:
-the delegator's question wins, the executor answers him, a briefing contradicts the capo, and a
-decision he takes afterwards is scored differently for it. Codex reviewed `974a88a` and returned one
-finding — a sixth character added against the milestone's own "no new characters" exclusion — which
-Matt accepted on 2026-08-16 as a **bounded scenario-fixture exception**, the second business requiring
-a distinct owner. That acceptance authorizes neither broader cast growth nor relaxed scope
-discipline. Its full record is in `docs/milestones/007-scenario-reach.md`.
+Milestones 001–007 are complete and accepted. **Milestone 008 — Relationship Readers and the
+Executable Schema — is implemented and archived, and is awaiting Codex review. It is not accepted and
+not verified.** Its full record, including Matt's ten rulings reproduced verbatim, is in
+`docs/milestones/008-relationship-readers.md`.
 
-Two things about that record, both described in its own corrections rather than only here. The
-rulings were written into *this* file before implementation, as instructed, and the lifecycle reset it
-inside the same commit — so no committed revision of this file contains them and the archive is their
-only copy. And the first attempt to record that fact rewrote the archive's append-only header, which
-the closeout commit restores verbatim. The rulings are safe; the mechanism that loses them is still
-there and will recur for any milestone that archives and resets in one commit.
+As with 006 and 007, the lifecycle reset this file inside the archiving commit, so **the archive is
+the only copy of milestone 008's rulings**. Ruling 10 kept the existing lifecycle deliberately; the
+mitigation was to reproduce them in the archive before the reset rather than to change `AGENTS.md`.
 
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
-inferring status from prose anywhere else, including this file. Note what was and was not reviewed.
-Milestone 007's implementation commit `974a88a` was **reviewed and accepted**, which is what its
-accepted status rests on. Milestone 006's rests on `404b416` in the same way.
+inferring status from prose anywhere else, including this file. The checkpoint stands at `6ba0737`.
+`b8e5ed4` was reviewed with no findings and accepted, and remains beyond the checkpoint. Milestone
+008's commit is later still, has no row, and needs reviewing in its turn.
 
-The documentation commits around them fared worse, and every one of them has now been reviewed.
-`6355347`, `46a5651`, `1c6889f` and `6ba0737` were all **rejected** — the first two for rewriting an
-append-only milestone archive at closure, the third for recording the second's rejection as though no
-review had happened, the fourth for putting its own corrective note above the end of the file it was
-restoring. `53e912e` was reviewed with no findings and accepted. **None of that touches either
-milestone's acceptance**, and every commit in the range `6355347`–`6ba0737` inclusive now has an
-established outcome. Older rows in the ledger carry "status not established" and are untouched.
+## What milestone 008 found, because it should shape the next scope decision
 
-**Milestone 008 has not been chosen.** Do not infer it from the candidate list or technical-debt list
-in `ROADMAP.md`, or from the carried-forward items below. Confirm scope with Matt and write it here
-before changing simulation behaviour.
+**The relationship channel is load-bearing, and milestone 007's headline number was measuring the
+weakest path in it.** Removing relationship state changes which candidate wins at **1–3 decisions in
+every variant** — 2 / 3 / 3 / 1 / 3, reported by `--compare`. 007's `0.0377` stands as a figure and
+was the wrong thing to generalise from: it measured the trust-to-partial-report path, which is the one
+place in the model where two loyalty reads nearly annihilate. `Fear` reaches **1.44** on a decision
+whose whole margin is 0.25.
 
-## What milestone 007 found, because it should shape the next scope decision
+**Two structural attenuators, both now removed or made visible, neither a coefficient.**
 
-**The edge now reaches a decision, and what it contributes there is very small.** Two perceived
-account conflicts take Vincent's trust in Salvatore from 0.45 to 0.031. The `relationship effects`
-component on his next report to that boss moves from **0.0440 to 0.0063** — non-zero, entirely
-attributable to the conflicts, and about four hundredths of a point against decision margins in this
-scenario of the order of one. Decision-relevant; emphatically not choice-changing.
+- A partial report carries `+0.7 × loyalty` for the standing reporting buys and `−0.5 × loyalty` for
+  what an omission costs. They net to `0.2 × loyalty`, so the full range of `Trust` is worth `0.09` to
+  that candidate — less than the spread between two candidates' `±0.05` noise draws. Both are
+  legitimate and both were kept; what changed is that they are now separately identifiable.
+- Grievance was subtracted **inside** the clamp that produced loyalty, so once it exceeded a
+  character's bond the sum floored at zero: further grievance was free and further trust was
+  worthless. It now sits outside, applied per reader at the same `0.50`.
 
-Most of the movement is absorbed before it arrives: `Utility.Loyalty` weights trust at `0.45` and
-subtracts `0.5 ×` any grievance, so Vincent's standing grievance of 0.35 eats more than a full
-collapse of trust. **The open question has moved** from "can a relationship consequence be shown at
-all" — which 004, 005 and 006 could not answer in play — to "is it worth anything once it is shown".
-That is a schema question and it belongs to `OPEN_CONCERNS.md` #3, which now carries this evidence.
+**A soldier who resents his capo now conceals rather than reporting to him.** At seed 42
+`resentful-tommy` diverges from `baseline` for the first time — 9 April, Tommy chooses
+`ConcealIncident` at 0.4689 over reporting to Vincent at 0.4410, because his grievance takes 0.21 out
+of what reporting to that particular man is worth. Nobody wrote a rule connecting resentment to
+concealment. **Recorded with its fragility:** the margin is 0.0279 against ±0.05 noise, and the
+divergence holds at seeds 42 and 31337 but not at 1, 7, 99 or 2024. Nothing was tuned; no coefficient
+in the model was changed by this milestone.
 
-**Which relationship a mechanism lands on decides whether it matters.** 006's conflict fell on
-Salvatore, who has no scored decision that reads a relationship, and changed nothing. The identical
-mechanism landing on Vincent, who reports upward, is measurable. A relationship schema that says how
-dimensions are stored and updated without saying which decisions read them will not predict this.
-
-**And the recurring lesson took two new forms.** Milestone 006's rounds all found a claim that was
-true of the code and false of the record. This milestone found two tests asserting against a
-*relationship the model did not have* — one inferring that a report was a reply from a two-day window,
-one requiring testimony behind a belief seeded from a source outside the cast. Both passed for a long
-time and stopped the moment surrounding behaviour moved. The question to carry: **is this assertion
-checking a link the simulation actually records, or one the test is inferring?**
-
-The review found the second form, and it is about authority rather than accuracy. **Twice in this
-milestone the work was right and the permission for it was not.** A sixth character was necessary and
-undeclared against a written exclusion; the rulings were properly recorded and the account of where
-they were recorded was written from intent rather than from `git`. Both were caught, and in both the
-tempting remedy was to make the record read as though nothing had happened. Second question to carry:
-**did I have permission for this, or only a good reason for it?**
-
-And a third, from the documentation rounds that followed. Every status claim in this project's record
-that has ever been wrong was written from the author's own vantage rather than from the world:
-verification asserted because the numbers were real, a review recorded as never happening because
-nobody had announced it. Third question: **is this sentence reporting what happened, or what I
-happened to know about?**
+**And the recurring lesson took a new form: the defect was inside the instrument.** The only way to
+ask how much of a score came from a relationship was to filter components named `relationship
+effects`, and 36% of them read no relationship state at all — `−0.45 × proud` wearing a relationship
+label. Two production tests already aggregated that way and the new diagnostic was about to. The
+question to carry: **is this grouping by what the thing is, or by what it is called?**
 
 ## Carried forward
 
 Open items the next scope decision should see. Fuller versions live in the milestone archives and
 `ROADMAP.md`'s technical-debt list.
 
-- **The trust edge reaches a score and barely moves it** — the numbers above. The most useful open
-  figure the project has.
-- **Concealment does not quiet the witnesses it is named for.** `AdvanceConceal`'s first step is
-  "quiet the witnesses" and moves only `LegalExposure`. `Utility` prices a denial almost entirely on
-  whether the actor believes he was seen, so this is what stands between the executor answering his
-  delegator — which now happens in play — and an executor *denying* to him, which still never does.
-- **`believedWitnesses` is scanned globally**, not scoped to the incident being concealed. Same defect
-  shape as the `SeekCorroboration` scan `404b416` fixed. Changes nothing today, which is why 007
-  excluded it.
-- **`resentful-tommy` still makes the same decisions as baseline.** Now measured rather than assumed:
-  `--compare` reports five distinct traces and four distinct chosen-action sequences and names the
-  convergence. Kept, untuned and un-recut.
-- **Salvatore is no longer contradicted at all.** 006's conflict reached the page only on Vincent's
-  second concealing report, which 007 correctly stopped him filing. Not a regression — the mechanism
-  moved to a listener who does something with it — but the boss-side path is now covered only by
-  staged unit tests.
-- **The bakery is never collected from.** Nobody in the organisation knows it is refusing, which is
-  the asymmetry that leaves the capo room to think; it does mean a second collection cycle sits in the
-  fixture unexercised.
-- **Trust cannot go negative.** Absence of trust and distrust are the same state.
-- **The concealment MVP rule is a placeholder, not a permanent design.**
-- **Tuning guesses**: the `FirstHandTestimony` suspicion discount of `0.15`, the `Discovery` discount
-  of `0.10`, and `Relations.ConflictTrustCost` of `0.35` — the last now with a measured consequence.
-- The empty-domain label, `ConcealIncident(, target=...)`.
-- **The cast is six and that is a ceiling, not a trend.** Nunzio exists because `AdvanceTribute`
-  resolves a demand through the owner's own decision and `Commit` finds a business by owner, so two
-  shops need two owners. Matt accepted him as a bounded exception to a written exclusion; a seventh
-  character needs its own ruling before, not after.
-- **The lifecycle loses rulings.** Writing them into this file does not durably record them when the
-  archive and the reset land in one commit. `AGENTS.md` is Matt's to change; recorded, not acted on.
+- **Concealment does not quiet the witnesses it is named for**, and `believedWitnesses` is scanned
+  globally rather than scoped to the incident. Untouched by 008 per ruling 4. Together they are what
+  keeps an executor from ever denying to his delegator.
+- **The `0.9 × Loyalty` versus `0.4` denial-premium question is unruled**, deliberately, per ruling 4.
+  It is what gates the milestone-009 candidate above.
+- **Obligation is read but never moves.** `Relations.Establish` is its only writer and that is
+  scenario construction.
+- **Nothing raises trust.** Conflicts lower it and no runtime path restores it, so a relationship can
+  be damaged and never repaired. Nobody decided that; it is now written down.
+- **Negative trust and decay are deferred, not retired**, each with a stated condition for return.
+- **`GrievanceWeight` is unbounded.** A cap was considered as 008's remedy and explicitly rejected in
+  favour of unbundling, so it is open rather than answered.
+- **Tuning guesses**: `FirstHandTestimony` 0.15, `Discovery` 0.10, `Relations.ConflictTrustCost` 0.35,
+  and `LoyaltyReading.GrievanceWeight` 0.50 — the last preserved exactly by 008 and still provisional.
+- **`AGENTS.md` does not mention `docs/RELATIONSHIPS.md`.** Flagged, not taken: no ruling authorized
+  editing `AGENTS.md`. A one-line addition to its conditional-reading list is the natural fix.
+- **The cast is six and that is a ceiling, not a trend.**
+- **The lifecycle loses rulings.** Unchanged and now demonstrated a third time. `AGENTS.md` is Matt's.
+- The bakery is never collected from; the boss-side conflict path is covered only by staged unit
+  tests; the empty-domain label `ConcealIncident(, target=...)`.
 
 ## Longer-standing deferrals
 
-- the relationship-design document — `OPEN_CONCERNS.md` #3, now carrying two milestones' worth of
-  executable evidence. **Not authorized.**
 - relevance tiering and its continuous-calendar engineering risk;
 - persistence and SQLite;
 - Godot / `net10.0` compatibility — cheap, gates nothing today, worth a standalone commit rather than
@@ -137,21 +100,9 @@ itself, and nothing that will notice a commit unless somebody points a review at
 
 - Matt takes commits in order, oldest unreviewed first, one at a time.
 - Each review names the exact commit whose diff was inspected.
-- A later documentation commit does not stand in for the implementation commit beneath it. If two
-  land back to back, both still need reviewing, in order.
+- A later documentation commit does not stand in for the implementation commit beneath it.
 - The coverage table in `REVIEW_LEDGER.md` is the record. It is maintained by hand, which is why it
   is the authority rather than the prose around it.
-
-The checkpoint now stands at `6ba0737`. The commit that moved it is itself later than it, has no row,
-and needs reviewing in its turn.
-
-The documentation trail around milestones 006 and 007 is worth reading as a sequence, because each
-step was a correct finding with a wrong remedy: `6355347` closed milestone 006 by rewriting its
-archive header; `46a5651` found a false provenance claim in milestone 007's archive and fixed it by
-rewriting *that* header; `1c6889f` restored the 007 header and then misreported the rejection behind
-it as no review at all; `53e912e` corrected that and was accepted; `6ba0737` restored the 006 header
-and put its own note about the restoration inside the file rather than after it. Both milestones' code
-was accepted once each, at `404b416` and `974a88a`, and none of it moved through any of it.
 
 Never write "verified" or "closed" from a review report alone. A report must name the exact commit
 reviewed, and Matt must confirm acceptance. That rule exists because the record twice claimed a

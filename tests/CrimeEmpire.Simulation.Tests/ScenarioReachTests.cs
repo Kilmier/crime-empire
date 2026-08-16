@@ -26,9 +26,11 @@ namespace CrimeEmpire.Simulation.Tests;
 /// </summary>
 public sealed class ScenarioReachTests
 {
-    private static World Run(string variant)
+    private static World Run(string variant) => Run(variant, 42);
+
+    private static World Run(string variant, int seed)
     {
-        var world = Cast.Build(42, variant);
+        var world = Cast.Build(seed, variant);
         Runner.Run(world, Cast.Start.AddDays(90));
         return world;
     }
@@ -510,10 +512,18 @@ public sealed class ScenarioReachTests
         var agenda = new Agenda(AgendaKind.DischargeResponsibility, "keep the harbour earning", "test", Cast.Harbour);
         var rng = Rng.ForOccasion(world.Seed, "test|fixed");
 
+        // Milestone 008: read through the facet, not the component name.
+        //
+        // This used to sum `p.Name == "relationship effects"`, and that was measurably the wrong
+        // question. Of the 168 components carrying that name across the five variants, 61 read no
+        // relationship state at all — `SeekCorroboration`'s "going behind X" is `-0.45 * proud`. It
+        // happens not to appear on a `ReportToSuperior` candidate, so this particular test was
+        // getting a right answer from a wrong rule, which is the least durable kind. The name also
+        // folded in the Belonging share of loyalty, which is a drive rather than anything owed to
+        // Salvatore, so the figure it reported was never purely relational.
         double Relationship() => Utility
             .Score(later.Candidate, vincent.View, vincent.Psychology, perceived, agenda, rng)
-            .Components.Where(p => p.Name == "relationship effects")
-            .Sum(p => p.Value);
+            .RelationshipNet();
 
         double withConflict = Relationship();
         Assert.NotEqual(0.0, withConflict, 6);
@@ -569,23 +579,73 @@ public sealed class ScenarioReachTests
     /// <summary>
     /// The behavioural digest is built from structured decision fields, not from rendered text.
     ///
-    /// `resentful-tommy` is the case that proves it: it renders differently from baseline, because
-    /// seeded trust and grievances reach scores and wording, and it chooses the identical action at
-    /// every single decision. A digest taken from the trace would call those two histories distinct,
-    /// which is what `--compare` did and what milestone 006's closing question was about — a claim
-    /// nothing checks.
+    /// <b>This test moved seeds in milestone 008, and why is the point of it.</b> It used to run at
+    /// seed 42, where `resentful-tommy` rendered differently from `baseline` and chose the identical
+    /// action at every decision — the case milestone 007 recorded as an honest convergence. Milestone
+    /// 008 broke that convergence at seed 42 by unbundling grievance from the clamped loyalty: Tommy
+    /// resents Vincent, the pair floored to zero under the old clamp, and once it stopped flooring,
+    /// what he holds against the man began taking the good out of reporting to him. See
+    /// <see cref="Resentment_now_reaches_a_chosen_action_at_seed_42"/>, which pins the new outcome.
+    ///
+    /// The property being tested here is unchanged and still needs a witness: a pair that renders
+    /// differently while choosing identically, so that a digest taken from rendered text would call
+    /// them distinct and this one does not. Seed 1 is such a pair, as are 7 and 99. Moving the seed
+    /// keeps the property pinned; deleting the test because its old witness stopped qualifying would
+    /// have quietly retired a guarantee.
     /// </summary>
     [Fact]
     public void Behavioural_distinctness_is_read_from_decisions_not_from_rendered_text()
     {
-        var baseline = Run("baseline");
-        var resentful = Run("resentful-tommy");
+        var baseline = Run("baseline", seed: 1);
+        var resentful = Run("resentful-tommy", seed: 1);
 
         Assert.NotEqual(
             TraceWriter.Render(baseline, "baseline", false),
             TraceWriter.Render(resentful, "resentful-tommy", false));
 
         Assert.Equal(Actions(baseline), Actions(resentful));
+    }
+
+    /// <summary>
+    /// Milestone 008's behavioural result, pinned where it happens.
+    ///
+    /// At seed 42 `resentful-tommy` now chooses differently from `baseline`, at exactly one decision:
+    /// on 9 April Tommy conceals the incident himself instead of reporting it to Vincent. Nobody
+    /// wrote a rule connecting resentment to concealment. It falls out of the grievance he holds
+    /// against Vincent no longer being clamped away, which takes 0.21 out of what reporting to that
+    /// particular man is worth and lets a concealment candidate that was always there win by 0.03.
+    ///
+    /// <b>Recorded with its fragility.</b> The winning margin is smaller than the ±0.05 per-candidate
+    /// noise, and the divergence holds at seeds 42 and 31337 but not at 1, 7, 99 or 2024. It is a
+    /// real choice change at this seed and it is not a robust one, and the archive says so. Nothing
+    /// was tuned to produce it — milestone 008 changed no coefficient.
+    /// </summary>
+    [Fact]
+    public void Resentment_now_reaches_a_chosen_action_at_seed_42()
+    {
+        var baseline = Run("baseline");
+        var resentful = Run("resentful-tommy");
+
+        Assert.NotEqual(Actions(baseline), Actions(resentful));
+
+        // The histories fork at one decision and stay forked — eleven of the thirty-eight pairs
+        // differ, which is what a fork looks like when compared position by position, not eleven
+        // independent changes. What is pinned is the fork point.
+        var (before, after) = baseline.Decisions
+            .Zip(resentful.Decisions, (b, r) => (b, r))
+            .First(p => p.b.ChosenActionSignature() != p.r.ChosenActionSignature());
+        Assert.Equal("tommy", after.ActorId);
+        Assert.Equal(ActionKind.ReportToSuperior, before.Chosen!.Candidate.Kind);
+        Assert.Equal(ActionKind.StartStrategy, after.Chosen!.Candidate.Kind);
+        Assert.Equal(StrategyKind.ConcealIncident, after.Chosen!.Candidate.Strategy);
+
+        // And the relationship channel is what decided it: without relationship state the report
+        // he actually declined would have won instead.
+        var counterfactualWinner = after.Scored
+            .OrderByDescending(s => s.TotalWithoutRelationships())
+            .ThenBy(s => s.Candidate.Id, StringComparer.Ordinal)
+            .First();
+        Assert.Equal(ActionKind.ReportToSuperior, counterfactualWinner.Candidate.Kind);
     }
 
     /// <summary>

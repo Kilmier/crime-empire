@@ -3,7 +3,63 @@ namespace CrimeSim.Decision;
 using CrimeSim.Domain;
 using CrimeSim.Sim;
 
-public sealed record ScoreComponent(string Name, double Value, string Explanation);
+/// <summary>
+/// Which relationship state a score component was derived from.
+///
+/// <b>Why this exists rather than grouping by component name.</b> Before milestone 008 the only way
+/// to ask "how much of this score came from a relationship" was to filter components whose Name was
+/// "relationship effects". Measured across the five variants at seed 42, 61 of the 168 components
+/// carrying that name — 36% — read no relationship state at all: they are
+/// <see cref="ActionKind.SeekCorroboration"/>'s "going behind X", which is <c>-0.45 * proud</c>, a
+/// pure trait term wearing a relationship label. Two production tests and the whole planned
+/// diagnostic were about to aggregate on that name. A label is not a derivation, and this is the
+/// ledger's "two different things treated as one" pattern found inside the instrument built to
+/// measure it.
+///
+/// Set at the point the value is computed, never inferred afterwards.
+///
+/// <see cref="Belonging"/> is a drive, not a relationship dimension. It is enumerated here because
+/// it is one of the three inputs to <see cref="LoyaltyReading"/> and milestone 008's ruling 3
+/// requires trust, obligation, Belonging and grievance to stay separately inspectable through the
+/// scoring path. It is deliberately excluded from <see cref="Relational"/>: a man with no
+/// relationships still has a need to belong.
+/// </summary>
+[Flags]
+public enum RelationshipFacet
+{
+    None = 0,
+    Trust = 1,
+    Obligation = 2,
+    Belonging = 4,
+    Grievance = 8,
+    Fear = 16,
+
+    /// <summary>The facets that are actually relationship state, for counterfactual purposes.</summary>
+    Relational = Trust | Obligation | Grievance | Fear,
+}
+
+/// <summary>
+/// One reason a candidate scored as it did.
+///
+/// <paramref name="WithoutRelationship"/> is what this component would have been worth had the actor
+/// held no relationship with anybody — trust, obligation, fear and grievance all zero, psychology
+/// untouched. It is recorded at emission because that is the only place the decomposition is still
+/// available; reconstructing it afterwards from the total would require re-deriving the clamp.
+/// Null means the component reads no relationship state, so the two values are the same.
+/// </summary>
+public sealed record ScoreComponent(
+    string Name,
+    double Value,
+    string Explanation,
+    RelationshipFacet Reads = RelationshipFacet.None,
+    double? WithoutRelationship = null)
+{
+    /// <summary>What this component would be worth to a man with no relationships.</summary>
+    public double RelationshipFreeValue => WithoutRelationship ?? Value;
+
+    /// <summary>How much of this component's value is owed to relationship state.</summary>
+    public double RelationshipShare => Value - RelationshipFreeValue;
+}
 
 public sealed record ScoreBreakdown(
     Candidate Candidate,
@@ -14,6 +70,50 @@ public sealed record ScoreBreakdown(
     public IEnumerable<ScoreComponent> Significant()
         => Components.Where(c => Math.Abs(c.Value) >= 0.15)
                      .OrderByDescending(c => Math.Abs(c.Value));
+
+    // ------------------------------------------------------------ relationship diagnostics
+    //
+    // Developer-facing. None of this reaches IntelligenceWriter or any player-facing surface — a
+    // player who could read the exact contribution of his capo's trust would be reading the utility
+    // calculation INFORMATION_AND_LEGIBILITY.md exists to keep out of his hands.
+    //
+    // Deliberately NOT filtered through Significant(). The 0.15 cutoff is right for a human-readable
+    // reason list and wrong for a measurement: on the very decision milestone 007's finding was taken
+    // from, both halves of the report pair (+0.0219 and -0.0156) fall under it, so the rendered trace
+    // printed no relationship line at all for a candidate whose net relationship contribution was the
+    // number being reported. A cutoff that hides a cancelling pair hides exactly the cancellation.
+
+    /// <summary>Every component that read relationship state, in emission order. No cutoff.</summary>
+    public IEnumerable<ScoreComponent> RelationshipComponents()
+        => Components.Where(c => (c.Reads & RelationshipFacet.Relational) != 0
+                                 || c.RelationshipShare != 0);
+
+    /// <summary>
+    /// The sum of the absolute gross values of the relationship components.
+    ///
+    /// Reported alongside the net because the two answer different questions and this milestone
+    /// exists because only the net was ever visible. Gross 0.0375 against net 0.0063 says the
+    /// considerations are large relative to what survives them; gross 0.0063 would have said the
+    /// character barely weighed the relationship at all. Those are different worlds.
+    /// </summary>
+    public double RelationshipGross()
+        => RelationshipComponents().Sum(c => Math.Abs(c.RelationshipShare));
+
+    /// <summary>What relationship state is actually worth to this candidate, after cancellation.</summary>
+    public double RelationshipNet()
+        => RelationshipComponents().Sum(c => c.RelationshipShare);
+
+    /// <summary>
+    /// This candidate's score for a man holding no relationship with anybody.
+    ///
+    /// Computed by summing each component's relationship-free value rather than by re-scoring, so it
+    /// reuses this breakdown's own noise draw and compares like with like. Re-scoring would draw
+    /// fresh noise of up to ±0.05 — larger than the effect being measured on the report candidates —
+    /// and would also require mutating relationship state, which milestone 006 deliberately made
+    /// impossible from outside <see cref="CrimeSim.Domain.Relations"/>.
+    /// </summary>
+    public double TotalWithoutRelationships()
+        => Total - RelationshipNet();
 }
 
 /// <summary>
@@ -53,18 +153,59 @@ public static class Utility
     };
 
     /// <summary>
-    /// Loyalty is derived, not stored. Attachment, obligation, a general need to belong and
-    /// accumulated grievance pull in different directions; collapsing them into one saved number
-    /// would erase exactly the distinctions that make a betrayal legible.
+    /// Loyalty is derived, not stored, and is read here as its parts rather than as one number.
+    ///
+    /// Attachment, obligation, a general need to belong and accumulated grievance pull in different
+    /// directions; collapsing them into one saved number would erase exactly the distinctions that
+    /// make a betrayal legible. <c>DESIGN_DECISIONS.md</c> says so, and until milestone 008 the
+    /// scorer said it and then immediately undid it — the four were summed, clamped, and handed to
+    /// every reader as a single scalar with no way back.
+    ///
+    /// <b>Grievance is outside the clamp, and that is the substantive change.</b> It used to be
+    /// subtracted inside <c>Math.Clamp(…, 0, 1)</c>, which meant that once the sum floored at zero
+    /// further grievance was free and further trust was worthless — the two most interesting
+    /// dimensions in the model saturating silently against each other. It is now carried separately
+    /// and applied by each reader at that reader's own coefficient, so the arithmetic is unchanged
+    /// wherever the old sum did not clamp, and honest where it did.
+    ///
+    /// The <c>0.50</c> coefficient is preserved exactly and remains PROVISIONAL TUNING. Milestone
+    /// 008 did not tune it and was forbidden to.
     /// </summary>
-    public static double Loyalty(CharacterView actor, Psychology psy, string otherId)
+    public readonly record struct LoyaltyReading(
+        double Trust, double Obligation, double Belonging, double Grievance)
+    {
+        public const double TrustWeight = 0.45;
+        public const double ObligationWeight = 0.30;
+        public const double BelongingWeight = 0.25;
+
+        /// <summary>
+        /// PROVISIONAL TUNING, unchanged in magnitude by milestone 008. What a unit of accumulated
+        /// grievance is worth against loyalty, at a reader's own coefficient.
+        /// </summary>
+        public const double GrievanceWeight = 0.50;
+
+        /// <summary>What binds him, before anything he holds against the man.</summary>
+        public double Value => Math.Clamp(
+            TrustWeight * Trust + ObligationWeight * Obligation + BelongingWeight * Belonging, 0, 1);
+
+        /// <summary>
+        /// The same figure for a man with no relationship at all. Belonging survives, because a need
+        /// to belong is psychology and is not owed to anybody in particular.
+        /// </summary>
+        public double BareValue => Math.Clamp(BelongingWeight * Belonging, 0, 1);
+
+        /// <summary>What he holds against the man, as a negative offset. Never clamped away.</summary>
+        public double GrievanceOffset => -GrievanceWeight * Grievance;
+
+        public bool HasGrievance => Grievance > 1e-9;
+    }
+
+    /// <summary>Reads the four inputs to loyalty without collapsing them.</summary>
+    public static LoyaltyReading Loyalty(CharacterView actor, Psychology psy, string otherId)
     {
         var rel = actor.Social.Toward(otherId);
-        double v = 0.45 * rel.Trust
-                 + 0.30 * rel.Obligation
-                 + 0.25 * psy[Drive.Belonging]
-                 - 0.50 * actor.Social.GrievanceAgainst(otherId);
-        return Math.Clamp(v, 0, 1);
+        return new LoyaltyReading(
+            rel.Trust, rel.Obligation, psy[Drive.Belonging], actor.Social.GrievanceAgainst(otherId));
     }
 
     public static ScoreBreakdown Score(
@@ -80,14 +221,37 @@ public static class Utility
         double cautious = psy[Trait.Cautious];
         double proud = psy[Trait.Proud];
 
-        void Add(string name, double value, string why)
+        void Add(string name, double value, string why,
+                 RelationshipFacet reads = RelationshipFacet.None, double? withoutRelationship = null)
         {
-            if (Math.Abs(value) <= 1e-9) return;
+            if (Math.Abs(value) <= 1e-9 && (withoutRelationship ?? 0) == 0) return;
             // Fold repeats together — an option that serves status twice should read as one larger
-            // reason, not as the same sentence printed twice.
+            // reason, not as the same sentence printed twice. Facets union and the relationship-free
+            // values sum, so folding cannot silently drop half a derivation.
             int at = parts.FindIndex(p => p.Name == name && p.Explanation == why);
-            if (at >= 0) parts[at] = parts[at] with { Value = parts[at].Value + value };
-            else parts.Add(new ScoreComponent(name, value, why));
+            if (at >= 0)
+                parts[at] = parts[at] with
+                {
+                    Value = parts[at].Value + value,
+                    Reads = parts[at].Reads | reads,
+                    WithoutRelationship = parts[at].RelationshipFreeValue + (withoutRelationship ?? value),
+                };
+            else parts.Add(new ScoreComponent(name, value, why, reads, withoutRelationship));
+        }
+
+        // Loyalty is read as parts and emitted as parts. Two components, always in this order:
+        // what binds him, and what he holds against the man. Ruling 3 — grievance is its own named
+        // contribution at every reader, not a term buried inside a clamped scalar.
+        const RelationshipFacet Bond =
+            RelationshipFacet.Trust | RelationshipFacet.Obligation | RelationshipFacet.Belonging;
+
+        void AddLoyalty(string name, double coefficient, LoyaltyReading loyalty, string why,
+                        string grievanceWhy)
+        {
+            Add(name, coefficient * loyalty.Value, why, Bond, coefficient * loyalty.BareValue);
+            if (loyalty.HasGrievance)
+                Add(name, coefficient * loyalty.GrievanceOffset, grievanceWhy,
+                    RelationshipFacet.Grievance, 0);
         }
 
         // --- perceived goal progress -------------------------------------------------------
@@ -123,25 +287,30 @@ public static class Utility
         switch (cand.Kind)
         {
             case ActionKind.DelegateStrategy when cand.TargetId is not null:
-            {
-                double loyalty = Loyalty(actor, psy, cand.TargetId);
-                Add("relationship effects", 0.9 * loyalty, $"he expects {cand.TargetId} to carry it out for him");
+                AddLoyalty("relationship effects", 0.9, Loyalty(actor, psy, cand.TargetId),
+                    $"he expects {cand.TargetId} to carry it out for him",
+                    $"what he holds against {cand.TargetId} makes him a worse bet");
                 break;
-            }
             case ActionKind.ReportToSuperior when cand.TargetId is not null:
-                Add("relationship effects", 0.7 * Loyalty(actor, psy, cand.TargetId), "reporting maintains standing with his superior");
+                AddLoyalty("relationship effects", 0.7, Loyalty(actor, psy, cand.TargetId),
+                    "reporting maintains standing with his superior",
+                    "what he holds against the man takes the good out of reporting to him");
                 break;
             case ActionKind.Retaliate when cand.TargetId is not null:
-                Add("relationship effects", 0.8 * actor.Social.GrievanceAgainst(cand.TargetId), "he holds a grievance against the target");
+                Add("relationship effects", 0.8 * actor.Social.GrievanceAgainst(cand.TargetId),
+                    "he holds a grievance against the target", RelationshipFacet.Grievance, 0);
                 break;
             case ActionKind.SeekApproval when cand.TargetId is not null:
-                Add("relationship effects", 0.4 * actor.Social.Toward(cand.TargetId).Obligation, "it defers to his superior");
+                Add("relationship effects", 0.4 * actor.Social.Toward(cand.TargetId).Obligation,
+                    "it defers to his superior", RelationshipFacet.Obligation, 0);
                 break;
             case ActionKind.Concede when cand.TargetId is not null:
-                Add("relationship effects", 1.6 * actor.Social.Toward(cand.TargetId).Fear, "he is afraid of them");
+                Add("relationship effects", 1.6 * actor.Social.Toward(cand.TargetId).Fear,
+                    "he is afraid of them", RelationshipFacet.Fear, 0);
                 break;
             case ActionKind.Refuse when cand.TargetId is not null:
-                Add("relationship effects", -1.6 * actor.Social.Toward(cand.TargetId).Fear, "holding out against them frightens him");
+                Add("relationship effects", -1.6 * actor.Social.Toward(cand.TargetId).Fear,
+                    "holding out against them frightens him", RelationshipFacet.Fear, 0);
                 break;
         }
 
@@ -200,9 +369,20 @@ public static class Utility
         if (cand.Kind == ActionKind.Retaliate && cand.TargetId is not null)
         {
             // Moving on someone you are bound to is dangerous in proportion to how bound you are.
-            double loyalty = Loyalty(actor, psy, cand.TargetId);
-            Add("perceived personal risk", -(1.3 + 2.2 * loyalty) * (1 - 0.4 * aggressive),
-                "going after him would be a serious step");
+            var loyalty = Loyalty(actor, psy, cand.TargetId);
+            double nerve = 1 - 0.4 * aggressive;
+            Add("perceived personal risk", -(1.3 + 2.2 * loyalty.Value) * nerve,
+                "going after him would be a serious step",
+                Bond, -(1.3 + 2.2 * loyalty.BareValue) * nerve);
+
+            // The grievance half, separated. It reduces the danger rather than adding to it, which
+            // is the point: a man with something against you is closer to moving on you. Buried
+            // inside the old clamped scalar this was invisible, and floored out entirely once the
+            // sum hit zero.
+            if (loyalty.HasGrievance)
+                Add("perceived personal risk", -2.2 * loyalty.GrievanceOffset * nerve,
+                    "what he holds against him makes the step feel less serious",
+                    RelationshipFacet.Grievance, 0);
         }
 
         if (cand.Kind is ActionKind.Concede or ActionKind.Refuse)
@@ -241,13 +421,19 @@ public static class Utility
         // --- moral / social reluctance ------------------------------------------------------------
         if (cand.BreachesPolicyId is not null && cand.PolicyIssuerId is not null)
         {
-            double loyalty = Loyalty(actor, psy, cand.PolicyIssuerId);
+            var loyalty = Loyalty(actor, psy, cand.PolicyIssuerId);
             // Pride reduces deference: a proud man discounts a rule he did not set.
-            double reluctance = cand.BreachesPolicyStrength * (0.6 + 1.2 * loyalty) * (1 - 0.55 * proud) * 2.4;
-            Add("reluctance to breach policy", -reluctance,
+            double scale = cand.BreachesPolicyStrength * (1 - 0.55 * proud) * 2.4;
+            Add("reluctance to breach policy", -(0.6 + 1.2 * loyalty.Value) * scale,
                 proud > 0.5
                     ? $"the ban weighs on him less than it should, because it is not his rule"
-                    : $"it would defy {cand.PolicyIssuerId}'s standing instruction");
+                    : $"it would defy {cand.PolicyIssuerId}'s standing instruction",
+                Bond, -(0.6 + 1.2 * loyalty.BareValue) * scale);
+
+            if (loyalty.HasGrievance)
+                Add("reluctance to breach policy", -1.2 * loyalty.GrievanceOffset * scale,
+                    $"what he holds against {cand.PolicyIssuerId} makes the rule easier to step over",
+                    RelationshipFacet.Grievance, 0);
         }
 
         // --- what to say when reporting -------------------------------------------------------------
@@ -256,9 +442,24 @@ public static class Utility
         // would hurt him if his superior had it, how likely he thinks it is that somebody else
         // already saw it, and what he owes the man he would be lying to. He is not consulting
         // whether the claim is objectively true — only what he holds and what he expects.
+        //
+        // NOTE ON THE PAIRING, milestone 008 ruling 2. Every report candidate carries two
+        // relationship considerations, and they are two things rather than one:
+        //
+        //   * from the ReportToSuperior case far above, `+0.7 * loyalty` — the general standing a man
+        //     gets from reporting to his superior at all;
+        //   * from the branches below, the relationship cost of the candour he selected —
+        //     `+0.8` for handing it over straight, `-0.5` for an omission, `-1.4` for a lie.
+        //
+        // Both are legitimate and both keep their coefficients. What was wrong was that they were
+        // indistinguishable once summed and invisible once rendered: on a partial report they net to
+        // `0.2 * loyalty`, and at Vincent's seeds that is 0.044 falling to 0.006 after two account
+        // conflicts — both halves under the trace's 0.15 cutoff, so the reason list printed nothing
+        // at all for the candidate milestone 007's central finding was measured on. They are now
+        // separately named, separately tagged, and reported gross as well as net.
         if (cand.Candor is { } candor && cand.TargetId is not null)
         {
-            double loyalty = Loyalty(actor, psy, cand.TargetId);
+            var loyalty = Loyalty(actor, psy, cand.TargetId);
 
             // How exposed he believes he already is. A man who thinks the street saw him has
             // less to gain by denying it, because the denial is what gets caught.
@@ -280,15 +481,18 @@ public static class Utility
                 case ReportCandor.Candid when stakes > 0:
                     Add("self-protection", -2.0 * stakes,
                         "telling him straight means handing over the part that damns him");
-                    Add("relationship effects", 0.8 * loyalty,
-                        "he would rather his superior heard it from him than from someone else");
+                    AddLoyalty("relationship effects", 0.8, loyalty,
+                        "he would rather his superior heard it from him than from someone else",
+                        "what he holds against him takes the value out of coming clean");
                     break;
 
                 case ReportCandor.Partial:
                     Add("self-protection", protection, "what he leaves out cannot be held against him");
                     Add("perceived personal risk", -1.1 * believedWitnesses,
                         "an account with a hole in it invites the question he cannot answer");
-                    Add("relationship effects", -0.5 * loyalty, "it is not what he owes the man");
+                    AddLoyalty("relationship effects", -0.5, loyalty,
+                        "it is not what he owes the man",
+                        "what he holds against him makes the omission sit easier");
                     break;
 
                 case ReportCandor.False:
@@ -304,7 +508,9 @@ public static class Utility
                         believedWitnesses > 0.4
                             ? "he thinks there were people on that street who saw him"
                             : "he does not think anyone can put him there");
-                    Add("relationship effects", -1.4 * loyalty, "he would be lying to his own boss");
+                    AddLoyalty("relationship effects", -1.4, loyalty,
+                        "he would be lying to his own boss",
+                        "what he holds against him makes lying to him sit easier");
                     break;
             }
         }
@@ -336,9 +542,18 @@ public static class Utility
                 // A claim he was told has a source whose word he is quietly declining to take; one
                 // he saw, did, found or worked out has none, and asking the man named in it for his
                 // version is an ordinary question rather than a slight.
+                //
+                // TAGGED `None`, DELIBERATELY, AND PINNED BY A TEST. This is `-0.45 * proud`: it
+                // reads a trait and no relationship state whatsoever. It carries the name
+                // "relationship effects" because socially that is what it is about, and that name is
+                // exactly what made it dangerous — across the five variants at seed 42 it accounts
+                // for 61 of the 168 components carrying that name, 36% of them, and two production
+                // tests plus this milestone's whole diagnostic were built to aggregate on the name.
+                // A label is not a derivation. The facet is the derivation.
                 if (position.SourceKind.IsTestimony() && position.SourceId != cand.TargetId)
                     Add("relationship effects", -0.45 * proud,
-                        $"going behind {position.SourceId} is an admission he does not trust him");
+                        $"going behind {position.SourceId} is an admission he does not trust him",
+                        RelationshipFacet.None);
             }
         }
 

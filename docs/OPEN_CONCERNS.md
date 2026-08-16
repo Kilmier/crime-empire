@@ -78,6 +78,30 @@ weight the social consequence (milestone 006 deliberately used one rule and pres
 so this can be decided on evidence); negative trust; and whether loyalty's weights leave trust enough
 room to matter once a grievance exists.
 
+**Narrowed 2026-08-16 by milestone 008, and not retired.** The document this item asked for exists as
+`docs/RELATIONSHIPS.md`, written from measured results rather than ahead of them. What it settles:
+
+- **The vocabulary is closed** — Trust, Fear, Obligation, relationship-keyed Grievances — with every
+  dimension required to name a decision that reads it, asserted by a test.
+- **Storage, update paths and readers are documented per dimension**, which is the half milestone 007
+  said a schema would be useless without.
+- **"Whether loyalty's weights leave trust enough room once a grievance exists" is answered, and the
+  answer was the clamp rather than the weights.** Grievance was subtracted inside
+  `clamp(…, 0, 1)`, so a character whose grievance exceeded his bond floored at zero and further
+  trust was worth nothing. It now sits outside the clamp as its own named contribution, at the same
+  `0.50`. No coefficient was tuned.
+- **The premise behind the question was too narrow.** Removing relationship state changes which
+  candidate wins at 1–3 decisions in every variant. The channel is not weak; the trust-to-partial-report
+  path is, because two loyalty reads on that candidate nearly annihilate. Fear reaches 1.44 on a
+  decision whose margin is 0.25.
+
+What remains open here, each now with a stated condition for return rather than an open question:
+**decay and its rate** (needs a calendar/tier timescale); **negative trust** (needs a decision that
+reads distrust differently from indifference); **whether respect and resentment are separate
+dimensions or derived** (needs a reader); **whether provenance should weight the social consequence**
+(unchanged since 006); and **whether `GrievanceWeight` should be capped** — considered as milestone
+008's remedy and explicitly rejected in favour of unbundling, so it is open rather than answered.
+
 ### 4. ~~Trait/value vocabulary must be closed, but the concrete list still isn't committed~~
 **Retired 2026-08-14.** Milestone 001 closed the list in `Domain/Psychology.cs` and it is now
 recorded in `DESIGN_DECISIONS.md` under "Actor parity and simulation tractability" — traits

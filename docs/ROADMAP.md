@@ -17,14 +17,17 @@ Milestone 001 proved the kernel. Milestone 003 built the first narrow informatio
 emergence prototype, 004 made its provenance precise, and 006 — **closed and accepted 2026-08-15** —
 gave a perceived account conflict a social consequence, which is the loop's return edge. Milestone
 007 — **closed and accepted 2026-08-16** — made that edge reach a later decision in the accepted
-scenario. The rest of the emergence prototype is not built, and the MVP has not begun. Milestone 002
-was a framework migration, not a step along this sequence. Full accounts are in `docs/milestones/`.
+scenario. Milestone 008 — **implemented, awaiting review** — settled the reader side of the
+relationship schema and built the instrument that measures it. The rest of the emergence prototype is
+not built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
+sequence. Full accounts are in `docs/milestones/`.
 
 006 established where the difficulty sat: the mechanisms worked and the scenario could not show them.
-007 was the scenario-reach answer to that, and its own finding is the next thing to weigh — the edge
-now reaches a score, and what it contributes there is about four hundredths of a point against
-decision margins of the order of one. The constraint has moved from "can it be shown at all" to
-"is it worth anything once it is".
+007 was the scenario-reach answer to that. 008 then answered 007's own finding, and the answer
+reframed it: the trust-to-partial-report path really is worth about four hundredths of a point, but
+that is the weakest path in the channel rather than the channel. Removing relationship state changes
+which candidate wins at 1–3 decisions in every variant. The constraint has moved again — from "is it
+worth anything once it is shown" to **which readers are worth strengthening, and on what evidence**.
 
 ## Known technical debt
 
@@ -50,13 +53,15 @@ decision margins of the order of one. The constraint has moved from "can it be s
   contradicts the capo, and the trust it costs is read by a decision he takes afterwards. The
   delegator's question, competitive since 006 and never chosen, now wins in play in four of five
   variants. See `milestones/007-scenario-reach.md`.
-- **The trust edge reaches a score and barely moves it, and this is now the most useful open number.**
-  Two conflicts take Vincent's trust in Salvatore from 0.45 to 0.031; the `relationship effects`
-  component on his next report to that boss moves from 0.0440 to 0.0063. Decision-relevant,
-  emphatically not choice-changing. `Utility.Loyalty` weights trust at `0.45` and subtracts `0.5 ×`
-  any grievance, so a standing grievance of 0.35 absorbs most of a full trust collapse before it
-  reaches a score. Whether the answer is a larger `ConflictTrustCost`, different loyalty weights, or
-  neither is a schema question — `OPEN_CONCERNS.md` #3.
+- ~~**The trust edge reaches a score and barely moves it.**~~ **Answered by milestone 008, and the
+  question was wrong.** The figures stand — two conflicts take Vincent's trust from 0.45 to 0.031 and
+  the net relationship contribution on his next partial report to that boss moves from 0.0440 to
+  0.0063 — but they measure the weakest path in the channel, not the channel. Removing relationship
+  state changes which candidate wins at **1–3 decisions in every variant**. The attenuation on that
+  particular candidate is structural: `+0.7 × loyalty` for the standing a report buys and
+  `−0.5 × loyalty` for what an omission costs net to `0.2 × loyalty`. And grievance was being clamped
+  away, not merely outweighing trust. Both are now visible and separately measured. See
+  `milestones/008-relationship-readers.md` and `docs/RELATIONSHIPS.md`.
 - **Concealment does not quiet the witnesses it is named for.** `AdvanceConceal`'s first step is
   "quiet the witnesses" and moves only `LegalExposure`; the concealer's own belief that he was seen is
   untouched. `Utility` prices a denial almost entirely on that belief, so this is what stands between
@@ -83,13 +88,23 @@ decision margins of the order of one. The constraint has moved from "can it be s
   the question wins in play in baseline, watchful-boss, disloyal-vincent and resentful-tommy —
   `cautious-vincent` has no delegation, so there is nobody to ask about. **Not retired by that:** the
   executor still answers rather than denies, for the concealment-step reason above.
-- **`resentful-tommy` still makes the same decisions as baseline**, and this is now measured rather
-  than assumed: `--compare` computes a chosen-action digest from structured decision fields and
-  reports "5 distinct traces · 4 distinct chosen-action sequences", naming the convergence. Kept,
-  untuned and un-recut. Its asymmetry becomes live only when a denial can win, which is the
-  concealment-step item above.
-- **Trust cannot go negative.** Absence of trust and distrust are the same state, so a stranger who
-  contradicts you is indistinguishable from a stranger. A schema question for the design pass.
+- ~~**`resentful-tommy` still makes the same decisions as baseline.**~~ **Retired by milestone 008.**
+  `--compare` now reports **5 distinct traces · 5 distinct chosen-action sequences**. At seed 42 Tommy
+  conceals the incident himself on 9 April instead of reporting it to Vincent, because his grievance
+  against Vincent is no longer clamped away and takes 0.21 out of what reporting to that particular
+  man is worth. Nothing was tuned. **Recorded with its fragility:** the winning margin is 0.0279
+  against ±0.05 per-candidate noise, and the divergence holds at seeds 42 and 31337 but not at 1, 7,
+  99 or 2024.
+- **Trust cannot go negative, and nothing raises it.** Absence of trust and distrust are the same
+  state; separately, the only runtime path that moves trust is a perceived account conflict, which
+  only lowers it, so a relationship can be damaged and never repaired. Both **deferred rather than
+  retired** by milestone 008 — negative trust returns when a decision reads distrust differently from
+  indifference. See `docs/RELATIONSHIPS.md`.
+- **`GrievanceWeight` is unbounded**, and a cap was considered as milestone 008's remedy for grievance
+  dominating loyalty and explicitly rejected in favour of unbundling the clamp. Open, not answered.
+- **Obligation is read but never moves.** `Relations.Establish` is its only writer and that is
+  scenario construction; it holds its seeded value for the whole of every run. Surfaced by writing
+  `docs/RELATIONSHIPS.md`, not a defect introduced by it.
 - The test project redundantly declares `TargetFramework` despite the centralized build property in
   `Directory.Build.props`. Carried since milestone 002.
 - **The cast is six, and six is a ceiling rather than a trend.** `nunzio` was added by milestone 007
@@ -126,11 +141,11 @@ decision margins of the order of one. The constraint has moved from "can it be s
 Candidates only. They are not ordered by priority and must not be read as a queue — confirm scope
 with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation behaviour.
 
-1. **Relationship design pass** — settle the relationship schema (`OPEN_CONCERNS.md` #3). Milestone
-   006 supplied the first executable evidence it was always conditioned on; 007 supplied the second
-   and more pointed kind — how far a trust movement actually carries into a score, and how much of it
-   a standing grievance absorbs first. Not automatically next: whether to write it now or gather more
-   evidence first is Matt's call.
+1. ~~**Relationship design pass**~~ — **became milestone 008**, which narrowed `OPEN_CONCERNS.md` #3
+   rather than retiring it. What is left of it is decay, negative trust, whether respect and
+   resentment are separate dimensions or derived, whether provenance should weight the social
+   consequence, and whether grievance should be capped — each now carrying a stated condition for
+   when it becomes answerable, which is what makes them not-yet-candidates rather than open questions.
 2. **A denial that can win** — the concealment step that does not quiet its witnesses, and the global
    `believedWitnesses` scan. Together they are what keeps an executor from ever denying to his
    delegator, which is the one exchange in the model that milestone 004's provenance distinction was
@@ -140,14 +155,18 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    Gates nothing today and its fallback is recorded above; worth a standalone commit rather than a
    milestone.
 5. **Another bounded emergence slice** — rival activity or limited tier transitions, but not the
-   whole remaining emergence prototype in one milestone. Weigh against candidate 1: another mechanism
-   the scenario cannot exercise is volume, not progress.
+   whole remaining emergence prototype in one milestone. Another mechanism the scenario cannot
+   exercise is volume, not progress.
+6. **A runtime path that raises trust.** Surfaced by milestone 008 writing the schema down: conflicts
+   lower trust and nothing restores it, so a relationship can be damaged and never repaired. Nobody
+   decided that. Small, and it would give the trust dimension a second update path to be read
+   against.
 
 Provenance precision was a candidate and became milestone 004, which is closed. RNG keying and the
 concealment runaway were a candidate and became milestone 005, which is closed. The relationship
-design pass was candidate 1 and became milestone 006 in its executable form — the schema document it
-was originally framed as remains unwritten and is candidate 1 above. Scenario reach was candidate 1
-and became milestone 007. "A scenario variant that contradicts a delegator's first-hand account" was
+design pass was candidate 1 and became milestone 006 in its executable form; the schema document it
+was originally framed as became **milestone 008**, written from measured results rather than ahead of
+them. Scenario reach was candidate 1 and became milestone 007. "A scenario variant that contradicts a delegator's first-hand account" was
 candidate 5, was attempted inside milestone 006 and did not succeed, and is now **half** achieved:
 milestone 007 makes the delegator ask and the executor answer, in play, but the executor answers
 honestly. What remains of it is candidate 2 above.

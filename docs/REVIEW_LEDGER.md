@@ -147,6 +147,42 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Awaiting review — milestone 008
+
+**Not accepted, not verified.** Recorded here as the current measured state so a reviewer has the
+figures; acceptance requires a review naming the commit and Matt confirming it.
+
+- Build: **0 warnings, 0 errors — measured after `dotnet clean`.**
+- Tests: **285 passed**, 0 failed (276 before the milestone).
+- Five variants, deterministic on repeated runs.
+
+| Variant | Hash | Decisions | Reports | Requests | Conflicts | Rel. read | Rel. decided |
+|---|---|---|---|---|---|---|---|
+| baseline | `3BA97219464FC2E4` | 38 | 6 | 5 | 2 | 19 | 2 |
+| cautious-vincent | `EC664E9FB52010B7` | 21 | 2 | 4 | 3 | 12 | 3 |
+| watchful-boss | `51AB00158218ACD0` | 39 | 7 | 5 | 2 | 18 | 3 |
+| disloyal-vincent | `709F0B6E4B90A2F4` | 39 | 6 | 5 | 2 | 20 | 1 |
+| resentful-tommy | `3D91B931EC2DAF3B` | 38 | 7 | 5 | 2 | 19 | 3 |
+
+`--compare` reports **five distinct traces and five distinct chosen-action sequences**. That second
+figure was four at milestone 007, and the change is the milestone's behavioural result: at seed 42
+`resentful-tommy` no longer chooses identically to `baseline`.
+
+**Read the two new columns as the milestone's central measurement.** "Rel. decided" is the number of
+decisions whose winner would differ with relationship state removed, computed by re-ranking on
+`TotalWithoutRelationships()`. It is 1–3 in every variant, so **the relationship channel is
+load-bearing** — a stronger result than milestone 007's `0.0377` implied, because 007 could only see
+the trust-to-partial-report path, which is the one place two loyalty reads nearly annihilate.
+
+**All five hashes move, and mostly not for a behaviour reason**: the trace now carries the
+relationship diagnostic block. The scoring change was measured separately, before the trace was
+touched, and that is the more informative comparison — `watchful-boss` was **byte-identical** there,
+and it is the only variant in which nobody holds a grievance against anybody. See
+`milestones/008-relationship-readers.md` for both hash tables.
+
+**Decision, request and conflict counts are unchanged** from milestone 007. `resentful-tommy`'s
+reports rose 6 → 7, downstream of the fork.
+
 ### Accepted — milestone 007, `974a88a`
 
 Codex reviewed it and returned one finding — the sixth character, `nunzio`, breaching the milestone's
@@ -268,12 +304,16 @@ They produce distinct histories, which is what demonstrates that traits and rela
 affect behaviour without directly triggering actions. `disloyal-vincent` is the only variant that
 exercises the request channel, so it is the one that moves when the channel changes.
 
-**The distinctness claim now states its own caveat.** `resentful-tommy` still makes the same decisions
-as `baseline`; its hash differs only through seeded state reaching the trace summary. Since milestone
-007, `--compare` computes a chosen-action digest from structured decision fields and reports trace
-distinctness and behavioural distinctness separately — five and four — so the weaker of the two claims
-can no longer be read as the stronger one. A future change that made two variants converge
-behaviourally is caught by the second figure.
+**The distinctness claim states its own caveat, and since milestone 008 the caveat no longer bites.**
+Milestone 007 introduced a chosen-action digest computed from structured decision fields, so
+`--compare` reports trace distinctness and behavioural distinctness separately and the weaker claim
+cannot be read as the stronger one. At 007 those figures were five and four: `resentful-tommy` chose
+identically to `baseline` throughout. **At milestone 008 they are five and five.** Tommy's grievance
+against Vincent stopped being clamped away, and on 9 April he conceals the incident himself rather
+than reporting it to the man he resents. The margin is 0.0279 against ±0.05 per-candidate noise and
+the divergence is seed-dependent — present at 42 and 31337, absent at 1, 7, 99 and 2024 — so the
+figure is honest rather than robust, and the archive says so. A future change that made two variants
+converge behaviourally is still caught by the second figure.
 
 The variant was added to stage an executor denying his own act to his delegator, and still does not
 achieve it. The delegator now asks and the executor now answers, in play; he answers honestly, because
@@ -334,6 +374,18 @@ Future changes should retain coverage for:
 - A relationship movement that reaches no decision score is not a demonstrated consequence —
   decision-relevance is asserted by a counterfactual through the production scorer, not by the
   movement existing.
+- A score component's relationship derivation is read from the facet it was tagged with at the point
+  of computation, never from its component name. A term named "relationship effects" that reads only
+  a trait must be tagged `None` and must not appear in the relationship channel.
+- Every retained relationship dimension is read by some decision in a natural run of all five
+  variants. A dimension with no reader is removed rather than given a purpose to justify keeping it.
+- Grievance is applied outside the clamped loyalty sum, as its own named component at each reader.
+- A report's two relationship considerations — the standing reporting buys and the cost of the
+  candour selected — remain separately identifiable. A change that preserves their net while merging
+  them must fail.
+- The relationship diagnostic applies no significance cutoff, so a cancelling pair stays visible.
+- The relationship counterfactual reuses the breakdown's own noise draw rather than re-scoring.
+- No relationship diagnostic reaches player-facing output.
 
 ## Review checklist
 
@@ -432,6 +484,14 @@ caused repeated partial reports; treating a request as person-to-person rather t
 permanently closed the channel; treating confidence as provenance produced "personally witnessed"
 without evidence of attendance.
 *What two different things does this code now treat as one?*
+
+Milestone 008 found this one inside the instrument built to measure it, which is the variant worth
+naming. The only way to ask how much of a score came from a relationship was to filter components by
+the name `relationship effects` — and 36% of those components read no relationship state at all, being
+`−0.45 × proud` wearing a relationship label. Two production tests already aggregated that way and the
+new diagnostic was about to. It also swept the Belonging share of loyalty, which is a drive, into a
+figure reported as relational. The fix was to record the derivation where the value is computed.
+*Is this grouping by what the thing is, or by what it is called?*
 
 **A correctness fix that stops halfway along the path a value travels.** The request gained a
 subject that never reached the event, the reply, or the guard. Milestone 004 then demonstrated the

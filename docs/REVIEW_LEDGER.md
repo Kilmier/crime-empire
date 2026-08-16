@@ -35,15 +35,16 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `46a5651`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `1c6889f`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
-"not yet recorded here", not "unreviewed". **The milestone-007 closeout commit that moved this
-checkpoint is itself later than it, has no row, and still needs reviewing in its turn.**
+"not yet recorded here", not "unreviewed". **The commit that moved this checkpoint is itself later
+than it, has no row, and still needs reviewing in its turn.**
 
-Two rows added with this move say "status not established", and that is the honest reading rather
-than an oversight: the milestone-006 closeout and milestone 007's own rulings-provenance correction
-are both documentation commits that nobody has inspected. Milestone 007 was accepted on the strength
-of a review of `974a88a`, its implementation commit — not of everything standing beneath it.
+**Of the four commits from `6355347` onward, only `6355347` has no established status.** Older rows
+carry "status not established" too — that is longstanding and untouched here; the claim being made is
+about the milestone-006-closeout-onward range, not about the whole table. Milestone 007 was accepted
+on the strength of a review of `974a88a`, its implementation commit; the documentation commits
+beneath it were reviewed separately and on their own merits, and both were rejected.
 
 A note on the rule below, because this closeout sits close to it. That rule forbids a commit whose
 *only* purpose is to record its own review or the review of the commit before it, because such a
@@ -109,13 +110,16 @@ Oldest first — the order review takes them in.
 | `404b416` | Second 006 correction: claim-specific question scoring, `(kind, target, claim)` deduplication, corrected rulings provenance | Reviewed, **no findings**. **Matt accepted it on 2026-08-15. Milestone 006 closed.** |
 | `6355347` | Close milestone 006: record Codex's clean review and Matt's acceptance. Docs only | Status not established. |
 | `974a88a` | Milestone 007 implementation: concealment priced on protection newly bought, repetition against a moved listener, a second contested business, structured behavioural digest | Reviewed. **One finding** — adding a sixth character breached the milestone's own "no new characters" exclusion. **Matt accepted it on 2026-08-16** as a bounded scenario-fixture exception, the second business requiring a distinct owner; explicitly not a licence for broader cast growth. **Milestone 007 closed.** |
-| `46a5651` | Correct milestone 007's account of where its rulings are recorded. Docs only | Status not established. Its finding was right and its remedy was not — it rewrote an append-only archive header, which the closeout commit restores. |
+| `46a5651` | Correct milestone 007's account of where its rulings are recorded. Docs only | Reviewed and **rejected**: its finding was right and its remedy was not — it rewrote the header of an append-only milestone archive instead of leaving the original standing and correcting it alongside. Corrected by `1c6889f`. |
+| `1c6889f` | Close milestone 007: restore the archive header, record the review and its bounded acceptance. Docs only | Reviewed and **rejected**: one documentation finding — it recorded `46a5651` as "status not established" when that commit had in fact been reviewed and rejected, and that very review is what produced `1c6889f`. A false review-history claim, which is the failure this file exists to stop. Corrected by the commit that follows it. |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
 `404b416`; milestone 007 through `974a88a`. Note the difference in shape: 003, 004 and 006 each took
 their implementation plus every corrective round through review before acceptance, while 007 needed no
 corrective round to its code and was accepted at its implementation commit with one finding ruled on
-rather than fixed. Its two documentation commits are unreviewed and are recorded as such.
+rather than fixed. **Its corrective rounds were all documentation**, and two of them were rejected —
+one for rewriting an append-only header, one for misreporting that rejection as no review at all.
+Milestone 007's accepted status rests on `974a88a` and is unaffected by either.
 
 **On `fb2c84d`.** It was rejected and its findings were never written down, so what they were is not
 recoverable from this repository. Matt retired them as superseded and non-actionable on 2026-08-14:
@@ -454,6 +458,20 @@ happened, first for `b8fe921` and then for `e83dacf`; it wrongly recorded `fb2c8
 never reviewed; and its next-step gate went stale twice — first telling readers milestone 004 was
 active and approved, then telling them it was blocked on three unfixed findings after all five had
 been corrected and accepted.
+
+**A sixth, in this file, at `1c6889f`.** It recorded `46a5651` as "status not established" — the same
+shape as wrongly recording `fb2c84d` and `714fbc3` as never reviewed, and produced the same way. The
+author wrote the row from what he had been told rather than from what had happened: nobody had
+announced a review to him, so he wrote that none had occurred, when the review had happened, had
+rejected the commit, and was the reason he was writing the row at all. The rejection was visible in
+the work he was doing and invisible in the sentence he wrote about it.
+
+That is worth separating from the two mechanics below, because neither explains it. Reviews were
+being taken in order, and no gate went stale. **A row is a claim about the world, and "I was not told
+about a review" is not evidence that none happened.** Absence of a review report is not a review
+outcome, and the honest options when the outcome is genuinely unknown are to say the status is
+unknown *to the author* or to go and find out — not to record it as though the world had been
+checked.
 
 Two mechanics made the false verifications easy to produce:
 

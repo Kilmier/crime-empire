@@ -26,9 +26,13 @@ the closeout commit restores verbatim. The rulings are safe; the mechanism that 
 there and will recur for any milestone that archives and resets in one commit.
 
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
-inferring status from prose anywhere else, including this file. Note what was and was not reviewed:
-milestone 007 was accepted on a review of its implementation commit. Its two documentation commits
-carry no established status, and the milestone-006 closeout still carries none either.
+inferring status from prose anywhere else, including this file. Note what was and was not reviewed.
+Milestone 007's implementation commit `974a88a` was **reviewed and accepted**, which is what its
+accepted status rests on. Its two documentation commits were reviewed separately and both
+**rejected** — `46a5651` for rewriting an append-only archive header, and `1c6889f` for then
+recording that rejection as though no review had taken place. Neither rejection touches milestone
+007's acceptance. **Of the four commits from `6355347` onward, `6355347` is the only one whose status
+is not established** — older rows in the ledger carry that status too, and are untouched.
 
 **Milestone 008 has not been chosen.** Do not infer it from the candidate list or technical-debt list
 in `ROADMAP.md`, or from the carried-forward items below. Confirm scope with Matt and write it here
@@ -66,6 +70,12 @@ undeclared against a written exclusion; the rulings were properly recorded and t
 they were recorded was written from intent rather than from `git`. Both were caught, and in both the
 tempting remedy was to make the record read as though nothing had happened. Second question to carry:
 **did I have permission for this, or only a good reason for it?**
+
+And a third, from the documentation rounds that followed. Every status claim in this project's record
+that has ever been wrong was written from the author's own vantage rather than from the world:
+verification asserted because the numbers were real, a review recorded as never happening because
+nobody had announced it. Third question: **is this sentence reporting what happened, or what I
+happened to know about?**
 
 ## Carried forward
 
@@ -128,11 +138,13 @@ itself, and nothing that will notice a commit unless somebody points a review at
 - The coverage table in `REVIEW_LEDGER.md` is the record. It is maintained by hand, which is why it
   is the authority rather than the prose around it.
 
-The checkpoint now stands at `46a5651`. The milestone-007 closeout commit that moved it is itself
-later than it, has no row, and needs reviewing in its turn — as do the two documentation commits the
-move recorded as "status not established": the milestone-006 closeout `6355347` and milestone 007's
-rulings-provenance correction `46a5651`. Milestone 007 is accepted on the strength of a review of
-`974a88a`, and that is the only milestone-007 commit anyone has inspected.
+The checkpoint now stands at `1c6889f`. The commit that moved it is itself later than it, has no row,
+and needs reviewing in its turn. Within the checkpoint only `6355347` has no established status.
+
+Milestone 007's documentation trail is worth reading as a sequence, because each step was a correct
+finding with a wrong remedy: `46a5651` found a false provenance claim and fixed it by rewriting an
+append-only header; `1c6889f` restored the header and then misreported that rejection as no review at
+all; this commit corrects that. The code was accepted once, at `974a88a`, and none of it moved.
 
 Never write "verified" or "closed" from a review report alone. A report must name the exact commit
 reviewed, and Matt must confirm acceptance. That rule exists because the record twice claimed a

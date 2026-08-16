@@ -17,8 +17,11 @@ iteration speed and understanding over process/documentation overhead.
 inferring a phase from this file. Completed milestones are in `docs/milestones/`, what is not yet
 built in `docs/ROADMAP.md`, review coverage in `docs/REVIEW_LEDGER.md`.
 
-The sequencing that governs any of it is settled, not a status: headless console sim core first, no
-Godot project yet — `docs/DESIGN_DECISIONS.md`, "Stack".
+The sequencing that governs any of it is settled, not a status: headless console sim core first, then
+Godot — `docs/DESIGN_DECISIONS.md`, "Stack". Milestone 009 passed that gate and created
+`src/CrimeEmpire.Godot`. **Passing it retired nothing else in the sequencing**: no art pipeline, no
+map, no tilemaps, no animation, no save/load. The shell exists to establish that the simulation is
+playable, not to present it.
 
 ## Claude-Code-specific practice
 - Use Plan mode / propose an approach before writing code for anything nontrivial. This project is

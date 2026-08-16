@@ -164,6 +164,46 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured, not accepted — milestone 009, this commit
+
+**This section records measurements, not a review outcome.** Milestone 009's commit is later than the
+coverage checkpoint, has no row in the table above, and has not been reviewed by anybody. Neither has
+`3f08685`, which closed milestone 008. Do not read anything below as verification in this file's
+sense — Matt's acceptance of a named commit is the only thing that is.
+
+Milestone 009 added a Godot playable shell and an engine-neutral session boundary. **It changed no
+simulation behaviour**, and that is the claim its verification is built to falsify.
+
+- Build: **0 warnings, 0 errors** across four projects — measured after deleting every `bin`, `obj`
+  and `.godot` directory, not after `dotnet clean`, because `dotnet clean` on a multi-targeting
+  solution is not obviously equivalent and the cheaper check is the one that has produced a false
+  zero here twice.
+- Tests: **343 passed**, 0 failed (305 before the milestone; 38 added).
+- **All five accepted trace hashes, chosen-action digests, decision counts, report counts, request
+  counts, conflict counts, and both relationship columns are unchanged** from the milestone 008
+  baseline below. Nothing moved.
+- **All 30 viewpoint renders are byte-identical** — five variants × six characters, diffed against a
+  scratch worktree at `3f08685`. That is the check that matters for `IntelligenceWriter` being
+  rewritten to consume `PlayerView`'s snapshot rather than derive the source limit itself.
+- Debug and Release both build; `Release` maps to the Godot project's `Debug` configuration, because
+  `Godot.NET.Sdk` defines `Debug;ExportDebug;ExportRelease` and has no `Release`.
+
+Two verification commands are new and **are not in `AGENTS.md` §Verification**, which milestone 009
+had no ruling to edit:
+
+```powershell
+dotnet build src/CrimeEmpire.Godot/CrimeEmpire.Godot.csproj
+& "$env:USERPROFILE\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe" --headless --path src/CrimeEmpire.Godot -- --selftest
+```
+
+The second drives the real interface — the same panels through the same methods a person would see —
+for ninety in-game days, taking the first offered option at every pause, and prints every string the
+node tree contains between `== CE-UI-TEXT-BEGIN ==` and `== CE-UI-TEXT-END ==`. At the recorded
+commit it makes 4 choices, renders 4 decision screens, exits 0, and its output contains none of:
+`Dorato's bakery is holding back what it owes` (the fixture's designed hidden fact — the bakery really
+is refusing and no character holds the claim), `dorato-bakery`, `Nunzio`, any rejected-candidate
+wording, or any decimal number.
+
 ### Accepted — milestone 008, `7e0700e`
 
 Codex reviewed it with **no findings**, and **Matt accepted the corrected milestone 008
@@ -448,11 +488,48 @@ Future changes should retain coverage for:
 - The relationship counterfactual reuses the breakdown's own noise draw rather than re-scoring.
 - No relationship diagnostic reaches player-facing output.
 
+Added by milestone 009:
+
+- **A session with nobody controlled renders a byte-identical developer trace to the batch runner**,
+  in every variant. Compared on the full rendered trace rather than a structural snapshot, because a
+  snapshot is its own comparator and a forgotten field makes it blinder rather than failing.
+- **Auto-resolving every pause in a *controlled* session reproduces the same trace**, in every
+  variant. This is what fails if `Prepare` and `Resolve` drift — a belief update on the wrong side of
+  the split, an id allocated in a different order, an RNG stream drawn twice.
+- **Four stepping patterns under one player policy agree**: one call, day by day, week by week, and
+  twenty-five single events then a fast-forward. The policy is a pure function of the offered options,
+  so "the player choices are identical" holds by construction across the four.
+- **Player options are ordered by candidate id, and the preferred option is demonstrably not always
+  first.** The second half is the mutation check on the first: without it, sorting by id is satisfied
+  by coincidence whenever rank and id happen to agree.
+- **An option the character's own filters rejected cannot be chosen**, asserted against a candidate
+  the production filter actually refused in that very deliberation — not an invented string — and the
+  refusal leaves the session usable.
+- **Time cannot move while a choice is outstanding.**
+- **A prepared decision commits exactly once.**
+- **A hidden fact reaches no player surface**, checked with two facts of different kinds: one planted
+  in another character's cognition at full confidence for the whole run, and one true of the world and
+  held by nobody. The forbidden wording is computed from the production narrator, so a renderer that
+  changed its phrasing cannot slip past prose the test hardcoded.
+- **No player-facing phrase carries a decimal number.** Confidence, trust, fear and grievance severity
+  are hidden state; every phrase is qualitative.
+- **`SimulationSession`, `PendingDecision` and `PlayerSnapshot` expose no `World`, `TruthLog`,
+  `DecisionRecord`, `ScoreBreakdown`, `PreparedDecision`, `Candidate`, `Rejection`, `Report`,
+  `Character`, `Cognition` or `Agenda`**, asserted by reflection over their public members.
+- **The Godot interface's own text is checked, not just the data behind it** — collected from the live
+  node tree across every screen the run builds, headlessly, through the same methods a person sees.
+
 ## Review checklist
 
 ### Architecture
 
-- Does the simulation library remain engine-independent?
+- Does the simulation library remain engine-independent? Since milestone 009 it multi-targets
+  `net8.0;net10.0` so the engine can load it — that is a packaging fact, and it must stay one. A
+  `using Godot`, an engine-conditional `#if`, or a package reference to `Godot.NET.Sdk` anywhere under
+  `src/CrimeEmpire.Simulation` is the thing this question is about.
+- Does anything player-facing derive its own source limit rather than consuming `PlayerView`'s
+  snapshot? Two answers to "what may this character see" is the failure this project produces most
+  reliably.
 - Does decision code read character-relative information rather than truth? Decisions must use
   `PerceivedSituation`, not `World`, for situational facts — do not add a world reference to the
   perceived view or expose raw cognition to candidate generators.

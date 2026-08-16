@@ -22,6 +22,11 @@ relationship schema and built the instrument that measures it. The rest of the e
 not built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
 sequence. Full accounts are in `docs/milestones/`.
 
+Milestone 009 — **implemented 2026-08-16, not yet reviewed** — is the first step off that sequence
+rather than along it: a Godot playable shell over the same kernel, with a person answering one
+character's decisions. It changed no simulation behaviour, and every accepted hash, decision count and
+digest is unmoved.
+
 006 established where the difficulty sat: the mechanisms worked and the scenario could not show them.
 007 was the scenario-reach answer to that. 008 then answered 007's own finding, and the answer
 reframed it: the trust-to-partial-report path really is worth about four hundredths of a point, but
@@ -105,14 +110,39 @@ worth anything once it is shown" to **which readers are worth strengthening, and
 - **Obligation is read but never moves.** `Relations.Establish` is its only writer and that is
   scenario construction; it holds its seeded value for the whole of every run. Surfaced by writing
   `docs/RELATIONSHIPS.md`, not a defect introduced by it.
-- The test project redundantly declares `TargetFramework` despite the centralized build property in
-  `Directory.Build.props`. Carried since milestone 002.
+- ~~The test project redundantly declares `TargetFramework` despite the centralized build property in
+  `Directory.Build.props`.~~ **Retired 2026-08-16 by milestone 009**, and not by deleting the line.
+  `Directory.Build.props` no longer assigns a TFM at all — it publishes `CrimeEmpireHostTfm` and
+  `CrimeEmpireEngineTfm` as named values, because assigning `TargetFramework` there and multi-targeting
+  the simulation library are mutually exclusive. Every project now names the framework it wants, so
+  the test project's declaration stopped being redundant rather than being tidied away. Carried since
+  milestone 002.
 - **The cast is six, and six is a ceiling rather than a trend.** `nunzio` was added by milestone 007
   against that milestone's own written "no new characters" exclusion, because `AdvanceTribute`
   resolves a demand through the owner's own decision and `Commit` finds a business by owner, so two
   shops need two owners. Codex found the breach and Matt accepted it as a bounded scenario-fixture
   exception on 2026-08-16, stating that it authorizes neither broader cast growth nor relaxed scope
   discipline. A seventh character needs its own ruling first.
+- **Candidate descriptions are developer-shaped, and the player now reads them.** They are generated
+  only from the actor's `PerceivedSituation`, so they cannot carry a fact he lacks — but they name raw
+  ids (`have tommy handle …`, `strong-arm bellini-grocery`) and embed `Claim.ToString()`, which prints
+  a truth-log `EventId` as a `#7` correlation suffix. Honest and ugly. The fix is a player-facing
+  description vocabulary, which is a milestone-sized decision rather than a tidy-up — and changing
+  `Claim.ToString()` instead would move every accepted trace hash for a wording reason. Surfaced by
+  milestone 009 and deliberately outside it.
+- **The player cannot see why an option is unavailable.** Rejected candidates are hidden per milestone
+  009's scope, which is right for utility scores and arguably wrong for "he does not know that the
+  bakery is holding out" — the single most legible line in a decision trace, and the one that proves
+  the simulation is belief-limited rather than merely claiming to be. Whether a *belief-stage*
+  rejection is player-facing is a real design question and is unanswered.
+- **`AGENTS.md` §Verification does not mention the Godot headless check**, and `docs/RELATIONSHIPS.md`
+  is still absent from its conditional-reading list. Same shape as the older item: flagged, not taken,
+  because no ruling authorized editing `AGENTS.md`. The commands milestone 009 added to the
+  verification set are recorded in `REVIEW_LEDGER.md`'s baseline section instead.
+- **Nothing prevents a future Godot script from calling `Cast.Build` and `Runner.Run` directly.** The
+  session's own surface is closed — `World` is `internal` and a reflection test pins the public
+  surface — but the library it lives in is not. A separate player-contract assembly would close it;
+  milestone 009 did not have the scope for a fifth project.
 - **The milestone lifecycle does not durably record rulings.** Written into `CURRENT_MILESTONE.md`
   before implementation and reset out of it by the archive-and-close commit, they survive only in the
   archive that reproduces them. Milestone 006 lost its set this way and milestone 007 nearly repeated
@@ -125,10 +155,12 @@ worth anything once it is shown" to **which readers are worth strengthening, and
 - **Relevance tiering.** Active / Supporting / Background promotion and demotion are designed in
   `SIMULATION_ARCHITECTURE.md` and not implemented. The six-character cast makes this a non-issue
   at present scale, which also means it is unvalidated.
-- **Godot.** Godot 4 C# compatibility with `net10.0` is unverified. No Godot project exists, so
-  nothing is broken today; if it turns out incompatible, multi-targeting or keeping the
-  Godot-facing layer on a lower TFM stays available because the simulation library is
-  engine-independent.
+- ~~**Godot.**~~ **Retired 2026-08-16 by milestone 009, and the fallback is what happened.** Godot
+  4.7.1 hosts .NET 8, not .NET 10, so the simulation library multi-targets `net8.0;net10.0` and the
+  Godot project is on `net8.0` while the runner and tests stay on `net10.0`. The library gained no
+  Godot reference. `src/CrimeEmpire.Godot` builds as part of `CrimeEmpire.sln` and starts headlessly.
+  **Not retired by that:** everything in the presentation list below is still absent — no map, no art
+  pipeline, no animation, no save/load, and the interface is a deliberately plain functional layout.
 - **Generalized rumor propagation.** Explicitly excluded from milestone 003 and still out.
   `SourceKind.Rumor` remains in the vocabulary; no path produces it.
 - Media and public-information channels, the case-board investigation model, prosecution, broader
@@ -151,9 +183,9 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    delegator, which is the one exchange in the model that milestone 004's provenance distinction was
    built for and that no accepted run has produced.
 3. **Persistence / SQLite** — begin storing the information and decision data now worth querying.
-4. **Godot / .NET compatibility spike** — cheaply settle an engine constraint before any UI work.
-   Gates nothing today and its fallback is recorded above; worth a standalone commit rather than a
-   milestone.
+4. ~~**Godot / .NET compatibility spike**~~ — **subsumed by milestone 009**, which settled the
+   constraint (the engine hosts .NET 8) and built the shell in the same pass rather than spiking it
+   separately.
 5. **Another bounded emergence slice** — rival activity or limited tier transitions, but not the
    whole remaining emergence prototype in one milestone. Another mechanism the scenario cannot
    exercise is volume, not progress.

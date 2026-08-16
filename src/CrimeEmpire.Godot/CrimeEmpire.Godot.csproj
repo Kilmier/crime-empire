@@ -1,0 +1,16 @@
+<Project Sdk="Godot.NET.Sdk/4.7.1">
+  <PropertyGroup>
+    <!--
+      net8.0 because that is what the engine hosts: GodotSharp/Api/Release/GodotPlugins.runtimeconfig.json
+      in the installed Godot 4.7.1 declares "tfm": "net8.0". The runner and the tests stay on .NET 10;
+      the simulation library multi-targets so both can consume it. See Directory.Build.props.
+    -->
+    <TargetFramework>$(CrimeEmpireEngineTfm)</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>CrimeEmpire.GodotShell</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrimeEmpire.Simulation\CrimeEmpire.Simulation.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,8 +1,35 @@
 <Project>
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!--
+    Framework monikers, centralised as named values rather than as an assignment.
+
+    Milestone 002 put `TargetFramework` itself here and recorded, in DESIGN_DECISIONS.md §Stack,
+    that redundant per-project entries were deliberately not added because this file was the single
+    source of truth. Milestone 009 supersedes that arrangement, and the reason is mechanical rather
+    than a change of taste: a multi-targeting project must set `TargetFrameworks`, MSBuild ignores
+    `TargetFrameworks` whenever `TargetFramework` has already been assigned, and this file is
+    imported before any project body — so no condition written here can see what the project is
+    about to declare. Assigning the TFM here and multi-targeting anywhere are mutually exclusive.
+
+    What centralisation is worth keeping is kept: one place still decides what "the host framework"
+    and "the engine framework" mean, and every project selects from these rather than spelling a
+    moniker of its own.
+  -->
+  <PropertyGroup>
+    <!-- The console runner and the test suite. Milestone 002's decision, unchanged. -->
+    <CrimeEmpireHostTfm>net10.0</CrimeEmpireHostTfm>
+
+    <!--
+      What Godot 4.7.1 hosts. Read off the installed engine rather than assumed:
+      GodotSharp/Api/Release/GodotPlugins.runtimeconfig.json declares "tfm": "net8.0", and
+      Godot.NET.Sdk/4.7.1 builds against net8.0. The simulation library multi-targets both so the
+      engine can consume it without the runner or the tests leaving .NET 10.
+    -->
+    <CrimeEmpireEngineTfm>net8.0</CrimeEmpireEngineTfm>
   </PropertyGroup>
 </Project>

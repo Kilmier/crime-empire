@@ -5,24 +5,74 @@ using CrimeSim.Domain;
 using CrimeSim.Org;
 using CrimeSim.Strategy;
 
+/// <summary>What one call to <see cref="Runner.Step"/> did.</summary>
+public enum StepStatus
+{
+    /// <summary>One event was handled to completion. There may or may not be more.</summary>
+    Advanced,
+
+    /// <summary>
+    /// The controlled character reached a deliberation. The world is mid-event: his beliefs have
+    /// been updated and his options worked out, and nothing has been committed. Nothing else may
+    /// run until the choice is made.
+    /// </summary>
+    AwaitingChoice,
+
+    /// <summary>Nothing is scheduled at or before the horizon. Time can only move by raising it.</summary>
+    Exhausted,
+}
+
+/// <summary>
+/// The outcome of handling at most one scheduled event.
+///
+/// <b>Developer-facing</b>, like everything that carries a <see cref="PreparedDecision"/>.
+/// </summary>
+public sealed record StepResult(StepStatus Status, ScheduledEvent? Event, PreparedDecision? Awaiting);
+
 /// <summary>
 /// The simulation loop. Time advances to the next scheduled event and no further — empty days cost
 /// nothing. Most event kinds simply wake one character and hand them to the decision pipeline; the
 /// exceptions are institutional (OrgReview) and perceptual (ObservationOpportunity), neither of
 /// which is a personal deliberation.
+///
+/// Milestone 009 turned the loop inside out without changing it: <see cref="Run"/> is now a loop
+/// over <see cref="Step"/> with nobody controlled, which is the same sequence of the same calls it
+/// always was. What <see cref="Step"/> adds is the ability to stop between a character working out
+/// his options and committing to one, so a person can answer the last question instead of
+/// <see cref="Utility"/>. There is no frame tick and no polling anywhere in this file: the clock
+/// still only moves to the time of the next queued event.
 /// </summary>
 public static class Runner
 {
     public static void Run(World world, DateTime until)
     {
-        while (world.Queue.Next(until) is { } ev)
+        while (Step(world, until, controlledCharacterId: null).Status == StepStatus.Advanced)
         {
-            world.Now = ev.Time;
-            Handle(world, ev);
         }
     }
 
-    private static void Handle(World world, ScheduledEvent ev)
+    /// <summary>
+    /// Handles at most one scheduled event at or before <paramref name="until"/>.
+    ///
+    /// <paramref name="controlledCharacterId"/> null is the batch simulation, and every autonomous
+    /// character takes that path whatever it is set to — only the named character pauses, and only
+    /// when he reaches a deliberation. Perception, strategy steps, leadership review and the world
+    /// tick never pause for anybody: they are not personal decisions.
+    /// </summary>
+    public static StepResult Step(World world, DateTime until, string? controlledCharacterId)
+    {
+        if (world.Queue.Next(until) is not { } ev)
+            return new StepResult(StepStatus.Exhausted, null, null);
+
+        world.Now = ev.Time;
+        var awaiting = Handle(world, ev, controlledCharacterId);
+
+        return awaiting is null
+            ? new StepResult(StepStatus.Advanced, ev, null)
+            : new StepResult(StepStatus.AwaitingChoice, ev, awaiting);
+    }
+
+    private static PreparedDecision? Handle(World world, ScheduledEvent ev, string? controlledCharacterId)
     {
         var actor = ev.OwnerId is null ? null : world.Find(ev.OwnerId);
 
@@ -30,11 +80,11 @@ public static class Runner
         {
             case EventKind.OrgReview:
                 LeadershipReview(world, ev);
-                return;
+                return null;
 
             case EventKind.ObservationOpportunity when actor is not null:
                 Observe(world, actor, ev);
-                return;
+                return null;
 
             case EventKind.StrategyStep:
                 // Resolved explicitly rather than through the shared `actor` lookup above, which
@@ -43,16 +93,18 @@ public static class Runner
                 // around quietly — nothing else can ever advance that instance's pending step again,
                 // so the strategy would sit inert forever with no trace of why.
                 Strategies.Advance(world, ResolveExecutor(world, ev), ev);
-                return;
+                return null;
 
             case EventKind.WorldTick:
                 Tick(world, ev);
-                return;
+                return null;
 
             case EventKind.AssignmentDelivered when actor is not null:
+                // The briefing lands whether or not a person is about to choose what to do about
+                // it. Being told something is not a decision, and pausing before it would leave the
+                // player choosing on information he has not yet been given.
                 DeliverAssignment(world, actor, ev);
-                Pipeline.Deliberate(world, actor, ev);
-                return;
+                return Think(world, actor, ev, controlledCharacterId);
 
             // Everything else is a reason for one person to think.
             case EventKind.RoleReview:
@@ -60,9 +112,45 @@ public static class Runner
             case EventKind.StrategyBlocked:
             case EventKind.Incident:
             case EventKind.PressureThreshold:
-                if (actor is not null) Pipeline.Deliberate(world, actor, ev);
-                return;
+                return actor is null ? null : Think(world, actor, ev, controlledCharacterId);
         }
+
+        return null;
+    }
+
+    /// <summary>
+    /// One character's deliberation — carried all the way through for an NPC, and stopped short of
+    /// commitment for the character a person is controlling.
+    ///
+    /// Note that the split is *after* preparation in both cases. The controlled character's options
+    /// are worked out by the same six stages, from the same beliefs, under the same salience,
+    /// knowledge, capability and access rejections as anybody else's; only the preference is
+    /// somebody else's to supply. A player who could act outside that set would be a second action
+    /// implementation, which is the one thing actor parity forbids.
+    /// </summary>
+    private static PreparedDecision? Think(
+        World world, Character actor, ScheduledEvent ev, string? controlledCharacterId)
+    {
+        if (controlledCharacterId is null || !string.Equals(actor.Id, controlledCharacterId, StringComparison.Ordinal))
+        {
+            Pipeline.Deliberate(world, actor, ev);
+            return null;
+        }
+
+        var prepared = Pipeline.Prepare(world, actor, ev);
+
+        // Nothing survived his own filters, so there is nothing to put to anybody. Stopping here
+        // would present an empty list and demand an acknowledgement, which is a dead end wearing a
+        // decision's clothes — and it would break the invariant that a pause always offers a real
+        // choice. Resolved exactly as the autonomous path resolves it, which records "nothing was
+        // open to him" and commits nothing.
+        if (prepared.Available.Count == 0)
+        {
+            Pipeline.Resolve(prepared, null);
+            return null;
+        }
+
+        return prepared;
     }
 
     /// <summary>

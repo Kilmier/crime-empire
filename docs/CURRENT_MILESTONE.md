@@ -7,96 +7,111 @@ do not create a separate handoff document.
 
 ## Status
 
-**No milestone is active. Do not start one.**
+**No milestone is active. Do not start one.** Milestone 009 is implemented and **awaiting Codex
+review**; milestone 010 has not been chosen and must not be inferred.
 
-Milestones 001–008 are complete and accepted. The most recent, **008 — Relationship Readers and the
-Executable Schema**, settled the reader side of the relationship model and built the instrument that
-measures it: loyalty's four contributions each arrive at every reader as their own facet-tagged score
-component, grievance is out of the clamped sum it used to be buried inside, and a developer-facing
-diagnostic reports gross, net, candidate margin and a like-for-like counterfactual with no significance
-cutoff. `docs/RELATIONSHIPS.md` is the prototype schema, written last from measured results.
-**No coefficient in the model was changed.**
+Milestones 001–008 are complete and accepted. The most recent, **009 — Godot Playable Shell**, is
+implemented and closed but **not reviewed and not accepted by anybody**. It added a Godot 4.7.1 .NET
+project under `src/CrimeEmpire.Godot`, an engine-neutral `SimulationSession` boundary, and a
+prepare/resolve split in the decision pipeline so a person can answer one character's decisions
+through the same commit path an NPC uses. Full record, including Matt's authorized scope reproduced
+verbatim and thirteen rulings, is in `docs/milestones/009-godot-playable-shell.md`.
 
-Milestone 008's code went through **three review rounds, and its accepted status rests on `7e0700e` —
-not on its implementation commit.** `7a9773b` was rejected on one finding, `9a29342` on two, and
-`7e0700e` was reviewed with no findings and accepted by Matt on 2026-08-16. Full record, including
-Matt's ten rulings reproduced verbatim and both corrections appended at the foot, is in
-`docs/milestones/008-relationship-readers.md`.
+**It changed no simulation behaviour.** All five trace hashes, all five chosen-action digests, every
+decision, report, request and conflict count, and both relationship columns are unchanged from
+milestone 008's accepted baseline, and all 30 viewpoint renders are byte-identical to `3f08685`.
+Tests went 305 → 343.
 
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
-inferring status from prose anywhere else, including this file. The checkpoint now stands at
-`7e0700e`. The commit that moved it is itself later than it, has no row, and needs reviewing in its
-turn.
+inferring status from prose anywhere else, including this file. **The checkpoint still stands at
+`7e0700e`** and milestone 009 did not move it. Two commits are now beyond it with no row and no
+established status: `3f08685`, which closed milestone 008, and milestone 009's own
+implementation-and-archive commit. Review takes them in that order.
 
-**Milestone 009 has not been chosen.** Do not infer it from the candidate list or technical-debt list
-in `ROADMAP.md`, or from the carried-forward items below. Confirm scope with Matt and write it here
-before changing simulation behaviour.
+## What milestone 009 found, because it should shape the next scope decision
 
-## What milestone 008 found, because it should shape the next scope decision
+**The engine question was four milestones of carried debt and one line of configuration.** Godot
+4.7.1 hosts .NET 8 — `GodotPlugins.runtimeconfig.json` says so — so the simulation library
+multi-targets `net8.0;net10.0` and nothing else moved. The recorded fallback is exactly what happened,
+and there is no coupling to report: no Godot reference, no `#if`, no conditional code in the library.
 
-**The relationship channel is load-bearing.** Removing relationship state changes which candidate wins
-at **1–3 decisions in every variant** — 2 / 3 / 3 / 1 / 3, reported by `--compare`. Milestone 007's
-`0.0377` stands as a figure and was the wrong thing to generalise from: it measured the
-trust-to-partial-report path, which is the one place in the model where two loyalty reads nearly
-annihilate. `Fear` reaches **1.44** on a decision whose whole margin is 0.25.
+**A player is a preference, not a second action implementation.** Deliberation now splits at the
+pipeline's fifth question — which available option do you prefer — and only that question is answered
+differently. `Pipeline.Deliberate` is `Resolve(Prepare(...), null)` and is still what `Runner` calls
+for everybody autonomous, so NPC behaviour is unchanged *by construction*. The byte-identity tests
+check that the construction is what it appears to be; they are not what establishes the claim.
 
-**Two structural attenuators, neither a coefficient.** A partial report carries `+0.7 × loyalty` for
-the standing reporting buys and `−0.5 × loyalty` for what an omission costs, netting `0.2 × loyalty`;
-and grievance was subtracted *inside* the clamp, so once it exceeded a character's bond, further
-grievance was free and further trust worthless.
+**Two surfaces showing a character what he knows would have been one derivation too many.**
+`IntelligenceWriter` had held the source limit since milestone 003. A second surface deriving it
+independently is this project's signature failure — a distinction drawn in one place and dropped on
+the way to the next — and the divergence would have stayed invisible until one of them leaked.
+`PlayerView.Build` now owns it, the console renderer became a layout over its snapshot, and all 30
+viewpoint renders are byte-identical, which is what makes that a refactor rather than a rewrite.
 
-**A soldier who resents his capo now conceals rather than reporting to him.** At seed 42
-`resentful-tommy` diverges from `baseline` for the first time. Nobody wrote a rule connecting
-resentment to concealment. **Recorded with its fragility:** the margin is 0.0279 against ±0.05 noise,
-and the divergence holds at seeds 42 and 31337 but not at 1, 7, 99 or 2024.
+**And the fixture answers a player differently in four choices.** Taking the first offered option
+every time, Vincent asks Tommy for an account, twice asks Salvatore to relax the no-violence rule,
+then answers his boss about the grocery — and ninety days later the harbour is exactly where it
+started. The autonomous Vincent breaches the policy and the grocery pays. Same character, same
+beliefs, same options; a different history because somebody else answered the last question.
 
-**And the lesson, from three rounds of findings that were all the same defect in different costumes:
-a claim true of one context and false of the one it was stated in.** Four contributions separately
-computed and not separately emitted. Hashes true of a build one edit earlier. A `[0,1]` range true of
-every fixture and false of the public API, with an argument for removing a clamp resting on it. The
-first correction *verified itself*, with a diff that excluded the only region its change touched.
-
-Question to carry: **is this claim true of the thing I am saying it about, or only of something
-adjacent to it?**
+Question to carry: **is this a rule the type system keeps, or a rule somebody has to remember?**
+Milestone 009 got `World` out of the UI's reach with `internal` and got console text out of the UI's
+reach with a project reference. It did not get `Cast.Build` out of reach, and said so.
 
 ## Carried forward
 
 Open items the next scope decision should see. Fuller versions live in the milestone archives and
-`ROADMAP.md`'s technical-debt list.
+`ROADMAP.md`'s technical-debt list. **Everything carried out of milestone 008 is still carried; 009
+touched none of it.**
+
+New from milestone 009:
+
+- **Candidate descriptions are developer-shaped and the player now reads them** — raw ids, and a
+  `#EventId` correlation suffix from `Claim.ToString()`. Honest, ugly, and not fixable without either
+  a second description vocabulary or moving every accepted trace hash.
+- **The player cannot see why an option is unavailable.** Right for utility scores; arguably wrong for
+  "he does not know that the bakery is holding out", which is the line that proves the simulation is
+  belief-limited rather than merely claiming to be.
+- **Nothing stops a future Godot script from calling `Cast.Build` and `Runner.Run` directly.** A
+  player-contract assembly would close it; a fifth project was out of scope.
+- **`AGENTS.md` now has two things it does not mention** — `docs/RELATIONSHIPS.md` in its
+  conditional-reading list, and the Godot headless check in §Verification. Both flagged, neither
+  taken, because no ruling authorized editing it.
+
+Still open from milestone 008 and earlier:
 
 - **Concealment does not quiet the witnesses it is named for**, and `believedWitnesses` is scanned
-  globally rather than scoped to the incident. Untouched by 008 per ruling 4. Together they are what
-  keeps an executor from ever denying to his delegator.
+  globally rather than scoped to the incident. Together they are what keeps an executor from ever
+  denying to his delegator.
 - **The `0.9 × Loyalty` versus `0.4` denial-premium question is unruled**, deliberately. It gates the
   candidate above.
 - **Obligation is read but never moves.** `Relations.Establish` is its only writer and that is
   scenario construction.
 - **Nothing raises trust.** Conflicts lower it and no runtime path restores it, so a relationship can
-  be damaged and never repaired. Nobody decided that; it is now written down.
+  be damaged and never repaired.
 - **Negative trust and decay are deferred, not retired**, each with a stated condition for return.
 - **`GrievanceWeight` is unbounded.** A cap was considered as 008's remedy and explicitly rejected in
   favour of unbundling, so it is open rather than answered.
 - **Tuning guesses**: `FirstHandTestimony` 0.15, `Discovery` 0.10, `Relations.ConflictTrustCost` 0.35,
-  and `LoyaltyReading.GrievanceWeight` 0.50 — the last two preserved exactly by 008 and still
-  provisional.
-- **`AGENTS.md` does not mention `docs/RELATIONSHIPS.md`.** Flagged, not taken: no ruling authorized
-  editing `AGENTS.md`. A one-line addition to its conditional-reading list is the natural fix.
+  and `LoyaltyReading.GrievanceWeight` 0.50.
 - **The cast is six and that is a ceiling, not a trend.**
-- **The lifecycle loses rulings** when the archive and the reset land in one commit. Demonstrated a
-  third time by 008, mitigated by reproducing them in the archive. `AGENTS.md` is Matt's.
+- **The lifecycle loses rulings** when the archive and the reset land in one commit. Mitigated again by
+  reproducing them in the archive. `AGENTS.md` is Matt's.
 - The bakery is never collected from; the boss-side conflict path is covered only by staged unit
   tests; the empty-domain label `ConcealIncident(, target=...)`.
 
 ## Longer-standing deferrals
 
 - relevance tiering and its continuous-calendar engineering risk;
-- persistence and SQLite;
-- Godot / `net10.0` compatibility — cheap, gates nothing today, worth a standalone commit rather than
-  a milestone;
+- persistence, SQLite, and save/load — now the most conspicuous gap, because a session ends when the
+  process does;
+- ~~Godot / `net10.0` compatibility~~ — settled by milestone 009;
+- art, map, tilemaps and animation, which passing the Godot sequencing gate did **not** unlock;
 - generalized rumor, evidence, prosecution, media, and public-information channels;
 - broader organizations, diplomacy, careers, corruption, and surveillance systems;
-- the redundant test-project target framework, unless Matt separately authorizes a
-  documentation/maintenance change.
+- the redundant test-project target framework — **retired**: since milestone 009 removed the
+  centralized `TargetFramework` assignment, every project names the framework it wants and that entry
+  is no longer redundant.
 
 ## Ordered review process
 

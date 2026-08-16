@@ -1,1 +1,22 @@
-<Project Sdk="Microsoft.NET.Sdk" />
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      Both frameworks, because the engine and the host are on different ones and this library is
+      the only thing both consume. The engine moniker comes first so a single-target consumer that
+      somehow asks for neither gets the more conservative surface.
+
+      Note what this does NOT do: it adds no Godot reference, no engine-conditional code, and no
+      #if. The library stays engine-independent (AGENTS.md, "Repository boundaries"); multi-targeting
+      is a packaging fact about which runtime can load it, not a coupling.
+    -->
+    <TargetFrameworks>$(CrimeEmpireEngineTfm);$(CrimeEmpireHostTfm)</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      The session boundary keeps World internal so the UI cannot reach it (milestone 009, ruling 9).
+      The tests need it, and only the tests.
+    -->
+    <InternalsVisibleTo Include="CrimeEmpire.Simulation.Tests" />
+  </ItemGroup>
+</Project>

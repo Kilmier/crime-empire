@@ -1,0 +1,23 @@
+; Criminal Empire — the playable shell.
+;
+; Deliberately bare. No autoloads, no input map, no theme, no rendering configuration beyond what
+; a window needs: milestone 009's interface exists to prove the simulation is playable, not to look
+; like anything. Everything on screen is built in code by Game.cs from a PlayerSnapshot.
+
+config_version=5
+
+[application]
+
+config/name="Criminal Empire"
+config/description="Playable shell over the headless simulation kernel."
+run/main_scene="res://Main.tscn"
+config/features=PackedStringArray("4.7", "C#")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+
+[dotnet]
+
+project/assembly_name="CrimeEmpire.Godot"

@@ -1,9 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <!--
+      Selected from Directory.Build.props rather than spelled out. Carried since milestone 002 as a
+      redundant override of a centralised assignment; milestone 009 removed that assignment (see
+      DESIGN_DECISIONS.md §Stack), so every project now names the framework it wants and this line
+      stopped being redundant rather than being tidied away.
+    -->
+    <TargetFramework>$(CrimeEmpireHostTfm)</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 

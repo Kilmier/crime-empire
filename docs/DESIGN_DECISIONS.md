@@ -209,6 +209,51 @@ changed **no coefficient**; everything here is about shape.
   back: a decision that reads distrust differently from indifference, and a calendar/tier timescale to
   decay against. — milestone 008 rulings 5 and 6.
 
+## The player boundary — settled by milestone 009
+
+See `milestones/009-godot-playable-shell.md`. What is settled is where a person enters the decision
+pipeline and what an interface may be given; the interface itself is deliberately provisional and
+settles nothing about presentation.
+
+- **A player is a preference, not a second action implementation.** Deliberation splits into
+  `Pipeline.Prepare` (trigger, beliefs, agenda, bounded generation, salience/knowledge/capability/
+  access rejection, scoring) and `Pipeline.Resolve` (commit, schedule, record). `Pipeline.Deliberate`
+  is exactly `Resolve(Prepare(...), null)` and is what `Runner` still calls for every autonomous
+  character, so NPC behaviour is unchanged *by construction* rather than by test. A player answers
+  only the pipeline's fifth question — which available option do you prefer — and resolving his answer
+  runs the same `Commit` in the same order with the same consequences. **`Resolve` refuses an id that
+  is not in `PreparedDecision.Available`, and throws before mutating anything.** There is no path by
+  which a player takes an action his character could not have taken himself, which is what causal
+  parity forbids.
+- **What is offered is what survived his own filters, and nothing about the offer says which he would
+  have taken.** Options are ordered by candidate id — never by rank and never by salience — because
+  either ordering is a utility score with the number filed off. Rejected candidates, score components,
+  the noise draw, salience notes and the agenda's `Reason` (which embeds a numeric pressure value) do
+  not cross the boundary.
+- **A deliberation with nothing open to him does not pause.** It resolves on the autonomous path,
+  recording "nothing was open to him". A pause always offers a real choice; one option is a decision,
+  none is not.
+- **`PlayerView.Build` is the only code that decides what a viewpoint character may be shown.** The
+  console renderer consumes its `PlayerSnapshot` rather than deriving the same limits again, and so
+  does the Godot interface. Two surfaces answering "what may this character see" independently is the
+  ledger's *distinction drawn in one place and dropped on the way to the next*; there is one
+  derivation and two layouts. The in-fiction phrasing lives with it, in `PlayerNarration`, because the
+  rules it enforces — Discovery says "came across" and never "saw", confidence is words and never a
+  number, standing never explains itself — are information-safety rules and not layout.
+- **The snapshot is immutable and the session's `World` is `internal`.** A UI cannot reach the truth
+  log, decision records, the report log, organisational conditions or anybody else's cognition through
+  `SimulationSession`, because the type system will not name them. `InternalsVisibleTo` admits the test
+  assembly and nothing else.
+- **The player-facing calendar is not `World.Now`.** Advancing raises a horizon and drains the
+  existing event queue; there is no tick and no polling. `World.Now` remains the time of the last event
+  actually processed. Consequently the stepping pattern cannot change the outcome — the sequence of
+  events handled is a property of the queue, and the horizon only decides where a call stops reading
+  it. Asserted across all five variants for four different patterns under an identical player policy.
+- **Time cannot move while a choice is outstanding.** A half-handled event is not a place the clock
+  can pass through; letting later events resolve around one would make the history depend on how long
+  somebody took to answer, which is the frame-rate dependence the determinism invariants forbid in a
+  different hat.
+
 ## Stack
 
 - **Simulation core**: C#, plain classes, engine-agnostic, unit-testable from the command line.
@@ -217,11 +262,23 @@ changed **no coefficient**; everything here is about shape.
   traces need real queries) and promotion/demotion tiering, not JSON/binary blobs.
 - **Rendering/engine**: Godot 4 with C# (not GDScript) — same language as the sim core, no FFI
   boundary. Chosen over Unity for licensing simplicity, 2D/tilemap support, and UI toolkit fit
-  for a text/menu-dense management game.
-- **Sequencing**: headless console sim core first, no Godot project yet. Prove a small hardcoded
+  for a text/menu-dense management game. **Executed 2026-08-16** by milestone 009: the project is
+  `src/CrimeEmpire.Godot`, on Godot 4.7.1 .NET.
+- **Sequencing**: headless console sim core first, then a Godot project. Prove a small hardcoded
   cast produces believable decision traces in plain text before spending time on tilemaps,
-  sprites, or UI.
-  — `PROJECT_CONTEXT.md`, "Stack decision."
+  sprites, or UI. — `PROJECT_CONTEXT.md`, "Stack decision."
+  **The gate has been passed, and passing it is not the same as retiring it.** Milestones 001–008
+  validated the kernel in text, and Matt authorized the playable shell on 2026-08-16. What the
+  sequencing still forbids is unchanged: no art pipeline, no map, no tilemaps, no animation. The
+  shell exists to establish that the simulation is playable, not to present it. — milestone 009.
+- **The engine boundary is one-way and multi-targeted.** Godot 4.7.1 hosts .NET 8
+  (`GodotSharp/Api/Release/GodotPlugins.runtimeconfig.json` declares `"tfm": "net8.0"`), so
+  `CrimeEmpire.Simulation` multi-targets `net8.0;net10.0`, `CrimeEmpire.Godot` targets `net8.0`, and
+  the runner and tests stay on `net10.0`. The library gained no Godot reference, no engine-conditional
+  code and no `#if`: multi-targeting is a fact about which runtime can load it, not a coupling. The
+  Godot project references the simulation library and **not** the runner, so "the UI consumes
+  structured data rather than parsing console-rendered text" is a project-reference fact rather than
+  a rule somebody has to keep. — milestone 009.
 - **Target framework: .NET 10 (LTS)**, not .NET 9. The kernel was originally scaffolded against
   .NET 9 because that was the SDK already on the dev machine; Matt confirmed the intent is to move
   to .NET 10 now that it's the current LTS. — decided in chat 2026-08-13; flagged originally by
@@ -234,6 +291,17 @@ changed **no coefficient**; everything here is about shape.
   `CrimeEmpire.Simulation.Tests.csproj` needed changing. Redundant per-project `TargetFramework`
   entries were deliberately *not* added — `Directory.Build.props` is the single source of truth
   for the TFM.
+
+  **That last sentence is superseded, by milestone 009, for a mechanical reason rather than a change
+  of taste.** A multi-targeting project must set `TargetFrameworks`; MSBuild ignores
+  `TargetFrameworks` whenever `TargetFramework` has already been assigned; and
+  `Directory.Build.props` is imported before any project body, so no condition written there can see
+  what the project is about to declare. Assigning the TFM there and multi-targeting anywhere are
+  mutually exclusive. `Directory.Build.props` now publishes `CrimeEmpireHostTfm` (`net10.0`) and
+  `CrimeEmpireEngineTfm` (`net8.0`) as named values and assigns neither; each project selects one, so
+  one place still decides what "the host framework" means. **The .NET 10 decision itself is unchanged**
+  — the runner and the tests are on `net10.0` exactly as before, and the simulation library adds
+  `net8.0` alongside it rather than leaving .NET 10.
 
 ## Concerns resolved since `design-doc-concerns_1.md` was written
 

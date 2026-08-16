@@ -35,18 +35,19 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `53e912e`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `6ba0737`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
 "not yet recorded here", not "unreviewed". **The commit that moved this checkpoint is itself later
 than it, has no row, and still needs reviewing in its turn.**
 
-**Every commit from `6355347` onward now has an established outcome.** Older rows carry "status not
-established" — that is longstanding and untouched here; the claim being made is about the
-milestone-006-closeout-onward range, not about the whole table. Milestone 007 was accepted on the
-strength of a review of `974a88a`, its implementation commit. Read the five rows at the foot together
-rather than singly: one implementation commit accepted, and four documentation commits of which three
-were rejected, each for a different way of getting the record wrong — rewriting an append-only
-archive, doing it again in a different archive, and misreporting a review that had happened.
+**Every commit in the range `6355347`–`6ba0737` inclusive has an established outcome.** The bound
+matters: "onward" would claim an outcome for commits that do not exist yet, which is the same
+open-ended promise this file's first version made when it said every commit had a row. Older rows
+before that range carry "status not established"; that is longstanding and untouched here.
+
+Milestone 007 was accepted on the strength of a review of `974a88a`, its implementation commit. Read
+the six rows at the foot together rather than singly: one implementation commit accepted, and five
+documentation commits of which four were rejected.
 
 A note on the rule below, because this closeout sits close to it. That rule forbids a commit whose
 *only* purpose is to record its own review or the review of the commit before it, because such a
@@ -114,7 +115,8 @@ Oldest first — the order review takes them in.
 | `974a88a` | Milestone 007 implementation: concealment priced on protection newly bought, repetition against a moved listener, a second contested business, structured behavioural digest | Reviewed. **One finding** — adding a sixth character breached the milestone's own "no new characters" exclusion. **Matt accepted it on 2026-08-16** as a bounded scenario-fixture exception, the second business requiring a distinct owner; explicitly not a licence for broader cast growth. **Milestone 007 closed.** |
 | `46a5651` | Correct milestone 007's account of where its rulings are recorded. Docs only | Reviewed and **rejected**: its finding was right and its remedy was not — it rewrote the header of an append-only milestone archive instead of leaving the original standing and correcting it alongside. Corrected by `1c6889f`. |
 | `1c6889f` | Close milestone 007: restore the archive header, record the review and its bounded acceptance. Docs only | Reviewed and **rejected**: one documentation finding — it recorded `46a5651` as "status not established" when that commit had in fact been reviewed and rejected, and that very review is what produced `1c6889f`. A false review-history claim, which is the failure this file exists to stop. Corrected by `53e912e`. |
-| `53e912e` | Record the real review history of milestone 007's documentation commits. Docs only | Reviewed, **no findings**. **Matt accepted it.** He also directed that no commit be made merely to record this review, so it was folded in here at the next change authorized on its own merits — which is the rule below working as intended rather than an oversight. |
+| `53e912e` | Record the real review history of milestone 007's documentation commits. Docs only | Reviewed, **no findings**. **Matt accepted it.** He also directed that no commit be made merely to record this review, so it was folded in at the next change authorized on its own merits — which is the rule below working as intended rather than an oversight. |
+| `6ba0737` | Restore milestone 006's archive header and reconcile review coverage. Docs only | Reviewed and **rejected**: three findings, two P1 and one P2 — the corrective note was inserted below the restored intro instead of appended at the end of the file, so the archive still carried a hunk above EOF; "every commit from `6355347` onward has an established outcome" was unbounded and claimed an outcome for commits that do not exist yet; and the recurring-failure section still said "Five patterns" after a sixth was added. Corrected by the commit that follows this one. |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
 `404b416`; milestone 007 through `974a88a`. Note the difference in shape: 003, 004 and 006 each took
@@ -417,7 +419,7 @@ For any proposed feature:
 
 ## Recurring failure patterns
 
-Five patterns have produced repeat findings. The detailed cases are in the milestone archives; what
+Six patterns have produced repeat findings. The detailed cases are in the milestone archives; what
 follows is the question each one leaves behind.
 
 **A correctness fix that narrows what can be expressed.** Filtering to held beliefs made retractions

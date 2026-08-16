@@ -8,20 +8,6 @@ revisions, and confirmed with five further rulings before implementation. All si
 in the scope section of this file's predecessor content below, because several of them narrowed what
 was originally proposed and the narrowed version is what was built.
 
-> **Appended note, not part of the text above.** The header and the two paragraphs above are this
-> file exactly as it stood at `404b416`, restored. Commit `6355347` rewrote them on closure — it
-> replaced the status line and rewrote the ruling-provenance paragraph — and `AGENTS.md` requires
-> milestone archives to be append-only, so that was a defect rather than a tidy-up.
->
-> Both things `6355347` was trying to say remain true and remain recorded, without editing anything.
-> **Milestone 006 is closed and accepted**; the closure record is appended at the foot of this file,
-> which is where it belongs. And the claim above that the sixteen rulings are "reproduced in the scope
-> section of this file's predecessor content below" **is false** — but it was already corrected inside
-> this archive before `6355347` touched it, under *Second correction*, finding 1, which records that
-> no committed revision has ever contained them and that the table under the first correction is the
-> only copy. Nothing is lost by restoring the original wording, because the correction for it was
-> already appended where corrections go.
-
 ## What was attempted
 
 The information channel built by milestone 003 and made precise by 004 terminated in a cul-de-sac.
@@ -569,3 +555,17 @@ value get read* but: **what does this claim assert, and did anything actually ch
 
 - `1fe5b9a` — implementation. `3ddd8a1` and `404b416` — the two corrections. The closeout commit that
   records this acceptance is not cited by hash here, for the reason milestone 001's archive gives.
+
+> **Appended note, not part of the text above.** The header and the two paragraphs above are this
+> file exactly as it stood at `404b416`, restored. Commit `6355347` rewrote them on closure — it
+> replaced the status line and rewrote the ruling-provenance paragraph — and `AGENTS.md` requires
+> milestone archives to be append-only, so that was a defect rather than a tidy-up.
+>
+> Both things `6355347` was trying to say remain true and remain recorded, without editing anything.
+> **Milestone 006 is closed and accepted**; the closure record is appended at the foot of this file,
+> which is where it belongs. And the claim above that the sixteen rulings are "reproduced in the scope
+> section of this file's predecessor content below" **is false** — but it was already corrected inside
+> this archive before `6355347` touched it, under *Second correction*, finding 1, which records that
+> no committed revision has ever contained them and that the table under the first correction is the
+> only copy. Nothing is lost by restoring the original wording, because the correction for it was
+> already appended where corrections go.

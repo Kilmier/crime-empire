@@ -31,11 +31,12 @@ Milestone 007's implementation commit `974a88a` was **reviewed and accepted**, w
 accepted status rests on. Milestone 006's rests on `404b416` in the same way.
 
 The documentation commits around them fared worse, and every one of them has now been reviewed.
-`6355347`, `46a5651` and `1c6889f` were all **rejected** — the first two for rewriting an append-only
-milestone archive at closure, the third for recording the second's rejection as though no review had
-happened. `53e912e` was reviewed with no findings and accepted. **None of that touches either
-milestone's acceptance**, and every commit from `6355347` onward now has an established outcome.
-Older rows in the ledger carry "status not established" and are untouched.
+`6355347`, `46a5651`, `1c6889f` and `6ba0737` were all **rejected** — the first two for rewriting an
+append-only milestone archive at closure, the third for recording the second's rejection as though no
+review had happened, the fourth for putting its own corrective note above the end of the file it was
+restoring. `53e912e` was reviewed with no findings and accepted. **None of that touches either
+milestone's acceptance**, and every commit in the range `6355347`–`6ba0737` inclusive now has an
+established outcome. Older rows in the ledger carry "status not established" and are untouched.
 
 **Milestone 008 has not been chosen.** Do not infer it from the candidate list or technical-debt list
 in `ROADMAP.md`, or from the carried-forward items below. Confirm scope with Matt and write it here
@@ -141,16 +142,16 @@ itself, and nothing that will notice a commit unless somebody points a review at
 - The coverage table in `REVIEW_LEDGER.md` is the record. It is maintained by hand, which is why it
   is the authority rather than the prose around it.
 
-The checkpoint now stands at `53e912e`. The commit that moved it is itself later than it, has no row,
+The checkpoint now stands at `6ba0737`. The commit that moved it is itself later than it, has no row,
 and needs reviewing in its turn.
 
 The documentation trail around milestones 006 and 007 is worth reading as a sequence, because each
-step was a correct finding with a wrong remedy, and the same wrong remedy twice: `6355347` closed
-milestone 006 by rewriting its archive header; `46a5651` found a false provenance claim in milestone
-007's archive and fixed it by rewriting *that* header; `1c6889f` restored the 007 header and then
-misreported the rejection behind it as no review at all; `53e912e` corrected that and was accepted.
-Both milestones' code was accepted once each, at `404b416` and `974a88a`, and none of it moved
-through any of it.
+step was a correct finding with a wrong remedy: `6355347` closed milestone 006 by rewriting its
+archive header; `46a5651` found a false provenance claim in milestone 007's archive and fixed it by
+rewriting *that* header; `1c6889f` restored the 007 header and then misreported the rejection behind
+it as no review at all; `53e912e` corrected that and was accepted; `6ba0737` restored the 006 header
+and put its own note about the restoration inside the file rather than after it. Both milestones' code
+was accepted once each, at `404b416` and `974a88a`, and none of it moved through any of it.
 
 Never write "verified" or "closed" from a review report alone. A report must name the exact commit
 reviewed, and Matt must confirm acceptance. That rule exists because the record twice claimed a

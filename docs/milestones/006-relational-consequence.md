@@ -1,22 +1,26 @@
 # Milestone 006 — Relational Consequence of a Perceived Account Conflict
 
-Status: **closed**, after two corrective rounds. Codex reviewed `404b416` with no findings and Matt
-accepted it on 2026-08-15; the closure record is at the foot of this file.
-
-Only this header is updated on closure, per `AGENTS.md` — the account below and the two appended
-corrections keep the status lines they carried when written, including the ones that say a review had
-not yet happened. Those were true at the time and are left standing rather than tidied, which is the
-same treatment milestones 004 and 005 record.
+Status: **implementation complete, awaiting Codex review. Not verified.** `REVIEW_LEDGER.md` is the
+record of when a review happens; nothing here should be read as one having happened.
 
 Scope was proposed against head `711553c`, approved in direction by Matt with eleven binding
-revisions, and confirmed with five further rulings before implementation.
+revisions, and confirmed with five further rulings before implementation. All sixteen are reproduced
+in the scope section of this file's predecessor content below, because several of them narrowed what
+was originally proposed and the narrowed version is what was built.
 
-**On those sixteen rulings.** This paragraph originally claimed they were "reproduced in the scope
-section of this file's predecessor content below." They were not, and the first correction's own
-account of where to find them was wrong in turn. They are reproduced in the table under
-*Correction — Codex findings on `1fe5b9a`*, and their actual provenance is recorded under
-*Second correction*: they were issued in review conversation, never committed to any revision, and
-that table is the only copy of them in this repository.
+> **Appended note, not part of the text above.** The header and the two paragraphs above are this
+> file exactly as it stood at `404b416`, restored. Commit `6355347` rewrote them on closure — it
+> replaced the status line and rewrote the ruling-provenance paragraph — and `AGENTS.md` requires
+> milestone archives to be append-only, so that was a defect rather than a tidy-up.
+>
+> Both things `6355347` was trying to say remain true and remain recorded, without editing anything.
+> **Milestone 006 is closed and accepted**; the closure record is appended at the foot of this file,
+> which is where it belongs. And the claim above that the sixteen rulings are "reproduced in the scope
+> section of this file's predecessor content below" **is false** — but it was already corrected inside
+> this archive before `6355347` touched it, under *Second correction*, finding 1, which records that
+> no committed revision has ever contained them and that the table under the first correction is the
+> only copy. Nothing is lost by restoring the original wording, because the correction for it was
+> already appended where corrections go.
 
 ## What was attempted
 

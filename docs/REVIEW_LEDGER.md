@@ -35,16 +35,18 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `1c6889f`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `53e912e`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
 "not yet recorded here", not "unreviewed". **The commit that moved this checkpoint is itself later
 than it, has no row, and still needs reviewing in its turn.**
 
-**Of the four commits from `6355347` onward, only `6355347` has no established status.** Older rows
-carry "status not established" too — that is longstanding and untouched here; the claim being made is
-about the milestone-006-closeout-onward range, not about the whole table. Milestone 007 was accepted
-on the strength of a review of `974a88a`, its implementation commit; the documentation commits
-beneath it were reviewed separately and on their own merits, and both were rejected.
+**Every commit from `6355347` onward now has an established outcome.** Older rows carry "status not
+established" — that is longstanding and untouched here; the claim being made is about the
+milestone-006-closeout-onward range, not about the whole table. Milestone 007 was accepted on the
+strength of a review of `974a88a`, its implementation commit. Read the five rows at the foot together
+rather than singly: one implementation commit accepted, and four documentation commits of which three
+were rejected, each for a different way of getting the record wrong — rewriting an append-only
+archive, doing it again in a different archive, and misreporting a review that had happened.
 
 A note on the rule below, because this closeout sits close to it. That rule forbids a commit whose
 *only* purpose is to record its own review or the review of the commit before it, because such a
@@ -108,10 +110,11 @@ Oldest first — the order review takes them in.
 | `1fe5b9a` | Milestone 006 implementation: perceived account conflicts, `Domain/Relations.cs`, relationship state in both replay comparators | Reviewed and **rejected**: six findings — a grievance collection castable back to something mutable, an absent reading that could be contaminated and reported no `OtherId`, the missing delegator-to-executor account path, absent state-machine tests, an archive citing sixteen rulings it did not contain, and a false zero-warning claim taken from an incremental build. Corrected by `3ddd8a1`. |
 | `3ddd8a1` | First 006 correction: relationship immutability, named absent reads, `Generators.FromDelegation` | Reviewed. The original six **accepted as sufficiently addressed**, including the staged delegator proof under ruling 7; **five further findings** — `SeekCorroboration` scored from the weakest unrelated testimony rather than its own `AboutClaim`, a trace claiming the actor was going behind a source that did not exist, undetected duplicate questions across two generators, a false provenance claim about the sixteen rulings, and a recantation test whose name contradicted its body. Corrected by `404b416`. |
 | `404b416` | Second 006 correction: claim-specific question scoring, `(kind, target, claim)` deduplication, corrected rulings provenance | Reviewed, **no findings**. **Matt accepted it on 2026-08-15. Milestone 006 closed.** |
-| `6355347` | Close milestone 006: record Codex's clean review and Matt's acceptance. Docs only | Status not established. |
+| `6355347` | Close milestone 006: record Codex's clean review and Matt's acceptance. Docs only | Reviewed and **rejected**: one P1 — it rewrote the header and introductory status text of `milestones/006-relational-consequence.md`, which `AGENTS.md` requires to be append-only. Milestone 006's acceptance itself is unaffected and stands on `404b416`. Corrected by the commit that follows `53e912e`. |
 | `974a88a` | Milestone 007 implementation: concealment priced on protection newly bought, repetition against a moved listener, a second contested business, structured behavioural digest | Reviewed. **One finding** — adding a sixth character breached the milestone's own "no new characters" exclusion. **Matt accepted it on 2026-08-16** as a bounded scenario-fixture exception, the second business requiring a distinct owner; explicitly not a licence for broader cast growth. **Milestone 007 closed.** |
 | `46a5651` | Correct milestone 007's account of where its rulings are recorded. Docs only | Reviewed and **rejected**: its finding was right and its remedy was not — it rewrote the header of an append-only milestone archive instead of leaving the original standing and correcting it alongside. Corrected by `1c6889f`. |
-| `1c6889f` | Close milestone 007: restore the archive header, record the review and its bounded acceptance. Docs only | Reviewed and **rejected**: one documentation finding — it recorded `46a5651` as "status not established" when that commit had in fact been reviewed and rejected, and that very review is what produced `1c6889f`. A false review-history claim, which is the failure this file exists to stop. Corrected by the commit that follows it. |
+| `1c6889f` | Close milestone 007: restore the archive header, record the review and its bounded acceptance. Docs only | Reviewed and **rejected**: one documentation finding — it recorded `46a5651` as "status not established" when that commit had in fact been reviewed and rejected, and that very review is what produced `1c6889f`. A false review-history claim, which is the failure this file exists to stop. Corrected by `53e912e`. |
+| `53e912e` | Record the real review history of milestone 007's documentation commits. Docs only | Reviewed, **no findings**. **Matt accepted it.** He also directed that no commit be made merely to record this review, so it was folded in here at the next change authorized on its own merits — which is the rule below working as intended rather than an oversight. |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
 `404b416`; milestone 007 through `974a88a`. Note the difference in shape: 003, 004 and 006 each took
@@ -119,7 +122,8 @@ their implementation plus every corrective round through review before acceptanc
 corrective round to its code and was accepted at its implementation commit with one finding ruled on
 rather than fixed. **Its corrective rounds were all documentation**, and two of them were rejected —
 one for rewriting an append-only header, one for misreporting that rejection as no review at all.
-Milestone 007's accepted status rests on `974a88a` and is unaffected by either.
+Milestone 007's accepted status rests on `974a88a` and is unaffected by either. Milestone 006's rests
+on `404b416` and is likewise unaffected by its own closeout being rejected.
 
 **On `fb2c84d`.** It was rejected and its findings were never written down, so what they were is not
 recoverable from this repository. Matt retired them as superseded and non-actionable on 2026-08-14:
@@ -448,6 +452,15 @@ belief to be self-acquired or backed by testimony, which a scenario-seeded belie
 outside the cast can never satisfy — it passed only because another character happened to speak about
 that same claim later in the run, and stopped the moment that report stopped being filed.
 *Is this assertion checking a link the simulation actually records, or one the test is inferring?*
+
+**Rewriting an append-only archive at closure.** Twice, in consecutive milestones and by the same
+reasoning both times: `6355347` replaced milestone 006's status line and rewrote its ruling-provenance
+paragraph, and `46a5651` did the same to milestone 007's header. Neither was vandalism — each was
+correcting something genuinely wrong, which is what makes the pattern worth naming. Closure and
+correction both feel like updates to the top of the file, and both belong at the bottom of it. Note
+also that in the 006 case the correction was **already appended** further down and the rewrite added
+nothing but the loss.
+*Is this an edit to what the record said, or an addition to what the record now says?*
 
 **Recording a review that did not happen.** See below; it is the pattern this file exists to stop.
 

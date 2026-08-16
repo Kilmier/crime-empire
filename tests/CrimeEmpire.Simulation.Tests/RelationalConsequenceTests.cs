@@ -1114,8 +1114,7 @@ public sealed class RelationalConsequenceTests
             world.Org.OfficeForDomain(Cast.Harbour), null, Array.Empty<Policy>(),
             Pipeline.SuperiorOf(world, actor), Pipeline.SubordinatesOf(world, actor),
             Pipeline.OrgMembersOf(world, actor),
-            Acquaintance.CouldApproach(
-                world, actor, Pipeline.SuperiorOf(world, actor), Pipeline.SubordinatesOf(world, actor)),
+            Acquaintance.KnownTo(world, actor),
             Array.Empty<Report>(), Array.Empty<InformationRequest>(), new[] { Cast.Grocery });
     }
 

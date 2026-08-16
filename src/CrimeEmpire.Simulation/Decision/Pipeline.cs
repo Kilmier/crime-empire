@@ -170,7 +170,7 @@ public static class Pipeline
             superior,
             subordinates,
             OrgMembersOf(world, actor),
-            Acquaintance.CouldApproach(world, actor, superior, subordinates),
+            Acquaintance.KnownTo(world, actor),
             world.Reports.Where(r => r.SenderId == actor.Id).ToList(),
             world.Requests.Where(r => r.AskerId == actor.Id).ToList(),
             VisibleTargets(world, domain));

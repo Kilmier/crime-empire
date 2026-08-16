@@ -8,8 +8,8 @@ do not create a separate handoff document.
 ## Status
 
 **No milestone is active. Do not start one.** Milestone 009 is implemented, **was reviewed and
-rejected twice, and is corrected and awaiting re-review**; milestone 010 has not been chosen and must
-not be inferred.
+rejected three times, and is corrected and awaiting re-review**; milestone 010 has not been chosen
+and must not be inferred.
 
 Codex rejected `901d345` on three findings, all accepted by Matt: the pending decision passed
 `ScheduledEvent.Cause` through, so a delegated operation's failure or completion reached its owner
@@ -19,27 +19,38 @@ raw `Claim`/`EventId` reachable; and the Godot self-test printed a failure while
 Codex then reviewed `b4900aa`, confirmed those three fixed, and returned **one further P1**:
 `Generators.FromRelationship` still picked corroboration targets out of the authoritative
 organisation roster without establishing that the actor knew that person existed, and the
-player-facing option then rendered the name. Also accepted. Both rounds are corrected, each pinned by
-a mutation check. Full account in `docs/milestones/009-godot-playable-shell.md`, Corrections 1 and 2.
+player-facing option then rendered the name. Also accepted.
+
+Codex then reviewed `c447a23` and returned **the same P1 again**: that correction narrowed the roster
+by knowledge and widened it back by "office relationships" derived from `Pipeline.SuperiorOf` and
+`Pipeline.SubordinatesOf` — which are authority scans over the same roster. A same-organisation
+stranger one rung below the actor was still reachable and still rendered by name, and none of the
+three tests written for it could see the difference. Accepted, and corrected under Correction 3.
+
+**All three rounds are corrected, each pinned by a mutation check.** Full account in
+`docs/milestones/009-godot-playable-shell.md`, Corrections 1–3.
 
 Milestones 001–008 are complete and accepted. The most recent, **009 — Godot Playable Shell**, is
-implemented and closed but **not reviewed and not accepted by anybody**. It added a Godot 4.7.1 .NET
-project under `src/CrimeEmpire.Godot`, an engine-neutral `SimulationSession` boundary, and a
-prepare/resolve split in the decision pipeline so a person can answer one character's decisions
-through the same commit path an NPC uses. Full record, including Matt's authorized scope reproduced
-verbatim and thirteen rulings, is in `docs/milestones/009-godot-playable-shell.md`.
+implemented and closed. It has been **reviewed three times, rejected three times, and corrected three
+times; no version of it has been accepted by Matt.** It added a Godot 4.7.1 .NET project under
+`src/CrimeEmpire.Godot`, an engine-neutral `SimulationSession` boundary, and a prepare/resolve split
+in the decision pipeline so a person can answer one character's decisions through the same commit
+path an NPC uses. Full record, including Matt's authorized scope reproduced verbatim and thirteen
+rulings, is in `docs/milestones/009-godot-playable-shell.md`.
 
-**The shell itself changed no simulation behaviour, and neither did the first correction. The second
-one does, deliberately.** `cautious-vincent` moved — trace `A8A1BBD12D5334C2` → `96EAE1A72850F3D7`,
-decisions 21 → 19, conflicts 3 → 2 — because Salvatore had been putting a question to a man nothing
-in his head established. The other four variants are byte-identical to milestone 008's accepted
-baseline throughout. Tests went 305 → 343 → 353 → 366. New figures in `REVIEW_LEDGER.md`.
+**The shell itself changed no simulation behaviour, and neither did the first or third correction.
+The second one does, deliberately.** `cautious-vincent` moved — trace `A8A1BBD12D5334C2` →
+`96EAE1A72850F3D7`, decisions 21 → 19, conflicts 3 → 2 — because Salvatore had been putting a
+question to a man nothing in his head established. The other four variants are byte-identical to
+milestone 008's accepted baseline throughout. Tests went 305 → 343 → 353 → 366 → 369. Current figures
+in `REVIEW_LEDGER.md`.
 
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
 inferring status from prose anywhere else, including this file. **The checkpoint still stands at
 `7e0700e`** and cannot advance, because `3f08685` sits between it and everything later with no
-established outcome. Four commits are now beyond it: `3f08685` (unreviewed), `901d345` (rejected),
-`b4900aa` (rejected on one further P1), and this correction (unreviewed). Review takes them in that
+established outcome. Five commits are now beyond it: `3f08685` (unreviewed), `901d345` (rejected),
+`b4900aa` (rejected on one further P1), `c447a23` (rejected on the same P1 again, plus a
+documentation contradiction), and this correction (unreviewed). Review takes them in that
 order.
 
 ## What milestone 009 found, because it should shape the next scope decision
@@ -60,7 +71,8 @@ check that the construction is what it appears to be; they are not what establis
 independently is this project's signature failure — a distinction drawn in one place and dropped on
 the way to the next — and the divergence would have stayed invisible until one of them leaked.
 `PlayerView.Build` now owns it, the console renderer became a layout over its snapshot, and all 30
-viewpoint renders are byte-identical, which is what makes that a refactor rather than a rewrite.
+viewpoint renders were byte-identical across that change, which is what made it a refactor rather
+than a rewrite. (One has moved since, under Correction 2 — a behaviour change, not a rendering one.)
 
 **And the fixture answers a player differently in four choices.** Taking the first offered option
 every time, Vincent asks Tommy for an account, twice asks Salvatore to relax the no-violence rule,
@@ -90,10 +102,13 @@ touched none of it.**
 
 New from milestone 009:
 
-- **Whether an office carries knowledge of the offices two rungs below it is unanswered.** The model
-  says membership is not knowledge, and the second correction followed that rather than changing it —
-  so a soldier two rungs down stays unreachable for corroboration until his boss hears of him some
-  other way, which in `cautious-vincent` never happens.
+- **Membership is not knowledge; a named office is.** Settled by the third correction:
+  `Acquaintance.KnownTo` widens what a character has heard of by the holders of his own
+  organisation's explicit posts — `Organization.Offices` and `BossId` — and by nothing else. A
+  soldier holding no office is unreachable for corroboration until somebody actually names him, which
+  in `cautious-vincent` never happens for Tommy. **What remains open is whether that is the right
+  answer**, not where the line is drawn: an outfit in which the boss cannot name his own soldiers is
+  a defensible reading of imperfect information and an odd reading of an organisation.
 - **The timing of a pause is observable even when the occasion is not.** The controlled character is
   woken when a delegated operation blocks or completes, so a player sees him stop on the day it
   happened. Closing it means not waking him, which changes autonomous behaviour.

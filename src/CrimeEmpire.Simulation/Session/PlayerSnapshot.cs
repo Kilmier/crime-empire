@@ -257,5 +257,5 @@ public static class PlayerView
     /// Public so tests can assert that no name outside this set ever reaches any surface.
     /// </summary>
     public static IReadOnlyList<string> KnownPeople(World world, Character who)
-        => Acquaintance.HeardOf(world, who);
+        => Acquaintance.KnownTo(world, who);
 }

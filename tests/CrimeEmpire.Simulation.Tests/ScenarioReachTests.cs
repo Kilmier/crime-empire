@@ -688,8 +688,7 @@ public sealed class ScenarioReachTests
             Pipeline.SuperiorOf(world, actor),
             Pipeline.SubordinatesOf(world, actor),
             Pipeline.OrgMembersOf(world, actor),
-            Acquaintance.CouldApproach(
-                world, actor, Pipeline.SuperiorOf(world, actor), Pipeline.SubordinatesOf(world, actor)),
+            Acquaintance.KnownTo(world, actor),
             sent,
             Array.Empty<InformationRequest>(),
             new[] { Cast.Grocery });

@@ -636,3 +636,116 @@ those three never meet. The habit that would have caught it is the one this mile
 run it and diff, rather than reason about whether it could matter.
 
 Carrying question, sharpened: **did I measure that, or infer it from something adjacent?**
+
+---
+
+## Correction 3 — the same leak, moved rather than closed; and a record that contradicted itself
+
+Appended 2026-08-16. Nothing above is rewritten.
+
+Codex reviewed `c447a23` and returned **two blocking findings**, both accepted by Matt. The first is
+the same P1 Correction 2 was written to close.
+
+### Finding 1 — "office relationship" was the roster under another name
+
+Correction 2 narrowed corroboration targets to people the actor has heard of, then widened the set
+back by what it called office relationships — and derived those from `Pipeline.SuperiorOf` and
+`Pipeline.SubordinatesOf`. Those are scans of `world.Characters` for members of the same organisation
+at a neighbouring `Capabilities.Authority`. **That is the authoritative roster, one layer down, with
+a better name on it.** A same-organisation stranger one rung below the actor was therefore still
+reachable, still generated as a target, and still rendered by name.
+
+**The lesson is narrow and I would rather state it than generalise it away: naming a thing after the
+justification does not make it the justification.** "Office relationship" is only an office
+relationship if it comes from an office. Rank is a property of a person; a post is a property of an
+institution. Correction 2's own prose argued the distinction correctly and then implemented the other
+thing, which is this project's signature defect committed by the paragraph that names it.
+
+**And all three tests written for it were blind in exactly the direction that mattered:**
+
+- `A_corroboration_target_he_has_never_heard_of_is_not_generated_or_rendered` gave the stranger
+  authority 1 against Salvatore's 3, so `SubordinatesOf` excluded him for a reason having nothing to
+  do with knowledge. It passed without exercising the widening at all.
+- `Office_relationships_count_as_knowing_somebody` used Tommy and Vincent, who already have a stored
+  relationship, so `HeardOf` contained him and the institutional half was never consulted.
+- `The_player_view_and_the_generators_agree_about_who_he_has_heard_of` compared
+  `PlayerView.KnownPeople` with `Acquaintance.HeardOf` — **the function it already delegated to.** It
+  compared a thing to itself while the generators used the wider set that nothing in the test touched.
+
+Three tests, one real subject, and none of them could fail.
+
+**The fix.** `Acquaintance.KnownTo` is now the single public derivation, and both readers use it and
+nothing else. It is what a character has heard of, widened by the holders of his own organisation's
+explicit posts — `Organization.Offices[].HolderId` and `Organization.BossId` — and by nothing else.
+`HeardOf` and `Officeholders` are `internal` components, so no reader outside this file can take the
+narrow half and believe it asked the whole question. `CouldApproach` is gone, along with its
+superior/subordinate parameters.
+
+A soldier holding no office is therefore not institutionally knowable however senior he is, and
+becomes knowable the moment anything actually names him. An outsider — a grocer — is party to none of
+it.
+
+**Three mutation checks, because there are three ways to get this wrong:**
+
+| Mutation | Result |
+|---|---|
+| Reinstate the superior/subordinate widening (Correction 2's version) | `An_authority_adjacent_stranger_holding_no_office_is_not_a_target` fails |
+| Drop the institutional half entirely | `An_office_is_knowledge_and_a_rung_on_the_ladder_is_not` fails |
+| Let `PlayerView` read the narrow half while generators read the wide one | `The_player_view_and_candidate_generation_read_the_same_derivation` fails |
+
+The third mutation **passed** on the first attempt at this correction, and that is worth recording:
+in the accepted scenario every character has a stored relationship with everybody he could ask, so
+the narrow and wide sets coincide for all six and any natural-run test passes whichever one each
+reader uses. That is why Correction 2's divergence survived its own test suite. The check is now
+staged on a newcomer who has heard of nobody, which is the only configuration where the two can be
+told apart.
+
+The new staged tests were **written and run against the unfixed code first**:
+`An_authority_adjacent_stranger_holding_no_office_is_not_a_target` failed on `c447a23`'s derivation
+before the fix existed.
+
+### Finding 2 — the record contradicted itself in two places
+
+`REVIEW_LEDGER.md` recorded `cautious-vincent`'s moved baseline in a table and, twenty lines below,
+still asserted "Nothing moved" and "All 30 viewpoint renders are byte-identical". Both sentences were
+true of the shell and its first correction and false from the second onward; Correction 2 added the
+table and did not sweep the bullets under it. `CURRENT_MILESTONE.md` said milestone 009 had been
+reviewed and rejected twice and then, ten lines later, that it was "not reviewed and not accepted by
+anybody" — a leftover from the reset text.
+
+Both corrected, and the ledger's own bullets now say what they used to say and when it stopped being
+true, rather than being quietly replaced. **This is the failure the file is named for**, and it is a
+milder form of the one at `1c6889f`: not a false claim about a review that never happened, but a true
+claim left standing after it stopped being true. The mechanism is the same — a sentence written about
+a commit, surviving into a file that has moved on.
+
+*Carrying question: when I add a corrected figure, what else in this file was written from the old
+one?*
+
+### Verification of this correction
+
+Measured after deleting every `bin`, `obj` and `.godot` directory.
+
+- **Inert on the accepted scenario, and this time measured rather than assumed.** All five trace
+  hashes, chosen-action digests, decision counts and conflict counts are identical to `c447a23`:
+  `6EB3F6B996CFC631` / `96EAE1A72850F3D7` / `DCEDCFF27928266F` / `E164E0A74E2EC7DC` /
+  `982EC77BD5C253CB`. **All 30 viewpoint renders byte-identical to `c447a23`**, including the ones
+  `PlayerView.KnownPeople` widening could have moved.
+- Build **0 warnings, 0 errors** across four projects. Tests **369 passed**, 0 failed (366 at
+  `c447a23`).
+- All five variants deterministic; `--compare` still five distinct traces and five distinct
+  chosen-action sequences.
+- Godot headless self-test exits 0, makes 4 choices, renders 4 decision screens, and its UI text
+  carries no hidden fact, counter, decimal or scheduler wording.
+
+`cautious-vincent`'s baseline is unchanged **from Correction 2** and remains different from milestone
+008's; that move belongs to Correction 2 and is not re-litigated here.
+
+### What is still open
+
+**Whether an outfit whose boss cannot name his own soldiers is the right model.** The line is now
+drawn explicitly — a named post is knowledge, a headcount is not — and the model has held that
+position since milestone 003, when `IntelligenceWriter` first recorded that "who else is in this
+outfit" is the kind of thing a boss can be wrong about. Following it here was the conservative
+choice, not a new decision. Whether it is *correct* is a design question this correction deliberately
+does not answer, and it is in `ROADMAP.md`.

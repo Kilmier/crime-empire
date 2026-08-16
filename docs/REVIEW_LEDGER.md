@@ -138,7 +138,8 @@ so that the table's completeness claim stays true.
 |---|---|---|
 | `3f08685` | Close milestone 008: record the review history and advance the checkpoint. Docs only | **Not reviewed.** No outcome established. It is the next commit review should take. |
 | `901d345` | Milestone 009 implementation and archive: Godot playable shell, session boundary, prepare/resolve split | Reviewed and **rejected**: three findings, one P1 — `PendingDecision.Occasion` passed `ScheduledEvent.Cause` straight through, so a `StrategyBlocked` or `StrategyComplete` handed the owner of a *delegated* operation its outcome before anybody had told him; the player-facing DTOs backed `IReadOnlyList<T>` with castable `List<T>` and left raw `Claim`/`EventId` reachable; and the Godot self-test printed `CE-SELFTEST FAILED` while exiting 0. Matt accepted all three. Corrected by `b4900aa`. |
-| `b4900aa` | First 009 correction: source-limited occasion, opaque immutable boundary, self-test exit code | Reviewed. The original three **confirmed fixed** and all verification passing; **one further P1** — `Generators.FromRelationship` still picked its corroboration target out of `ctx.OrgMemberIds`, the authoritative roster, without establishing that the actor knew that person existed, and `PlayerOption` then rendered the name. Matt accepted it. Corrected by the commit this section is part of. |
+| `b4900aa` | First 009 correction: source-limited occasion, opaque immutable boundary, self-test exit code | Reviewed. The original three **confirmed fixed** and all verification passing; **one further P1** — `Generators.FromRelationship` still picked its corroboration target out of `ctx.OrgMemberIds`, the authoritative roster, without establishing that the actor knew that person existed, and `PlayerOption` then rendered the name. Matt accepted it. Corrected by `c447a23`. |
+| `c447a23` | Second 009 correction: belief-limited corroboration targets | Reviewed and **rejected**: two findings. **The same P1 again** — the correction narrowed the roster by knowledge and widened it back by "office relationships" derived from `Pipeline.SuperiorOf`/`SubordinatesOf`, which are authority scans over that same roster, so a same-organisation stranger one rung below the actor stayed reachable and renderable; and none of its three tests could see it, one having compared `PlayerView.KnownPeople` against the function it already delegated to. Plus a documentation contradiction: this file recorded `cautious-vincent`'s moved baseline in one place and "nothing moved / all 30 identical" in another, and `CURRENT_MILESTONE.md` called milestone 009 both twice-rejected and "not reviewed". Matt accepted both. Corrected by the commit this section is part of. |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
 `404b416`; milestone 007 through `974a88a`; milestone 008 through `7e0700e`. Note the difference in
@@ -185,16 +186,19 @@ above); this commit is its second correction and **has not been reviewed by anyb
 sense — Matt's acceptance of a named commit is the only thing that is.
 
 Milestone 009 added a Godot playable shell and an engine-neutral session boundary, and changed no
-simulation behaviour doing it. Its first correction changed none either. **Its second correction
-does**, and deliberately: restricting corroboration targets to people the actor has heard of removes
-a question `cautious-vincent`'s Salvatore had been putting to a man nothing had ever told him about.
+simulation behaviour doing it. Its first and third corrections changed none either. **Its second
+correction does**, and deliberately: restricting corroboration targets to people the actor has heard
+of removes a question `cautious-vincent`'s Salvatore had been putting to a man nothing had ever told
+him about.
 
 - Build: **0 warnings, 0 errors** across four projects — measured after deleting every `bin`, `obj`
   and `.godot` directory, not after `dotnet clean`, because `dotnet clean` on a multi-targeting
   solution is not obviously equivalent and the cheaper check is the one that has produced a false
   zero here twice.
-- Tests: **366 passed**, 0 failed (353 at `b4900aa`; 343 at `901d345`; 305 before the milestone).
-- **29 of 30 viewpoint renders byte-identical** to `b4900aa` and to `3f08685`. The exception is
+- Tests: **369 passed**, 0 failed (366 at `c447a23`; 353 at `b4900aa`; 343 at `901d345`; 305 before
+  the milestone).
+- **29 of 30 viewpoint renders byte-identical** to `3f08685`, and **all 30 byte-identical to
+  `c447a23`** — the third correction moved nothing. The standing exception is
   `cautious-vincent`/`salvatore`, which loses one line — `Tommy Nardo — it did not (6 Apr)`, an
   account from a man he had never heard of and had gone and asked for.
 
@@ -215,12 +219,20 @@ that contradiction was the third conflict. The question, the answer, two decisio
 entries and the conflict all went together. The other four variants being untouched is the evidence
 that this is the defect leaving rather than a re-tuning. Full account in
 `milestones/009-godot-playable-shell.md`, Correction 2.
-- **All five accepted trace hashes, chosen-action digests, decision counts, report counts, request
-  counts, conflict counts, and both relationship columns are unchanged** from the milestone 008
-  baseline below. Nothing moved.
-- **All 30 viewpoint renders are byte-identical** — five variants × six characters, diffed against a
-  scratch worktree at `3f08685`. That is the check that matters for `IntelligenceWriter` being
-  rewritten to consume `PlayerView`'s snapshot rather than derive the source limit itself.
+- **Four of the five variants are unchanged from the milestone 008 baseline below** on every figure —
+  trace hash, chosen-action digest, decision, report, request and conflict counts, and both
+  relationship columns. `cautious-vincent` is the exception and its new baseline is the table above.
+
+  These two bullets said "Nothing moved" and "all 30 viewpoint renders are byte-identical" until
+  2026-08-16, which was true of the shell and its first correction and **false from the second one
+  onward** — the table above had already recorded the `cautious-vincent` move while these lines went
+  on denying it. Corrected under Correction 3. The failure is the one this file is named for: a claim
+  that stayed true of the commit it was written about and false of the file it was sitting in.
+- **29 of 30 viewpoint renders are byte-identical to `3f08685`** — five variants × six characters,
+  diffed against a scratch worktree. The exception is `cautious-vincent`/`salvatore`, which loses one
+  line. That comparison is what matters for `IntelligenceWriter` being rewritten to consume
+  `PlayerView`'s snapshot rather than derive the source limit itself, and the one moved line is a
+  behaviour change rather than a rendering one.
 - Debug and Release both build; `Release` maps to the Godot project's `Debug` configuration, because
   `Godot.NET.Sdk` defines `Debug;ExportDebug;ExportRelease` and has no `Release`.
 
@@ -591,6 +603,23 @@ Added by milestone 009's second correction:
   every variant after a full run.
 - **Requests are checked at the moment each one is made**, by stepping the run — never against the
   asker's acquaintance set at the end, which is a superset and made the check very nearly vacuous.
+
+Added by milestone 009's third correction:
+
+- **"Who could this character name" has exactly one public derivation**, `Acquaintance.KnownTo`, and
+  both `PlayerView.KnownPeople` and `GeneratorContext.AcquaintedIds` read it. The cognition-only half
+  is `internal`, because a test that compared the player view against *that* — while the generators
+  used a wider set — is how a leak survived a correction written to close it.
+- **Institutional knowledge comes from an institution.** The widening is the holders of
+  `Organization.Offices` and `BossId`: named formal posts. Never `Pipeline.SuperiorOf` or
+  `SubordinatesOf`, which are authority scans over `world.Characters` and are the roster under
+  another name. *Naming a thing after its justification does not make it the justification.*
+- **The staged stranger must be authority-adjacent and hold no office**, or the roster-derived route
+  excludes him for a reason unrelated to knowledge and the test passes without exercising anything.
+- **Divergence between the two readers must be stageable.** In the accepted scenario every character
+  has a relationship with everybody he could ask, so the narrow and wide sets coincide and any
+  natural-run test passes whichever one each reader uses. The check is staged on a newcomer who has
+  heard of nobody, where they differ.
 
 ## Review checklist
 

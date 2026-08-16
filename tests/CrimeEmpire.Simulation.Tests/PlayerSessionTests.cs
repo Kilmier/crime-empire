@@ -939,25 +939,67 @@ public sealed class PlayerSessionTests
     }
 
     /// <summary>
-    /// An office relationship is knowledge too. A soldier who has exchanged no words with anybody
-    /// still knows who his capo is, and the belief limit must not make him unable to name his own
-    /// superior — <c>Inference</c> already treats who holds which office in one's own organisation as
-    /// an institutional fact a member is party to.
+    /// An office is knowledge; a rung on the ladder is not.
+    ///
+    /// Tested on a man with an <b>empty</b> cognition and no relationships, so the institutional half
+    /// is the only thing that could put anybody in the set. Correction 2's version of this test used
+    /// Tommy, who already has stored relationships with both of them, so it asserted nothing about
+    /// offices at all and passed on the strength of <c>HeardOf</c>.
+    ///
+    /// The stranger in the same organisation, one rung below and holding no office, is the control:
+    /// he is what the roster-derived version admitted.
     /// </summary>
     [Fact]
-    public void Office_relationships_count_as_knowing_somebody()
+    public void An_office_is_knowledge_and_a_rung_on_the_ladder_is_not()
     {
         var world = Cast.Build(Seed, "baseline");
-        var tommy = world.Get("tommy");
 
-        var reachable = Acquaintance.CouldApproach(
-            world, tommy, Pipeline.SuperiorOf(world, tommy), Pipeline.SubordinatesOf(world, tommy));
+        var newcomer = new Character
+        {
+            Id = "zeno-newcomer",
+            Name = "Zeno Newcomer",
+            RoleTitle = "soldier",
+            Capabilities = new Capabilities(
+                new Dictionary<Skill, double> { [Skill.Coercion] = 0.3 },
+                crew: 0, cash: 0, authority: 1, districts: new[] { Cast.Harbour }),
+            Psychology = new Psychology(
+                new Dictionary<Trait, double> { [Trait.Cautious] = 0.5 },
+                new Dictionary<Drive, double> { [Drive.Belonging] = 0.5 }),
+        };
+        newcomer.Social.OrganizationId = Cast.OrgId;
+        world.Characters[newcomer.Id] = newcomer;
 
-        Assert.Contains("vincent", reachable);
-        Assert.DoesNotContain(tommy.Id, reachable);
+        var stranger = AddStranger(world, authority: 1);
 
-        // And it is a widening of what he has heard of, never a replacement for it.
-        foreach (var id in Acquaintance.HeardOf(world, tommy)) Assert.Contains(id, reachable);
+        // He has heard of nobody at all.
+        Assert.Empty(Acquaintance.HeardOf(world, newcomer));
+
+        var known = Acquaintance.KnownTo(world, newcomer);
+
+        // The boss and the officeholder are named posts, and he is party to both.
+        Assert.Contains("salvatore", known);
+        Assert.Equal("vincent", world.Org.OfficeForDomain(Cast.Harbour)!.HolderId);
+        Assert.Contains("vincent", known);
+
+        // Tommy and the stranger hold no office. Being in the outfit is not being known.
+        Assert.Null(world.Org.OfficeFor("tommy"));
+        Assert.DoesNotContain("tommy", known);
+        Assert.DoesNotContain(stranger.Id, known);
+        Assert.DoesNotContain(newcomer.Id, known);
+    }
+
+    /// <summary>
+    /// Somebody outside the organisation is party to none of its offices.
+    /// </summary>
+    [Fact]
+    public void An_outsider_gets_no_institutional_knowledge()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var marco = world.Get("marco");
+
+        Assert.Null(marco.Social.OrganizationId);
+        Assert.Empty(Acquaintance.Officeholders(world, marco));
+        Assert.Equal(Acquaintance.HeardOf(world, marco), Acquaintance.KnownTo(world, marco));
     }
 
     /// <summary>
@@ -987,10 +1029,7 @@ public sealed class PlayerSessionTests
             {
                 var request = world.Requests[checkedSoFar];
                 var asker = world.Get(request.AskerId);
-                var reachable = Acquaintance.CouldApproach(
-                    world, asker,
-                    Pipeline.SuperiorOf(world, asker),
-                    Pipeline.SubordinatesOf(world, asker));
+                var reachable = Acquaintance.KnownTo(world, asker);
 
                 Assert.True(reachable.Contains(request.AskedId),
                     $"{request.AskerId} put a question to {request.AskedId} on {request.At:yyyy-MM-dd} " +
@@ -1006,21 +1045,97 @@ public sealed class PlayerSessionTests
     }
 
     /// <summary>
-    /// One derivation, two readers. The player view and candidate generation must agree about who a
-    /// character has heard of, because they are asking the same question — and before milestone
-    /// 009's second correction they did not.
+    /// One derivation, checked where it actually bites: every corroboration target any character
+    /// generates, in a natural run, is somebody <c>PlayerView.KnownPeople</c> would name.
+    ///
+    /// <b>Correction 2's version of this test compared <c>PlayerView.KnownPeople</c> with
+    /// <c>Acquaintance.HeardOf</c>.</b> Those were the same function by delegation, so it compared a
+    /// thing to itself and passed — while the generators used the wider, roster-derived set that
+    /// nothing in the test touched. This version ties the generators' real output to the player-view
+    /// rule, which is the claim worth making.
+    ///
+    /// Checked as each decision is written, stepping the run. The actor's own cognition cannot grow
+    /// during his own deliberation — <c>Inference.Reconsider</c> runs before generation, and
+    /// <c>Commit</c> writes to recipients rather than to him — so checking immediately after the
+    /// event is checking the set he generated against.
     /// </summary>
     [Theory]
     [MemberData(nameof(AllVariants))]
-    public void The_player_view_and_the_generators_agree_about_who_he_has_heard_of(string variant)
+    public void Every_generated_target_is_somebody_the_player_view_would_name(string variant)
     {
         var world = Cast.Build(Seed, variant);
-        Runner.Run(world, End);
+        int checkedSoFar = 0, targetsSeen = 0;
 
-        foreach (var who in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
-            Assert.Equal(
-                PlayerView.KnownPeople(world, who),
-                Acquaintance.HeardOf(world, who));
+        void CheckNewDecisions()
+        {
+            for (; checkedSoFar < world.Decisions.Count; checkedSoFar++)
+            {
+                var decision = world.Decisions[checkedSoFar];
+                var actor = world.Get(decision.ActorId);
+                var nameable = PlayerView.KnownPeople(world, actor);
+
+                foreach (var candidate in decision.Generated)
+                {
+                    if (candidate.Kind != ActionKind.SeekCorroboration || candidate.TargetId is not { } target)
+                        continue;
+
+                    targetsSeen++;
+                    Assert.True(nameable.Contains(target),
+                        $"{actor.Id} was offered a question to {target} on {decision.At:yyyy-MM-dd}, " +
+                        "and the player view would not name that man");
+                }
+            }
+        }
+
+        while (Runner.Step(world, End, controlledCharacterId: null).Status == StepStatus.Advanced)
+            CheckNewDecisions();
+
+        CheckNewDecisions();
+        Assert.True(targetsSeen > 0, "no corroboration candidate was generated, so this proves nothing");
+    }
+
+    /// <summary>
+    /// The player view and candidate generation read <b>the same</b> derivation — asserted on a
+    /// character for whom the candidate sets can actually be told apart.
+    ///
+    /// <b>Why a newcomer.</b> In the accepted scenario everybody has a stored relationship with
+    /// everybody they could ask, so <c>HeardOf</c> and <c>KnownTo</c> coincide for every character and
+    /// any test over natural runs passes whichever of them each reader uses. That is why Correction
+    /// 2's divergence survived: swapping one reader to the narrower set breaks nothing anybody was
+    /// checking. This newcomer has heard of nobody, so the two sets differ, and a reader on the wrong
+    /// one shows up immediately.
+    /// </summary>
+    [Fact]
+    public void The_player_view_and_candidate_generation_read_the_same_derivation()
+    {
+        var world = Cast.Build(Seed, "baseline");
+
+        var newcomer = new Character
+        {
+            Id = "zeno-newcomer",
+            Name = "Zeno Newcomer",
+            RoleTitle = "soldier",
+            Capabilities = new Capabilities(
+                new Dictionary<Skill, double> { [Skill.Coercion] = 0.3 },
+                crew: 0, cash: 0, authority: 1, districts: new[] { Cast.Harbour }),
+            Psychology = new Psychology(
+                new Dictionary<Trait, double> { [Trait.Cautious] = 0.5 },
+                new Dictionary<Drive, double> { [Drive.Belonging] = 0.5 }),
+        };
+        newcomer.Social.OrganizationId = Cast.OrgId;
+        world.Characters[newcomer.Id] = newcomer;
+
+        var authoritative = Acquaintance.KnownTo(world, newcomer);
+
+        // The configuration that makes this test able to fail at all.
+        Assert.NotEqual(Acquaintance.HeardOf(world, newcomer), authoritative);
+
+        // Reader one.
+        Assert.Equal(authoritative, PlayerView.KnownPeople(world, newcomer));
+
+        // Reader two — the context candidate generation actually filters against.
+        var prepared = Pipeline.Prepare(world, newcomer, Wake(world, newcomer));
+        Assert.Equal(authoritative, prepared.Context.AcquaintedIds);
     }
 
     /// <summary>
@@ -1029,7 +1144,7 @@ public sealed class PlayerSessionTests
     /// Added to the world the test built, never to <c>Cast</c>. The six-character scenario fixture is
     /// unchanged and the ceiling on it is untouched.
     /// </summary>
-    private static Character AddStranger(World world)
+    private static Character AddStranger(World world, int authority = 1)
     {
         var stranger = new Character
         {
@@ -1038,7 +1153,7 @@ public sealed class PlayerSessionTests
             RoleTitle = "soldier",
             Capabilities = new Capabilities(
                 new Dictionary<Skill, double> { [Skill.Coercion] = 0.4 },
-                crew: 1, cash: 100, authority: 1, districts: new[] { Cast.Harbour }),
+                crew: 1, cash: 100, authority: authority, districts: new[] { Cast.Harbour }),
             Psychology = new Psychology(
                 new Dictionary<Trait, double> { [Trait.Cautious] = 0.5 },
                 new Dictionary<Drive, double> { [Drive.Belonging] = 0.5 }),
@@ -1047,6 +1162,61 @@ public sealed class PlayerSessionTests
         stranger.Social.OrganizationId = Cast.OrgId;
         world.Characters[stranger.Id] = stranger;
         return stranger;
+    }
+
+    /// <summary>
+    /// The leak Correction 2 did not close: a same-organisation stranger one authority rung below
+    /// the actor, holding no office, whom nothing in the actor's head names.
+    ///
+    /// Correction 2 widened the acquaintance set by "office relationships" and then derived those
+    /// from <c>Pipeline.SubordinatesOf</c> — which is a scan of <c>world.Characters</c> for members
+    /// at <c>Authority - 1</c>. That is the authoritative roster again, one layer down and wearing a
+    /// different name, so the correction moved the leak rather than closing it.
+    ///
+    /// The stranger here is authority-adjacent on purpose. Correction 2's own staged test used
+    /// authority 1 against Salvatore's 3, so the roster scan excluded him for a reason that had
+    /// nothing to do with knowledge and the test passed without exercising anything.
+    /// </summary>
+    [Fact]
+    public void An_authority_adjacent_stranger_holding_no_office_is_not_a_target()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var salvatore = world.Get("salvatore");
+        var stranger = AddStranger(world, authority: salvatore.Capabilities.Authority - 1);
+
+        // He is on the roster, he sorts first, and he is exactly one rung down — so every
+        // roster-derived route reaches him.
+        Assert.Contains(stranger.Id, Pipeline.OrgMembersOf(world, salvatore));
+        Assert.Contains(stranger.Id, Pipeline.SubordinatesOf(world, salvatore));
+        Assert.Equal(
+            stranger.Id,
+            Pipeline.OrgMembersOf(world, salvatore).OrderBy(id => id, StringComparer.Ordinal).First());
+
+        // And he holds no office, and nothing in Salvatore's head names him.
+        Assert.Null(world.Org.OfficeFor(stranger.Id));
+        Assert.NotEqual(world.Org.BossId, stranger.Id);
+
+        var known = Acquaintance.KnownTo(world, salvatore);
+        Assert.DoesNotContain(stranger.Id, known);
+
+        var prepared = Pipeline.Prepare(world, salvatore, Wake(world, salvatore));
+        var corroborations = prepared.Generated
+            .Where(c => c.Kind == ActionKind.SeekCorroboration)
+            .ToList();
+
+        Assert.NotEmpty(corroborations);
+        Assert.DoesNotContain(corroborations, c => c.TargetId == stranger.Id);
+        Assert.Contains(corroborations, c => c.TargetId == "vincent");
+
+        var pending = SimulationSession.Project(
+            prepared,
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id);
+
+        Assert.DoesNotContain(stranger.Name, Flatten(pending), StringComparison.Ordinal);
+
+        // And the player view says the same thing, because it reads the same derivation.
+        Assert.DoesNotContain(stranger.Id, PlayerView.KnownPeople(world, salvatore));
     }
 
     /// <summary>A plain wake, for staging a deliberation without running a whole scenario.</summary>

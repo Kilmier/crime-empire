@@ -22,10 +22,13 @@ relationship schema and built the instrument that measures it. The rest of the e
 not built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
 sequence. Full accounts are in `docs/milestones/`.
 
-Milestone 009 — **implemented 2026-08-16, not yet reviewed** — is the first step off that sequence
-rather than along it: a Godot playable shell over the same kernel, with a person answering one
-character's decisions. It changed no simulation behaviour, and every accepted hash, decision count and
-digest is unmoved.
+Milestone 009 — **implemented 2026-08-16, reviewed and rejected three times, corrected three times,
+and not accepted** — is the first step off that sequence rather than along it: a Godot playable shell
+over the same kernel, with a person answering one character's decisions. The shell changed no
+simulation behaviour. **Its second correction did**, deliberately: `cautious-vincent`'s baseline moved
+when corroboration targets were restricted to people the actor has heard of. The other four variants
+are unmoved. Current figures are in `REVIEW_LEDGER.md`; the account is in
+`milestones/009-godot-playable-shell.md`, Corrections 1–3.
 
 006 established where the difficulty sat: the mechanisms worked and the scenario could not show them.
 007 was the scenario-reach answer to that. 008 then answered 007's own finding, and the answer
@@ -142,12 +145,13 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   derivation of who a character has heard of, `GeneratorContext.AcquaintedIds` carries it, and
   `PlayerView.KnownPeople` delegates to it instead of repeating it. `cautious-vincent`'s baseline
   moved and the new figures are in `REVIEW_LEDGER.md`.
-- **Whether an office carries knowledge of the offices two rungs below it is unanswered.** The model
-  says membership is not knowledge — `SubordinatesOf` is one rung, and `IntelligenceWriter` has said
-  since milestone 003 that "who else is in this outfit" is the kind of thing a boss can be wrong
-  about. The consequence is now visible: a soldier two rungs down is unreachable for corroboration
-  until his boss hears of him by some other route, which in `cautious-vincent` never happens. Surfaced
-  by milestone 009's second correction, which followed the settled position rather than changing it.
+- **Whether an outfit whose boss cannot name his own soldiers is the right model.** The line is drawn
+  explicitly by milestone 009's third correction: a named post is knowledge — `Organization.Offices`
+  and `BossId` — and a headcount is not. The model has held that position since milestone 003, when
+  `IntelligenceWriter` recorded that "who else is in this outfit" is the kind of thing a boss can be
+  wrong about, so following it was the conservative choice rather than a new decision. The consequence
+  is visible: a soldier holding no office is unreachable for corroboration until somebody names him,
+  which in `cautious-vincent` never happens for Tommy. Whether that is *correct* is unanswered.
 - **The player cannot see why an option is unavailable.** Rejected candidates are hidden per milestone
   009's scope, which is right for utility scores and arguably wrong for "he does not know that the
   bakery is holding out" — the single most legible line in a decision trace, and the one that proves

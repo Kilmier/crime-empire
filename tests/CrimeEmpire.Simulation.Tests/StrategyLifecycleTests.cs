@@ -576,6 +576,7 @@ public sealed class StrategyLifecycleTests
             SuperiorId: null,
             SubordinateIds: Array.Empty<string>(),
             OrgMemberIds: Array.Empty<string>(),
+            AcquaintedIds: Array.Empty<string>(),
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
             VisibleTargets: Array.Empty<string>());

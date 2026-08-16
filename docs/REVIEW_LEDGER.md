@@ -137,7 +137,8 @@ so that the table's completeness claim stays true.
 | Commit | What it did | Review status |
 |---|---|---|
 | `3f08685` | Close milestone 008: record the review history and advance the checkpoint. Docs only | **Not reviewed.** No outcome established. It is the next commit review should take. |
-| `901d345` | Milestone 009 implementation and archive: Godot playable shell, session boundary, prepare/resolve split | Reviewed and **rejected**: three findings, one P1 — `PendingDecision.Occasion` passed `ScheduledEvent.Cause` straight through, so a `StrategyBlocked` or `StrategyComplete` handed the owner of a *delegated* operation its outcome before anybody had told him; the player-facing DTOs backed `IReadOnlyList<T>` with castable `List<T>` and left raw `Claim`/`EventId` reachable; and the Godot self-test printed `CE-SELFTEST FAILED` while exiting 0. Matt accepted all three. Corrected by the commit this section is part of. |
+| `901d345` | Milestone 009 implementation and archive: Godot playable shell, session boundary, prepare/resolve split | Reviewed and **rejected**: three findings, one P1 — `PendingDecision.Occasion` passed `ScheduledEvent.Cause` straight through, so a `StrategyBlocked` or `StrategyComplete` handed the owner of a *delegated* operation its outcome before anybody had told him; the player-facing DTOs backed `IReadOnlyList<T>` with castable `List<T>` and left raw `Claim`/`EventId` reachable; and the Godot self-test printed `CE-SELFTEST FAILED` while exiting 0. Matt accepted all three. Corrected by `b4900aa`. |
+| `b4900aa` | First 009 correction: source-limited occasion, opaque immutable boundary, self-test exit code | Reviewed. The original three **confirmed fixed** and all verification passing; **one further P1** — `Generators.FromRelationship` still picked its corroboration target out of `ctx.OrgMemberIds`, the authoritative roster, without establishing that the actor knew that person existed, and `PlayerOption` then rendered the name. Matt accepted it. Corrected by the commit this section is part of. |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
 `404b416`; milestone 007 through `974a88a`; milestone 008 through `7e0700e`. Note the difference in
@@ -178,22 +179,42 @@ coherently.
 ### Measured, not accepted — milestone 009, this commit
 
 **This section records measurements, not a review outcome.** Milestone 009's implementation commit
-`901d345` was reviewed and **rejected** on three findings (see "Beyond the checkpoint" above); this
-commit is its first correction and **has not been reviewed by anybody**. Neither has `3f08685`, which
-closed milestone 008. Do not read anything below as verification in this file's sense — Matt's
-acceptance of a named commit is the only thing that is.
+`901d345` was rejected on three findings and `b4900aa` on one further P1 (see "Beyond the checkpoint"
+above); this commit is its second correction and **has not been reviewed by anybody**. Neither has
+`3f08685`, which closed milestone 008. Do not read anything below as verification in this file's
+sense — Matt's acceptance of a named commit is the only thing that is.
 
-Milestone 009 added a Godot playable shell and an engine-neutral session boundary. **It changed no
-simulation behaviour**, and that is the claim its verification is built to falsify. The correction
-changed no simulation behaviour either: it closed a leak in the player boundary, made the DTOs
-genuinely immutable and opaque, and gave the Godot self-test an exit code.
+Milestone 009 added a Godot playable shell and an engine-neutral session boundary, and changed no
+simulation behaviour doing it. Its first correction changed none either. **Its second correction
+does**, and deliberately: restricting corroboration targets to people the actor has heard of removes
+a question `cautious-vincent`'s Salvatore had been putting to a man nothing had ever told him about.
 
 - Build: **0 warnings, 0 errors** across four projects — measured after deleting every `bin`, `obj`
   and `.godot` directory, not after `dotnet clean`, because `dotnet clean` on a multi-targeting
   solution is not obviously equivalent and the cheaper check is the one that has produced a false
   zero here twice.
-- Tests: **353 passed**, 0 failed (343 at `901d345`; 305 before the milestone).
-- **All 30 viewpoint renders byte-identical to `901d345`** as well as to `3f08685`.
+- Tests: **366 passed**, 0 failed (353 at `b4900aa`; 343 at `901d345`; 305 before the milestone).
+- **29 of 30 viewpoint renders byte-identical** to `b4900aa` and to `3f08685`. The exception is
+  `cautious-vincent`/`salvatore`, which loses one line — `Tommy Nardo — it did not (6 Apr)`, an
+  account from a man he had never heard of and had gone and asked for.
+
+**`cautious-vincent` has a new baseline, and it is the only variant that moved.**
+
+| Variant | Hash | Chosen actions | Decisions | Conflicts | Rel. read | Rel. decided |
+|---|---|---|---|---|---|---|
+| baseline | `6EB3F6B996CFC631` | `38B7183ED2EEF34A` | 38 | 2 | 19 | 2 |
+| **cautious-vincent** | **`96EAE1A72850F3D7`** | **`1F660F63735133FC`** | **19** | **2** | **11** | 3 |
+| watchful-boss | `DCEDCFF27928266F` | `4F15ECD8B7A593BB` | 39 | 2 | 18 | 3 |
+| disloyal-vincent | `E164E0A74E2EC7DC` | `3D7F2B79BA4DC3E3` | 39 | 2 | 20 | 1 |
+| resentful-tommy | `982EC77BD5C253CB` | `18B507EBBE4FBA7E` | 38 | 2 | 19 | 3 |
+
+`cautious-vincent` was `A8A1BBD12D5334C2` / `124E8FE932DD5A89` with 21 decisions and 3 conflicts. On
+5 April 1987 Salvatore asked Tommy for an account of the grocery; in this variant there is no violence
+and nothing had ever named Tommy to him. Tommy's honest answer contradicted what Salvatore held, and
+that contradiction was the third conflict. The question, the answer, two decisions, two truth-log
+entries and the conflict all went together. The other four variants being untouched is the evidence
+that this is the defect leaving rather than a re-tuning. Full account in
+`milestones/009-godot-playable-shell.md`, Correction 2.
 - **All five accepted trace hashes, chosen-action digests, decision counts, report counts, request
   counts, conflict counts, and both relationship columns are unchanged** from the milestone 008
   baseline below. Nothing moved.
@@ -555,6 +576,21 @@ Added by milestone 009's first correction:
   authority on whether an action was open to the character.
 - **The Godot self-test exits nonzero when it fails**, verified by sabotage rather than by reading the
   code.
+
+Added by milestone 009's second correction:
+
+- **A candidate's target must be somebody the actor has heard of.** `ctx.OrgMemberIds` is the
+  authoritative roster and is not a list of people anybody knows about; anything that turns a member
+  into a target intersects it with `ctx.AcquaintedIds` first. Staged with a member nobody has heard of
+  whose id sorts first, so the generator's own ordering would pick him if the limit were absent.
+- **The filter admits as well as excludes.** One claim naming a stranger makes him approachable, and a
+  soldier can still name his own capo — a rule that narrowed what can honestly be expressed would be
+  its own defect.
+- **"Who has this character heard of" has one derivation.** `Acquaintance.HeardOf` is it;
+  `PlayerView.KnownPeople` delegates to it rather than repeating it, asserted for every character in
+  every variant after a full run.
+- **Requests are checked at the moment each one is made**, by stepping the run — never against the
+  asker's acquaintance set at the end, which is a superset and made the check very nearly vacuous.
 
 ## Review checklist
 

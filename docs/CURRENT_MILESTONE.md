@@ -8,15 +8,19 @@ do not create a separate handoff document.
 ## Status
 
 **No milestone is active. Do not start one.** Milestone 009 is implemented, **was reviewed and
-rejected once, and is corrected and awaiting re-review**; milestone 010 has not been chosen and must
+rejected twice, and is corrected and awaiting re-review**; milestone 010 has not been chosen and must
 not be inferred.
 
 Codex rejected `901d345` on three findings, all accepted by Matt: the pending decision passed
 `ScheduledEvent.Cause` through, so a delegated operation's failure or completion reached its owner
 before anybody had told him (P1); the player-facing DTOs were castable back to mutable lists and left
-raw `Claim`/`EventId` reachable; and the Godot self-test printed a failure while exiting 0. All three
-are corrected, with the P1 fix pinned by a mutation check — reverting it fails seven tests. Full
-account in `docs/milestones/009-godot-playable-shell.md`, "Correction 1".
+raw `Claim`/`EventId` reachable; and the Godot self-test printed a failure while exiting 0.
+
+Codex then reviewed `b4900aa`, confirmed those three fixed, and returned **one further P1**:
+`Generators.FromRelationship` still picked corroboration targets out of the authoritative
+organisation roster without establishing that the actor knew that person existed, and the
+player-facing option then rendered the name. Also accepted. Both rounds are corrected, each pinned by
+a mutation check. Full account in `docs/milestones/009-godot-playable-shell.md`, Corrections 1 and 2.
 
 Milestones 001–008 are complete and accepted. The most recent, **009 — Godot Playable Shell**, is
 implemented and closed but **not reviewed and not accepted by anybody**. It added a Godot 4.7.1 .NET
@@ -25,16 +29,18 @@ prepare/resolve split in the decision pipeline so a person can answer one charac
 through the same commit path an NPC uses. Full record, including Matt's authorized scope reproduced
 verbatim and thirteen rulings, is in `docs/milestones/009-godot-playable-shell.md`.
 
-**It changed no simulation behaviour**, and neither did the correction. All five trace hashes, all
-five chosen-action digests, every decision, report, request and conflict count, and both relationship
-columns are unchanged from milestone 008's accepted baseline, and all 30 viewpoint renders are
-byte-identical to both `3f08685` and `901d345`. Tests went 305 → 343 → 353.
+**The shell itself changed no simulation behaviour, and neither did the first correction. The second
+one does, deliberately.** `cautious-vincent` moved — trace `A8A1BBD12D5334C2` → `96EAE1A72850F3D7`,
+decisions 21 → 19, conflicts 3 → 2 — because Salvatore had been putting a question to a man nothing
+in his head established. The other four variants are byte-identical to milestone 008's accepted
+baseline throughout. Tests went 305 → 343 → 353 → 366. New figures in `REVIEW_LEDGER.md`.
 
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
 inferring status from prose anywhere else, including this file. **The checkpoint still stands at
 `7e0700e`** and cannot advance, because `3f08685` sits between it and everything later with no
-established outcome. Three commits are now beyond it: `3f08685` (unreviewed), `901d345` (reviewed and
-rejected), and this correction (unreviewed). Review takes them in that order.
+established outcome. Four commits are now beyond it: `3f08685` (unreviewed), `901d345` (rejected),
+`b4900aa` (rejected on one further P1), and this correction (unreviewed). Review takes them in that
+order.
 
 ## What milestone 009 found, because it should shape the next scope decision
 
@@ -84,6 +90,10 @@ touched none of it.**
 
 New from milestone 009:
 
+- **Whether an office carries knowledge of the offices two rungs below it is unanswered.** The model
+  says membership is not knowledge, and the second correction followed that rather than changing it —
+  so a soldier two rungs down stays unreachable for corroboration until his boss hears of him some
+  other way, which in `cautious-vincent` never happens.
 - **The timing of a pause is observable even when the occasion is not.** The controlled character is
   woken when a delegated operation blocks or completes, so a player sees him stop on the day it
   happened. Closing it means not waking him, which changes autonomous behaviour.

@@ -241,6 +241,17 @@ settles nothing about presentation.
   somebody rules that a character necessarily knows about it, and `PlayerOption` builds each option's
   wording from the candidate's typed fields. The general rule: a player-facing surface names what it
   may say, rather than filtering what it must not.
+- **A candidate's target must be somebody the actor has heard of, and "who has he heard of" has one
+  derivation.** Settled by milestone 009's second correction. `ctx.OrgMemberIds` is the authoritative
+  organisation roster: rank-blind on purpose, and *not* a list of people anybody knows about. The
+  corroboration generator was picking its target out of it, so a character could put a question to
+  somebody whose existence nothing in his head established, and the player-facing option then rendered
+  the name. `Decision/Acquaintance.cs` now derives it once — whoever appears in a claim he holds,
+  gave him an account, he has a relationship with, or he holds a grievance against — widened by the
+  office relationships he is party to, on the precedent `Inference` sets for institutional facts. The
+  roster keeps its rank-blindness; what is added is the knowledge limit. `PlayerView.KnownPeople`
+  delegates to the same derivation rather than repeating it, because the player view and candidate
+  generation are asking one question and had been getting two answers.
 - **The boundary is opaque as well as immutable.** Every collection on a player-facing record is
   frozen in its `init` accessor, because an `IReadOnlyList<T>` backed by a `List<T>` is read-only by
   politeness — the same defect milestone 006 fixed on `IRelationship.Grievances`. `Claim` does not

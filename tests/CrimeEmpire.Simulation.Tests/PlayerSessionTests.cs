@@ -857,6 +857,208 @@ public sealed class PlayerSessionTests
             $"only {checkedCollections} collections were reached, so this proves very little");
     }
 
+    // ================================================================= belief-limited targets
+
+    /// <summary>
+    /// A corroboration target has to be somebody the actor has heard of.
+    ///
+    /// The staged regression milestone 009's second review asked for. An organisation member nobody
+    /// has heard of is added to the cast, with an id that sorts <b>before</b> the legitimate
+    /// alternative — so the generator's own <c>OrderBy(id)</c> would pick him if the belief limit
+    /// were absent, which is what makes this a proof rather than a coincidence. The world is built
+    /// here rather than by changing the scenario: <c>Cast</c> is untouched and the six-character
+    /// fixture is unchanged.
+    /// </summary>
+    [Fact]
+    public void A_corroboration_target_he_has_never_heard_of_is_not_generated_or_rendered()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var salvatore = world.Get("salvatore");
+        var stranger = AddStranger(world);
+
+        // Without the belief limit this man would win outright: he is on the roster, and he sorts
+        // first. If either stops being true the test has stopped proving anything.
+        var roster = Pipeline.OrgMembersOf(world, salvatore);
+        Assert.Contains(stranger.Id, roster);
+        Assert.Equal(stranger.Id, roster.OrderBy(id => id, StringComparer.Ordinal).First());
+
+        // And nothing in Salvatore's head names him.
+        Assert.DoesNotContain(stranger.Id, Acquaintance.HeardOf(world, salvatore));
+
+        var prepared = Pipeline.Prepare(world, salvatore, Wake(world, salvatore));
+        var corroborations = prepared.Generated
+            .Where(c => c.Kind == ActionKind.SeekCorroboration)
+            .ToList();
+
+        Assert.NotEmpty(corroborations);
+        Assert.DoesNotContain(corroborations, c => c.TargetId == stranger.Id);
+
+        // The known alternative is still eligible. A filter that removed the option entirely would
+        // be a correctness fix that narrows what can be expressed, which is its own defect.
+        Assert.Contains(corroborations, c => c.TargetId == "vincent");
+
+        // And nothing renders his name, which is the half that reaches a person.
+        var pending = SimulationSession.Project(
+            prepared,
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id);
+
+        Assert.DoesNotContain(stranger.Name, Flatten(pending), StringComparison.Ordinal);
+        Assert.DoesNotContain(stranger.Id, Flatten(pending), StringComparison.Ordinal);
+
+        var snapshot = PlayerView.Build(world, salvatore.Id, world.Now);
+        Assert.DoesNotContain(stranger.Name, Flatten(snapshot), StringComparison.Ordinal);
+        Assert.DoesNotContain(stranger.Id, snapshot.Silent.Select(p => p.Id));
+    }
+
+    /// <summary>
+    /// The other direction, and it matters as much: hearing of somebody makes him eligible.
+    ///
+    /// A filter that simply removed strangers forever would be the ledger's first recurring pattern —
+    /// a correctness fix that narrows what can be expressed. The same man, once Salvatore holds a
+    /// claim naming him, becomes somebody he can go and ask.
+    /// </summary>
+    [Fact]
+    public void Hearing_of_somebody_makes_him_a_target_he_can_approach()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var salvatore = world.Get("salvatore");
+        var stranger = AddStranger(world);
+
+        // Somebody mentions him. That is all it takes to have heard of a man.
+        salvatore.Cognition.Learn(
+            new Claim(ClaimKind.PersonUsedViolence, stranger.Id, Cast.Grocery),
+            Stance.Suspects, 0.4, SourceKind.Report, "vincent", Cast.Start);
+
+        Assert.Contains(stranger.Id, Acquaintance.HeardOf(world, salvatore));
+
+        var prepared = Pipeline.Prepare(world, salvatore, Wake(world, salvatore));
+        Assert.Contains(
+            prepared.Generated.Where(c => c.Kind == ActionKind.SeekCorroboration),
+            c => c.TargetId == stranger.Id);
+    }
+
+    /// <summary>
+    /// An office relationship is knowledge too. A soldier who has exchanged no words with anybody
+    /// still knows who his capo is, and the belief limit must not make him unable to name his own
+    /// superior — <c>Inference</c> already treats who holds which office in one's own organisation as
+    /// an institutional fact a member is party to.
+    /// </summary>
+    [Fact]
+    public void Office_relationships_count_as_knowing_somebody()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var tommy = world.Get("tommy");
+
+        var reachable = Acquaintance.CouldApproach(
+            world, tommy, Pipeline.SuperiorOf(world, tommy), Pipeline.SubordinatesOf(world, tommy));
+
+        Assert.Contains("vincent", reachable);
+        Assert.DoesNotContain(tommy.Id, reachable);
+
+        // And it is a widening of what he has heard of, never a replacement for it.
+        foreach (var id in Acquaintance.HeardOf(world, tommy)) Assert.Contains(id, reachable);
+    }
+
+    /// <summary>
+    /// The structural version, over natural runs: every question anybody puts in the accepted
+    /// scenario goes to somebody that character could actually name.
+    ///
+    /// Checked against the recorded requests rather than against candidates, because a request is
+    /// the act itself — and <b>at the moment each one is made</b>, stepping the run event by event,
+    /// rather than against the asker's acquaintance set at the end.
+    ///
+    /// The first version of this test did check at the end and was very nearly vacuous: answering a
+    /// question puts the answerer's testimony in the asker's head, so a man he had never heard of
+    /// when he asked is a man he has heard of by the time the run finishes. It passed with the belief
+    /// limit removed. A test that cannot fail is the ledger's false-assurance pattern, and this one
+    /// was an instance of it until the loop below was stepped.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(AllVariants))]
+    public void Nobody_ever_puts_a_question_to_a_stranger(string variant)
+    {
+        var world = Cast.Build(Seed, variant);
+        int checkedSoFar = 0;
+
+        void CheckNewRequests()
+        {
+            for (; checkedSoFar < world.Requests.Count; checkedSoFar++)
+            {
+                var request = world.Requests[checkedSoFar];
+                var asker = world.Get(request.AskerId);
+                var reachable = Acquaintance.CouldApproach(
+                    world, asker,
+                    Pipeline.SuperiorOf(world, asker),
+                    Pipeline.SubordinatesOf(world, asker));
+
+                Assert.True(reachable.Contains(request.AskedId),
+                    $"{request.AskerId} put a question to {request.AskedId} on {request.At:yyyy-MM-dd} " +
+                    "with nothing in his head establishing that man exists");
+            }
+        }
+
+        while (Runner.Step(world, End, controlledCharacterId: null).Status == StepStatus.Advanced)
+            CheckNewRequests();
+
+        CheckNewRequests();
+        Assert.NotEmpty(world.Requests);
+    }
+
+    /// <summary>
+    /// One derivation, two readers. The player view and candidate generation must agree about who a
+    /// character has heard of, because they are asking the same question — and before milestone
+    /// 009's second correction they did not.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(AllVariants))]
+    public void The_player_view_and_the_generators_agree_about_who_he_has_heard_of(string variant)
+    {
+        var world = Cast.Build(Seed, variant);
+        Runner.Run(world, End);
+
+        foreach (var who in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
+            Assert.Equal(
+                PlayerView.KnownPeople(world, who),
+                Acquaintance.HeardOf(world, who));
+    }
+
+    /// <summary>
+    /// An organisation member nobody has heard of, whose id sorts before every other member's.
+    ///
+    /// Added to the world the test built, never to <c>Cast</c>. The six-character scenario fixture is
+    /// unchanged and the ceiling on it is untouched.
+    /// </summary>
+    private static Character AddStranger(World world)
+    {
+        var stranger = new Character
+        {
+            Id = "aldo-stranger",
+            Name = "Aldo Stranger",
+            RoleTitle = "soldier",
+            Capabilities = new Capabilities(
+                new Dictionary<Skill, double> { [Skill.Coercion] = 0.4 },
+                crew: 1, cash: 100, authority: 1, districts: new[] { Cast.Harbour }),
+            Psychology = new Psychology(
+                new Dictionary<Trait, double> { [Trait.Cautious] = 0.5 },
+                new Dictionary<Drive, double> { [Drive.Belonging] = 0.5 }),
+        };
+
+        stranger.Social.OrganizationId = Cast.OrgId;
+        world.Characters[stranger.Id] = stranger;
+        return stranger;
+    }
+
+    /// <summary>A plain wake, for staging a deliberation without running a whole scenario.</summary>
+    private static ScheduledEvent Wake(World world, Character actor) => new()
+    {
+        Id = 9_000,
+        Time = world.Now,
+        Kind = EventKind.RoleReview,
+        OwnerId = actor.Id,
+        Cause = "staged: his patch came up for review",
+    };
+
     // ================================================================= helpers
 
     /// <summary>

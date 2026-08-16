@@ -155,6 +155,9 @@ public static class Pipeline
         var agenda = AgendaSelection.Select(world, actor, trigger, perceived, assignment);
 
         string? domain = agenda.Domain ?? office?.Domain;
+        string? superior = SuperiorOf(world, actor);
+        var subordinates = SubordinatesOf(world, actor);
+
         var ctx = new GeneratorContext(
             actor.View,
             perceived,
@@ -164,9 +167,10 @@ public static class Pipeline
             office,
             assignment,
             knownPolicies,
-            SuperiorOf(world, actor),
-            SubordinatesOf(world, actor),
+            superior,
+            subordinates,
             OrgMembersOf(world, actor),
+            Acquaintance.CouldApproach(world, actor, superior, subordinates),
             world.Reports.Where(r => r.SenderId == actor.Id).ToList(),
             world.Requests.Where(r => r.AskerId == actor.Id).ToList(),
             VisibleTargets(world, domain));

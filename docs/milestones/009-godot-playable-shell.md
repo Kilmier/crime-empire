@@ -499,3 +499,140 @@ else, so being wrong now requires somebody to add an entry rather than merely to
 
 Carrying question, unchanged from milestone 008 and answered wrong here: **is this claim true of the
 thing I am saying it about, or only of the instances of it I happened to look at?**
+
+---
+
+## Correction 2 — a corroboration target the actor had never heard of, and the baseline it moved
+
+Appended 2026-08-16. Nothing above is rewritten.
+
+Codex reviewed `b4900aa`, confirmed the first three findings fixed and all verification passing, and
+returned **one further P1**. Matt accepted it.
+
+### The finding
+
+`Generators.FromRelationship` chose its corroboration target out of `ctx.OrgMemberIds` — the
+authoritative organisation roster, read straight off `world.Characters` — with no check that the
+actor had any way of knowing that person exists. `PlayerOption` then resolved the id into a visible
+name. Two things wrong, and the second is the worse one:
+
+1. **A player-facing surface named somebody the viewpoint character could not name.** That is the
+   settled source-limited rule, broken.
+2. **An NPC option was unsupported by the actor's beliefs**, which is a simulation defect that has
+   nothing to do with the interface. `SIMULATION_ARCHITECTURE.md`'s pipeline says "reject unknown,
+   impossible, or unavailable candidates", and a target is exactly the kind of thing that can be
+   unknown.
+
+**Correction 1 recorded this and under-called it.** It went into `ROADMAP.md` as "inert in a
+three-member outfit and wrong in principle". The first half was false and I did not check it; the
+second half was reason enough to fix it and I deferred anyway. What made it feel inert was reasoning
+about the cast size rather than about the fixture — and the fixture has a variant in which nobody
+ever tells Salvatore that Tommy exists.
+
+### The fix, upstream
+
+`Decision/Acquaintance.cs` is now the single derivation of "who has this character heard of":
+whoever appears in a claim he holds, whoever has given him an account, whoever he has a relationship
+with, whoever he holds a grievance against. `CouldApproach` widens that by the office relationships he
+is party to — his superior and his subordinates — on the precedent `Inference` already sets, which
+reads "who holds which office in his own organisation" as institutional and refuses everything else.
+The widening is deliberate: a rule that left a soldier unable to name his own capo would be a
+correctness fix that narrows what can be expressed, which is the first pattern on the ledger's list.
+
+`GeneratorContext` gains `AcquaintedIds` alongside `OrgMemberIds`, and the corroboration generator
+intersects the two. **The roster keeps its rank-blindness** — a boss seeking a second account still
+has to be able to reach past the man who reports to him — so this narrows by knowledge and not by
+rank, which is what the roster was there for.
+
+`PlayerView.KnownPeople` now delegates to `Acquaintance.HeardOf` rather than repeating it. That is the
+part worth insisting on: the player view had this rule right all along, carefully, with a comment
+explaining why enumerating the organisation would be wrong — and the generator had a different answer
+to the same question three files away. One derivation, two readers.
+
+### It was not inert, and the baseline moved
+
+**`cautious-vincent` changes, and only that variant.** Trace `A8A1BBD12D5334C2` → `96EAE1A72850F3D7`;
+chosen actions `124E8FE932DD5A89` → `1F660F63735133FC`; decisions 21 → 19; conflicts 3 → 2;
+"rel. read" 12 → 11. Everything about the other four variants is byte-identical.
+
+What happened, exactly. On 5 April 1987 Salvatore chose *ask tommy for his own account* about the
+grocery. In this variant Vincent is careful, there is no violence, and **nothing had ever put Tommy
+in Salvatore's head** — no claim naming him, no account from him, no relationship, and he is two rungs
+down rather than a direct subordinate. Tommy answered honestly the next day, his answer contradicted
+what Salvatore held, and that contradiction was `cautious-vincent`'s third perceived conflict. The
+question, the answer, both decisions, two truth-log entries and the conflict all go together, because
+none of them should have existed.
+
+The one moved viewpoint render says it plainly. Salvatore's view of `cautious-vincent` loses exactly
+one line:
+
+```
+     Tommy Nardo          — it did not (6 Apr)
+```
+
+An account from a man he had never heard of, which he had gone and asked for.
+
+**This is a deliberate behaviour change and the new numbers are the corrected ones.** Recorded here
+and in `REVIEW_LEDGER.md`'s baseline table rather than absorbed. The other four variants being
+untouched is the evidence that the change is the defect and not a re-tuning: the leak only bites where
+the scenario never introduces the two men to each other.
+
+### An open question this raises, stated rather than decided
+
+**Should a boss know the members of his own organisation?** The model says no — membership is not
+knowledge, `SubordinatesOf` is one rung, and `IntelligenceWriter` has said since milestone 003 that
+"who else is in this outfit" is exactly the kind of thing a boss might be wrong about. The fix follows
+that settled position. But the consequence is now visible: a soldier two rungs down is unreachable for
+corroboration until his boss hears of him by some other route, and in `cautious-vincent` that never
+happens. Whether an office should carry knowledge of the offices below the ones directly under it is a
+real design question. It is not answered here, and it is in `ROADMAP.md`.
+
+### Tests
+
+- `A_corroboration_target_he_has_never_heard_of_is_not_generated_or_rendered` — the staged regression
+  Codex asked for. An organisation member nobody has heard of is added **to the world the test built,
+  never to `Cast`**, with an id that sorts before every other member so the generator's own
+  `OrderBy(id)` would pick him if the belief limit were absent. It asserts he is on the roster and
+  sorts first (so the test cannot go quietly vacuous), that no candidate targets him, that the known
+  alternative is still generated, and that neither his name nor his id reaches the rendered pending
+  decision or the snapshot.
+- `Hearing_of_somebody_makes_him_a_target_he_can_approach` — the other direction. One claim naming him
+  is enough, so the filter admits rather than merely excludes.
+- `Office_relationships_count_as_knowing_somebody` — a soldier can still name his capo, and
+  `CouldApproach` is a superset of `HeardOf`.
+- `Nobody_ever_puts_a_question_to_a_stranger` — structural, all five variants, **stepping the run and
+  checking each request at the moment it is made**. The first version checked at the end of the run
+  and was very nearly vacuous: answering a question puts the answerer's testimony in the asker's head,
+  so a stranger at the time of asking is an acquaintance by the time the run finishes. **It passed
+  with the belief limit removed.** That is the ledger's false-assurance pattern, caught here by running
+  the mutation check rather than by reading the test.
+- `The_player_view_and_the_generators_agree_about_who_he_has_heard_of` — the one-derivation claim,
+  asserted for every character in every variant after a full run.
+
+**Mutation check.** Removing the single `acquainted.Contains(id)` clause fails three tests: the staged
+regression, the natural-run check on `cautious-vincent` by name and date, and the conflict budget.
+
+### Verification of this correction
+
+Measured after deleting every `bin`, `obj` and `.godot` directory.
+
+- Build **0 warnings, 0 errors** across four projects. Tests **366 passed**, 0 failed (353 at
+  `b4900aa`).
+- Four variants byte-identical; `cautious-vincent` moved as described above and its new hashes are
+  recorded in `REVIEW_LEDGER.md`.
+- All five variants deterministic on repeated runs. `--compare` still reports five distinct traces and
+  five distinct chosen-action sequences.
+- 29 of 30 viewpoint renders byte-identical to `b4900aa`; `cautious-vincent`/`salvatore` loses the one
+  line quoted above.
+- Godot headless self-test exits 0, makes 4 choices, renders 4 decision screens, and its UI text
+  carries no hidden fact, no counter, no decimal and no scheduler wording.
+
+### The lesson
+
+Correction 1 closed a leak from the scheduler into the interface and, in the same pass, wrote this one
+down as inert without measuring it. **"Inert at this cast size" is a claim about a fixture, and it was
+checked against the wrong one** — the three-member organisation, rather than the variant where two of
+those three never meet. The habit that would have caught it is the one this milestone already owns:
+run it and diff, rather than reason about whether it could matter.
+
+Carrying question, sharpened: **did I measure that, or infer it from something adjacent?**

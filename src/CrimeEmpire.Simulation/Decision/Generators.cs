@@ -26,7 +26,21 @@ public sealed record GeneratorContext(
     // Everyone in the same organisation, regardless of rank. Needed because the chain of command
     // is not the only path information can take — a boss seeking a second account has to be able
     // to reach past the man who reports to him.
+    //
+    // AUTHORITATIVE, AND THEREFORE NOT A LIST OF PEOPLE HE KNOWS ABOUT. It is read off the world's
+    // roster. Anything that turns a member into a target must intersect it with AcquaintedIds first;
+    // see that field.
     IReadOnlyList<string> OrgMemberIds,
+    // Everyone he has heard of, plus the office relationships he is party to — the belief-limited
+    // half of the pair above. See Decision/Acquaintance.cs.
+    //
+    // Milestone 009's second correction added this because the corroboration generator picked its
+    // target straight out of OrgMemberIds: a character could put a question to somebody whose
+    // existence nothing in his head established, and the player-facing option then resolved that id
+    // into a visible name. Belief-limited candidate generation is the rule the architecture states
+    // — "reject unknown, impossible, or unavailable candidates" — and a target is exactly the kind of
+    // thing that can be unknown.
+    IReadOnlyList<string> AcquaintedIds,
     // Reports this character has already sent. Needed so that "report in" stops being a live
     // option once he has said everything he has — otherwise a standing responsibility wakes him
     // on a timer and he volunteers the same account indefinitely.
@@ -517,8 +531,14 @@ public static class Generators
 
         if (secondhand is not null)
         {
+            // Whom he could actually go to: in the outfit, and somebody he has heard of. The second
+            // half is the belief limit — without it the roster itself proposed the target, so a man
+            // could go and put a question to somebody he had no way of knowing existed.
+            var acquainted = new HashSet<string>(ctx.AcquaintedIds, StringComparer.Ordinal);
+
             string? other = ctx.OrgMemberIds
                 .Where(id => id != ctx.Actor.Id
+                             && acquainted.Contains(id)
                              && id != secondhand.SourceId
                              // Not the man who just asked him to account for himself. Answering a
                              // question with the same question back is not corroboration.

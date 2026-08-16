@@ -399,9 +399,16 @@ public sealed class RelationalConsequenceTests
     /// of exactly the kind milestone 003's corroboration loop was, and the number is small enough
     /// that a change to it should be explained rather than absorbed.
     /// </summary>
+    /// <b>cautious-vincent fell from three to two on 2026-08-16</b>, and the lost conflict was one
+    /// the model should never have produced. Salvatore was asking Tommy for an account of the
+    /// grocery, and in this variant there is no violence, so nothing had ever put Tommy in
+    /// Salvatore's head — the corroboration generator was picking its target straight out of the
+    /// authoritative organisation roster. Tommy's honest answer contradicted what Salvatore held, and
+    /// that contradiction was the third conflict. It went when the question did. See
+    /// `milestones/009-godot-playable-shell.md`, Correction 2.
     [Theory]
     [InlineData("baseline", 2)]
-    [InlineData("cautious-vincent", 3)]
+    [InlineData("cautious-vincent", 2)]
     [InlineData("watchful-boss", 2)]
     [InlineData("disloyal-vincent", 2)]
     [InlineData("resentful-tommy", 2)]
@@ -1107,6 +1114,8 @@ public sealed class RelationalConsequenceTests
             world.Org.OfficeForDomain(Cast.Harbour), null, Array.Empty<Policy>(),
             Pipeline.SuperiorOf(world, actor), Pipeline.SubordinatesOf(world, actor),
             Pipeline.OrgMembersOf(world, actor),
+            Acquaintance.CouldApproach(
+                world, actor, Pipeline.SuperiorOf(world, actor), Pipeline.SubordinatesOf(world, actor)),
             Array.Empty<Report>(), Array.Empty<InformationRequest>(), new[] { Cast.Grocery });
     }
 

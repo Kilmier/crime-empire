@@ -1,5 +1,6 @@
 namespace CrimeSim.Session;
 
+using CrimeSim.Decision;
 using CrimeSim.Domain;
 using CrimeSim.Sim;
 
@@ -246,30 +247,15 @@ public static class PlayerView
     /// books" and a grocery are not people to go and ask — which resolves references he already
     /// has rather than introducing new ones.
     ///
+    /// <b>The derivation itself lives in <see cref="Acquaintance.HeardOf"/></b>, one layer down,
+    /// because candidate generation needs the same answer to the same question and had been getting
+    /// a different one — it read the authoritative organisation roster. Milestone 009's second
+    /// correction moved the rule rather than copying it: the player view and the generators are two
+    /// readers of one derivation, and the reason this is worth insisting on is that the copy would
+    /// have drifted silently and only shown up as a leak.
+    ///
     /// Public so tests can assert that no name outside this set ever reaches any surface.
     /// </summary>
     public static IReadOnlyList<string> KnownPeople(World world, Character who)
-    {
-        var known = new SortedSet<string>(StringComparer.Ordinal);
-
-        void Consider(string? id)
-        {
-            if (string.IsNullOrEmpty(id) || id == who.Id) return;
-            if (world.Find(id) is null) return;
-            known.Add(id);
-        }
-
-        foreach (var r in who.Cognition.Records)
-        {
-            Consider(r.Claim.Subject);
-            Consider(r.Claim.Object);
-            Consider(r.SourceId);
-        }
-
-        foreach (var t in who.Cognition.Testimony) Consider(t.SenderId);
-        foreach (var id in who.Social.Others) Consider(id);
-        foreach (var g in who.Social.Grievances) Consider(g.AgainstId);
-
-        return known.ToList();
-    }
+        => Acquaintance.HeardOf(world, who);
 }

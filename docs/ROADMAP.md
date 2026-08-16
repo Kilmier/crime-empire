@@ -134,11 +134,20 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   controlled character is woken when a delegated operation blocks or completes, so a player sees him
   stop on the day it happened even though the interface says nothing about why. Closing it would mean
   not waking him, which changes autonomous behaviour. Surfaced by milestone 009's first correction.
-- **`Generators.FromRelationship` draws a corroboration target from the whole organisation's
-  membership**, not from people the character has heard of — `ctx.OrgMemberIds` is rank-blind and
-  belief-blind. Inert in a three-member outfit and wrong in principle, and more visible since the
-  player-facing option wording resolves ids to names. Pre-existing; surfaced, not introduced, by
-  milestone 009.
+- ~~**`Generators.FromRelationship` draws a corroboration target from the whole organisation's
+  membership.**~~ **Retired 2026-08-16 by milestone 009's second correction, and the deferral's
+  reasoning was wrong.** It said "inert in a three-member outfit"; that was never measured and was
+  false. In `cautious-vincent` there is no violence, so nothing ever names Tommy to Salvatore, and
+  Salvatore was going to him for an account anyway. `Decision/Acquaintance.cs` is now the single
+  derivation of who a character has heard of, `GeneratorContext.AcquaintedIds` carries it, and
+  `PlayerView.KnownPeople` delegates to it instead of repeating it. `cautious-vincent`'s baseline
+  moved and the new figures are in `REVIEW_LEDGER.md`.
+- **Whether an office carries knowledge of the offices two rungs below it is unanswered.** The model
+  says membership is not knowledge — `SubordinatesOf` is one rung, and `IntelligenceWriter` has said
+  since milestone 003 that "who else is in this outfit" is the kind of thing a boss can be wrong
+  about. The consequence is now visible: a soldier two rungs down is unreachable for corroboration
+  until his boss hears of him by some other route, which in `cautious-vincent` never happens. Surfaced
+  by milestone 009's second correction, which followed the settled position rather than changing it.
 - **The player cannot see why an option is unavailable.** Rejected candidates are hidden per milestone
   009's scope, which is right for utility scores and arguably wrong for "he does not know that the
   bakery is holding out" — the single most legible line in a decision trace, and the one that proves

@@ -22,8 +22,9 @@ relationship schema and built the instrument that measures it. The rest of the e
 not built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
 sequence. Full accounts are in `docs/milestones/`.
 
-Milestone 009 — **implemented 2026-08-16, reviewed and rejected three times, corrected three times,
-and not accepted** — is the first step off that sequence rather than along it: a Godot playable shell
+Milestone 009 — **implemented 2026-08-16, reviewed five times, rejected four times, corrected after
+each, clean on the fifth round at `0f52d75`, and not accepted** — is the first step off that
+sequence rather than along it: a Godot playable shell
 over the same kernel, with a person answering one character's decisions. The shell changed no
 simulation behaviour. **Its second correction did**, deliberately: `cautious-vincent`'s baseline moved
 when corroboration targets were restricted to people the actor has heard of. The other four variants

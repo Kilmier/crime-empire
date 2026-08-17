@@ -35,12 +35,16 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `7e0700e`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `0f52d75`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
 "not yet recorded here", not "unreviewed". **The commit that moved this checkpoint is itself later
 than it, has no row, and still needs reviewing in its turn.**
 
-**Every commit in the range `6355347`–`7e0700e` inclusive has an established outcome.** The bound
+It advanced from `7e0700e` once the ordered backlog was worked through: `3f08685` was the oldest
+uncovered commit and blocked everything behind it, and its review is what produced the correction
+this checkpoint move accompanies.
+
+**Every commit in the range `6355347`–`0f52d75` inclusive has an established outcome.** The bound
 matters: "onward" would claim an outcome for commits that do not exist yet, which is the same
 open-ended promise this file's first version made when it said every commit had a row. Older rows
 before that range carry "status not established"; that is longstanding and untouched here.
@@ -127,19 +131,12 @@ Oldest first — the order review takes them in.
 | `7a9773b` | Milestone 008 implementation: facet-tagged relationship contributions, grievance unbundled from the clamped loyalty, developer-facing diagnostic, `docs/RELATIONSHIPS.md` | Reviewed and **rejected**: one finding — ruling 3 required trust, obligation, Belonging and grievance to be separately inspectable, and three of the four were emitted fused into a single component tagged `Trust \| Obligation \| Belonging`. Separately computed, then reassembled at the emission site. Matt accepted the finding. Corrected by `9a29342`. |
 | `9a29342` | First 008 correction: one component per facet at every loyalty reader | Reviewed and **rejected**: two findings — the verification hashes recorded in the archive and this file were false, having been measured before a late widening of the diagnostic listing and never re-measured; and the unclamped bond it introduced rested on a `[0,1]` range that `Psychology` documented on its indexers and enforced nowhere, so the clamp removal was a real behaviour change for any out-of-range caller. Matt accepted both. Corrected by `7e0700e`. |
 | `7e0700e` | Second 008 correction: true hashes with the cause established, and range enforcement in `Psychology`'s constructor | Reviewed, **no findings**. **Matt accepted the corrected milestone 008 implementation. Milestone 008 closed.** |
-
-### Beyond the checkpoint
-
-The checkpoint stays at `7e0700e` and **cannot advance yet**, because `3f08685` sits between it and
-everything below with no established outcome. These rows are recorded here rather than in the table
-so that the table's completeness claim stays true.
-
-| Commit | What it did | Review status |
-|---|---|---|
-| `3f08685` | Close milestone 008: record the review history and advance the checkpoint. Docs only | **Not reviewed.** No outcome established. It is the next commit review should take. |
+| `3f08685` | Close milestone 008: record the review history and advance the checkpoint. Docs only | Reviewed and **rejected**: one P2 — this file claimed "Milestone 008 is the first whose code was rejected twice", which the rows above it disprove: milestone 003 had its implementation and five corrective rounds rejected, and milestone 004 four. A superlative asserted about the table containing its own refutation. Matt accepted the finding. Corrected by the commit that moved this checkpoint. |
 | `901d345` | Milestone 009 implementation and archive: Godot playable shell, session boundary, prepare/resolve split | Reviewed and **rejected**: three findings, one P1 — `PendingDecision.Occasion` passed `ScheduledEvent.Cause` straight through, so a `StrategyBlocked` or `StrategyComplete` handed the owner of a *delegated* operation its outcome before anybody had told him; the player-facing DTOs backed `IReadOnlyList<T>` with castable `List<T>` and left raw `Claim`/`EventId` reachable; and the Godot self-test printed `CE-SELFTEST FAILED` while exiting 0. Matt accepted all three. Corrected by `b4900aa`. |
 | `b4900aa` | First 009 correction: source-limited occasion, opaque immutable boundary, self-test exit code | Reviewed. The original three **confirmed fixed** and all verification passing; **one further P1** — `Generators.FromRelationship` still picked its corroboration target out of `ctx.OrgMemberIds`, the authoritative roster, without establishing that the actor knew that person existed, and `PlayerOption` then rendered the name. Matt accepted it. Corrected by `c447a23`. |
-| `c447a23` | Second 009 correction: belief-limited corroboration targets | Reviewed and **rejected**: two findings. **The same P1 again** — the correction narrowed the roster by knowledge and widened it back by "office relationships" derived from `Pipeline.SuperiorOf`/`SubordinatesOf`, which are authority scans over that same roster, so a same-organisation stranger one rung below the actor stayed reachable and renderable; and none of its three tests could see it, one having compared `PlayerView.KnownPeople` against the function it already delegated to. Plus a documentation contradiction: this file recorded `cautious-vincent`'s moved baseline in one place and "nothing moved / all 30 identical" in another, and `CURRENT_MILESTONE.md` called milestone 009 both twice-rejected and "not reviewed". Matt accepted both. Corrected by the commit this section is part of. |
+| `c447a23` | Second 009 correction: belief-limited corroboration targets | Reviewed and **rejected**: two findings. **The same P1 again** — the correction narrowed the roster by knowledge and widened it back by "office relationships" derived from `Pipeline.SuperiorOf`/`SubordinatesOf`, which are authority scans over that same roster, so a same-organisation stranger one rung below the actor stayed reachable and renderable; and none of its three tests could see it, one having compared `PlayerView.KnownPeople` against the function it already delegated to. Plus a documentation contradiction: this file recorded `cautious-vincent`'s moved baseline in one place and "nothing moved / all 30 identical" in another, and `CURRENT_MILESTONE.md` called milestone 009 both twice-rejected and "not reviewed". Matt accepted both. Corrected by `49b71a6`. |
+| `49b71a6` | Third 009 correction: `Acquaintance.KnownTo`, an office rather than an authority rung | Reviewed. **No behavioural findings**, and its verification passed; **two documentation findings**, one P1 — `CURRENT_MILESTONE.md`, `DESIGN_DECISIONS.md` and `ROADMAP.md` still described the live rule as the rejected second correction had left it, naming `HeardOf` rather than `KnownTo` — and one P2 on the matching source comments. Matt accepted both. Corrected by `0f52d75`. |
+| `0f52d75` | Reconcile the live rule across the canon documents and the source comments. Docs and comments only | Reviewed, **no findings**; behavioural verification passed. **Not an acceptance of milestone 009** — Matt has recorded none, and a clean review is not one. |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
 `404b416`; milestone 007 through `974a88a`; milestone 008 through `7e0700e`. Note the difference in
@@ -151,11 +148,20 @@ misreporting that rejection as no review at all. Milestone 007's accepted status
 and is unaffected by either. Milestone 006's rests on `404b416` and is likewise unaffected by its own
 closeout being rejected.
 
-**Milestone 008 is the first whose code was rejected twice.** `7a9773b` fused three of four
+**Milestone 008's code was rejected in two successive rounds.** `7a9773b` fused three of four
 contributions it was required to keep apart; `9a29342` fixed that and reported hashes its own build did
 not produce, on a premise its own API did not enforce. Both rejections were of the code and its
 verification, not of the design, and neither disturbed anything accepted earlier. The milestone's
 accepted state is `7e0700e` and nothing before it.
+
+**That paragraph used to open "Milestone 008 is the first whose code was rejected twice", which was
+false, and the rows above this one disprove it.** Milestone 003 had its implementation and five
+corrective rounds rejected — `097fbda`, `cf22e5d`, `2a74a5d`, `f97ef76`, `b8fe921`, `e83dacf` — and
+milestone 004 had four. The claim was a superlative asserted about a table it was sitting in, and
+checking it required only reading upward. Found by Codex reviewing `3f08685` and corrected here. It is
+replaced with a plain description rather than a corrected superlative on purpose: **a comparative
+claim about the whole history has to be re-checked every time the history grows, and nothing prompts
+that.** Prefer describing the thing in front of you.
 
 **On `fb2c84d`.** It was rejected and its findings were never written down, so what they were is not
 recoverable from this repository. Matt retired them as superseded and non-actionable on 2026-08-14:
@@ -177,13 +183,16 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured, not accepted — milestone 009, this commit
+### Measured and reviewed clean, not accepted — milestone 009, through `0f52d75`
 
-**This section records measurements, not a review outcome.** Milestone 009's implementation commit
-`901d345` was rejected on three findings and `b4900aa` on one further P1 (see "Beyond the checkpoint"
-above); this commit is its second correction and **has not been reviewed by anybody**. Neither has
-`3f08685`, which closed milestone 008. Do not read anything below as verification in this file's
-sense — Matt's acceptance of a named commit is the only thing that is.
+**This section records measurements and a review outcome, and neither is an acceptance.** Milestone
+009 went through five review rounds, four of them rejections: `901d345` on three findings, `b4900aa`
+on one further P1, `c447a23` on that same P1 again plus a documentation contradiction, `49b71a6` on
+two documentation findings, and `0f52d75` clean. **Matt has recorded no acceptance of milestone 009**,
+and a clean review is not one — rule 3 above. Do not read anything below as verification in this
+file's sense.
+
+The figures are measured at `0f52d75`, which is where the checkpoint now stands.
 
 Milestone 009 added a Godot playable shell and an engine-neutral session boundary, and changed no
 simulation behaviour doing it. Its first and third corrections changed none either. **Its second
@@ -198,7 +207,7 @@ him about.
 - Tests: **369 passed**, 0 failed (366 at `c447a23`; 353 at `b4900aa`; 343 at `901d345`; 305 before
   the milestone).
 - **29 of 30 viewpoint renders byte-identical** to `3f08685`, and **all 30 byte-identical to
-  `c447a23`** — the third correction moved nothing. The standing exception is
+  `c447a23`** — neither the third correction nor `0f52d75` moved anything. The standing exception is
   `cautious-vincent`/`salvatore`, which loses one line — `Tommy Nardo — it did not (6 Apr)`, an
   account from a man he had never heard of and had gone and asked for.
 

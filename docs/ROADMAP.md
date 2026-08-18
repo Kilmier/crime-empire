@@ -246,9 +246,16 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
 4. ~~**Godot / .NET compatibility spike**~~ — **subsumed by milestone 009**, which settled the
    constraint (the engine hosts .NET 8) and built the shell in the same pass rather than spiking it
    separately.
-5. **Another bounded emergence slice** — rival activity or limited tier transitions, but not the
-   whole remaining emergence prototype in one milestone. Another mechanism the scenario cannot
-   exercise is volume, not progress.
+5. ~~**Another bounded emergence slice**~~ — **taken up as milestone 011 in one specific form**, chosen
+   by Matt on 2026-08-18: the detective's side. Not speculative — looking at `InvestigateIncident`
+   after milestone 010 stumbled into two defects in it found something larger. **Det. Iris Kane opens a
+   case, names a suspect, and then has a candidate set of exactly one option for the rest of the run**,
+   with no rejections at all: nothing is outscored, nothing is generated. Every route to a question is
+   structurally closed to her — corroboration requires a belief acquired through *testimony* and a
+   detective's beliefs are self-acquired by construction; delegation requires people she has sent;
+   reporting requires a superior and she belongs to no institution. Scope and rulings in
+   `CURRENT_MILESTONE.md`. What remains of this candidate afterwards is rival activity and tier
+   transitions, which are still unbuilt.
 6. **A runtime path that raises trust.** Surfaced by milestone 008 writing the schema down: conflicts
    lower trust and nothing restores it, so a relationship can be damaged and never repaired. Nobody
    decided that. Small, and it would give the trust dimension a second update path to be read

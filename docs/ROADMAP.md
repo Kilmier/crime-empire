@@ -22,8 +22,8 @@ relationship schema and built the instrument that measures it. The rest of the e
 not built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
 sequence. Full accounts are in `docs/milestones/`.
 
-Milestone 009 — **implemented 2026-08-16, through five Codex rounds and one self-review, corrected
-after each, and not accepted** — is the first step off that sequence rather than along it: a Godot
+Milestone 009 — **closed and accepted 2026-08-16** after five Codex rounds and one self-review,
+nine findings in all — is the first step off that sequence rather than along it: a Godot
 playable shell over the same kernel, with a person answering one character's decisions.
 **All five variants are byte-identical to milestone 008's accepted baseline**; the second correction
 moved `cautious-vincent` and the fourth moved it back, having found the cause a layer deeper. One
@@ -70,12 +70,12 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   `−0.5 × loyalty` for what an omission costs net to `0.2 × loyalty`. And grievance was being clamped
   away, not merely outweighing trust. Both are now visible and separately measured. See
   `milestones/008-relationship-readers.md` and `docs/RELATIONSHIPS.md`.
-- **Concealment does not quiet the witnesses it is named for.** `AdvanceConceal`'s first step is
+- **Concealment does not quiet the witnesses it is named for.** **Being addressed by milestone 010.** `AdvanceConceal`'s first step is
   "quiet the witnesses" and moves only `LegalExposure`; the concealer's own belief that he was seen is
   untouched. `Utility` prices a denial almost entirely on that belief, so this is what stands between
   the executor answering his delegator — which now happens — and an executor *denying* to him, which
   still does not. Surfaced by milestone 007 and deliberately outside it.
-- **`believedWitnesses` is scanned globally.** `Utility` maxes over every `WitnessSawIncident` the
+- **`believedWitnesses` is scanned globally.** **Being addressed by milestone 010.** `Utility` maxes over every `WitnessSawIncident` the
   actor holds, regardless of which incident he would be concealing — the same defect shape as the
   `SeekCorroboration` scan `404b416` fixed, and the same load-bearing category in `REVIEW_LEDGER.md`.
   It changes nothing in the current scenario, which is why milestone 007 excluded it rather than
@@ -207,10 +207,11 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    resentment are separate dimensions or derived, whether provenance should weight the social
    consequence, and whether grievance should be capped — each now carrying a stated condition for
    when it becomes answerable, which is what makes them not-yet-candidates rather than open questions.
-2. **A denial that can win** — the concealment step that does not quiet its witnesses, and the global
-   `believedWitnesses` scan. Together they are what keeps an executor from ever denying to his
-   delegator, which is the one exchange in the model that milestone 004's provenance distinction was
-   built for and that no accepted run has produced.
+2. ~~**A denial that can win**~~ — **became milestone 010**, authorized 2026-08-16 and active. The
+   concealment step that does not quiet its witnesses, and the global `believedWitnesses` scan.
+   Together they are what keeps an executor from ever denying to his delegator, which is the one
+   exchange in the model that milestone 004's provenance distinction was built for and that no
+   accepted run has produced. Scope and rulings in `CURRENT_MILESTONE.md`.
 3. **Persistence / SQLite** — begin storing the information and decision data now worth querying.
 4. ~~**Godot / .NET compatibility spike**~~ — **subsumed by milestone 009**, which settled the
    constraint (the engine hosts .NET 8) and built the shell in the same pass rather than spiking it

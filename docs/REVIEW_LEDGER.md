@@ -33,18 +33,38 @@ Standing rules:
 Test-green is not review, and review is not acceptance. `714fbc3` built clean, passed its suite,
 and was still rejected on three P1 findings; do not describe such a commit as unreviewed or as safe.
 
+### From milestone 010 onward, review is self-assessment
+
+**Matt withdrew Codex from the loop on 2026-08-16, until further notice.** Claude implements and
+reviews its own work. The rows below are the argument for treating that as a weakened process rather
+than an equivalent one: across milestone 009, Codex returned **nine findings in five rounds** on work
+already declared verified, including the same P1 three times. A self-review then found four more —
+but only after the method changed. Re-reading the code found nothing; dumping what a player actually
+sees, across every variant and character, found four defects immediately.
+
+So the standing method for a self-review is **not vigilance, it is refusing to trust a reading**:
+enumerate the real surface empirically and diff it, mutation-check every fix by reverting it and
+watching a test fail, test for the *kind* of defect rather than the reported instance, and walk the
+recurring-failure list below as an explicit checklist. Findings go into the milestone archive whether
+or not they flatter the author.
+
+**What this cannot replace is an adversary who does not share the author's assumptions**, and every
+one of those nine findings was a place the author had convinced himself. A self-review that returns
+no findings is weak evidence, and must be recorded as what it is.
+
 ## Commit and review coverage
 
-**Coverage checkpoint: `0f52d75`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `7ca7819`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
 "not yet recorded here", not "unreviewed". **The commit that moved this checkpoint is itself later
 than it, has no row, and still needs reviewing in its turn.**
 
-It advanced from `7e0700e` once the ordered backlog was worked through: `3f08685` was the oldest
-uncovered commit and blocked everything behind it, and its review is what produced the correction
-this checkpoint move accompanies.
+It advanced from `7e0700e` once the ordered backlog was worked through — `3f08685` was the oldest
+uncovered commit and blocked everything behind it — and then to `7ca7819` when Matt accepted
+milestone 009. **The last two rows in that range were never seen by Codex**, and their status rests
+on Matt's acceptance and a self-review; the rows say so rather than leaving it to be inferred.
 
-**Every commit in the range `6355347`–`0f52d75` inclusive has an established outcome.** The bound
+**Every commit in the range `6355347`–`7ca7819` inclusive has an established outcome.** The bound
 matters: "onward" would claim an outcome for commits that do not exist yet, which is the same
 open-ended promise this file's first version made when it said every commit had a row. Older rows
 before that range carry "status not established"; that is longstanding and untouched here.
@@ -136,7 +156,9 @@ Oldest first — the order review takes them in.
 | `b4900aa` | First 009 correction: source-limited occasion, opaque immutable boundary, self-test exit code | Reviewed. The original three **confirmed fixed** and all verification passing; **one further P1** — `Generators.FromRelationship` still picked its corroboration target out of `ctx.OrgMemberIds`, the authoritative roster, without establishing that the actor knew that person existed, and `PlayerOption` then rendered the name. Matt accepted it. Corrected by `c447a23`. |
 | `c447a23` | Second 009 correction: belief-limited corroboration targets | Reviewed and **rejected**: two findings. **The same P1 again** — the correction narrowed the roster by knowledge and widened it back by "office relationships" derived from `Pipeline.SuperiorOf`/`SubordinatesOf`, which are authority scans over that same roster, so a same-organisation stranger one rung below the actor stayed reachable and renderable; and none of its three tests could see it, one having compared `PlayerView.KnownPeople` against the function it already delegated to. Plus a documentation contradiction: this file recorded `cautious-vincent`'s moved baseline in one place and "nothing moved / all 30 identical" in another, and `CURRENT_MILESTONE.md` called milestone 009 both twice-rejected and "not reviewed". Matt accepted both. Corrected by `49b71a6`. |
 | `49b71a6` | Third 009 correction: `Acquaintance.KnownTo`, an office rather than an authority rung | Reviewed. **No behavioural findings**, and its verification passed; **two documentation findings**, one P1 — `CURRENT_MILESTONE.md`, `DESIGN_DECISIONS.md` and `ROADMAP.md` still described the live rule as the rejected second correction had left it, naming `HeardOf` rather than `KnownTo` — and one P2 on the matching source comments. Matt accepted both. Corrected by `0f52d75`. |
-| `0f52d75` | Reconcile the live rule across the canon documents and the source comments. Docs and comments only | Reviewed, **no findings**; behavioural verification passed. **Not an acceptance of milestone 009** — Matt has recorded none, and a clean review is not one. |
+| `0f52d75` | Reconcile the live rule across the canon documents and the source comments. Docs and comments only | Reviewed by Codex, **no findings**; behavioural verification passed. |
+| `c0bb60f` | Correct a false superlative; advance the checkpoint through `0f52d75`. Docs only | **Not reviewed by Codex** — it was the last commit before Codex was withdrawn. Covered by Matt's acceptance below. |
+| `7ca7819` | Fourth 009 correction: `Relations.Meet`, a truthful occasion, a derived focus, a self-test that presses buttons | **Not reviewed by Codex.** Produced by a self-review at Matt's request, which found four defects — two of them the same P1 Codex had raised twice, still live on generators the fix had not reached and invisible to a test scoped to the one that had. **Matt accepted milestone 009 on the strength of this commit on 2026-08-16. Milestone 009 closed.** |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
 `404b416`; milestone 007 through `974a88a`; milestone 008 through `7e0700e`. Note the difference in
@@ -183,18 +205,16 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured, not accepted — milestone 009, through this commit
+### Accepted — milestone 009, `7ca7819`
 
-**This section records measurements, not an acceptance.** Milestone 009 went through five Codex
-rounds, four of them rejections: `901d345` on three findings, `b4900aa` on one further P1, `c447a23`
-on that same P1 again plus a documentation contradiction, `49b71a6` on two documentation findings,
-and `0f52d75` clean. **Matt has recorded no acceptance of milestone 009**, and a clean review is not
-one — rule 3 above.
+**Matt accepted milestone 009 on 2026-08-16, on the strength of `7ca7819`.** It took five Codex
+rounds — four of them rejections: `901d345` on three findings, `b4900aa` on one further P1,
+`c447a23` on that same P1 again plus a documentation contradiction, `49b71a6` on two documentation
+findings, and `0f52d75` clean — and then a self-review that found four more, of which two were that
+same P1 a third time. **Nine findings across the milestone, on work declared verified each time.**
 
-**A self-review at Matt's request then found four more**, and Correction 4 is the result. Two of
-them were the same P1 Codex had raised twice, still live on generators the fix had not reached and
-invisible to a regression test scoped to the one that had. That correction is beyond the checkpoint
-and unreviewed, as is `c0bb60f`. Figures below are measured there.
+Read the acceptance with that shape in view: it rests on a commit Codex never saw, and the last
+round of findings came from the author. Figures below are measured at `7ca7819`.
 
 Milestone 009 added a Godot playable shell and an engine-neutral session boundary, and changed no
 simulation behaviour doing it. Its first and third corrections changed none either. **Its second

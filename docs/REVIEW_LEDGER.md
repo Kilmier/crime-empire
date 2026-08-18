@@ -54,15 +54,16 @@ no findings is weak evidence, and must be recorded as what it is.
 
 ## Commit and review coverage
 
-**Coverage checkpoint: `7ca7819`.** The table is complete through that commit and says nothing
+**Coverage checkpoint: `824f3fc`.** The table is complete through that commit and says nothing
 about anything after it. Commits later than the checkpoint have no row yet; their absence means
 "not yet recorded here", not "unreviewed". **The commit that moved this checkpoint is itself later
 than it, has no row, and still needs reviewing in its turn.**
 
 It advanced from `7e0700e` once the ordered backlog was worked through — `3f08685` was the oldest
-uncovered commit and blocked everything behind it — and then to `7ca7819` when Matt accepted
-milestone 009. **The last two rows in that range were never seen by Codex**, and their status rests
-on Matt's acceptance and a self-review; the rows say so rather than leaving it to be inferred.
+uncovered commit and blocked everything behind it — then to `7ca7819` when Matt accepted milestone
+009, and to `824f3fc` when he accepted milestone 010 on 2026-08-18. **Every row from `c0bb60f`
+onward was produced without Codex**, and their status rests on Matt's acceptance and a self-review;
+the rows say so rather than leaving it to be inferred.
 
 **Every commit in the range `6355347`–`7ca7819` inclusive has an established outcome.** The bound
 matters: "onward" would claim an outcome for commits that do not exist yet, which is the same
@@ -159,9 +160,19 @@ Oldest first — the order review takes them in.
 | `0f52d75` | Reconcile the live rule across the canon documents and the source comments. Docs and comments only | Reviewed by Codex, **no findings**; behavioural verification passed. |
 | `c0bb60f` | Correct a false superlative; advance the checkpoint through `0f52d75`. Docs only | **Not reviewed by Codex** — it was the last commit before Codex was withdrawn. Covered by Matt's acceptance below. |
 | `7ca7819` | Fourth 009 correction: `Relations.Meet`, a truthful occasion, a derived focus, a self-test that presses buttons | **Not reviewed by Codex.** Produced by a self-review at Matt's request, which found four defects — two of them the same P1 Codex had raised twice, still live on generators the fix had not reached and invisible to a test scoped to the one that had. **Matt accepted milestone 009 on the strength of this commit on 2026-08-16. Milestone 009 closed.** |
+| `12d1054` | Close milestone 009 as accepted; open milestone 010. Docs only | Status not established. |
+| `824f3fc` | Milestone 010 implementation: a concealer acts on his own exposure; the denial is priced from its own incident | **Reviewed by its own author, the only reviewer this project now has.** Eighteen mutation checks, of which two initially caught nothing and exposed three defects in the milestone's own tests — a vacuous boundary assertion, a fixture staging a trace on an incident the concealment did not name, and nothing at all pinning whose belief moves. All three were fixed before the commit; none was found by re-reading. **Matt accepted milestone 010 on the strength of this commit on 2026-08-18. Milestone 010 closed.** |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through
-`404b416`; milestone 007 through `974a88a`; milestone 008 through `7e0700e`. Note the difference in
+`404b416`; milestone 007 through `974a88a`; milestone 008 through `7e0700e`; milestone 009 through
+`7ca7819`; milestone 010 through `824f3fc`.
+
+**Milestone 010 is the first accepted on a review nobody but its author performed**, and the first
+whose implementation commit needed no corrective round. Read those two facts together rather than
+singly: the absence of corrections is not evidence of quality here, because the only reviewer shares
+every assumption the author made. What the round did produce is three findings, all in the
+milestone's own tests, all surfaced by mutation checks rather than by inspection — which is the
+argument for the method and not for the result. Note the difference in
 shape: 003, 004, 006 and 008 each took their implementation plus every corrective round through review
 before acceptance, while 007 needed no corrective round to its code and was accepted at its
 implementation commit with one finding ruled on rather than fixed. **Its corrective rounds were all
@@ -205,17 +216,19 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 010, `824f3fc`, not yet reviewed or accepted
+### Accepted — milestone 010, `824f3fc`
 
-**Nobody has reviewed this and nobody has accepted it.** The figures below are measurements taken by
-the author of the change. They are recorded here because ruling 6 required every moved figure to be
-recorded with its reason; they establish no status whatever. See
-`milestones/010-a-denial-that-can-win.md`.
+**Matt accepted milestone 010 on 2026-08-18, on the strength of `824f3fc`.** It needed no corrective
+round, and it is the first milestone here accepted on a review nobody but its author performed —
+which is a fact about the process rather than about the code, and is why the coverage row for it says
+so. The figures below were recorded by the author under ruling 6, which required every moved figure to
+carry its reason. See `milestones/010-a-denial-that-can-win.md`.
 
 **Re-verified at `824f3fc` on 2026-08-18**, from a clean tree with every `bin`, `obj` and `.godot`
-directory deleted, and every figure below reproduced exactly. That run is a *measurement repeated by
-the author*, not a review and not an acceptance — the distinction is the one this file exists to keep,
-and "the numbers came out the same twice" is evidence about determinism rather than about correctness.
+directory deleted, and every figure below reproduced exactly. That run was a *measurement repeated by
+the author* — evidence about determinism rather than about correctness — and it is recorded separately
+from the acceptance above because the two are different things and this file's whole history is of
+them being run together.
 
 The same pass audited the committed diff against the authorized scope, empirically rather than by
 recollection, and the two probes worth keeping are:

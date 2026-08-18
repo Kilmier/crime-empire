@@ -7,15 +7,13 @@ do not create a separate handoff document.
 
 ## Status
 
-**Milestone 011 — The Detective Has No Next Move — is planned and NOT authorized to begin.** Matt
-chose the direction on 2026-08-18; the scope and rulings below are Claude's proposal against that
-direction and need his sign-off before any code is written. Nothing here is a licence to start.
+**Milestone 011 — The Detective Has No Next Move — is active.** Authorized by Matt on 2026-08-18,
+who chose the direction, kept item 5, and signed off the scope and rulings below.
 
-**Milestone 010 is implemented and awaiting Matt's review**, at `824f3fc`, re-verified at `bec0370`.
-Nobody has reviewed it and nobody has accepted it. `REVIEW_LEDGER.md`'s coverage checkpoint stands at
-`7ca7819`, which is milestone 009. Milestone 011 must not begin before 010 is accepted.
-
-Milestones 001–009 are complete and accepted.
+Milestones 001–010 are complete and accepted. **Matt accepted milestone 010 on 2026-08-18 on the
+strength of `824f3fc`**, and `REVIEW_LEDGER.md`'s coverage checkpoint now stands there. It needed no
+corrective round and it is the first milestone accepted on a review nobody but its author performed;
+read those together rather than singly.
 
 **Codex remains withdrawn from the review loop.** Claude implements and reviews its own work — see
 `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".
@@ -93,8 +91,8 @@ be measured, not assumed; ruling 6 below governs what happens if it is wrong.
    `WHAT HE HAS`, `WHAT HE CANNOT SETTLE`, and "Everything here is something **he** saw or was told".
    That is a shipping surface stating something false about a person. 56 strings across
    `PlayerNarration`, `PlayerOccasion`, `PlayerOption`, `IntelligenceWriter` and the Godot panels.
-   **This item is separable and Matt may strike it** — it is the one item that is not about the
-   investigation mechanism, and it was found by looking at the detective rather than derived from her.
+   **Matt kept this item on 2026-08-18** when offered the chance to strike it. It remains the one item
+   that is not about the investigation mechanism, which is why ruling 7 keeps its measurement apart.
 6. **Measure**, and report the answer whichever way it falls: does the detective now act, and does a
    denial put to her win?
 

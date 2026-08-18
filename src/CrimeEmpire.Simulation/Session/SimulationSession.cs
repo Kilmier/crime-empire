@@ -366,8 +366,8 @@ public sealed class SimulationSession
             prepared.Actor.Id,
             prepared.Actor.Name,
             prepared.Actor.RoleTitle,
-            PlayerOccasion.For(prepared.Trigger.Kind),
-            PlayerOccasion.Focus(prepared.Agenda, prepared.Trigger.Kind),
+            PlayerOccasion.For(prepared.Trigger),
+            PlayerOccasion.Focus(prepared.Actor, prepared.Agenda, prepared.Trigger, name),
             options);
     }
 

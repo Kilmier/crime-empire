@@ -1,6 +1,7 @@
 namespace CrimeSim.Session;
 
 using CrimeSim.Decision;
+using CrimeSim.Domain;
 using CrimeSim.Sim;
 
 /// <summary>
@@ -38,27 +39,43 @@ using CrimeSim.Sim;
 internal static class PlayerOccasion
 {
     /// <summary>
-    /// What woke him, in terms that assert nothing beyond the fact that he was woken.
+    /// What woke him, in terms that assert nothing beyond what the event itself establishes for the
+    /// character it is addressed to.
     ///
-    /// Null means the interface says nothing. Each phrase below is admissible because the event kind
-    /// itself establishes it for the character it is addressed to:
+    /// Null means the interface says nothing.
     ///
-    ///  - <see cref="EventKind.AssignmentDelivered"/> — he has just been briefed, through
-    ///    <c>Cognition.Receive</c>, by the man who issued it.
-    ///  - <see cref="EventKind.RoleReview"/> — a periodic look at his own patch, or somebody having
-    ///    spoken to him. Every scheduler of this kind addresses it to the person the speaking was
-    ///    done to; none of them carries a third party's outcome. The phrase says only that he came
-    ///    back round to it, which is true of all of them.
-    ///  - <see cref="EventKind.Incident"/> — scheduled by <c>Runner.Observe</c> only after the
-    ///    observer actually acquired something, so "something reached him" is established by the
-    ///    event's own precondition.
-    ///  - <see cref="EventKind.PressureThreshold"/> — his own pressure, crossed in his own head.
+    /// <b>Keyed on the event's structured note as well as its kind, since milestone 009's fourth
+    /// correction.</b> <see cref="EventKind.RoleReview"/> has five schedulers — a periodic look at his
+    /// own patch, and four occasions on which somebody has just spoken to him — and one phrase for
+    /// all of them told a man he was doing his rounds when his soldier had reported in. That is not a
+    /// leak; it is the opposite, and worse for it. It withheld something he certainly knew and put a
+    /// specific false reason in its place, and the withheld part is the most decision-relevant
+    /// context there is: "somebody has just put a question to you" is precisely why you would answer
+    /// it.
+    ///
+    /// The phrases below name nobody. Whoever spoke is already named in the options — "give Tommy
+    /// Nardo his account of…" — so naming him twice buys nothing and widens the surface.
     /// </summary>
-    internal static string? For(EventKind kind) => kind switch
+    internal static string? For(ScheduledEvent trigger) => trigger.Kind switch
     {
+        // He has just been briefed, through Cognition.Receive, by the man who issued it.
         EventKind.AssignmentDelivered => "he has just been handed something to do",
-        EventKind.RoleReview => "he came back round to his own patch",
+
+        // Somebody spoke to him, and the note says which act it was. Each is established for him by
+        // the act itself: he was the one asked, reported to, or petitioned.
+        EventKind.RoleReview => trigger.Payload.Note switch
+        {
+            "asked-to-account" => "somebody has put a question to him",
+            "reported-to" => "somebody has reported to him",
+            "permission-sought" => "somebody has asked him for room to move",
+            _ => "he came back round to his own patch",
+        },
+
+        // Runner.Observe schedules this only after the observer actually acquired something, so the
+        // event's own precondition establishes the phrase.
         EventKind.Incident => "something reached him",
+
+        // His own pressure, crossed in his own head.
         EventKind.PressureThreshold => "something had got hard to ignore",
 
         // StrategyComplete and StrategyBlocked, and anything added later. Silence is the default and
@@ -68,36 +85,62 @@ internal static class PlayerOccasion
     };
 
     /// <summary>
-    /// What is on his mind, from the agenda — and only where the agenda's own description is
-    /// structurally his.
+    /// What is on his mind — derived from his own state, never passed through from the agenda's
+    /// developer-facing description.
     ///
     /// <see cref="AgendaKind.RespondToTrigger"/> is excluded because
     /// <see cref="AgendaSelection.Select"/> sets its <c>Description</c> to <c>trigger.Cause</c>
-    /// verbatim. That is the same string this file exists to keep out, arriving through a second
-    /// field — which is exactly the "distinction drawn in one place and dropped on the way to the
-    /// next" shape, and it is why this is a suppression list rather than a sanitising pass over one
-    /// property.
+    /// verbatim, which is the authored string this file exists to keep out.
     ///
-    /// The four kinds that do pass are each structurally the character's own:
-    /// <see cref="AgendaKind.FulfilAssignment"/> is the objective he was briefed on,
-    /// <see cref="AgendaKind.ContinueCommitment"/> is the course of action he started,
-    /// <see cref="AgendaKind.RelievePressure"/> is his own pressure by name, and
-    /// <see cref="AgendaKind.DischargeResponsibility"/> is his own standing duty. None can carry
-    /// anybody else's outcome, because none is written by anybody else.
+    /// <b>Two of the four remaining kinds were passing developer text too, until milestone 009's
+    /// fourth correction.</b> <see cref="AgendaKind.ContinueCommitment"/>'s description is
+    /// <c>"ongoing: " + StrategyInstance.Label</c>, which put
+    /// <c>ConcealIncident(, target=bellini-grocery, method=Persuade)</c> in front of a player — raw
+    /// ids, a raw enum, and the empty-domain defect already on the carried-forward list.
+    /// <see cref="AgendaKind.RelievePressure"/>'s was <c>"pressure: " + PressureKind</c>. Both are now
+    /// phrased here from the typed values, and the strategy phrasing is
+    /// <see cref="PlayerOption.Work"/> — the same one the options use, rather than a second wording
+    /// of the same thing.
+    ///
+    /// The two that do pass their description through are prose a person wrote about him and that he
+    /// holds: the objective he was briefed on, and his own standing responsibility.
     /// </summary>
-    internal static string? Focus(Agenda agenda, EventKind kind)
+    internal static string? Focus(Character actor, Agenda agenda, ScheduledEvent trigger, Func<string, string> name)
     {
-        // A wake we cannot describe is a wake we say nothing about. Otherwise the focus would
-        // narrate the same delegated outcome the occasion was suppressed for.
-        if (For(kind) is null) return null;
+        // A wake we cannot describe is a wake we say nothing about. Otherwise the focus would narrate
+        // the same delegated outcome the occasion was suppressed for.
+        if (For(trigger) is null) return null;
 
         return agenda.Kind switch
         {
+            // The objective he was handed, in the issuer's words, which he was told.
             AgendaKind.FulfilAssignment => agenda.Description,
-            AgendaKind.ContinueCommitment => agenda.Description,
-            AgendaKind.RelievePressure => agenda.Description,
+
+            // His own standing duty, in the words the scenario gave it.
             AgendaKind.DischargeResponsibility => agenda.Description,
+
+            // The course of action he started, described as his options describe it.
+            AgendaKind.ContinueCommitment when actor.Execution.Strategy is { } s =>
+                PlayerOption.Work(s.Kind, s.TargetId, name),
+
+            // What is pressing on him, by what it is rather than by its enum name.
+            AgendaKind.RelievePressure => actor.Motivations.Dominant() is { } p ? Pressure(p.Kind) : null,
+
             _ => null,
         };
     }
+
+    /// <summary>
+    /// A pressure in the character's own terms. Closed, and silent on anything unnamed — the same
+    /// fail-closed default as the occasion vocabulary.
+    /// </summary>
+    private static string? Pressure(PressureKind kind) => kind switch
+    {
+        PressureKind.RevenueShortfall => "the money that is not arriving",
+        PressureKind.LegalExposure => "how exposed he is",
+        PressureKind.Resentment => "what he is carrying against somebody",
+        PressureKind.Fear => "what he is afraid of",
+        PressureKind.OrganizationalInstability => "how unsteady the outfit has become",
+        _ => null,
+    };
 }

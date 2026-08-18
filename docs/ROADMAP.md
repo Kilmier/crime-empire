@@ -22,14 +22,13 @@ relationship schema and built the instrument that measures it. The rest of the e
 not built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
 sequence. Full accounts are in `docs/milestones/`.
 
-Milestone 009 — **implemented 2026-08-16, reviewed five times, rejected four times, corrected after
-each, clean on the fifth round at `0f52d75`, and not accepted** — is the first step off that
-sequence rather than along it: a Godot playable shell
-over the same kernel, with a person answering one character's decisions. The shell changed no
-simulation behaviour. **Its second correction did**, deliberately: `cautious-vincent`'s baseline moved
-when corroboration targets were restricted to people the actor has heard of. The other four variants
-are unmoved. Current figures are in `REVIEW_LEDGER.md`; the account is in
-`milestones/009-godot-playable-shell.md`, Corrections 1–3.
+Milestone 009 — **implemented 2026-08-16, through five Codex rounds and one self-review, corrected
+after each, and not accepted** — is the first step off that sequence rather than along it: a Godot
+playable shell over the same kernel, with a person answering one character's decisions.
+**All five variants are byte-identical to milestone 008's accepted baseline**; the second correction
+moved `cautious-vincent` and the fourth moved it back, having found the cause a layer deeper. One
+viewpoint render differs from 008 — Marco's, which gains a line. Current figures are in
+`REVIEW_LEDGER.md`; the account is in `milestones/009-godot-playable-shell.md`, Corrections 1–4.
 
 006 established where the difficulty sat: the mechanisms worked and the scenario could not show them.
 007 was the scenario-reach answer to that. 008 then answered 007's own finding, and the answer
@@ -154,8 +153,8 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   character's own cognition and social state widened **only** by the holders of his organisation's
   `Organization.Offices` and `BossId`. No roster and no authority scan reaches a target.
 - **Whether an outfit whose boss cannot name his own soldiers is the right model.** The line is drawn
-  explicitly by milestone 009's third correction: a named post is knowledge — `Organization.Offices`
-  and `BossId` — and a headcount is not. The model has held that position since milestone 003, when
+  explicitly by milestone 009's third and fourth corrections: a named post is knowledge —
+  `Organization.Offices` and `BossId` — an encounter is knowledge, and a headcount is not. The model has held that position since milestone 003, when
   `IntelligenceWriter` recorded that "who else is in this outfit" is the kind of thing a boss can be
   wrong about, so following it was the conservative choice rather than a new decision. The consequence
   is visible: a soldier holding no office is unreachable for corroboration until somebody names him,

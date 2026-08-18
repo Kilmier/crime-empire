@@ -387,7 +387,16 @@ public sealed class RelationalConsequenceTests
                 bool fromConflict = world.AccountConflicts.Any(
                     x => x.ListenerId == c.Id && x.Conflict.SpeakerId == rel.OtherId);
 
-                Assert.True(moved || fromConflict,
+                // A recorded encounter is the third legitimate origin, added by milestone 009's
+                // fourth correction: Relations.Meet establishes that a man knows somebody exists
+                // without moving any dimension, so an all-zero relationship is now a real state and
+                // not automatically evidence of a creating read. The invariant is preserved rather
+                // than weakened — every such relationship must still be accounted for by something
+                // the run recorded, and a read creates no encounter.
+                bool fromEncounter = world.Encounters.Any(
+                    e => e.WhoId == c.Id && e.MetId == rel.OtherId);
+
+                Assert.True(moved || fromConflict || fromEncounter,
                     $"{c.Id} holds an all-zero relationship toward {rel.OtherId} that no recorded " +
                     "event accounts for, which means something created one by reading it.");
             }
@@ -399,16 +408,19 @@ public sealed class RelationalConsequenceTests
     /// of exactly the kind milestone 003's corroboration loop was, and the number is small enough
     /// that a change to it should be explained rather than absorbed.
     /// </summary>
-    /// <b>cautious-vincent fell from three to two on 2026-08-16</b>, and the lost conflict was one
-    /// the model should never have produced. Salvatore was asking Tommy for an account of the
-    /// grocery, and in this variant there is no violence, so nothing had ever put Tommy in
-    /// Salvatore's head — the corroboration generator was picking its target straight out of the
-    /// authoritative organisation roster. Tommy's honest answer contradicted what Salvatore held, and
-    /// that contradiction was the third conflict. It went when the question did. See
-    /// `milestones/009-godot-playable-shell.md`, Correction 2.
+    /// <b>cautious-vincent fell from three to two under Correction 2, and is back to three under
+    /// Correction 4.</b> Worth reading as one story rather than two moves. Salvatore asks Tommy for
+    /// an account of the grocery, and Correction 2 removed the question because nothing had ever put
+    /// Tommy in Salvatore's head — the generator was reading the organisation roster. That was the
+    /// right diagnosis of the generator and the wrong diagnosis of the scenario: Tommy had already
+    /// approached Salvatore with a question of his own, and the model simply never recorded that
+    /// being asked something makes you able to name the asker. `Relations.Meet` records it, the
+    /// question returns with a cause behind it, Tommy's honest answer contradicts what Salvatore
+    /// holds, and the third conflict is back. See `milestones/009-godot-playable-shell.md`,
+    /// Corrections 2 and 4.
     [Theory]
     [InlineData("baseline", 2)]
-    [InlineData("cautious-vincent", 2)]
+    [InlineData("cautious-vincent", 3)]
     [InlineData("watchful-boss", 2)]
     [InlineData("disloyal-vincent", 2)]
     [InlineData("resentful-tommy", 2)]

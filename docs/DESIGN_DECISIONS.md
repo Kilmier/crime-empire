@@ -263,6 +263,19 @@ settles nothing about presentation.
   comparing the player view against *that* while the generators used a wider set is how the leak
   survived a correction written to close it. The roster keeps its rank-blindness where it is still
   used; what is added is the knowledge limit.
+
+  **The rule is over every candidate's target, not the corroboration generator's.** Milestone 009's
+  third correction fixed the one generator that had been reported and left `Concede`, `Refuse` and
+  `ReportToSuperior` reading the trigger payload unchecked; the fourth found them, and the test now
+  covers every `ActionKind`.
+- **An encounter is knowledge.** Settled by milestone 009's fourth correction. Having a demand put to
+  you in your own shop, or a question put to you by another character, makes that man nameable —
+  `Relations.Meet` records it as a stored relationship at zero on every dimension. That is what
+  `Establish` produces before anything is set and what `SocialState.Others` already fed into the
+  acquaintance derivation, so it introduces no concept; it states something the model was relying on
+  and could not express. **Scoring is untouched** — an all-zero relationship reads exactly as an
+  absent one, so a man you have merely met is worth what a stranger is worth. `World.Encounters`
+  logs them so the "no relationship was created by reading one" invariant stays assertable.
 - **The boundary is opaque as well as immutable.** Every collection on a player-facing record is
   frozen in its `init` accessor, because an `IReadOnlyList<T>` backed by a `List<T>` is read-only by
   politeness — the same defect milestone 006 fixed on `IRelationship.Grievances`. `Claim` does not

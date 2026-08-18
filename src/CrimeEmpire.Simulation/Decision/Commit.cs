@@ -191,8 +191,14 @@ public static class Commit
                 var report = Reporting.Compose(world, actor, boss, c, ctx.Perceived);
                 Reporting.Deliver(world, report, boss);
 
+                // The note is what lets the player-facing occasion say why he is thinking without
+                // reading the authored cause. RoleReview covers five different schedulers, and a
+                // phrase keyed on the event kind alone told a man he was doing his rounds when
+                // somebody had just reported to him. Nothing in the decision path reads this value —
+                // Generators only tests for "asked-to-account" and "tribute-demanded".
                 world.Queue.Schedule(world.Now.AddDays(1), EventKind.RoleReview, boss.Id,
-                    $"{actor.Name} reported in");
+                    $"{actor.Name} reported in",
+                    new EventPayload { TargetId = actor.Id, Note = "reported-to" });
 
                 return report.Candor switch
                 {
@@ -226,6 +232,11 @@ public static class Commit
                 world.Record("request", actor.Id, other.Id,
                     $"{actor.Name} asked {other.Name} for his own account of {about}");
 
+                // Being asked is meeting the asker. Without this a man could be woken to answer
+                // somebody he had no way of naming, and the answer candidate would name him anyway.
+                Relations.Meet(other, actor.Id);
+                world.Encounters.Add(new Encounter(other.Id, actor.Id, world.Now));
+
                 // He asks; the other man decides for himself what to say. Waking the other
                 // character is the whole point — a request that produced an answer directly would
                 // be truth synchronisation wearing a question mark.
@@ -245,7 +256,8 @@ public static class Commit
             {
                 var boss = world.Get(c.TargetId!);
                 world.Queue.Schedule(world.Now.AddDays(1), EventKind.RoleReview, boss.Id,
-                    $"{actor.Name} asked for latitude in {agenda.Domain}");
+                    $"{actor.Name} asked for latitude in {agenda.Domain}",
+                    new EventPayload { TargetId = actor.Id, Note = "permission-sought" });
                 if (actor.Execution.Strategy is { } s)
                     Strategies.ScheduleNextStep(world, s, $"{s.Label}: waiting on {boss.Name}", TimeSpan.FromDays(5));
                 reconsideration.Add($"{boss.Name} answers, or does not");

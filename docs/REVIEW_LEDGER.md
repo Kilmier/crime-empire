@@ -183,16 +183,18 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured and reviewed clean, not accepted — milestone 009, through `0f52d75`
+### Measured, not accepted — milestone 009, through this commit
 
-**This section records measurements and a review outcome, and neither is an acceptance.** Milestone
-009 went through five review rounds, four of them rejections: `901d345` on three findings, `b4900aa`
-on one further P1, `c447a23` on that same P1 again plus a documentation contradiction, `49b71a6` on
-two documentation findings, and `0f52d75` clean. **Matt has recorded no acceptance of milestone 009**,
-and a clean review is not one — rule 3 above. Do not read anything below as verification in this
-file's sense.
+**This section records measurements, not an acceptance.** Milestone 009 went through five Codex
+rounds, four of them rejections: `901d345` on three findings, `b4900aa` on one further P1, `c447a23`
+on that same P1 again plus a documentation contradiction, `49b71a6` on two documentation findings,
+and `0f52d75` clean. **Matt has recorded no acceptance of milestone 009**, and a clean review is not
+one — rule 3 above.
 
-The figures are measured at `0f52d75`, which is where the checkpoint now stands.
+**A self-review at Matt's request then found four more**, and Correction 4 is the result. Two of
+them were the same P1 Codex had raised twice, still live on generators the fix had not reached and
+invisible to a regression test scoped to the one that had. That correction is beyond the checkpoint
+and unreviewed, as is `c0bb60f`. Figures below are measured there.
 
 Milestone 009 added a Godot playable shell and an engine-neutral session boundary, and changed no
 simulation behaviour doing it. Its first and third corrections changed none either. **Its second
@@ -204,30 +206,30 @@ him about.
   and `.godot` directory, not after `dotnet clean`, because `dotnet clean` on a multi-targeting
   solution is not obviously equivalent and the cheaper check is the one that has produced a false
   zero here twice.
-- Tests: **369 passed**, 0 failed (366 at `c447a23`; 353 at `b4900aa`; 343 at `901d345`; 305 before
+- Tests: **380 passed**, 0 failed (369 at `c0bb60f`; 353 at `b4900aa`; 343 at `901d345`; 305 before
   the milestone).
-- **29 of 30 viewpoint renders byte-identical** to `3f08685`, and **all 30 byte-identical to
-  `c447a23`** — neither the third correction nor `0f52d75` moved anything. The standing exception is
-  `cautious-vincent`/`salvatore`, which loses one line — `Tommy Nardo — it did not (6 Apr)`, an
-  account from a man he had never heard of and had gone and asked for.
+- **29 of 30 viewpoint renders byte-identical to `3f08685`.** The exception is Marco's, in all five
+  variants, which *gains* one line — `· Vincent Russo has not given him an account`. He can now name
+  the man who stood in his shop demanding money, and that man has told him nothing.
 
-**`cautious-vincent` has a new baseline, and it is the only variant that moved.**
+**Every variant is byte-identical to milestone 008's accepted baseline again.** `cautious-vincent` moved under Correction 2 and moved back under Correction 4; the table below is the accepted 008 state, which is also the current state.
 
 | Variant | Hash | Chosen actions | Decisions | Conflicts | Rel. read | Rel. decided |
 |---|---|---|---|---|---|---|
 | baseline | `6EB3F6B996CFC631` | `38B7183ED2EEF34A` | 38 | 2 | 19 | 2 |
-| **cautious-vincent** | **`96EAE1A72850F3D7`** | **`1F660F63735133FC`** | **19** | **2** | **11** | 3 |
+| cautious-vincent | `A8A1BBD12D5334C2` | `124E8FE932DD5A89` | 21 | 3 | 12 | 3 |
 | watchful-boss | `DCEDCFF27928266F` | `4F15ECD8B7A593BB` | 39 | 2 | 18 | 3 |
 | disloyal-vincent | `E164E0A74E2EC7DC` | `3D7F2B79BA4DC3E3` | 39 | 2 | 20 | 1 |
 | resentful-tommy | `982EC77BD5C253CB` | `18B507EBBE4FBA7E` | 38 | 2 | 19 | 3 |
 
-`cautious-vincent` was `A8A1BBD12D5334C2` / `124E8FE932DD5A89` with 21 decisions and 3 conflicts. On
-5 April 1987 Salvatore asked Tommy for an account of the grocery; in this variant there is no violence
-and nothing had ever named Tommy to him. Tommy's honest answer contradicted what Salvatore held, and
-that contradiction was the third conflict. The question, the answer, two decisions, two truth-log
-entries and the conflict all went together. The other four variants being untouched is the evidence
-that this is the defect leaving rather than a re-tuning. Full account in
-`milestones/009-godot-playable-shell.md`, Correction 2.
+Read Corrections 2 and 4 together rather than singly. Correction 2 took `cautious-vincent` to
+`96EAE1A72850F3D7` / `1F660F63735133FC`, 19 decisions and 2 conflicts, by removing Salvatore's
+5 April question to Tommy: nothing had ever named Tommy to him, and the generator was reading the
+organisation roster. Right about the generator, wrong about the scenario — **Tommy had already
+approached Salvatore with a question of his own**, and the model never recorded that being asked
+something makes you able to name the asker. Correction 4's `Relations.Meet` records it, the question
+returns with a cause behind it, and every figure goes back to 008. Full account in
+`milestones/009-godot-playable-shell.md`, Corrections 2 and 4.
 - **Four of the five variants are unchanged from the milestone 008 baseline below** on every figure —
   trace hash, chosen-action digest, decision, report, request and conflict counts, and both
   relationship columns. `cautious-vincent` is the exception and its new baseline is the table above.
@@ -238,10 +240,10 @@ that this is the defect leaving rather than a re-tuning. Full account in
   on denying it. Corrected under Correction 3. The failure is the one this file is named for: a claim
   that stayed true of the commit it was written about and false of the file it was sitting in.
 - **29 of 30 viewpoint renders are byte-identical to `3f08685`** — five variants × six characters,
-  diffed against a scratch worktree. The exception is `cautious-vincent`/`salvatore`, which loses one
-  line. That comparison is what matters for `IntelligenceWriter` being rewritten to consume
-  `PlayerView`'s snapshot rather than derive the source limit itself, and the one moved line is a
-  behaviour change rather than a rendering one.
+  diffed against a scratch worktree. That comparison is what matters for `IntelligenceWriter` being
+  rewritten to consume `PlayerView`'s snapshot rather than derive the source limit itself. The one
+  exception is Marco's view, which gains a line under Correction 4 — a behaviour change rather than
+  a rendering one.
 - Debug and Release both build; `Release` maps to the Godot project's `Debug` configuration, because
   `Godot.NET.Sdk` defines `Debug;ExportDebug;ExportRelease` and has no `Release`.
 
@@ -630,6 +632,24 @@ Added by milestone 009's third correction:
   has a relationship with everybody he could ask, so the narrow and wide sets coincide and any
   natural-run test passes whichever one each reader uses. The check is staged on a newcomer who has
   heard of nobody, where they differ.
+
+Added by milestone 009's fourth correction:
+
+- **Every candidate's target is somebody the actor could name — checked over every `ActionKind`, not
+  one.** Scoping this to `SeekCorroboration` left the same defect live in `Concede`, `Refuse` and
+  `ReportToSuperior` through a correction written to close it. *A test shaped like the bug it was
+  written for cannot find that bug's siblings.*
+- **An encounter registers.** Having a demand put to you, or a question, makes the other man
+  nameable — `Relations.Meet`, an all-zero relationship that scores exactly as a stranger does.
+  Logged in `World.Encounters` so `A_full_run_creates_no_relationships_by_reading` keeps its
+  invariant now that a legitimate route creates all-zero relationships.
+- **The occasion says which act woke him**, keyed on the event's structured note. One phrase for all
+  five `RoleReview` schedulers told a man he was doing his rounds when his soldier had just reported
+  in — not a leak but its inverse, withholding what he knew and asserting something false instead.
+- **The focus is phrased from his own state**, never passed through from `Agenda.Description`, which
+  carried `StrategyInstance.Label` and raw `PressureKind` names.
+- **The Godot self-test drives the interface through real button presses**, so the rebuild that
+  frees the button its own signal came from is exercised rather than reasoned about.
 
 ## Review checklist
 

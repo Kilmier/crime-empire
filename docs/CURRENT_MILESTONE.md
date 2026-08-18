@@ -7,10 +7,11 @@ do not create a separate handoff document.
 
 ## Status
 
-**No milestone is active. Do not start one.** Milestone 009 is implemented and **has been reviewed
-five times: four rejections, then a clean round at `0f52d75`.** Every finding is corrected.
-**Matt has recorded no acceptance of it**, and a clean review is not one — `REVIEW_LEDGER.md`'s
-rule 3. Milestone 010 has not been chosen and must not be inferred.
+**No milestone is active. Do not start one.** Milestone 009 is implemented and **has been through
+five Codex rounds — four rejections, then a clean one at `0f52d75` — and one self-review at Matt's
+request, which found four more defects.** All are corrected, in Correction 4. **Matt has recorded no
+acceptance of it**, and a clean review is not one — `REVIEW_LEDGER.md`'s rule 3. Milestone 010 has
+not been chosen and must not be inferred.
 
 Codex rejected `901d345` on three findings, all accepted by Matt: the pending decision passed
 `ScheduledEvent.Cause` through, so a delegated operation's failure or completion reached its owner
@@ -33,32 +34,40 @@ findings**: the canon documents still described the live rule as the rejected se
 left it, naming `HeardOf` rather than `KnownTo`, and the matching source comments with it. Accepted,
 and corrected by `0f52d75` — which Codex then reviewed clean.
 
-**Every round is corrected, and each of the three code rounds is pinned by a mutation check.** Full
-account in `docs/milestones/009-godot-playable-shell.md`, Corrections 1–3; `0f52d75` was
-documentation and source comments only and has no numbered correction of its own.
+**A self-review then found four more, and two of them were that same P1 a third time.** The belief
+limit had been applied to the corroboration generator alone, so `Concede`, `Refuse` and
+`ReportToSuperior` still named people the actor could not name — and the regression test written for
+it was scoped to `SeekCorroboration`, so it could not see them. Correction 4 fixes the root cause:
+an encounter now registers. It also stops the occasion asserting a false reason for most `RoleReview`
+wakes, stops `Focus` carrying `StrategyInstance.Label`, and makes the Godot self-test press real
+buttons instead of calling the session behind the interface's back.
+
+**Every round is corrected, and each code round is pinned by a mutation check.** Full account in
+`docs/milestones/009-godot-playable-shell.md`, Corrections 1–4; `0f52d75` was documentation and
+source comments only and has no numbered correction of its own.
 
 Milestones 001–008 are complete and accepted. The most recent, **009 — Godot Playable Shell**, is
-implemented and closed. It has been **reviewed five times, rejected four times, and corrected after
-each; the fifth round returned no findings, and no version of it has been accepted by Matt.** It
+implemented and closed. It has been **through five Codex rounds and one self-review, rejected on
+nine findings in total and corrected after each; no version of it has been accepted by Matt.** It
 added a Godot 4.7.1 .NET project under
 `src/CrimeEmpire.Godot`, an engine-neutral `SimulationSession` boundary, and a prepare/resolve split
 in the decision pipeline so a person can answer one character's decisions through the same commit
 path an NPC uses. Full record, including Matt's authorized scope reproduced verbatim and thirteen
 rulings, is in `docs/milestones/009-godot-playable-shell.md`.
 
-**The shell itself changed no simulation behaviour, and neither did the first or third correction,
-nor `0f52d75`. The second one does, deliberately.** `cautious-vincent` moved — trace `A8A1BBD12D5334C2` →
-`96EAE1A72850F3D7`, decisions 21 → 19, conflicts 3 → 2 — because Salvatore had been putting a
-question to a man nothing in his head established. The other four variants are byte-identical to
-milestone 008's accepted baseline throughout. Tests went 305 → 343 → 353 → 366 → 369. Current figures
-in `REVIEW_LEDGER.md`.
+**All five variants are byte-identical to milestone 008's accepted baseline.** The second correction
+moved `cautious-vincent` and the fourth moved it back, for a reason worth reading as one story:
+Salvatore was asking a man nothing in his head established, and the deeper cause was that Tommy
+having already approached him was never recorded. `Relations.Meet` records it, and the question
+returns with a cause behind it. One viewpoint render differs from 008 — Marco's, which *gains* a
+line, because he can now name the man who stood in his shop. Tests went 305 → 343 → 353 → 366 → 369
+→ 380. Current figures in `REVIEW_LEDGER.md`.
 
 `REVIEW_LEDGER.md` alone defines review coverage; consult its checkpoint directly rather than
-inferring status from prose anywhere else, including this file. **The checkpoint now stands at
+inferring status from prose anywhere else, including this file. **The checkpoint stands at
 `0f52d75`**, the ordered backlog having been worked through from `3f08685` — which was itself
-reviewed and rejected on one P2, and whose correction is what carried the checkpoint forward. One
-commit is beyond it: the reconciliation that moved it, which has no row and needs reviewing in its
-turn.
+reviewed and rejected on one P2. Two commits are beyond it and unreviewed: `c0bb60f`, the
+reconciliation that moved the checkpoint, and Correction 4. Review takes them in that order.
 
 ## What milestone 009 found, because it should shape the next scope decision
 
@@ -79,7 +88,8 @@ independently is this project's signature failure — a distinction drawn in one
 the way to the next — and the divergence would have stayed invisible until one of them leaked.
 `PlayerView.Build` now owns it, the console renderer became a layout over its snapshot, and all 30
 viewpoint renders were byte-identical across that change, which is what made it a refactor rather
-than a rewrite. (One has moved since, under Correction 2 — a behaviour change, not a rendering one.)
+than a rewrite. (Marco's has moved since, under Correction 4 — a behaviour change, not a rendering
+one, and a gain: he can now name the man who stood in his shop.)
 
 **And the fixture answers a player differently in four choices.** Taking the first offered option
 every time, Vincent asks Tommy for an account, twice asks Salvatore to relax the no-violence rule,
@@ -95,11 +105,16 @@ held out against force" on a day nobody had told him anything. The replacement e
 closed vocabulary, silent by default, so being wrong now requires adding an entry rather than merely
 adding an event.
 
-Question to carry: **is this claim true of the thing I am saying it about, or only of the instances of
-it I happened to look at?** And its sibling, which the correction also turned on: **is this a rule the
-type system keeps, or a rule somebody has to remember?** Milestone 009 got `World` out of the UI's
-reach with `internal` and console text out with a project reference; it did not get `Cast.Build` out
-of reach, and said so.
+**And the same P1 was fixed three times before it was fixed at the root.** Each round was right about
+the generator in front of it and scoped to that generator, and the test was then scoped to the fix —
+so a test shaped like the bug could not find the bug's siblings, and two were sitting in the same
+file. The fourth correction stopped patching generators and asked why the knowledge was missing: an
+encounter was not recorded anywhere.
+
+Questions to carry. **Is this claim true of the thing I am saying it about, or only of the instances
+of it I happened to look at?** **Is this a rule the type system keeps, or one somebody has to
+remember?** And the one this pass added: **what else is of this kind, and does my test look for the
+kind or for the instance?**
 
 ## Carried forward
 
@@ -109,15 +124,15 @@ touched none of it.**
 
 New from milestone 009:
 
-- **Membership is not knowledge; a named office is.** **Settled by the third correction, and the
-  boundary is implemented** — `Acquaintance.KnownTo` is the one derivation both `PlayerView` and
-  candidate generation read: what the character holds in cognition and social state, widened only by
-  the holders of his own organisation's `Organization.Offices` and `BossId`. Neither
-  `Generators.FromRelationship` nor anything else selects a target from the organisation roster any
-  more, and no authority scan stands in for an office. **What is carried forward is the design
-  question, not the rule**: a soldier holding no office is unreachable for corroboration until
-  somebody actually names him, which in `cautious-vincent` never happens for Tommy, and whether an
-  outfit whose boss cannot name his own soldiers is the right model is unanswered.
+- **Membership is not knowledge; a named office is, and so is an encounter.** **Settled by the third
+  and fourth corrections, and implemented** — `Acquaintance.KnownTo` is the one derivation both
+  `PlayerView` and candidate generation read: what the character holds in cognition and social state,
+  widened only by the holders of his own organisation's `Organization.Offices` and `BossId`. No
+  generator selects a target from the roster, and no authority scan stands in for an office.
+  `Relations.Meet` adds the third route: a man who put a demand or a question to you is a man you can
+  name. **What is carried forward is the design question, not the rule**: a soldier holding no office
+  and who has approached nobody stays unnameable, and whether an outfit whose boss cannot name his
+  own soldiers is the right model is unanswered.
 - **The timing of a pause is observable even when the occasion is not.** The controlled character is
   woken when a delegated operation blocks or completes, so a player sees him stop on the day it
   happened. Closing it means not waking him, which changes autonomous behaviour.

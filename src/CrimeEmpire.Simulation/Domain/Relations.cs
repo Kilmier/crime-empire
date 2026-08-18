@@ -211,6 +211,35 @@ public static class Relations
     }
 
     // ---------------------------------------------------------------- ordinary movement
+    /// <summary>
+    /// These two have met. Establishes that the subject knows this person exists, and moves no
+    /// dimension.
+    ///
+    /// <b>Why a relationship record and not a claim.</b> A stored all-zero relationship already means
+    /// "we have met and nothing has passed between us" — it is what <see cref="Establish"/> produces
+    /// before any dimension is set, and it is why <see cref="SocialState.Others"/> is one of the
+    /// inputs to <c>Acquaintance.HeardOf</c>. Making the meeting explicit therefore adds no new
+    /// concept; it records something the model was already relying on and had no way to state.
+    ///
+    /// <b>What it fixes.</b> A man could put a demand to a shopkeeper in his own shop, or a question
+    /// to another character, and the person on the receiving end had nothing in his head naming the
+    /// man in front of him. Candidate generation then offered him "pay what Vincent Russo is asking"
+    /// about somebody the player-facing view would not name. Milestone 009's fourth correction; the
+    /// review before it fixed the same defect in the corroboration generator alone.
+    ///
+    /// Scoring is untouched: every dimension reads zero, which is exactly what
+    /// <see cref="Absent"/> reads, so a met-but-otherwise-unconnected person is worth the same to
+    /// <c>Utility</c> as a stranger. What changes is that he can be named.
+    ///
+    /// Deliberately not reciprocal. Relationships are directional, and the two sides of an encounter
+    /// do not always both register it — call it once per side that actually noticed.
+    /// </summary>
+    public static void Meet(Character subject, string otherId)
+    {
+        if (subject.Id == otherId) return;
+        Writable(subject.Social.Ensure(otherId));
+    }
+
     /// <summary>Somebody frightened him. Used by coercion resolution.</summary>
     public static void Frighten(Character subject, string ofId, double delta)
     {

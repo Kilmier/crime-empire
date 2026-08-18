@@ -30,6 +30,17 @@ public sealed class Business
 /// </summary>
 public sealed record PerceivedConflict(string ListenerId, AccountConflict Conflict, DateTime At);
 
+/// <summary>
+/// One encounter: this character now knows that one exists, because they met.
+///
+/// Developer/test state. No decision consults it — the consequence lives on the relationship
+/// <see cref="Relations.Meet"/> establishes — and it exists so the run-wide invariant "no relationship
+/// was created by reading one" can still be asserted directly now that a legitimate route creates
+/// all-zero relationships. Same footing, and the same reasoning, as
+/// <see cref="PerceivedConflict"/>.
+/// </summary>
+public sealed record Encounter(string WhoId, string MetId, DateTime At);
+
 /// <summary>Authoritative record of what actually happened. Never consulted by decision-making.</summary>
 public sealed record WorldEvent(
     long Id,
@@ -90,6 +101,12 @@ public sealed class World
     /// and test state only — see <see cref="PerceivedConflict"/>.
     /// </summary>
     public List<PerceivedConflict> AccountConflicts { get; } = new();
+
+    /// <summary>
+    /// Every encounter that established one character knows another exists, in order. Developer and
+    /// test state only — see <see cref="Encounter"/>.
+    /// </summary>
+    public List<Encounter> Encounters { get; } = new();
 
     private long _nextWorldEventId = 1;
     private long _nextAssignmentId = 1;

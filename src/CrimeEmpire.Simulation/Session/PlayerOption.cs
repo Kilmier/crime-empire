@@ -74,16 +74,27 @@ internal static class PlayerOption
         _ => "let it lie",
     };
 
-    /// <summary>The course of action itself, without repeating how it is being pursued.</summary>
-    private static string Work(Candidate c, Func<string, string> name) => c.Strategy switch
-    {
-        StrategyKind.SecureTribute when c.TargetId is { } t => $"getting {name(t)} to pay",
-        StrategyKind.SecureTribute => "the collection",
-        StrategyKind.ConcealIncident => "covering it up",
-        StrategyKind.InvestigateIncident when c.TargetId is { } t => $"looking into {name(t)}",
-        StrategyKind.InvestigateIncident => "the investigation",
-        _ => "what he started",
-    };
+    private static string Work(Candidate c, Func<string, string> name)
+        => Work(c.Strategy, c.TargetId, name);
+
+    /// <summary>
+    /// The course of action itself, without repeating how it is being pursued.
+    ///
+    /// Internal and taking the fields rather than a candidate, so <see cref="PlayerOccasion"/> can
+    /// describe a running strategy the same way an option describes one. The alternative was a second
+    /// phrasing of the same thing, which is how <c>StrategyInstance.Label</c> — a developer string
+    /// carrying raw ids and an empty domain — reached the player as the decision's focus.
+    /// </summary>
+    internal static string Work(StrategyKind? strategy, string? targetId, Func<string, string> name)
+        => strategy switch
+        {
+            StrategyKind.SecureTribute when targetId is { } t => $"getting {name(t)} to pay",
+            StrategyKind.SecureTribute => "the collection",
+            StrategyKind.ConcealIncident => "covering it up",
+            StrategyKind.InvestigateIncident when targetId is { } t => $"looking into {name(t)}",
+            StrategyKind.InvestigateIncident => "the investigation",
+            _ => "what he started",
+        };
 
     private static string Start(Candidate c, Func<string, string> name) => c.Strategy switch
     {

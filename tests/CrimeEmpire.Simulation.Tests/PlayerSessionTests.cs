@@ -677,23 +677,86 @@ public sealed class PlayerSessionTests
 
         foreach (var kind in Enum.GetValues<EventKind>())
         {
-            string? occasion = PlayerOccasion.For(kind);
+            string? occasion = PlayerOccasion.For(Wake(kind));
             if (admitted.Contains(kind)) Assert.False(string.IsNullOrEmpty(occasion), $"{kind} lost its occasion");
             else Assert.Null(occasion);
         }
 
-        Assert.Null(PlayerOccasion.For(EventKind.StrategyBlocked));
-        Assert.Null(PlayerOccasion.For(EventKind.StrategyComplete));
+        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyBlocked)));
+        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyComplete)));
+    }
+
+    /// <summary>
+    /// A RoleReview that somebody caused says so, and says which act it was.
+    ///
+    /// Before milestone 009's fourth correction all five schedulers of this kind produced "he came
+    /// back round to his own patch", so a man who had just been reported to was told he was doing his
+    /// rounds. Not a leak — the opposite, and worse: it withheld something he certainly knew and
+    /// substituted a specific false reason. Keyed on the payload note rather than the authored cause,
+    /// so no scheduler's wording crosses the boundary either way.
+    /// </summary>
+    [Theory]
+    [InlineData("asked-to-account", "somebody has put a question to him")]
+    [InlineData("reported-to", "somebody has reported to him")]
+    [InlineData("permission-sought", "somebody has asked him for room to move")]
+    [InlineData(null, "he came back round to his own patch")]
+    public void A_role_review_somebody_caused_says_which_act_it_was(string? note, string expected)
+        => Assert.Equal(expected, PlayerOccasion.For(Wake(EventKind.RoleReview, note)));
+
+    /// <summary>
+    /// The focus is derived from the character's own state, never passed through from the agenda's
+    /// description.
+    ///
+    /// Two kinds used to pass developer text: <c>ContinueCommitment</c> carried
+    /// <c>StrategyInstance.Label</c> — raw ids, a raw enum and the empty-domain defect — and
+    /// <c>RelievePressure</c> carried a <c>PressureKind</c> enum name.
+    /// </summary>
+    [Fact]
+    public void The_focus_is_phrased_from_his_own_state_not_from_the_agenda_text()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+        string Name(string id) =>
+            world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id;
 
         // A RespondToTrigger agenda's description *is* the trigger cause, so it never passes even on
-        // an admitted kind — the same value arriving through a second field is the shape this whole
-        // correction is about.
+        // an admitted kind — the same value arriving through a second field is the shape the third
+        // correction was about.
         var respond = new Agenda(AgendaKind.RespondToTrigger, "some authored cause", "why");
-        Assert.Null(PlayerOccasion.Focus(respond, EventKind.Incident));
+        Assert.Null(PlayerOccasion.Focus(vincent, respond, Wake(EventKind.Incident), Name));
 
+        // What he was briefed on passes: it is prose, and he was told it.
         var assignment = new Agenda(AgendaKind.FulfilAssignment, "restore the harbour tribute", "why");
-        Assert.Equal("restore the harbour tribute", PlayerOccasion.Focus(assignment, EventKind.AssignmentDelivered));
-        Assert.Null(PlayerOccasion.Focus(assignment, EventKind.StrategyBlocked));
+        Assert.Equal("restore the harbour tribute",
+            PlayerOccasion.Focus(vincent, assignment, Wake(EventKind.AssignmentDelivered), Name));
+        Assert.Null(PlayerOccasion.Focus(vincent, assignment, Wake(EventKind.StrategyBlocked), Name));
+
+        // A running strategy is described the way his own options describe it — never as its Label.
+        vincent.Execution.Strategy = new StrategyInstance
+        {
+            OwnerId = vincent.Id,
+            LocalSequence = 0,
+            Kind = StrategyKind.ConcealIncident,
+            Domain = "",
+            TargetId = Cast.Grocery,
+            Method = CoercionMethod.Persuade,
+            StartedAt = world.Now,
+            Deadline = world.Now.AddDays(30),
+        };
+        var ongoing = new Agenda(AgendaKind.ContinueCommitment, $"ongoing: {vincent.Execution.Strategy.Label}", "why");
+        string? focus = PlayerOccasion.Focus(vincent, ongoing, Wake(EventKind.RoleReview), Name);
+
+        Assert.Equal("covering it up", focus);
+        Assert.DoesNotContain("ConcealIncident", focus!, StringComparison.Ordinal);
+        Assert.DoesNotContain(Cast.Grocery, focus!, StringComparison.Ordinal);
+
+        // And a pressure by what it is, not by its enum name.
+        vincent.Motivations.AddPressure(PressureKind.LegalExposure, 0.9);
+        var pressing = new Agenda(AgendaKind.RelievePressure, "pressure: LegalExposure", "why");
+        string? pressure = PlayerOccasion.Focus(vincent, pressing, Wake(EventKind.RoleReview), Name);
+
+        Assert.Equal("how exposed he is", pressure);
+        Assert.DoesNotContain("LegalExposure", pressure!, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -1076,13 +1139,20 @@ public sealed class PlayerSessionTests
 
                 foreach (var candidate in decision.Generated)
                 {
-                    if (candidate.Kind != ActionKind.SeekCorroboration || candidate.TargetId is not { } target)
-                        continue;
+                    // EVERY action kind, not one of them. Scoping this to SeekCorroboration is what
+                    // let the same defect stay live in Concede, Refuse and ReportToSuperior through a
+                    // correction written to close it: the generator that had been caught was the only
+                    // one the test could see.
+                    if (candidate.TargetId is not { } target) continue;
+
+                    // A business is not a person — its existence is visible from the street, which is
+                    // why GeneratorContext.VisibleTargets exists.
+                    if (world.Find(target) is null || target == actor.Id) continue;
 
                     targetsSeen++;
                     Assert.True(nameable.Contains(target),
-                        $"{actor.Id} was offered a question to {target} on {decision.At:yyyy-MM-dd}, " +
-                        "and the player view would not name that man");
+                        $"{actor.Id} was offered a {candidate.Kind} naming {target} on " +
+                        $"{decision.At:yyyy-MM-dd}, and the player view would not name that man");
                 }
             }
         }
@@ -1091,7 +1161,7 @@ public sealed class PlayerSessionTests
             CheckNewDecisions();
 
         CheckNewDecisions();
-        Assert.True(targetsSeen > 0, "no corroboration candidate was generated, so this proves nothing");
+        Assert.True(targetsSeen > 0, "no candidate named a person, so this proves nothing");
     }
 
     /// <summary>
@@ -1219,6 +1289,67 @@ public sealed class PlayerSessionTests
         Assert.DoesNotContain(stranger.Id, PlayerView.KnownPeople(world, salvatore));
     }
 
+    /// <summary>
+    /// Meeting somebody makes him nameable and moves nothing else.
+    ///
+    /// The primitive milestone 009's fourth correction added. A man who has had a demand put to him
+    /// in his own shop, or a question put to him by another character, could not name the person in
+    /// front of him — nothing in the model recorded the encounter — while candidate generation
+    /// offered him "pay what Vincent Russo is asking" regardless.
+    ///
+    /// The second half matters as much as the first: an all-zero relationship must score exactly as a
+    /// stranger does, or "we have met" would quietly become "we are connected".
+    /// </summary>
+    [Fact]
+    public void Meeting_somebody_makes_him_nameable_and_moves_nothing_else()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var marco = world.Get("marco");
+
+        Assert.DoesNotContain("vincent", Acquaintance.KnownTo(world, marco));
+
+        Relations.Meet(marco, "vincent");
+
+        Assert.Contains("vincent", Acquaintance.KnownTo(world, marco));
+        Assert.Contains("vincent", PlayerView.KnownPeople(world, marco));
+
+        var rel = marco.Social.Toward("vincent");
+        Assert.Equal(0, rel.Trust);
+        Assert.Equal(0, rel.Fear);
+        Assert.Equal(0, rel.Obligation);
+        Assert.Empty(rel.Grievances);
+
+        // And it says nothing about him — the player view lists attitudes only where something moved.
+        Assert.DoesNotContain(PlayerView.Build(world, marco.Id, world.Now).Attitudes,
+            a => a.PersonId == "vincent");
+
+        // Meeting the same man again is not a second event, and meeting yourself is not one at all.
+        Relations.Meet(marco, "vincent");
+        Relations.Meet(marco, marco.Id);
+        Assert.Single(marco.Social.Others);
+    }
+
+    /// <summary>
+    /// The encounter actually fires in the accepted scenario, on the man it was found for.
+    ///
+    /// A staged proof of the primitive is not a proof that anything calls it. Marco has a demand put
+    /// to him in every variant, and afterwards he can name the man who put it.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(AllVariants))]
+    public void The_shopkeeper_can_name_the_man_who_stood_in_his_shop(string variant)
+    {
+        var world = Cast.Build(Seed, variant);
+        Runner.Run(world, End);
+
+        var marco = world.Get("marco");
+        var met = world.Encounters.Where(e => e.WhoId == marco.Id).ToList();
+
+        Assert.NotEmpty(met);
+        foreach (var encounter in met)
+            Assert.Contains(encounter.MetId, PlayerView.KnownPeople(world, marco));
+    }
+
     /// <summary>A plain wake, for staging a deliberation without running a whole scenario.</summary>
     private static ScheduledEvent Wake(World world, Character actor) => new()
     {
@@ -1227,6 +1358,17 @@ public sealed class PlayerSessionTests
         Kind = EventKind.RoleReview,
         OwnerId = actor.Id,
         Cause = "staged: his patch came up for review",
+    };
+
+    /// <summary>A bare event of one kind, for exercising the occasion vocabulary directly.</summary>
+    private static ScheduledEvent Wake(EventKind kind, string? note = null) => new()
+    {
+        Id = 9_001,
+        Time = Cast.Start,
+        Kind = kind,
+        OwnerId = Controlled,
+        Cause = "staged: an authored cause that must never reach a player",
+        Payload = new EventPayload { Note = note },
     };
 
     // ================================================================= helpers

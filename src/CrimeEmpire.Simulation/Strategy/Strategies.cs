@@ -183,6 +183,14 @@ public static class Strategies
                     new Claim(ClaimKind.BusinessRefusesTribute, business.Id),
                     Stance.Knows, 1.0, SourceKind.Participant, business.OwnerId, world.Now);
 
+                // And he has now met the man who put it to him. Somebody standing in your shop
+                // asking for money is somebody you can name afterwards, and until this line the
+                // model had no way to say so — the owner's own Concede and Refuse options named a
+                // man nothing in his head established. Directional: the executor already knows who
+                // he leaned on, because he chose the target.
+                Relations.Meet(world.Get(business.OwnerId), executor.Id);
+                world.Encounters.Add(new Encounter(business.OwnerId, executor.Id, world.Now));
+
                 world.Queue.Schedule(world.Now, EventKind.Incident, business.OwnerId,
                     $"{executor.Name} demanded payment",
                     new EventPayload { TargetId = executor.Id, Note = "tribute-demanded" });

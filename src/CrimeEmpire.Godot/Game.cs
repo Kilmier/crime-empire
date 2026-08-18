@@ -416,22 +416,32 @@ public partial class Game : Control
 
         // Bounded rather than "until done": a loop that could not terminate would hang a headless
         // verification run instead of failing it.
+        //
+        // EVERY STEP GOES THROUGH A BUTTON. Milestone 009's fourth correction: this loop used to call
+        // the session directly and then call Refresh itself, so the one genuinely fiddly path in the
+        // interface — a button's Pressed handler resolving a choice, and the rebuild then detaching
+        // and freeing that very button — had never run. A headless check that bypasses the widgets
+        // proves the session works, which was never the thing in doubt.
         for (int guard = 0; guard < 2000 && session.Date < end; guard++)
         {
+            string label;
+
             if (session.Status == SessionStatus.AwaitingChoice)
             {
                 var pending = session.Pending!;
                 GD.Print($"CE-SELFTEST decision {pending.At:yyyy-MM-dd} {pending.ActorId} " +
-                         $"options={pending.Options.Count} taking=\"{pending.Options[0].Id}\"");
-                session.Choose(pending.Options[0].Id);
+                         $"options={pending.Options.Count} taking=\"{pending.Options[0].Description}\"");
+                label = pending.Options[0].Description;
                 choices++;
             }
             else
             {
-                session.AdvanceDays(7);
+                label = "Advance a week";
             }
 
-            Refresh();
+            if (!Press(label))
+                throw new InvalidOperationException($"no button reading \"{label}\" is on screen");
+
             if (session.Status == SessionStatus.AwaitingChoice) decisionScreens++;
             Collect(this, transcript);
         }
@@ -458,6 +468,30 @@ public partial class Game : Control
             "CE-SELFTEST FAILED — the run did not reach the end of the scenario having rendered and " +
             "answered a decision, so it proves nothing");
         GetTree().Quit(1);
+    }
+
+    /// <summary>
+    /// Presses the button reading this text, as a person would, and lets its own handler do the rest
+    /// — including the rebuild that frees the button the signal came from.
+    /// </summary>
+    private bool Press(string text)
+    {
+        var button = FindButton(this, text);
+        if (button is null) return false;
+
+        button.EmitSignal(BaseButton.SignalName.Pressed);
+        return true;
+    }
+
+    private static Button? FindButton(Node node, string text)
+    {
+        if (node is Button b && !b.Disabled && b.Text == text) return b;
+
+        foreach (var child in node.GetChildren())
+            if (FindButton(child, text) is { } found)
+                return found;
+
+        return null;
     }
 
     private static bool SelfTestRequested()

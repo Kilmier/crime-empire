@@ -749,3 +749,154 @@ position since milestone 003, when `IntelligenceWriter` first recorded that "who
 outfit" is the kind of thing a boss can be wrong about. Following it here was the conservative
 choice, not a new decision. Whether it is *correct* is a design question this correction deliberately
 does not answer, and it is in `ROADMAP.md`.
+
+---
+
+## Correction 4 — an encounter is knowledge, and the decision panel stops guessing
+
+Appended 2026-08-16. Nothing above is rewritten.
+
+A self-review pass at Matt's request, before acceptance. Four defects, found by dumping what a player
+actually sees at every decision across all five variants and all six characters rather than by
+re-reading the code. **The first is the same P1 Codex raised twice, still live on two other
+generators, and the test written to close it could not see them.**
+
+### Finding 1 — the belief limit stopped at one generator
+
+Correction 3 restricted corroboration targets to people the actor could name. It did not touch
+`Concede`, `Refuse` or `ReportToSuperior`, which take their target from the trigger payload with no
+check at all. Eleven instances in the accepted scenario, in every variant:
+
+```
+baseline          1987-03-08 marco     Concede           names vincent — not in KnownTo
+cautious-vincent  1987-04-03 salvatore ReportToSuperior  names tommy   — not in KnownTo
+```
+
+Marco was offered *"pay what Vincent Russo is asking"* about a man nothing in his head established.
+
+**And the regression test written for Correction 3 was scoped to
+`ActionKind.SeekCorroboration`.** It checked the one generator that had been caught. That is the
+ledger's *fix that stops halfway along the path a value travels*, committed inside the correction
+that names the pattern — and then hidden by a test shaped like the bug.
+
+**The root cause is single, and it is not a missing filter.** Being spoken to, or having a demand put
+to you in your own shop, did not register anywhere. `Acquaintance` reads cognition, social state and
+offices; an encounter is none of the three, so the model had no way to say that a man standing in
+front of you is a man you can name afterwards.
+
+`Relations.Meet` records it: a stored relationship at zero on every dimension, which is what
+`Establish` produces before anything is set and what `SocialState.Others` already feeds into
+`HeardOf`. It adds no concept — it states something the model was already relying on. **Scoring is
+untouched**, because an all-zero relationship reads exactly as `Absent` does; what changes is that he
+can be named. Called at the two places an encounter happens: the demand in `AdvanceTribute`, and
+being asked in `Commit.SeekCorroboration`.
+
+`World.Encounters` logs them, on the same footing and for the same reason as
+`World.AccountConflicts` — so `A_full_run_creates_no_relationships_by_reading` can still assert its
+invariant now that a legitimate route creates all-zero relationships. The invariant is preserved, not
+weakened: every such relationship must still be accounted for by something the run recorded, and a
+read records no encounter.
+
+**The test is now over every `ActionKind`, not one.**
+
+### The baselines go back to milestone 008, and Correction 2 is undone
+
+**All five variants are byte-identical to milestone 008's accepted state.** `cautious-vincent`
+returns to `A8A1BBD12D5334C2` / `124E8FE932DD5A89`, 21 decisions, 3 conflicts — exactly the figures
+Correction 2 moved away from.
+
+That is worth reading as one story. Correction 2 removed Salvatore's question to Tommy because
+nothing had put Tommy in Salvatore's head, and that was the right diagnosis of the generator and the
+wrong diagnosis of the scenario. **Tommy had already approached Salvatore with a question of his
+own.** The model simply never recorded that being asked something makes you able to name the asker.
+With the encounter recorded, the question returns with a cause behind it, Tommy's honest answer
+contradicts what Salvatore holds, and the third conflict is back.
+
+So the original behaviour was right, its reason was wrong, Correction 2 removed both, and this
+correction restores the behaviour on a reason that holds. `REVIEW_LEDGER.md`'s baseline table is
+updated and the intermediate state kept on the record rather than flattened.
+
+**One viewpoint render moves against milestone 008**, in all five variants, and it is a gain:
+Marco's view gains `· Vincent Russo has not given him an account`. He can now name the man who stood
+in his shop, and that man has told him nothing.
+
+### Finding 2 — the occasion was false for most `RoleReview` wakes
+
+Twelve of the twenty distinct rows a player can see read:
+
+```
+occasion=he came back round to his own patch
+real cause=Tommy Nardo reported in
+```
+
+`RoleReview` has five schedulers — one periodic, four on which somebody has just spoken to him — and
+Correction 1's vocabulary was keyed on the event kind alone. **This is not a leak; it is the inverse,
+and worse for it.** It withheld something the character certainly knew and put a specific false
+reason in its place, and the withheld part is the most decision-relevant context there is: *somebody
+has just put a question to you* is precisely why you would answer it.
+
+The same error shape as ruling 7: one phrase asserted about a set whose members differ.
+
+Two schedulers gained a structured `Note` (`reported-to`, `permission-sought`; `asked-to-account`
+already had one) and the occasion is keyed on it. Behaviour-neutral — `Generators` tests `Note` only
+for `"asked-to-account"` and `"tribute-demanded"`, and nothing else reads it. The phrases name
+nobody, because the options already name whoever spoke.
+
+### Finding 3 — `Focus` still carried developer text
+
+```
+focus=ongoing: ConcealIncident(, target=bellini-grocery, method=Persuade)
+focus=pressure: LegalExposure
+```
+
+Raw ids, raw enums, and the empty-domain defect already on the carried-forward list — in front of a
+player. Correction 3 built `PlayerOption` to stop exactly this for options and left `Focus` passing
+`Agenda.Description` verbatim for four agenda kinds, two of which are developer-shaped.
+
+Both are now phrased from the typed values, and the strategy phrasing is `PlayerOption.Work` — the
+same one the options use, made `internal` rather than duplicated. The two kinds that still pass their
+description through are prose about him that he holds: the objective he was briefed on, and his own
+standing responsibility.
+
+### Finding 4 — the Godot self-test never pressed a button
+
+It called the session directly and then called `Refresh` itself, so the one genuinely fiddly path in
+the interface — a button's `Pressed` handler resolving a choice, and the rebuild then detaching and
+freeing that very button — **had never run**. A headless check that bypasses the widgets proves the
+session works, which was never the thing in doubt.
+
+It now finds the button by its label and emits `Pressed`, and lets the handler do the rest. The path
+is sound; it had simply never been exercised.
+
+### Mutation checks
+
+| Mutation | Caught by |
+|---|---|
+| Drop the encounter at the demand | `Every_generated_target_is_somebody_the_player_view_would_name` (all 5) and `The_shopkeeper_can_name_the_man_who_stood_in_his_shop` |
+| One phrase for every `RoleReview` again | `A_role_review_somebody_caused_says_which_act_it_was` (3 of 4 cases) |
+| `Focus` passes the agenda description through again | `The_focus_is_phrased_from_his_own_state_not_from_the_agenda_text` |
+
+### Verification
+
+Measured after deleting every `bin`, `obj` and `.godot` directory.
+
+- Build **0 warnings, 0 errors** across four projects. Tests **380 passed**, 0 failed (374 mid-pass,
+  369 at `c0bb60f`).
+- **All five variants byte-identical to milestone 008's accepted baseline** — hashes, chosen-action
+  digests, decision counts and conflict counts. `--compare` five distinct traces, five distinct
+  chosen-action sequences. All deterministic on repeated runs.
+- **29 of 30 viewpoint renders byte-identical to `3f08685`**; Marco's gains one line, in all five
+  variants, described above.
+- Godot headless self-test exits 0, makes 4 choices **through real button presses**, renders 4
+  decision screens, and its UI text contains no hidden fact, counter, decimal, scheduler wording,
+  strategy label, enum name, or the false "came back round to his own patch".
+
+### The lesson
+
+Three corrections in, the pattern is not that the fixes were wrong — each was right about the
+generator in front of it. **The pattern is that each fix was scoped to the instance that had been
+reported, and the test was then scoped to the fix.** A test shaped like the bug it was written for
+cannot find the bug's siblings, and there were two sitting in the same file.
+
+Carrying question, and it is a different one from the last three: **what else is of this kind, and
+does my test look for the kind or for the instance?**

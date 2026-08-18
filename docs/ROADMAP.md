@@ -261,6 +261,16 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
 4. ~~**Godot / .NET compatibility spike**~~ — **subsumed by milestone 009**, which settled the
    constraint (the engine hosts .NET 8) and built the shell in the same pass rather than spiking it
    separately.
+5b. **Scenario reach II** — **planned as milestone 012 on 2026-08-18, not authorized to begin.** The
+   scenario is the binding constraint again, and this time it is measured: milestones 010 and 011
+   produced five findings of the form *the fixture cannot exercise this*. The root cause is one thing.
+   `OrgCondition.RevenueLoss` sits at **0.90** in every variant from early on and never falls, the
+   boss issues three assignments all aimed at the one shop his capo has watched start paying, and
+   **nobody in any variant ever learns the bakery is refusing**. The organisation cannot notice a
+   shortfall it cannot attribute. That is a missing inference rather than a tuning problem, and the
+   opening asymmetry — which `Cast.cs` argues for at length and correctly — is preserved rather than
+   removed. Scope and rulings in `CURRENT_MILESTONE.md`.
+
 5. ~~**Another bounded emergence slice**~~ — **taken up as milestone 011 in one specific form**, chosen
    by Matt on 2026-08-18: the detective's side. Not speculative — looking at `InvestigateIncident`
    after milestone 010 stumbled into two defects in it found something larger. **Det. Iris Kane opens a

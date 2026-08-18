@@ -205,12 +205,32 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 010, not yet reviewed or accepted
+### Measured — milestone 010, `824f3fc`, not yet reviewed or accepted
 
 **Nobody has reviewed this and nobody has accepted it.** The figures below are measurements taken by
-the author of the change, on the implementation commit that carries this section. They are recorded
-here because ruling 6 required every moved figure to be recorded with its reason; they establish no
-status whatever. See `milestones/010-a-denial-that-can-win.md`.
+the author of the change. They are recorded here because ruling 6 required every moved figure to be
+recorded with its reason; they establish no status whatever. See
+`milestones/010-a-denial-that-can-win.md`.
+
+**Re-verified at `824f3fc` on 2026-08-18**, from a clean tree with every `bin`, `obj` and `.godot`
+directory deleted, and every figure below reproduced exactly. That run is a *measurement repeated by
+the author*, not a review and not an acceptance — the distinction is the one this file exists to keep,
+and "the numbers came out the same twice" is evidence about determinism rather than about correctness.
+
+The same pass audited the committed diff against the authorized scope, empirically rather than by
+recollection, and the two probes worth keeping are:
+
+- **The only source lines deleted in the entire commit are the four that were the global witness
+  scan.** Nothing else in `Utility` was touched, so no existing term was retuned on the way past.
+- **The only numeric literals added anywhere under `src/` are `0.2` and `0.1`**, the two magnitudes the
+  concealment step already applies to `LegalExposure` on the adjacent line, for a mechanism that did
+  not previously exist. `0.25`, `3.0`, the `0.15`/`0.45` erosion rates and the `0.45` discretion
+  threshold appear in neither an added nor a removed line. That is ruling 3 checked rather than
+  asserted.
+
+Out-of-scope boundaries were probed the same way and all hold: `Claim.cs` gains no member,
+`Scenario/`, `Session/`, `Domain/Relations.cs` and `src/CrimeEmpire.Godot` are untouched, and nothing
+added names SQLite, `Tier`, promotion or demotion.
 
 Milestone 010 made concealment act on the concealer's own belief about the incident he is concealing,
 and scoped the denial's exposure term to that incident. **Baselines moved in four of five variants,

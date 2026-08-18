@@ -541,18 +541,31 @@ public sealed class ScenarioReachTests
     }
 
     /// <summary>
-    /// And the honest other half of it. The trust movement is real and reaches a score; it is nowhere
-    /// near large enough to flip a winner in this scenario, and nothing was tuned to make it so.
+    /// And the honest other half of it. The trust movement is real and reaches a score; it does not
+    /// flip the winner of the first decision that follows it, and nothing was tuned either way.
     ///
-    /// Recorded as an assertion rather than as prose because it is a measurement the next tuning pass
-    /// will want, and because a later change that did make the term choice-changing should have to
-    /// come here and say so deliberately.
+    /// <b>Rewritten in milestone 011, and the reason is the ledger's own recurring pattern.</b> This
+    /// asserted <c>winner - runnerUp &gt; 0.5</c> — a *proxy* for "the relationship term did not
+    /// decide this", on the reasoning that the term is worth about a tenth of a point and the margin
+    /// was an order of magnitude wider. Milestone 011's allegation route reordered the run, the test
+    /// landed on a different decision whose margin is 0.037, and it failed — while the relationship
+    /// term at that decision is **not** choice-changing: without any relationship state the same
+    /// candidate still wins, and `--compare`'s own figure for the variant is unchanged at 2.
+    ///
+    /// So the proxy was reporting a change that had not happened, and could equally have stayed
+    /// silent about one that had — a wide margin does not mean the term was irrelevant, it means the
+    /// gap was wide. *Is this assertion checking a link the simulation actually records, or one the
+    /// test is inferring?* The simulation records the real thing:
+    /// <see cref="ScoreBreakdown.TotalWithoutRelationships"/>, which is what the runner's own
+    /// counterfactual uses. This now re-ranks through that and asserts the winner is unchanged,
+    /// which is both stronger and immune to the run being reordered.
+    ///
+    /// A later change that genuinely made the term choice-changing here still has to come and say so.
     /// </summary>
     [Fact]
-    public void The_relationship_change_is_not_large_enough_to_change_a_choice()
+    public void The_relationship_change_does_not_decide_the_next_choice()
     {
         var world = Run("baseline");
-        var vincent = world.Get("vincent");
 
         var conflict = world.AccountConflicts
             .First(c => c.ListenerId == "vincent" && c.Conflict.SpeakerId == "salvatore");
@@ -560,15 +573,21 @@ public sealed class ScenarioReachTests
         var decision = world.Decisions
             .First(d => d.ActorId == "vincent" && d.At >= conflict.At && d.Scored.Count > 1);
 
-        double winner = decision.Scored[0].Total;
-        double runnerUp = decision.Scored[1].Total;
+        // Some relationship state was actually read, or this decision proves nothing either way.
+        Assert.Contains(decision.Scored, s => s.RelationshipGross() > 1e-9);
 
-        // The whole trust movement is worth about a tenth of a point through loyalty; the margins it
-        // would have to close are an order of magnitude wider.
-        Assert.True(winner - runnerUp > 0.5,
-            $"the margin at {decision.At:yyyy-MM-dd} is {winner - runnerUp:0.000}, which is close " +
-            "enough that the relationship term may now be choice-changing — that would be a real " +
-            "result, and it needs recording rather than passing silently");
+        // Re-ranked with every relationship contribution removed, exactly as `--compare` does it.
+        var withoutRelationships = decision.Scored
+            .OrderByDescending(s => s.TotalWithoutRelationships())
+            .ThenBy(s => s.Candidate.Id, StringComparer.Ordinal)
+            .First();
+
+        Assert.True(
+            ReferenceEquals(withoutRelationships, decision.Scored[0]),
+            $"at {decision.At:yyyy-MM-dd} the relationship channel decided the winner: with it " +
+            $"\"{decision.Scored[0].Candidate.Id}\" wins, without it " +
+            $"\"{withoutRelationships.Candidate.Id}\" does. That would be a real result and needs " +
+            "recording rather than passing silently.");
     }
 
     // ================================================================ D4 — honest distinctness

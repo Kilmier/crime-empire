@@ -125,8 +125,8 @@ public partial class Game : Control
         _root.AddChild(begin);
 
         _root.AddChild(Plain(
-            "Controlling somebody stops the clock whenever he has a decision to make, and offers " +
-            "what actually occurred to him. Everyone else goes on deciding for themselves either " +
+            "Controlling somebody stops the clock whenever they have a decision to make, and offers " +
+            "what actually occurred to them. Everyone else goes on deciding for themselves either " +
             "way."));
     }
 
@@ -184,11 +184,12 @@ public partial class Game : Control
         columns.AddChild(Column("HOW HE TAKES THEM", BuildAttitudes(snapshot)));
         columns.AddChild(Column(
             session.ControlledCharacterId is null ? "NOBODY IS BEING CONTROLLED" : "A DECISION",
-            BuildDecision(session)));
+            BuildDecision(session, snapshot)));
     }
 
     private Control BuildToolbar(SimulationSession session, PlayerSnapshot snapshot)
     {
+        var p = snapshot.ViewpointPronouns;
         var bar = new HBoxContainer();
         bar.AddThemeConstantOverride("separation", 12);
 
@@ -206,7 +207,7 @@ public partial class Game : Control
         bar.AddChild(Advance("Advance a week", paused, () => session.AdvanceDays(7)));
 
         bar.AddChild(Plain(paused
-            ? "· paused — he has something to decide"
+            ? $"· paused — {p.Subject} {p.Verb("has", "have")} something to decide"
             : "· running"));
 
         return bar;
@@ -232,9 +233,10 @@ public partial class Game : Control
 
     private IEnumerable<Control> BuildKnowledge(PlayerSnapshot snapshot)
     {
+        var p = snapshot.ViewpointPronouns;
         if (snapshot.Known.Count == 0)
         {
-            yield return Plain("Nothing. Nobody has told him anything and he has seen nothing himself.");
+            yield return Plain($"Nothing. Nobody has told {p.Object} anything and {p.Subject} {p.Verb("has", "have")} seen nothing {p.Reflexive}.");
             yield break;
         }
 
@@ -253,7 +255,7 @@ public partial class Game : Control
             foreach (var belief in snapshot.Unsettled)
                 yield return Faint($"· whether {belief.Statement} — {belief.Confidence}");
             foreach (var person in snapshot.Silent)
-                yield return Faint($"· {person.Name} has not given him an account");
+                yield return Faint($"· {person.Name} has not given {snapshot.ViewpointPronouns.Object} an account");
         }
     }
 
@@ -266,9 +268,10 @@ public partial class Game : Control
     /// </summary>
     private IEnumerable<Control> BuildRecent(PlayerSnapshot snapshot)
     {
+        var p = snapshot.ViewpointPronouns;
         if (snapshot.Recent.Count == 0)
         {
-            yield return Plain("Nothing has reached him lately.");
+            yield return Plain($"Nothing has reached {snapshot.ViewpointPronouns.Object} lately.");
             yield break;
         }
 
@@ -294,9 +297,10 @@ public partial class Game : Control
 
     private IEnumerable<Control> BuildAttitudes(PlayerSnapshot snapshot)
     {
+        var p = snapshot.ViewpointPronouns;
         if (snapshot.Attitudes.Count == 0)
         {
-            yield return Plain("He has nothing much to say about anybody.");
+            yield return Plain($"{p.Subject_} {p.Verb("has", "have")} nothing much to say about anybody.");
             yield break;
         }
 
@@ -307,26 +311,38 @@ public partial class Game : Control
             if (attitude.Wariness is { } wariness)
                 yield return Faint($"    {wariness}");
             foreach (var grievance in attitude.Grievances)
-                yield return Faint($"    what he holds against him: \"{grievance}\"");
+                yield return Faint(
+                    $"    what {p.Subject} {p.Verb("holds", "hold")} against " +
+                    $"{attitude.PersonPronouns.Object}: \"{grievance}\"");
         }
     }
 
-    private IEnumerable<Control> BuildDecision(SimulationSession session)
+    /// <summary>
+    /// The controlled character's decision. Its pronouns are the *viewpoint's* until there is a
+    /// pending decision to take them from — the two are the same character in this shell, and where
+    /// they are not, the panel is describing the man being watched rather than the man deciding.
+    /// </summary>
+    private IEnumerable<Control> BuildDecision(SimulationSession session, PlayerSnapshot snapshot)
     {
+        var p = snapshot.ViewpointPronouns;
+
         if (session.ControlledCharacterId is null)
         {
             yield return Plain(
-                "Everybody is deciding for themselves. Advance the clock and read what he comes to " +
-                "hear about it.");
+                $"Everybody is deciding for themselves. Advance the clock and read what {p.Subject} " +
+                $"{p.Verb("comes", "come")} to hear about it.");
             yield break;
         }
 
         if (session.Pending is not { } pending)
         {
-            yield return Plain("He has nothing in front of him at the moment.");
-            yield return Faint("Advance the clock until something reaches him.");
+            yield return Plain(
+                $"{p.Subject_} {p.Verb("has", "have")} nothing in front of {p.Object} at the moment.");
+            yield return Faint($"Advance the clock until something reaches {p.Object}.");
             yield break;
         }
+
+        var actor = pending.ActorPronouns;
 
         yield return Plain($"{pending.ActorName}, {pending.ActorRole}");
 
@@ -338,7 +354,7 @@ public partial class Game : Control
             ? $"{pending.At.ToString("d MMM yyyy", CultureInfo.InvariantCulture)} — {occasion}"
             : pending.At.ToString("d MMM yyyy", CultureInfo.InvariantCulture));
 
-        if (pending.Focus is { } focus) yield return Faint($"on his mind: {focus}");
+        if (pending.Focus is { } focus) yield return Faint($"on {actor.Possessive} mind: {focus}");
 
         yield return new HSeparator();
 
@@ -363,8 +379,9 @@ public partial class Game : Control
         }
 
         yield return Faint(
-            "These are the options that occurred to him and that he could actually take. What he " +
-            "never thought of, and what he does not know, are not listed.");
+            $"These are the options that occurred to {actor.Object} and that {actor.Subject} could " +
+            $"actually take. What {actor.Subject} never thought of, and what {actor.Subject} " +
+            $"{actor.Verb("does", "do")} not know, are not listed.");
     }
 
     // ================================================================= self-test

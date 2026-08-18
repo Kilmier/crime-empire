@@ -547,25 +547,43 @@ public static class Strategies
         world.Record("investigate", executor.Id, s.TargetId,
             $"{executor.Name} went to {step} at {s.TargetId}");
 
-        if (found && s.TargetId is not null)
+        // Which incident this case is about, carried from the lead it was opened on. A case with no
+        // identified incident investigates nothing rather than falling back on the address — the
+        // knowledge filter already refuses a candidate with no lead, so this is the second layer.
+        long? incidentId = s.SourceEventId;
+
+        if (found && incidentId is { } incident)
         {
-            // She learns who, only if a witness claim naming a person is already in her head.
+            // She learns who, only if a witness claim naming a person is already in her head — and
+            // only from a witness to *this* incident. Matching on s.TargetId asked what anybody had
+            // seen at that address, so a second beating at the same shop fed the first case's canvass
+            // a name from an event it was not investigating.
             var lead = owner.Cognition.OfKind(ClaimKind.WitnessSawIncident)
-                .FirstOrDefault(r => r.Claim.Subject == s.TargetId && r.Claim.Object.Length > 0);
+                .FirstOrDefault(r => r.Claim.EventId == incident && r.Claim.Object.Length > 0);
 
             if (lead is not null)
             {
+                // Where, taken from the lead rather than from the instance's TargetId. Both name
+                // the same shop here, and the lead is the right source on this milestone's own
+                // terms: the incident's facts come from the incident. It is also the non-nullable
+                // one, so this stops depending on a null check that the incident-scoped guard above
+                // no longer performs.
                 owner.Cognition.Learn(
-                    new Claim(ClaimKind.PersonUsedViolence, lead.Claim.Object, s.TargetId, lead.Claim.EventId),
+                    new Claim(ClaimKind.PersonUsedViolence, lead.Claim.Object, lead.Claim.Subject, incident),
                     Stance.Suspects, 0.55, SourceKind.Inference, owner.Id, world.Now);
 
-                // The suspect's own risk rises only if he comes to believe he is being looked at.
+                // The suspect's own risk rises only if he comes to believe he is being looked at —
+                // about the incident he is being looked at over. A PoliceInvestigating claim naming
+                // no incident is a heat bar with one holder: it cannot be answered, cannot be
+                // corroborated against anything, and cannot go stale when the case does. The related
+                // event id was a hardcoded 0 for the same reason nothing had an incident to hand.
                 var suspect = world.Find(lead.Claim.Object);
                 if (suspect is not null)
                     ScheduleObservation(
-                        world, s, "surveillance", suspect.Id, relatedEventId: 0, relatedTargetId: suspect.Id,
+                        world, s, "surveillance", suspect.Id, relatedEventId: incident,
+                        relatedTargetId: suspect.Id,
                         discoverability: 0.4,
-                        claims: new[] { new Claim(ClaimKind.PoliceInvestigating, suspect.Id) });
+                        claims: new[] { new Claim(ClaimKind.PoliceInvestigating, suspect.Id, "", incident) });
             }
         }
 
@@ -575,22 +593,33 @@ public static class Strategies
             return;
         }
 
-        bool named = s.TargetId is not null && owner.Cognition
-            .OfKind(ClaimKind.PersonUsedViolence).Any(v => v.Claim.Object == s.TargetId);
+        // Whether she has put a name to *this incident*. Asking whether she had named anybody for
+        // anything at this address meant one closed case at a shop declared every later case there
+        // solved before it started.
+        bool named = incidentId is { } closing && owner.Cognition
+            .OfKind(ClaimKind.PersonUsedViolence).Any(v => v.Claim.EventId == closing);
 
-        if (!named && s.TargetId is not null)
+        if (!named && incidentId is { } cold)
         {
             // The trail went cold. She stops treating the street talk as something to act on —
             // otherwise she reopens the same dead case every time the calendar nudges her.
             //
-            // Inference, because that is what this is: nothing was observed and nobody said
-            // anything. Coming up empty is a conclusion she drew from looking and not finding, and
-            // filing it as something she established first-hand would let a failed canvass override
-            // a real account of the same incident.
+            // Through Revise, not Learn. This was written as a Learn at half confidence and did
+            // nothing at all: Learn's override rule discards an Inference arriving less confident
+            // than what is already held, so a man's own conclusions could only ever firm up. The
+            // branch has been inert since it was written and no natural run reaches it, which is why
+            // it went unnoticed — milestone 010 found the same shape in the concealment step and
+            // added Revise for it. Stance is not passed: a revision is a change of confidence, and
+            // demoting the stance as well would be a second rule with its own threshold.
+            //
+            // Her own conclusion is exactly what this is. Nothing was observed and nobody said
+            // anything; coming up empty is something she worked out from looking and not finding —
+            // which is also why Revise accepts it, since it refuses anything that is not the
+            // holder's own inference. A lead she was *told* therefore survives a failed canvass,
+            // and that is correct: not finding a witness is not evidence the account was false.
             foreach (var stale in owner.Cognition.OfKind(ClaimKind.WitnessSawIncident)
-                         .Where(r => r.Claim.Subject == s.TargetId).ToList())
-                owner.Cognition.Learn(stale.Claim, Stance.Doubts, stale.Confidence * 0.5,
-                    SourceKind.Inference, owner.Id, world.Now);
+                         .Where(r => r.Claim.EventId == cold).ToList())
+                owner.Cognition.Revise(stale.Claim, stale.Confidence * 0.5, owner.Id, world.Now);
         }
 
         Complete(world, owner, s, named ? "the canvass turned up a name" : "the trail went cold");

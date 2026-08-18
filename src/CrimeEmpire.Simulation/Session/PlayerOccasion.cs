@@ -56,24 +56,25 @@ internal static class PlayerOccasion
     /// The phrases below name nobody. Whoever spoke is already named in the options — "give Tommy
     /// Nardo his account of…" — so naming him twice buys nothing and widens the surface.
     /// </summary>
-    internal static string? For(ScheduledEvent trigger) => trigger.Kind switch
+    internal static string? For(ScheduledEvent trigger, Pronouns self) => trigger.Kind switch
     {
         // He has just been briefed, through Cognition.Receive, by the man who issued it.
-        EventKind.AssignmentDelivered => "he has just been handed something to do",
+        EventKind.AssignmentDelivered =>
+            $"{self.Subject} {self.Verb("has", "have")} just been handed something to do",
 
         // Somebody spoke to him, and the note says which act it was. Each is established for him by
         // the act itself: he was the one asked, reported to, or petitioned.
         EventKind.RoleReview => trigger.Payload.Note switch
         {
-            "asked-to-account" => "somebody has put a question to him",
-            "reported-to" => "somebody has reported to him",
-            "permission-sought" => "somebody has asked him for room to move",
-            _ => "he came back round to his own patch",
+            "asked-to-account" => $"somebody has put a question to {self.Object}",
+            "reported-to" => $"somebody has reported to {self.Object}",
+            "permission-sought" => $"somebody has asked {self.Object} for room to move",
+            _ => $"{self.Subject} came back round to {self.Possessive} own patch",
         },
 
         // Runner.Observe schedules this only after the observer actually acquired something, so the
         // event's own precondition establishes the phrase.
-        EventKind.Incident => "something reached him",
+        EventKind.Incident => $"something reached {self.Object}",
 
         // His own pressure, crossed in his own head.
         EventKind.PressureThreshold => "something had got hard to ignore",
@@ -109,7 +110,7 @@ internal static class PlayerOccasion
     {
         // A wake we cannot describe is a wake we say nothing about. Otherwise the focus would narrate
         // the same delegated outcome the occasion was suppressed for.
-        if (For(trigger) is null) return null;
+        if (For(trigger, actor.Pronouns) is null) return null;
 
         return agenda.Kind switch
         {
@@ -121,10 +122,11 @@ internal static class PlayerOccasion
 
             // The course of action he started, described as his options describe it.
             AgendaKind.ContinueCommitment when actor.Execution.Strategy is { } s =>
-                PlayerOption.Work(s.Kind, s.TargetId, name),
+                PlayerOption.Work(s.Kind, s.TargetId, name, actor.Pronouns),
 
             // What is pressing on him, by what it is rather than by its enum name.
-            AgendaKind.RelievePressure => actor.Motivations.Dominant() is { } p ? Pressure(p.Kind) : null,
+            AgendaKind.RelievePressure =>
+                actor.Motivations.Dominant() is { } p ? Pressure(p.Kind, actor.Pronouns) : null,
 
             _ => null,
         };
@@ -134,12 +136,12 @@ internal static class PlayerOccasion
     /// A pressure in the character's own terms. Closed, and silent on anything unnamed — the same
     /// fail-closed default as the occasion vocabulary.
     /// </summary>
-    private static string? Pressure(PressureKind kind) => kind switch
+    private static string? Pressure(PressureKind kind, Pronouns self) => kind switch
     {
         PressureKind.RevenueShortfall => "the money that is not arriving",
-        PressureKind.LegalExposure => "how exposed he is",
-        PressureKind.Resentment => "what he is carrying against somebody",
-        PressureKind.Fear => "what he is afraid of",
+        PressureKind.LegalExposure => $"how exposed {self.Subject} {self.Verb("is", "are")}",
+        PressureKind.Resentment => $"what {self.Subject} {self.Verb("is", "are")} carrying against somebody",
+        PressureKind.Fear => $"what {self.Subject} {self.Verb("is", "are")} afraid of",
         PressureKind.OrganizationalInstability => "how unsteady the outfit has become",
         _ => null,
     };

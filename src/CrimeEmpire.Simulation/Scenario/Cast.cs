@@ -58,6 +58,7 @@ public static class Cast
             Id = "salvatore",
             Name = "Salvatore Greco",
             RoleTitle = "boss",
+            Pronouns = Pronouns.He,
             Capabilities = new Capabilities(
                 new Dictionary<Skill, double>
                 {
@@ -83,6 +84,7 @@ public static class Cast
             Id = "vincent",
             Name = "Vincent Russo",
             RoleTitle = "capo, harbour",
+            Pronouns = Pronouns.He,
             Capabilities = new Capabilities(
                 new Dictionary<Skill, double>
                 {
@@ -108,6 +110,7 @@ public static class Cast
             Id = "tommy",
             Name = "Tommy Nardo",
             RoleTitle = "soldier",
+            Pronouns = Pronouns.He,
             Capabilities = new Capabilities(
                 new Dictionary<Skill, double>
                 {
@@ -133,6 +136,7 @@ public static class Cast
             Id = "marco",
             Name = "Marco Bellini",
             RoleTitle = "grocer",
+            Pronouns = Pronouns.He,
             Capabilities = new Capabilities(
                 new Dictionary<Skill, double> { [Skill.Persuasion] = 0.45, [Skill.Discretion] = 0.30 },
                 crew: 0, cash: 3000, authority: 0, districts: new[] { Harbour }),
@@ -152,6 +156,7 @@ public static class Cast
             Id = "nunzio",
             Name = "Nunzio Dorato",
             RoleTitle = "baker",
+            Pronouns = Pronouns.He,
             Capabilities = new Capabilities(
                 new Dictionary<Skill, double> { [Skill.Persuasion] = 0.35, [Skill.Discretion] = 0.40 },
                 crew: 0, cash: 2600, authority: 0, districts: new[] { Harbour }),
@@ -173,6 +178,7 @@ public static class Cast
             Id = "kane",
             Name = "Det. Iris Kane",
             RoleTitle = "detective",
+            Pronouns = Pronouns.She,
             Capabilities = new Capabilities(
                 new Dictionary<Skill, double>
                 {

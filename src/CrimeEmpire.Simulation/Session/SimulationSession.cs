@@ -1,6 +1,7 @@
 namespace CrimeSim.Session;
 
 using CrimeSim.Decision;
+using CrimeSim.Domain;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
 
@@ -274,7 +275,7 @@ public sealed class SimulationSession
             if (step.Status == StepStatus.AwaitingChoice)
             {
                 _prepared = step.Awaiting;
-                _pending = Project(step.Awaiting!, _optionIds, NameIn(_world));
+                _pending = Project(step.Awaiting!, _optionIds, NameIn(_world), PronounsIn(_world));
                 Reached(_world.Now);
                 return;
             }
@@ -325,6 +326,14 @@ public sealed class SimulationSession
         => id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id;
 
     /// <summary>
+    /// How to refer to somebody, which is public knowledge in the same way a display name is.
+    /// Falls back to the same default <see cref="Character.Pronouns"/> carries, so an id that names
+    /// no person behaves exactly as everything did before pronouns existed.
+    /// </summary>
+    private static Func<string, Pronouns> PronounsIn(World world)
+        => id => world.Find(id)?.Pronouns ?? Pronouns.He;
+
+    /// <summary>
     /// The player-facing projection of a stopped deliberation.
     ///
     /// <b>Nothing authored by a generator or a scheduler crosses here.</b> The occasion and the focus
@@ -341,8 +350,11 @@ public sealed class SimulationSession
     internal static PendingDecision Project(
         PreparedDecision prepared,
         IDictionary<string, string> optionIds,
-        Func<string, string> name)
+        Func<string, string> name,
+        Func<string, Pronouns> pronouns)
     {
+        var self = prepared.Actor.Pronouns;
+
         optionIds.Clear();
 
         var options = new List<PendingOption>(prepared.Available.Count);
@@ -358,7 +370,7 @@ public sealed class SimulationSession
                     $"option token collision at {prepared.Actor.Id}'s decision: '{candidate.Id}' and " +
                     $"'{optionIds[token]}' both hash to '{token}'.");
 
-            options.Add(new PendingOption(token, PlayerOption.Describe(candidate, name)));
+            options.Add(new PendingOption(token, PlayerOption.Describe(candidate, name, self, pronouns)));
         }
 
         return new PendingDecision(
@@ -366,7 +378,8 @@ public sealed class SimulationSession
             prepared.Actor.Id,
             prepared.Actor.Name,
             prepared.Actor.RoleTitle,
-            PlayerOccasion.For(prepared.Trigger),
+            self,
+            PlayerOccasion.For(prepared.Trigger, self),
             PlayerOccasion.Focus(prepared.Actor, prepared.Agenda, prepared.Trigger, name),
             options);
     }

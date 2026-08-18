@@ -49,6 +49,7 @@ public sealed record PlayerDisagreement(
 public sealed record PlayerAttitude(
     string PersonId,
     string PersonName,
+    Pronouns PersonPronouns,
     string Standing,
     string? Wariness,
     IReadOnlyList<string> Grievances)
@@ -79,6 +80,7 @@ public sealed record PlayerSnapshot(
     string ViewpointId,
     string ViewpointName,
     string ViewpointRole,
+    Pronouns ViewpointPronouns,
     IReadOnlyList<PlayerBelief> Known,
     IReadOnlyList<PlayerBelief> Recent,
     IReadOnlyList<PlayerDisagreement> Disagreements,
@@ -120,11 +122,18 @@ public static class PlayerView
     public static PlayerSnapshot Build(World world, string viewpointId, DateTime asOf)
     {
         var who = world.Get(viewpointId);
+        var self = who.Pronouns;
 
         string Name(string id) =>
             world.Find(id)?.Name
             ?? world.Businesses.GetValueOrDefault(id)?.Name
             ?? id;
+
+        // How to refer to somebody else. A business is not a person and takes the neuter form
+        // nothing currently asks for, so an unknown id falls back to the same default Character
+        // carries — which is the position everything was in before pronouns existed, not a new
+        // assumption introduced here.
+        Pronouns Theirs(string id) => world.Find(id)?.Pronouns ?? Domain.Pronouns.He;
 
         PlayerBelief Belief(InformationRecord r)
         {
@@ -136,7 +145,7 @@ public static class PlayerView
                 r.AcquiredAt,
                 r.ReconsideredAt,
                 PlayerNarration.Qualify(r, contested),
-                PlayerNarration.Attribute(r, Name),
+                PlayerNarration.Attribute(r, Name, self),
                 contested,
                 r.IsHeld);
         }
@@ -176,7 +185,7 @@ public static class PlayerView
             // about who was responsible. Anything he was told is already listed below under the
             // name of the man who gave it.
             var own = who.Cognition.Find(claim);
-            string? ownBasis = own is null ? null : PlayerNarration.OwnBasis(own);
+            string? ownBasis = own is null ? null : PlayerNarration.OwnBasis(own, self);
 
             var accounts = who.Cognition.AccountsOf(claim)
                 .OrderBy(t => t.At)
@@ -198,8 +207,9 @@ public static class PlayerView
             .Select(x => new PlayerAttitude(
                 x.Id,
                 Name(x.Id),
-                PlayerNarration.Standing(x.Rel.Trust),
-                PlayerNarration.Wariness(x.Rel.Fear),
+                Theirs(x.Rel.OtherId),
+                PlayerNarration.Standing(x.Rel.Trust, self, Theirs(x.Rel.OtherId)),
+                PlayerNarration.Wariness(x.Rel.Fear, self, Theirs(x.Rel.OtherId)),
                 // Quoted verbatim by the surfaces that show them. Grievance descriptions are
                 // written from the holder's own side and mostly in the first person, so they read
                 // correctly as his words about it and stay his.
@@ -230,6 +240,7 @@ public static class PlayerView
             who.Id,
             who.Name,
             who.RoleTitle,
+            self,
             held,
             recent,
             disagreements,

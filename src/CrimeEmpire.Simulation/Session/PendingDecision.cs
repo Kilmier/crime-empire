@@ -1,5 +1,7 @@
 namespace CrimeSim.Session;
 
+using CrimeSim.Domain;
+
 /// <summary>
 /// One thing the controlled character could do, as he would put it to himself.
 ///
@@ -43,6 +45,7 @@ public sealed record PendingDecision(
     string ActorId,
     string ActorName,
     string ActorRole,
+    Pronouns ActorPronouns,
     string? Occasion,
     string? Focus,
     IReadOnlyList<PendingOption> Options)

@@ -216,6 +216,76 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 011, complete, not yet reviewed or accepted
+
+**Nobody has reviewed this and nobody has accepted it.** The section below records items 1–4 alone,
+taken before item 5 existed, because ruling 7 required the two to be measured separately. **Item 5 is
+recorded here, against that intermediate state:**
+
+- **It moved no developer trace at all** — byte-identical in all five variants, so every hash in the
+  table below still stands at the end of the milestone.
+- **It moved 11 of 30 viewpoint renders.** Kane's five now read as her. Six more change one line,
+  where the lowest-trust standing band went from "he puts no weight on anything *the man* says" to
+  "he would not take her word at all" — that phrase had to change because "the man" is itself
+  gendered, and it is the only wording change item 5 makes to anybody else's view.
+- Tests rise from 428 to **437**; build stays at 0 warnings, 0 errors; the Godot self-test still makes
+  4 choices and exits 0.
+
+### Measured — milestone 011, items 1–4, not yet reviewed or accepted
+
+**Nobody has reviewed this and nobody has accepted it.** Figures taken by the author of the change.
+Recorded here under milestone 011's ruling 7, which requires the behavioural items and the pronoun
+item to be measured separately so that neither can mask the other: the pronoun item moves every
+viewpoint render, the behavioural items move the trace hashes, and one combined diff would hide
+whichever moved less. **This section is the intermediate state, before item 5.** See
+`milestones/011-…` for the account.
+
+- Build: **0 warnings, 0 errors** across four projects, after deleting every `bin`, `obj` and
+  `.godot` directory. One warning was introduced and fixed on the way: scoping the canvass guard to
+  the incident stopped narrowing `s.TargetId`, and the fix reads the location off the lead instead —
+  the incident's facts come from the incident.
+- Tests: **428 passed**, 0 failed (406 at `824f3fc`). 21 added in a new `InvestigationTests.cs`, plus
+  one theory case added to `ExposureAndDenialTests` for the corrected `Revise` rule.
+- `--compare`: **5 distinct traces, 5 distinct chosen-action sequences.**
+
+| Variant | Hash | Chosen actions | Decisions | Conflicts | Rel. read | Rel. decided |
+|---|---|---|---|---|---|---|
+| baseline | `0B06A3983797B16A` | `9D014A2A94EC6487` | 44 | 2 | 23 | 2 |
+| cautious-vincent | `A8A1BBD12D5334C2` | `124E8FE932DD5A89` | 21 | 3 | 12 | 3 |
+| watchful-boss | `F4A61680B871B8F9` | `D35876B5A78C6074` | 48 | 4 | 23 | 4 |
+| disloyal-vincent | `CC7D21F508221492` | `09238CEB3AA3B2E5` | 44 | 2 | 25 | 2 |
+| resentful-tommy | `EFD549BC3EF89FA8` | `18A116A6855B9E2C` | 39 | 2 | 22 | 3 |
+
+Reasons, against milestone 010's accepted baseline:
+
+- **`cautious-vincent` is byte-identical on every figure.** No violence, so no incident, so no case
+  and no allegation. It is the control, and it was the control for milestone 010 too.
+- **The incident-scoping fixes moved nothing at all.** Items 1, 2 and 4 changed one character of
+  rendered output between them — `PoliceInvestigating(tommy)` became `PoliceInvestigating(tommy#11)` —
+  and left every decision, every hash column above except the trace, and **all 30 viewpoint renders**
+  untouched. That is expected: the fixture contains exactly one incident, so location and incident
+  coincide everywhere in it. The rules are pinned by staged tests instead, on the two-incidents case
+  the fixture has never contained.
+- **Everything else here is item 3, the allegation route**, and it is where the decision counts move:
+  41 → 44, 44 → 48, 41 → 44, 37 → 39. Two characters gain a question they never had. Kane puts her
+  case to Tommy — the exchange the milestone was for — and **Salvatore puts the policy breach to
+  Vincent**, which was not anticipated: he infers the breach himself, so the corroboration route
+  could never offer it and he had no way to ask the man who committed it.
+- **`watchful-boss` rises from 2 perceived conflicts to 4.** Both new ones are Salvatore hearing
+  Vincent reject `BusinessRefusesTribute(bellini-grocery)` — a position Vincent genuinely holds, and
+  the milestone-006 edge firing more often because there are more accounts. `watchful-boss` is the
+  variant where Vincent owes Salvatore most and reports to him most.
+- **`rel. decided` is unchanged in every variant** except `watchful-boss`, which follows its conflict
+  count from 3 to 4. The relationship channel decides no more winners than before.
+- **21 of 30 viewpoint renders byte-identical** to `824f3fc`; the nine that move are Tommy's and
+  Vincent's in four variants and Salvatore's in one, all following the new exchanges.
+
+**A denial to a detective is cheaper than a denial to a delegator, and still loses.** Tommy answers
+Kane on 9 April: partial `+1.47`, denial `−0.82`, margin **2.29** — against the same man's denial to
+his own capo at `−1.27` against `1.66`, margin 2.93. The loyalty terms do fall away as milestone 011's
+premise predicted, and they are worth about a fifth of the gap. Narrowest losing margin anywhere is
+**1.01**, Vincent in `disloyal-vincent` on 18 April, essentially unchanged from 010's 1.083.
+
 ### Accepted — milestone 010, `824f3fc`
 
 **Matt accepted milestone 010 on 2026-08-18, on the strength of `824f3fc`.** It needed no corrective
@@ -811,6 +881,40 @@ Added by milestone 010:
   appear in `IntelligenceWriter`'s output for *any* viewpoint, including the ones who hold it, so the
   assertion cannot fail. It duly survived a mutation that made the view read every character's
   cognition. *An assertion that a string is absent is worth nothing until you have seen it present.*
+
+Added by milestone 011:
+
+- **A case is about an incident, not an address**, at every point in the investigation path: the lead
+  it picks up, whether it has closed, and which stale claims it demotes. Two beatings at one shop are
+  two cases. The accepted scenario contains exactly one incident, so **a natural-run test passes
+  whichever rule the code uses** — this is staged, and has to be.
+- **`Generators.SameIncident` is the one predicate**, and event 0 is not an incident.
+- **A failed canvass demotes the lead it was opened on, and only that one** — and does not demote a
+  lead somebody *gave* her, because testimony is something she has to be argued out of. Unreachable
+  in every variant at seed 42, so the staged test is the only thing standing behind it.
+- **A man may revise his own reading as well as his own reasoning.** `Provenance.IsOwnReading` is the
+  named rule; admitting `Inference` alone put `Discovery` in with Participant and Witness, which is
+  the bundle that file exists to prevent. *A fifth rule keyed off a category has to answer the same
+  question the other four did.*
+- **Police interest names the incident the suspect is being looked at over.** A `PoliceInvestigating`
+  claim with no event id cannot be answered, corroborated or made stale — it is where a heat bar
+  starts.
+- **A man may put an allegation to the person it names**, and that route is the exact complement of
+  corroboration: what you were told you check with somebody else, what you worked out yourself you
+  put to its subject. Neither generator may cover the other's provenance, or one act is offered twice
+  out of a bounded six. It is bounded by `CanAsk`, by `Acquaintance.KnownTo`, and by whether he has
+  already answered; it never fires on the actor himself.
+- **Being asked by somebody who is not your superior still offers candid, partial and false.** The
+  redirect must not confer rank, and a detective who cannot be lied to is not a detective.
+- **A character is described as themselves on every player-facing surface**, checked over every
+  viewpoint in every variant through the production renderer, and against the pronoun sets rather than
+  against prose written in the test. **The attitude list cannot cover a woman in a natural run** —
+  it filters to non-zero trust, fear or grievance and Kane's only relationship is all-zero — so that
+  path is staged and the emptiness is asserted rather than left to look like coverage.
+- **Verb agreement is real and is not faked.** `Pronouns.Verb` takes both forms because English
+  agreement is not a suffix rule, so `They` is usable rather than decorative.
+- **A mutation that does not compile is not a passing test.** The harness reported build failures as
+  "no test failed" and hid two unpinned rules until it was fixed.
 
 ## Review checklist
 

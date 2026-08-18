@@ -13,6 +13,17 @@ public sealed class Character
     public required string Name { get; init; }
     public required string RoleTitle { get; init; }
 
+    /// <summary>
+    /// How player-facing prose refers to this person. See <see cref="Domain.Pronouns"/>.
+    ///
+    /// Defaulted rather than required, and that is a considered trade. Making it required would force
+    /// every construction site to state it, which is the stricter rule — but the default it replaces
+    /// is the same "he" that every surface hardcoded, so a forgotten one is no worse than the
+    /// position before this existed, while a required field would be one more thing for a test
+    /// fixture to get wrong for no behavioural gain. The scenario cast states all six explicitly.
+    /// </summary>
+    public Pronouns Pronouns { get; init; } = Pronouns.He;
+
     public required Capabilities Capabilities { get; init; }
 
     /// <summary>
@@ -62,6 +73,7 @@ public sealed class CharacterView
     public string Id => _c.Id;
     public string Name => _c.Name;
     public string RoleTitle => _c.RoleTitle;
+    public Pronouns Pronouns => _c.Pronouns;
     public Capabilities Capabilities => _c.Capabilities;
     public SocialState Social => _c.Social;
     public Motivations Motivations => _c.Motivations;

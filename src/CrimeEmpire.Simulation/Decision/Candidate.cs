@@ -80,10 +80,20 @@ public sealed record Candidate(
     public IReadOnlyList<Claim> RequiredKnowledge { get; init; } = Array.Empty<Claim>();
 
     /// <summary>
-    /// The incident a ConcealIncident candidate is about. Set only there. Filters' redundancy stage
-    /// uses it to enforce the one-attempt-per-incident MVP rule regardless of whether the earlier
-    /// attempt is still running or has already completed — a state (Kind, TargetId) match alone
-    /// cannot express "already tried and finished", since a finished strategy is no longer running.
+    /// The incident this candidate is about, whatever the claim's kind — a concealment carries the
+    /// violence it is covering, an investigation carries the lead it was opened on, and what makes
+    /// them the same thing is <see cref="Claim.EventId"/> rather than the predicate.
+    ///
+    /// Two readers, and they are separate questions. Filters' redundancy stage uses it to enforce
+    /// ConcealIncident's one-attempt-per-incident MVP rule regardless of whether the earlier attempt
+    /// is still running or has already completed — a (Kind, TargetId) match alone cannot express
+    /// "already tried and finished", since a finished strategy is no longer running. And
+    /// <see cref="Commit"/> turns it into <see cref="StrategyInstance.SourceEventId"/> so the running
+    /// instance's steps can act on the incident rather than on its address.
+    ///
+    /// Set only on ConcealIncident until milestone 011, which is why the redundancy branch reading it
+    /// is guarded on the strategy kind: an investigation naming its incident must not be mistaken for
+    /// a concealment attempt on that incident.
     /// </summary>
     public Claim? AboutIncident { get; init; }
 

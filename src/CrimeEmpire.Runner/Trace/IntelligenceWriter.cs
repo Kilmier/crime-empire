@@ -52,16 +52,18 @@ public static class IntelligenceWriter
         sb.AppendLine($" as of {view.Date:d MMMM yyyy}");
         sb.AppendLine("═══════════════════════════════════════════════════════════════════════");
         sb.AppendLine();
-        sb.AppendLine(" Everything here is something he saw or was told. Where it is wrong, it is");
+        var self = view.ViewpointPronouns;
+        sb.AppendLine($" Everything here is something {self.Subject} saw or was told. Where it is wrong, it is");
         sb.AppendLine(" wrong because somebody was wrong or somebody lied.");
         sb.AppendLine();
 
         // ---------------------------------------------------------------- what he has
-        sb.AppendLine("WHAT HE HAS");
+        sb.AppendLine($"WHAT {self.Subject.ToUpperInvariant()} {self.Verb("HAS", "HAVE")}");
         sb.AppendLine();
         if (view.Known.Count == 0)
         {
-            sb.AppendLine("  Nothing. Nobody has told him anything and he has seen nothing himself.");
+            sb.AppendLine($"  Nothing. Nobody has told {self.Object} anything and {self.Subject} " +
+                          $"{self.Verb("has", "have")} seen nothing {self.Reflexive}.");
         }
         else
         {
@@ -115,7 +117,8 @@ public static class IntelligenceWriter
                 // after "he holds it against him that" produces broken English. As his own words
                 // about it, they read correctly and stay his.
                 foreach (var g in a.Grievances)
-                    sb.AppendLine($"     what he holds against him: \"{g}\"");
+                    sb.AppendLine($"     what {self.Subject} {self.Verb("holds", "hold")} against " +
+                                  $"{a.PersonPronouns.Object}: \"{g}\"");
             }
             sb.AppendLine();
         }
@@ -123,12 +126,12 @@ public static class IntelligenceWriter
         // ---------------------------------------------------------------- open questions
         if (view.Unsettled.Count > 0 || view.Silent.Count > 0)
         {
-            sb.AppendLine("WHAT HE CANNOT SETTLE");
+            sb.AppendLine($"WHAT {self.Subject.ToUpperInvariant()} CANNOT SETTLE");
             sb.AppendLine();
             foreach (var b in view.Unsettled)
                 sb.AppendLine($"  · whether {b.Statement} — {b.Confidence}");
             foreach (var p in view.Silent)
-                sb.AppendLine($"  · {p.Name} has not given him an account");
+                sb.AppendLine($"  · {p.Name} has not given {self.Object} an account");
             sb.AppendLine();
         }
 
@@ -156,5 +159,6 @@ public static class IntelligenceWriter
     /// How far he would go on this person's word, in words. See
     /// <see cref="PlayerNarration.Standing"/>, which owns the wording.
     /// </summary>
-    public static string Standing(double trust) => PlayerNarration.Standing(trust);
+    public static string Standing(double trust, Pronouns self, Pronouns other)
+        => PlayerNarration.Standing(trust, self, other);
 }

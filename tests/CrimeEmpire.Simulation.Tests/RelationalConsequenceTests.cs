@@ -418,10 +418,17 @@ public sealed class RelationalConsequenceTests
     /// question returns with a cause behind it, Tommy's honest answer contradicts what Salvatore
     /// holds, and the third conflict is back. See `milestones/009-godot-playable-shell.md`,
     /// Corrections 2 and 4.
+    /// <b>watchful-boss rose from two to four in milestone 011, and the extra two are the point of
+    /// that milestone rather than a side effect of it.</b> Both are Salvatore hearing Vincent reject
+    /// `BusinessRefusesTribute(bellini-grocery)` — a position Vincent genuinely came to hold when he
+    /// found the shop paying, contradicting what his boss still believes. They appear because the
+    /// allegation route produces more accounts, and `watchful-boss` is the variant where Vincent owes
+    /// Salvatore most and therefore reports to him most. The budget's purpose is unchanged: four is
+    /// still small, and a run producing conflicts in bulk would still be the runaway this pins.
     [Theory]
     [InlineData("baseline", 2)]
     [InlineData("cautious-vincent", 3)]
-    [InlineData("watchful-boss", 2)]
+    [InlineData("watchful-boss", 4)]
     [InlineData("disloyal-vincent", 2)]
     [InlineData("resentful-tommy", 2)]
     public void The_scenario_produces_the_expected_number_of_conflicts(string variant, int expected)
@@ -944,7 +951,9 @@ public sealed class RelationalConsequenceTests
         foreach (var rel in vincent.Social.All)
         {
             if (rel.Trust <= 0 && rel.Fear <= 0 && rel.Grievances.Count == 0) continue;
-            Assert.Contains(IntelligenceWriter.Standing(rel.Trust), view);
+            Assert.Contains(
+                IntelligenceWriter.Standing(rel.Trust, vincent.Pronouns, world.Get(rel.OtherId).Pronouns),
+                view);
         }
     }
 
@@ -953,7 +962,7 @@ public sealed class RelationalConsequenceTests
     {
         foreach (double t in new[] { 0.0, 0.05, 0.2, 0.5, 0.9, 1.0 })
         {
-            string s = IntelligenceWriter.Standing(t);
+            string s = IntelligenceWriter.Standing(t, Pronouns.He, Pronouns.She);
             Assert.DoesNotContain("lie", s, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(t.ToString("0.00"), s);
         }

@@ -571,7 +571,8 @@ public sealed class PlayerSessionTests
         var pending = SimulationSession.Project(
             step.Awaiting!,
             new Dictionary<string, string>(StringComparer.Ordinal),
-            id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id);
+            id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id,
+            id => world.Find(id)?.Pronouns ?? Pronouns.He);
 
         // He was not there, nobody has told him, and no discovery roll was made — so the interface
         // says nothing about why he is thinking, rather than reading him the scheduler's sentence.
@@ -615,7 +616,8 @@ public sealed class PlayerSessionTests
         var pending = SimulationSession.Project(
             step.Awaiting!,
             new Dictionary<string, string>(StringComparer.Ordinal),
-            id => world.Find(id)?.Name ?? id);
+            id => world.Find(id)?.Name ?? id,
+            id => world.Find(id)?.Pronouns ?? Pronouns.He);
 
         Assert.Null(pending.Occasion);
         Assert.Null(pending.Focus);
@@ -677,13 +679,13 @@ public sealed class PlayerSessionTests
 
         foreach (var kind in Enum.GetValues<EventKind>())
         {
-            string? occasion = PlayerOccasion.For(Wake(kind));
+            string? occasion = PlayerOccasion.For(Wake(kind), Pronouns.He);
             if (admitted.Contains(kind)) Assert.False(string.IsNullOrEmpty(occasion), $"{kind} lost its occasion");
             else Assert.Null(occasion);
         }
 
-        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyBlocked)));
-        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyComplete)));
+        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyBlocked), Pronouns.He));
+        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyComplete), Pronouns.He));
     }
 
     /// <summary>
@@ -701,7 +703,7 @@ public sealed class PlayerSessionTests
     [InlineData("permission-sought", "somebody has asked him for room to move")]
     [InlineData(null, "he came back round to his own patch")]
     public void A_role_review_somebody_caused_says_which_act_it_was(string? note, string expected)
-        => Assert.Equal(expected, PlayerOccasion.For(Wake(EventKind.RoleReview, note)));
+        => Assert.Equal(expected, PlayerOccasion.For(Wake(EventKind.RoleReview, note), Pronouns.He));
 
     /// <summary>
     /// The focus is derived from the character's own state, never passed through from the agenda's
@@ -964,7 +966,8 @@ public sealed class PlayerSessionTests
         var pending = SimulationSession.Project(
             prepared,
             new Dictionary<string, string>(StringComparer.Ordinal),
-            id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id);
+            id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id,
+            id => world.Find(id)?.Pronouns ?? Pronouns.He);
 
         Assert.DoesNotContain(stranger.Name, Flatten(pending), StringComparison.Ordinal);
         Assert.DoesNotContain(stranger.Id, Flatten(pending), StringComparison.Ordinal);
@@ -1281,7 +1284,8 @@ public sealed class PlayerSessionTests
         var pending = SimulationSession.Project(
             prepared,
             new Dictionary<string, string>(StringComparer.Ordinal),
-            id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id);
+            id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id,
+            id => world.Find(id)?.Pronouns ?? Pronouns.He);
 
         Assert.DoesNotContain(stranger.Name, Flatten(pending), StringComparison.Ordinal);
 

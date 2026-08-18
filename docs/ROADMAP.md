@@ -22,7 +22,13 @@ relationship schema and built the instrument that measures it. The rest of the e
 not built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
 sequence. Full accounts are in `docs/milestones/`.
 
-Milestone 010 — **implemented 2026-08-17, not reviewed and not accepted** — made concealment act on
+Milestone 011 — **implemented 2026-08-18, not reviewed and not accepted** — gave the detective a move
+after she names a suspect. She had none: a candidate set of one option, with nothing generated and
+nothing rejected, because every route to a question was structurally closed to an actor whose beliefs
+are self-acquired by construction and who belongs to no institution. See
+`milestones/011-the-detective-has-no-next-move.md`.
+
+Milestone 010 — **accepted 2026-08-18 on `824f3fc`** — made concealment act on
 the concealer's own belief and scoped the denial's exposure term to its own incident. Both defects
 were real and both are fixed; **the denial still loses**, and the milestone's deliverable is therefore
 the measured explanation of what else holds it shut rather than the exchange it went looking for. See
@@ -86,15 +92,24 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   to. **Neither fix made the denial win, which is milestone 010's result rather than a failure of
   it**; the margins and the three reasons the model is still shut are below and in
   `milestones/010-a-denial-that-can-win.md`.
-- **A man's own conclusions can only firm up, except through one method.** `Cognition.Learn` discards
-  an `Inference` arriving less confident than what is already held, so `Cognition.Revise` was added as
-  the single narrow route by which a character revises something he worked out himself. **Two places
-  still have the old shape and were outside milestone 010's authorized scope**, both in
-  `Strategies.AdvanceInvestigation`: its "the trail went cold" branch calls `Learn` at half confidence
-  intending to demote a dead lead and is therefore a no-op (unreachable in all five variants at seed
-  42, so it has never shown); and it picks and demotes leads by `Claim.Subject == s.TargetId`, which
-  is by **location** rather than by incident — ruling 1's "whatever happened at this address", in the
-  investigation path.
+- ~~**A man's own conclusions can only firm up, except through one method.**~~ **Both halves fixed by
+  milestone 011.** `AdvanceInvestigation`'s cold-trail branch now goes through `Cognition.Revise`, and
+  the whole investigation path is scoped to its incident rather than its address. Fixing the first
+  required correcting `Revise` itself: it admitted `Inference` alone, which put `Discovery` in with
+  Participant and Witness — the bundle `Provenance.cs` exists to prevent — so the repair was still a
+  no-op until `Provenance.IsOwnReading` replaced the guard. **The branch remains unreachable in every
+  variant at seed 42**, so a staged test is the only thing standing behind it.
+- **The developer trace calls everybody "he"**, 59 strings across `Utility` and `TraceWriter`.
+  Milestone 011 fixed the player-facing surfaces and deliberately left this one: it is a debugging
+  tool the architecture doc separates from player-facing accounts by name, and changing it would move
+  the trace hashes for no player-visible gain.
+- **`AdvanceInvestigation` reads and writes `owner` throughout.** A delegated investigation would put
+  its findings in the head of a man who was not there — the asymmetry milestone 010 resolved for
+  concealment by moving the belief to the executor. Investigation is never delegated in the fixture,
+  so nothing exercises it.
+- **Nobody in the fixture holds a scored relationship with Det. Kane**, so the player-facing attitude
+  list can never describe a woman in a natural run. Her one relationship is the all-zero record
+  `Relations.Meet` writes when she questions Tommy, and the list filters those out.
 - **One cleanup is worth `-0.2` and the denial needs about `-0.4`.** Measured by milestone 010. The
   MVP one-attempt-per-incident rule caps the mechanism at a single step, and the counterfactual shows
   the denial winning outright once the concealer's witness belief reaches zero. Bound up with the

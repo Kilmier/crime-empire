@@ -382,12 +382,18 @@ public sealed class Cognition
     /// <c>Strategies.AdvanceConceal</c>'s "quiet the witnesses" step unable to quiet anything, even
     /// in the mind of the man running it.
     ///
-    /// <b>Only his own inference.</b> A record he established by doing or seeing, and a record
-    /// somebody gave him, are both refused: the first is what <see cref="Provenance.OverridesPriorRecord"/>
-    /// and <see cref="Provenance.ProtectsStance"/> exist to defend, and the second is an account he
-    /// would have to be argued out of rather than one he can simply revise. Refusing rather than
-    /// throwing, because "there was nothing of mine here to revise" is an ordinary outcome and the
-    /// caller has nothing better to do about it.
+    /// <b>Only his own reading.</b> <see cref="Provenance.IsOwnReading"/> owns the rule: his own
+    /// reasoning and his own reading of a trace are his to revise; what he did or saw is not, and
+    /// neither is an account somebody gave him — the first is what
+    /// <see cref="Provenance.OverridesPriorRecord"/> and <see cref="Provenance.ProtectsStance"/> exist
+    /// to defend, and the second is something he has to be argued out of through
+    /// <see cref="Receive"/> rather than set aside quietly. Refusing rather than throwing, because
+    /// "there was nothing of mine here to revise" is an ordinary outcome and the caller has nothing
+    /// better to do about it.
+    ///
+    /// <b>Discovery was refused until milestone 011 and should not have been</b> — see
+    /// <see cref="Provenance.IsOwnReading"/> for why that was the one bundle this codebase had already
+    /// written a whole file to eliminate.
     ///
     /// <b>The stance does not move.</b> Falling below the acting threshold demotes a stance in
     /// <see cref="Receive"/> because somebody argued him down to it; nothing here is an argument, and
@@ -405,7 +411,7 @@ public sealed class Cognition
         if (i < 0) return null;
 
         var prior = _records[i];
-        if (prior.SourceKind != SourceKind.Inference || prior.SourceId != holderId) return null;
+        if (!prior.SourceKind.IsOwnReading() || prior.SourceId != holderId) return null;
 
         var revised = prior with
         {

@@ -252,19 +252,19 @@ public sealed class ExposureAndDenialTests
     }
 
     /// <summary>
-    /// Revise is for a conclusion of his own, and refuses anything else. What he saw is defended by
-    /// <see cref="Provenance.OverridesPriorRecord"/> and what he was told is somebody's account he
-    /// would have to be argued out of — neither is his to simply revise, and a wishful concealer
-    /// must not be able to overwrite either.
+    /// What he did, what he saw, and what somebody told him are none of them his to simply revise.
+    /// The first two are defended by <see cref="Provenance.OverridesPriorRecord"/> and
+    /// <see cref="Provenance.ProtectsStance"/>; the last is an account he has to be argued out of
+    /// through <see cref="Cognition.Receive"/>, and a quieter second route would let a wishful
+    /// character discard testimony without the disagreement ever being recorded.
     /// </summary>
     [Theory]
     [InlineData(SourceKind.Participant)]
     [InlineData(SourceKind.Witness)]
-    [InlineData(SourceKind.Discovery)]
     [InlineData(SourceKind.FirstHandTestimony)]
     [InlineData(SourceKind.Report)]
     [InlineData(SourceKind.Rumor)]
-    public void Only_his_own_inference_is_his_to_revise(SourceKind provenance)
+    public void What_he_did_saw_or_was_told_is_not_his_to_revise(SourceKind provenance)
     {
         var world = Cast.Build(seed: 1, "baseline");
         var tommy = world.Get("tommy");
@@ -275,6 +275,34 @@ public sealed class ExposureAndDenialTests
 
         Assert.Null(revised);
         Assert.Equal(0.6, tommy.Cognition.ConfidenceIn(claim), 6);
+    }
+
+    /// <summary>
+    /// His own reasoning and his own reading of a trace are both his to think better of.
+    ///
+    /// <b>Discovery was refused until milestone 011</b>, and this theory case is the correction.
+    /// Admitting Inference alone put Discovery in with Participant and Witness, which is the exact
+    /// bundle <see cref="Provenance"/> exists to prevent — its other four predicates all say a
+    /// discovery is a reading that can be weak, wrong and reconsidered, and a fifth saying it was
+    /// unrevisable contradicted them. It surfaced through implementation rather than inspection:
+    /// <c>AdvanceInvestigation</c>'s cold-trail branch demotes a lead the investigator found herself,
+    /// so the repair written for it in milestone 011 was still a no-op until this changed.
+    /// </summary>
+    [Theory]
+    [InlineData(SourceKind.Inference)]
+    [InlineData(SourceKind.Discovery)]
+    public void His_own_reading_is_his_to_revise(SourceKind provenance)
+    {
+        var world = Cast.Build(seed: 1, "baseline");
+        var tommy = world.Get("tommy");
+        var claim = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, tommy.Id, 7);
+        tommy.Cognition.Learn(claim, Stance.Believes, 0.6, provenance, tommy.Id, world.Now);
+
+        var revised = tommy.Cognition.Revise(claim, 0.1, tommy.Id, world.Now);
+
+        Assert.NotNull(revised);
+        Assert.Equal(0.1, tommy.Cognition.ConfidenceIn(claim), 6);
+        Assert.Equal(provenance, revised!.SourceKind);
     }
 
     /// <summary>Somebody else's conclusion is not his to revise either, however it is filed.</summary>

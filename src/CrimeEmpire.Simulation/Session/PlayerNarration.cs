@@ -54,13 +54,17 @@ public static class PlayerNarration
     /// of history the player has to reconstruct from the accounts, not a label the interface hands
     /// over.
     /// </summary>
-    public static string Standing(double trust) => trust switch
+    public static string Standing(double trust, Pronouns self, Pronouns other) => trust switch
     {
-        >= 0.60 => "he would take his word",
-        >= 0.35 => "he takes him as he finds him",
-        >= 0.15 => "he has his reservations about him",
-        > 0 => "he would not take his word for much",
-        _ => "he puts no weight on anything the man says",
+        >= 0.60 => $"{self.Subject} would take {other.Possessive} word",
+        >= 0.35 => $"{self.Subject} {self.Verb("takes", "take")} {other.Object} as {self.Subject} " +
+                   $"{self.Verb("finds", "find")} {other.Object}",
+        >= 0.15 => $"{self.Subject} {self.Verb("has", "have")} {self.Possessive} reservations about {other.Object}",
+        > 0 => $"{self.Subject} would not take {other.Possessive} word for much",
+        // Not "anything {other.Subject} says": two people in one sentence and both of them "he" is
+        // a sentence the reader cannot parse. The other stays out of subject position here, which
+        // also keeps this parallel with the band above it.
+        _ => $"{self.Subject} would not take {other.Possessive} word at all",
     };
 
     /// <summary>
@@ -68,8 +72,10 @@ public static class PlayerNarration
     ///
     /// Never an accusation and never a number, exactly as <see cref="Standing"/>.
     /// </summary>
-    public static string? Wariness(double fear)
-        => fear <= 0.25 ? null : fear > 0.6 ? "he is frightened of him" : "he is wary of him";
+    public static string? Wariness(double fear, Pronouns self, Pronouns other)
+        => fear <= 0.25
+            ? null
+            : $"{self.Subject} {self.Verb("is", "are")} {(fear > 0.6 ? "frightened" : "wary")} of {other.Object}";
 
     /// <summary>
     /// Qualitative confidence only. INFORMATION_AND_LEGIBILITY.md lists the vocabulary; the numeric
@@ -88,17 +94,17 @@ public static class PlayerNarration
     /// acquisition category does not carry. Discovery in particular says "came across", never
     /// "saw" — finding a wrecked shopfront the next morning is not witnessing a beating.
     /// </summary>
-    public static string Attribute(InformationRecord r, Func<string, string> name)
+    public static string Attribute(InformationRecord r, Func<string, string> name, Pronouns self)
         => r.SourceKind switch
         {
             // Deliberately not "he saw it". Vincent holds that he went outside his boss's rule
             // because he decided to, which is not a thing anybody watches happen.
-            SourceKind.Participant => "he had a hand in it himself",
-            SourceKind.Witness => "he saw it himself",
-            SourceKind.Discovery => "he came across it",
-            SourceKind.FirstHandTestimony => $"{name(r.SourceId)} was in it and told him so",
-            SourceKind.Report => $"{name(r.SourceId)} told him",
-            SourceKind.Inference => "he worked it out himself",
+            SourceKind.Participant => $"{self.Subject} had a hand in it {self.Reflexive}",
+            SourceKind.Witness => $"{self.Subject} saw it {self.Reflexive}",
+            SourceKind.Discovery => $"{self.Subject} came across it",
+            SourceKind.FirstHandTestimony => $"{name(r.SourceId)} was in it and told {self.Object} so",
+            SourceKind.Report => $"{name(r.SourceId)} told {self.Object}",
+            SourceKind.Inference => $"{self.Subject} worked it out {self.Reflexive}",
             _ => $"talk, no better sourced than {name(r.SourceId)}",
         };
 
@@ -110,13 +116,13 @@ public static class PlayerNarration
     /// Only what he came to on his own account counts as a separate voice here. Testing for "not a
     /// report" would file somebody else's first-hand account as his own.
     /// </summary>
-    public static string? OwnBasis(InformationRecord r)
+    public static string? OwnBasis(InformationRecord r, Pronouns self)
         => r.SourceKind switch
         {
-            SourceKind.Participant => "his own doing",
-            SourceKind.Witness => "his own eyes",
-            SourceKind.Discovery => "what he came across",
-            SourceKind.Inference => "what he worked out",
+            SourceKind.Participant => $"{self.Possessive} own doing",
+            SourceKind.Witness => $"{self.Possessive} own eyes",
+            SourceKind.Discovery => $"what {self.Subject} came across",
+            SourceKind.Inference => $"what {self.Subject} worked out",
             _ => null,
         };
 }

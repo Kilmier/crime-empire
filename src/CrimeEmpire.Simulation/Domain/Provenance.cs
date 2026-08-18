@@ -62,6 +62,28 @@ public static class Provenance
         => kind is SourceKind.Participant or SourceKind.Witness;
 
     /// <summary>
+    /// Whether this is the holder's own conclusion or reading, which he may revise by himself.
+    ///
+    /// The behaviour behind <see cref="Cognition.Revise"/>. Inference is his reasoning and Discovery
+    /// is his reading of a trace; both are his to think better of, and neither needs anybody to argue
+    /// him out of it. Participant and Witness are refused because a man does not revise whether he did
+    /// something or saw it, and the three testimony kinds are refused because somebody else's account
+    /// is exactly what he *does* have to be argued out of — that is <see cref="Cognition.Receive"/>'s
+    /// job and giving it a second, quieter route would let a wishful character discard what he was
+    /// told without the disagreement ever being recorded.
+    ///
+    /// <b>Discovery's membership here is a correction to milestone 010, made in 011.</b> Revise
+    /// originally admitted <see cref="SourceKind.Inference"/> alone, which put Discovery in with
+    /// Participant and Witness — the precise bundle this file exists to prevent, reintroduced as a
+    /// fifth rule keyed off it. The other four all say Discovery is a reading that can be weak, wrong
+    /// and reconsidered; a fifth saying it is unrevisable contradicted them. Surfaced by implementation
+    /// rather than by inspection: <c>AdvanceInvestigation</c>'s cold-trail branch demotes a lead the
+    /// investigator found herself, so it stayed a no-op after the fix written to repair it.
+    /// </summary>
+    public static bool IsOwnReading(this SourceKind kind)
+        => kind is SourceKind.Inference or SourceKind.Discovery;
+
+    /// <summary>
     /// Descriptive, not behavioural: he came by this himself rather than through anyone's account.
     ///
     /// Used for the structural invariant that such a record must name its holder as its source.

@@ -349,6 +349,48 @@ ruling 3 forbade tuning anything to make the denial win, and the denial did not 
   by location rather than by incident; it was outside milestone 010's authorized scope and is recorded
   in `ROADMAP.md` rather than silently fixed.
 
+## The investigation and the allegation — settled by milestone 011
+
+See `milestones/011-the-detective-has-no-next-move.md`. No coefficient was tuned.
+
+- **A man may revise his own reading as well as his own reasoning, and nothing else.** This
+  **corrects milestone 010's entry above**, which admitted `SourceKind.Inference` alone.
+  `Provenance.IsOwnReading` is the named rule: `Inference` and `Discovery` are his — his reasoning and
+  his reading of a trace, both defeasible, both his to think better of. `Participant` and `Witness`
+  are refused because a man does not revise whether he did something or saw it, and the three
+  testimony kinds are refused because somebody else's account is what he has to be *argued* out of
+  through `Receive`; a quieter second route would let a wishful character discard testimony without
+  the disagreement ever being recorded. The original guard put Discovery in with Participant and
+  Witness, which is the exact bundle `Provenance.cs` exists to prevent — its other four predicates all
+  say a discovery is a reading that can be weak, wrong and reconsidered. **Surfaced through
+  implementation**: `AdvanceInvestigation`'s cold-trail branch demotes a lead the investigator found
+  herself, so the repair written for it was still a no-op until this changed.
+- **A case is about an incident, not an address.** Milestone 005's ruling, now applied at every point
+  in the investigation path — which lead it picks up, whether it has closed, and which stale claims it
+  demotes. `Generators.SameIncident` is the single predicate, and event 0 is not an incident. The
+  accepted scenario contains exactly one incident, so location and incident coincide in it and only a
+  staged two-incident case can tell the rules apart.
+- **Police interest names the incident the suspect is being looked at over.** A `PoliceInvestigating`
+  claim with no event id cannot be answered, cannot be corroborated against anything, and cannot go
+  stale when the case does. That is where a heat bar starts, and
+  `INFORMATION_AND_LEGIBILITY.md`'s anti-heat-bar tests are what forbids it.
+- **What you were told, you check with somebody else; what you worked out yourself, you put to the
+  man it names.** `FromAllegation` is the complement of `FromRelationship`'s corroboration branch and
+  the two cover every provenance exactly once. The corroboration restriction — there is nothing to
+  corroborate about your own eyes — is right and was not relaxed; a third generator is the answer,
+  which is the same shape milestone 007 chose for `FromDelegation`. **It reads no role, title or
+  skill**: it is the general act of putting something to its subject, and it matters most for an
+  investigator only because an investigator's beliefs are self-acquired by construction.
+- **Being asked by somebody who is not your superior still offers candid, partial and false.** The
+  `asked-to-account` redirect changes who he answers to for one exchange and confers no rank. A
+  detective who cannot be lied to is not a detective.
+- **A character is described as themselves on every player-facing surface.** `Domain/Pronouns.cs`
+  carries the forms and a plural-verb flag; `Verb(singular, plural)` takes both words because English
+  agreement is not a suffix rule, so `They` is usable rather than decorative. Pronouns cross the
+  boundary the way display names do — for the viewpoint, for a pending decision's actor, and for the
+  people in the view. **The developer trace is deliberately excluded**: it is a debugging tool the
+  architecture doc separates from player-facing accounts by name.
+
 ## Stack
 
 - **Simulation core**: C#, plain classes, engine-agnostic, unit-testable from the command line.

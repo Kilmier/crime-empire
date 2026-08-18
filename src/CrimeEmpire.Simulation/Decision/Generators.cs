@@ -76,6 +76,10 @@ public static class Generators
         all.AddRange(FromTrigger(ctx));
         all.AddRange(FromRelationship(ctx));
         all.AddRange(FromDelegation(ctx));
+        // Last, so it fills gaps rather than taking questions off generators that already own them.
+        // The (kind, target, claim) dedupe below keeps the first proposer, so a delegator who can
+        // already audit his own executor keeps FromDelegation's version and its wording.
+        all.AddRange(FromAllegation(ctx));
 
         // De-duplicate by id, keeping the first proposer.
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -165,15 +169,22 @@ public static class Generators
             var leads = ctx.Perceived.OfKind(ClaimKind.WitnessSawIncident).ToList();
             var named = ctx.Perceived.OfKind(ClaimKind.PersonUsedViolence).ToList();
 
-            // A lead she has already put a name against is not a reason to open the case again.
-            var lead = leads.FirstOrDefault(r => !named.Any(v => v.Claim.Object == r.Claim.Subject));
+            // A lead she has already put a name against is not a reason to open the case again —
+            // and "already named" is a question about the incident, never about the address. Matched
+            // on Claim.EventId, so a second beating at a shop she has already closed a case on is
+            // still a live lead. Comparing the violence claim's Object to the lead's Subject asked
+            // whether she had named anybody for anything at that location, which is milestone 005's
+            // ruling read off the map instead of the case.
+            var lead = leads.FirstOrDefault(r => !named.Any(v => SameIncident(v.Claim, r.Claim)));
             if (leads.Count > 0 && lead is null) yield break;
 
             string? target = lead?.Claim.Subject ?? ctx.VisibleTargets.FirstOrDefault();
             if (target is null) yield break;
 
             yield return new Candidate(
-                $"investigate:{target}",
+                // Keyed on the incident where there is one, so two cases at one address are two
+                // candidates rather than one that looks like a repeat of itself.
+                lead is not null ? $"investigate:{target}:{lead.Claim.EventId}" : $"investigate:{target}",
                 ActionKind.StartStrategy,
                 nameof(FromResponsibility),
                 $"open an investigation into events at {target}")
@@ -183,6 +194,9 @@ public static class Generators
                 Domain = domain,
                 // With no lead, the requirement is one she cannot meet — and the trace says so.
                 RequiredKnowledge = new[] { lead?.Claim ?? new Claim(ClaimKind.WitnessSawIncident, target) },
+                // Which incident the case is about, so its steps can act on it. Null when she has no
+                // lead, which is also the case the knowledge filter refuses.
+                AboutIncident = lead?.Claim,
                 RequiredSkill = Skill.Investigation,
                 RequiredSkillLevel = 0.3,
             };
@@ -586,6 +600,82 @@ public static class Generators
         }
     }
 
+    // ---------------------------------------------------------------- allegation
+    /// <summary>
+    /// Putting an allegation to the person it names.
+    ///
+    /// <b>The complement of the corroboration route, and the two together cover every provenance
+    /// exactly once.</b> What you were told, you check against somebody else — that is
+    /// <see cref="FromRelationship"/>'s <c>secondhand</c> branch, and its reasoning is that there is
+    /// nothing to corroborate about your own eyes. What you worked out or came across yourself, you
+    /// put to the man it names. Neither is a special case of the other, and this is the same shape
+    /// milestone 007 chose when it added <see cref="FromDelegation"/> rather than relaxing the
+    /// corroboration restriction: *the restriction is right for corroboration, and the answer is a
+    /// different generator rather than a wider one.* Widening a limit by renaming its justification
+    /// is what got milestone 009's second correction rejected.
+    ///
+    /// <b>Why this is not a detective's action.</b> Nothing here reads a role, a title or a skill.
+    /// It is the general act of asking somebody about something you hold against them, and every
+    /// character with such a belief gets it. It happens to matter most for an investigator, because
+    /// **an investigator's beliefs are self-acquired by construction** — she works things out and
+    /// comes across things, never being told — so the corroboration route can never fire for her,
+    /// she delegates to nobody, and belonging to no organisation she has no superior to report to.
+    /// Before this she had no way to put a question to anybody at all: her candidate set after naming
+    /// a suspect was one option, <c>let it lie</c>, with nothing generated and nothing rejected.
+    ///
+    /// The two claim kinds are the two that name a person as having done something, which is the
+    /// same pair the answering branch tests for <c>namesHim</c>. That correspondence is the point:
+    /// a question this generator can ask is a question the recipient can answer candidly, partially
+    /// or falsely, so the exchange is a real one rather than a message with no reply.
+    /// </summary>
+    private static IEnumerable<Candidate> FromAllegation(GeneratorContext ctx)
+    {
+        var acquainted = new HashSet<string>(ctx.AcquaintedIds, StringComparer.Ordinal);
+
+        foreach (var held in ctx.Perceived.Beliefs
+                     .Where(b => b.IsHeld
+                                 && b.Claim.Kind is ClaimKind.PersonUsedViolence
+                                                 or ClaimKind.PersonBreachedPolicy
+                                 // Not what he was told — that is the corroboration route's, and
+                                 // offering both would be one act proposed twice.
+                                 && !b.SourceKind.IsTestimony())
+                     // Thinnest first, matching every other question generator: the account he is
+                     // least sure of is the one worth putting.
+                     .OrderBy(b => b.Confidence)
+                     .ThenBy(b => b.Claim.ToString(), StringComparer.Ordinal))
+        {
+            string subject = held.Claim.Subject;
+
+            // Not himself. A man does not put his own act to himself, and the answering branch would
+            // have nothing to do with it.
+            if (subject == ctx.Actor.Id) continue;
+
+            // Somebody he could name. Milestone 009's rule, over every candidate's target and not
+            // only the one that was reported — Acquaintance.KnownTo is the single derivation.
+            if (!acquainted.Contains(subject)) continue;
+
+            // Spent when asked, like every other question, and not worth putting to a man who has
+            // already given his version of this.
+            if (!CanAsk(ctx.RequestsMade, subject, held.Claim)) continue;
+            if (ctx.Perceived.HasAccountFrom(subject, held.Claim)) continue;
+
+            yield return new Candidate(
+                $"allege:{subject}:{held.Claim}",
+                ActionKind.SeekCorroboration,
+                nameof(FromAllegation),
+                $"put it to {subject} directly")
+            {
+                TargetId = subject,
+                Domain = ctx.Agenda.Domain,
+                AboutClaim = held.Claim,
+            };
+
+            // One question at a time, for the same reason FromDelegation stops at one: a bounded
+            // candidate set is not a place to put a whole case file.
+            yield break;
+        }
+    }
+
     // ---------------------------------------------------------------- delegation
     /// <summary>
     /// A delegator asking the man he sent to account for what he did.
@@ -670,6 +760,23 @@ public static class Generators
     /// Being asked directly bypasses this — a question deserves an answer even if the answer is
     /// the one already given.
     /// </summary>
+    /// <summary>
+    /// Whether two claims are about the same incident.
+    ///
+    /// The predicate rather than the kinds: a `WitnessSawIncident` lead, the `PersonUsedViolence` it
+    /// leads to, and the `PoliceInvestigating` that follows are three statements about one event, and
+    /// what ties them together is <see cref="Claim.EventId"/>. **Event 0 is not an incident** — it is
+    /// the default for a claim that names none, and matching on it would make every unattributed
+    /// claim share a single incident, which is the scan defect milestone 010 removed from
+    /// <c>Utility</c> reappearing one layer up.
+    ///
+    /// Public and parameterised for the same reason as <see cref="CanAsk"/> and
+    /// <see cref="HasSomethingToReport"/>: a rule buried inside a LINQ predicate is a rule nothing
+    /// can test directly, and this repository has already had two regression tests pass against a
+    /// hand-written copy of a rule rather than against the rule.
+    /// </summary>
+    public static bool SameIncident(Claim a, Claim b) => a.EventId != 0 && a.EventId == b.EventId;
+
     private static bool HasSomethingNewFor(GeneratorContext ctx, string recipientId)
         => HasSomethingToReport(ctx.ReportsSent, ctx.Perceived.Beliefs, recipientId);
 

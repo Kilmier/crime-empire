@@ -205,6 +205,61 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 010, not yet reviewed or accepted
+
+**Nobody has reviewed this and nobody has accepted it.** The figures below are measurements taken by
+the author of the change, on the implementation commit that carries this section. They are recorded
+here because ruling 6 required every moved figure to be recorded with its reason; they establish no
+status whatever. See `milestones/010-a-denial-that-can-win.md`.
+
+Milestone 010 made concealment act on the concealer's own belief about the incident he is concealing,
+and scoped the denial's exposure term to that incident. **Baselines moved in four of five variants,
+which ruling 6 stated in advance would happen.** The mechanism by which they moved is one edge:
+`Cognition.Revise` moves the reconsideration stamp, `Reporting.NeedsConveying` reads it, so a concealer
+whose view of his own exposure has changed has something to report again.
+
+- Build: **0 warnings, 0 errors** across four projects — measured after deleting every `bin`, `obj`
+  and `.godot` directory, not after `dotnet clean`.
+- Tests: **406 passed**, 0 failed (380 at `7ca7819`). All 26 added are in a new
+  `ExposureAndDenialTests.cs` — 15 facts and 11 theory cases. `SimulationReplayTests.cs` gains a
+  snapshot field rather than a test.
+- Godot headless self-test: **4 choices, 4 decision screens, exit 0**, unchanged from `7ca7819`, and
+  its UI text still contains none of the forbidden strings listed in the 009 section below.
+- **23 of 30 viewpoint renders byte-identical to `7ca7819`.** The seven that move are Tommy's in four
+  variants — his own `WitnessSawIncident` confidence rises from "plausible" to "strongly supported"
+  after a clumsy cleanup — and Salvatore's in three, which gain a line as the re-armed report reaches
+  him through Vincent.
+
+| Variant | Hash | Chosen actions | Decisions | Conflicts | Rel. read | Rel. decided |
+|---|---|---|---|---|---|---|
+| baseline | `5E95096F02A29E4E` | `EC21B3702A113A2B` | 41 | 2 | 21 | 2 |
+| cautious-vincent | `A8A1BBD12D5334C2` | `124E8FE932DD5A89` | 21 | 3 | 12 | 3 |
+| watchful-boss | `EED500CFCE722C8B` | `E95050F5E205106D` | 44 | 2 | 21 | 3 |
+| disloyal-vincent | `2496418CEAF47C35` | `D42236DD11812D2A` | 41 | 2 | 23 | 2 |
+| resentful-tommy | `0FE0FF37BE6E68CF` | `E33EF9BACC7BE7F8` | 37 | 2 | 20 | 3 |
+
+Reasons, per variant, against the accepted milestone 008/009 baseline in the next section:
+
+- **`cautious-vincent` is byte-identical on every figure.** It contains no violence, so no incident, so
+  no concealment. That is the control.
+- **`baseline` 38 → 41 decisions, `watchful-boss` 39 → 44, `disloyal-vincent` 39 → 41.** Tommy's clumsy
+  cleanup raises his own witness belief 0.6 → 0.7, which re-arms his report to Vincent, which wakes
+  Vincent, which re-arms Vincent's to Salvatore. Relationship reads rise with the decision count
+  (19 → 21, 18 → 21, 20 → 23) and conflicts are unchanged at 2.
+- **`resentful-tommy` 38 → 37 decisions.** The one variant that falls. Tommy conceals earlier there
+  (9 April rather than 13 April, milestone 008's finding), so the same re-arming lands on a different
+  part of his schedule and one later wake finds nothing to do.
+- **`rel. decided` is unchanged in every variant**, so the relationship channel decides the same number
+  of winners as before.
+
+**A denial still loses in every variant**, which is the milestone's result under ruling 3 rather than a
+failure of it. Narrowest losing margin **+1.083** — Vincent, `disloyal-vincent`, 18 April, against
+"report to salvatore, leaving out his own part". The full counterfactual table, and the three reasons
+the model is still shut, are in the milestone archive.
+
+The two Godot verification commands are still **not in `AGENTS.md` §Verification** and are still
+recorded only in the 009 section below.
+
 ### Accepted — milestone 009, `7ca7819`
 
 **Matt accepted milestone 009 on 2026-08-16, on the strength of `7ca7819`.** It took five Codex
@@ -232,7 +287,16 @@ him about.
   variants, which *gains* one line — `· Vincent Russo has not given him an account`. He can now name
   the man who stood in his shop demanding money, and that man has told him nothing.
 
-**Every variant is byte-identical to milestone 008's accepted baseline again.** `cautious-vincent` moved under Correction 2 and moved back under Correction 4; the table below is the accepted 008 state, which is also the current state.
+**Every variant is byte-identical to milestone 008's accepted baseline again**, at `7ca7819`.
+`cautious-vincent` moved under Correction 2 and moved back under Correction 4; the table below is the
+accepted 008 state.
+
+**It stopped being the current state on 2026-08-17**, when milestone 010 moved four of the five
+variants — see the section above, which is the current measurement. This sentence used to end "which
+is also the current state", and correcting it here rather than leaving it is the whole point of the
+file: the claim was true of the commit it was written about and would have been false of the file it
+was sitting in the moment anything moved. That is the failure recorded under "How this record has
+failed", twice.
 
 | Variant | Hash | Chosen actions | Decisions | Conflicts | Rel. read | Rel. decided |
 |---|---|---|---|---|---|---|
@@ -483,7 +547,17 @@ converge behaviourally is still caught by the second figure.
 
 The variant was added to stage an executor denying his own act to his delegator, and still does not
 achieve it. The delegator now asks and the executor now answers, in play; he answers honestly, because
-he believes the street saw him. See `ROADMAP.md` for what would have to change.
+he believes the street saw him.
+
+**Milestone 010 attacked exactly that and did not move it**, and the reason is now measured rather than
+guessed. A concealer can now act on his own exposure and a denial is priced from its own incident, but
+the denial still loses in every variant — narrowest margin 1.083 — and three things hold it shut: one
+cleanup attempt is worth `-0.2` where roughly `-0.4` is needed; Tommy's Discretion of `0.30` cannot
+clear the `0.45` threshold at any seed, so his cleanups are always clumsy and move his belief the wrong
+way; and Vincent, whose denial comes closest, is never offered a cleanup because his dominant pressure
+is `RevenueShortfall` and never `LegalExposure`. **The man who can clean up is not offered a cleanup,
+and the man offered one cannot clean up.** Full counterfactual in
+`milestones/010-a-denial-that-can-win.md`.
 
 **Also note the second business is never collected from.** Nobody in the organisation knows it is
 refusing — deliberately, since that asymmetry is what leaves the capo room to question his own man
@@ -670,6 +744,40 @@ Added by milestone 009's fourth correction:
   carried `StrategyInstance.Label` and raw `PressureKind` names.
 - **The Godot self-test drives the interface through real button presses**, so the rebuild that
   frees the button its own signal came from is exercised rather than reasoned about.
+
+Added by milestone 010:
+
+- **A concealment names the incident it is concealing**, on the instance, as an event id — never the
+  target, and never the default 0, which would make every unidentified claim share one incident.
+- **Quieting the witnesses changes a belief and nothing else.** No trace removed, no truth-log entry
+  altered, nobody else's cognition touched. Mutation-checked by making each of those happen in turn,
+  which is the only way to check an assertion that nothing happened.
+- **The belief that moves belongs to the executor, not the owner.** Concealment is never delegated in
+  the fixture, so owner and executor coincide everywhere and a natural-run test cannot tell them
+  apart; the split is staged.
+- **A cleanup can be wrong in both directions.** Clean lowers his confidence that the street can place
+  him, clumsy raises it, and the world is untouched either way — so a man who believes he has cleaned
+  up and has not remains available, which is why `ResolveViolence` files that belief as an inference.
+- **Only the first concealment step touches what he thinks about witnesses.** The second is about
+  records.
+- **A man can revise a conclusion he drew himself, and nothing else.** `Cognition.Revise` refuses a
+  record he established by doing or seeing, and refuses one somebody gave him — the first is what
+  `Provenance` defends, the second is an account he has to be argued out of. `Learn` still discards a
+  less confident inference, and that is pinned, because routing a revision back through it is the
+  simplification that would silently restore the defect.
+- **A revision is a reconsideration**: stance and acquisition time stand, the reconsideration stamp
+  moves, and `Reporting.NeedsConveying` therefore re-arms.
+- **A denial is priced from the witnesses to the incident it is about**, by `Claim.EventId`, never
+  from a maximum over every witness belief the actor holds. Asserted as a comparison between staged
+  worlds so the test pins the scoping rather than a coefficient.
+- **A suppressed claim with no event id is priced as though nobody saw it**, not against every other
+  idless claim.
+- **No viewpoint is shown a belief he does not hold**, over all six characters and all five variants —
+  and asserted at the claim level, never against the narrator's phrasing appearing in rendered text.
+  The phrasing form of this test is vacuous: the narrator's sentence for a witness claim does not
+  appear in `IntelligenceWriter`'s output for *any* viewpoint, including the ones who hold it, so the
+  assertion cannot fail. It duly survived a mutation that made the view read every character's
+  cognition. *An assertion that a string is absent is worth nothing until you have seen it present.*
 
 ## Review checklist
 

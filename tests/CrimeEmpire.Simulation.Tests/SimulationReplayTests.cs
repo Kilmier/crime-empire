@@ -166,12 +166,17 @@ public sealed class SimulationReplayTests
             // different occasion keys, so this state has to be in the canonical comparison rather
             // than only in a dedicated test. AttemptedConcealments is the redundancy rule's own
             // state: a run that attempted a different set of incidents would reach different
-            // candidates on every later wake.
+            // candidates on every later wake. SourceEventId is milestone 010's: it decides which
+            // witness beliefs the concealment's first step revises, so a run that carried a
+            // different incident on the instance would leave the concealer holding a different view
+            // of his own exposure and score every later report from it. Deliberately absent from
+            // BehavioralSnapshot below, which excludes every field derived from a monotonic counter.
             lines.Add($"character|{character.Id}|{character.Tier}|{character.DecisionCount}|" +
                       $"{character.StrategyCount}|{character.Execution.Strategy?.Kind}|" +
                       $"{character.Execution.Strategy?.OwnerId}|{character.Execution.Strategy?.LocalSequence}|" +
                       $"{character.Execution.Strategy?.StepIndex}|{character.Execution.Strategy?.NextAdvanceOrdinal}|" +
                       $"{character.Execution.Strategy?.PendingStepEventId}|" +
+                      $"{character.Execution.Strategy?.SourceEventId}|" +
                       string.Join(",", character.Execution.AttemptedConcealments.Select(a => a.ToString())) +
                       // Who has executed work for him gates the delegator's account question, so a
                       // run that recorded a different set would go on to generate different

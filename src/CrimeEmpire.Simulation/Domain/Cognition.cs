@@ -370,6 +370,52 @@ public sealed class Cognition
         return prior with { SourceKind = heard, SourceId = senderId };
     }
 
+    /// <summary>
+    /// The holder thinks better of a conclusion he drew himself, in either direction.
+    ///
+    /// <b>Why this exists at all.</b> <see cref="Learn"/> models acquiring information and
+    /// <see cref="Receive"/> models being told something; neither can lower a character's own
+    /// confidence in his own reasoning. Learn's override rule is
+    /// <c>OverridesPriorRecord() || confidence &gt;= prior.Confidence</c>, so an
+    /// <see cref="SourceKind.Inference"/> arriving less sure than what is already there is silently
+    /// discarded — a man's own conclusions could only ever firm up. That gap is what made
+    /// <c>Strategies.AdvanceConceal</c>'s "quiet the witnesses" step unable to quiet anything, even
+    /// in the mind of the man running it.
+    ///
+    /// <b>Only his own inference.</b> A record he established by doing or seeing, and a record
+    /// somebody gave him, are both refused: the first is what <see cref="Provenance.OverridesPriorRecord"/>
+    /// and <see cref="Provenance.ProtectsStance"/> exist to defend, and the second is an account he
+    /// would have to be argued out of rather than one he can simply revise. Refusing rather than
+    /// throwing, because "there was nothing of mine here to revise" is an ordinary outcome and the
+    /// caller has nothing better to do about it.
+    ///
+    /// <b>The stance does not move.</b> Falling below the acting threshold demotes a stance in
+    /// <see cref="Receive"/> because somebody argued him down to it; nothing here is an argument, and
+    /// inventing a second threshold would be a new coefficient rather than a structural change. The
+    /// acquisition time stands and only the reconsideration stamp moves, exactly as a revision under
+    /// Learn does — which is also what re-arms
+    /// <see cref="Org.Reporting.NeedsConveying"/> for a position he has moved on.
+    ///
+    /// Being wrong stays possible in both directions: this changes what he thinks, and nothing else.
+    /// </summary>
+    /// <returns>The revised record, or null when he held no conclusion of his own to revise.</returns>
+    public InformationRecord? Revise(Claim claim, double confidence, string holderId, DateTime at)
+    {
+        int i = _records.FindIndex(r => r.Claim.Equals(claim));
+        if (i < 0) return null;
+
+        var prior = _records[i];
+        if (prior.SourceKind != SourceKind.Inference || prior.SourceId != holderId) return null;
+
+        var revised = prior with
+        {
+            Confidence = Math.Clamp(confidence, 0, 1),
+            LastReconsideredAt = at,
+        };
+        _records[i] = revised;
+        return revised;
+    }
+
     private InformationRecord Replace(InformationRecord prior, InformationRecord updated)
     {
         int i = _records.FindIndex(r => r.Claim.Equals(prior.Claim));

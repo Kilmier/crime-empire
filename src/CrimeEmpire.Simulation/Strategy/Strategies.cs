@@ -458,6 +458,21 @@ public static class Strategies
     }
 
     // ------------------------------------------------------------------ concealment
+
+    /// <summary>
+    /// How far one attempt at quieting witnesses moves the concealer's own view of whether the
+    /// street can place him there. The same two magnitudes the step already applies to
+    /// <see cref="PressureKind.LegalExposure"/> beside it, in the same directions.
+    ///
+    /// Deliberately not new numbers. The step has always modelled a clumsy cleanup as actively
+    /// worse rather than merely ineffective — exposure rises, and completion says "the cleanup made
+    /// things worse" — so the belief follows the model already there. Choosing a gentler failure
+    /// here, such as leaving the belief untouched, would be picking a coefficient by what it does to
+    /// a downstream decision, which milestone 010's ruling 3 forbids.
+    /// </summary>
+    private const double QuietedWitnessesConfidence = 0.2;
+    private const double StirredWitnessesConfidence = 0.1;
+
     private static void AdvanceConceal(
         World world, Character owner, Character executor, StrategyInstance s, string step, Rng rng)
     {
@@ -472,10 +487,54 @@ public static class Strategies
         else
             owner.Motivations.AddPressure(PressureKind.LegalExposure, 0.1);
 
+        // StepIndex has already been incremented, so 1 is the first step — the same convention
+        // AdvanceTribute switches on. Only "quiet the witnesses" touches what he thinks about
+        // witnesses; "tidy the paperwork" is about records and keeps the exposure effect alone.
+        if (s.StepIndex == 1)
+            QuietWitnesses(world, executor, s, clean);
+
         if (s.StepIndex >= ConcealSteps.Length)
             Complete(world, owner, s, clean ? "the loose ends were tied off" : "the cleanup made things worse");
         else
             ScheduleNextStep(world, s, $"{s.Label}: {step} done");
+    }
+
+    /// <summary>
+    /// The step named for silencing witnesses, finally silencing somebody — in exactly one place.
+    ///
+    /// <b>What moves is a belief, not the world.</b> No trace is removed, no truth-log entry is
+    /// altered, and nobody else's cognition is touched. The grocer still saw what he saw and the
+    /// wrecked shopfront is still wrecked; what changes is the executor's own confidence that the
+    /// street can put him at this incident. So a man who has cleaned up and has not is exactly as
+    /// available as a man who has and does not believe it — being wrong stays possible in both
+    /// directions, which is why <see cref="ResolveViolence"/> records that belief as an
+    /// <see cref="SourceKind.Inference"/> in the first place.
+    ///
+    /// <b>Whose belief.</b> The executor's. He is the man who went out and did it and formed a view
+    /// from what he found; a delegator who sent him learns nothing here, exactly as he learns
+    /// nothing from the approach step. <see cref="Cognition.Revise"/> refuses anything that is not
+    /// the holder's own inference, so this cannot overwrite something he saw or something he was
+    /// told.
+    ///
+    /// <b>Which incident.</b> The one the instance names, by event id. Every witness belief carrying
+    /// that id moves and nothing else does — a man cleaning up after one beating does not become
+    /// calmer about a different one, which is the same scan defect this milestone fixes in
+    /// <see cref="Decision.Utility"/>. An instance with no identified incident quiets nothing at all
+    /// rather than falling back on the target, per milestone 005's ruling.
+    /// </summary>
+    private static void QuietWitnesses(World world, Character executor, StrategyInstance s, bool clean)
+    {
+        if (s.SourceEventId is not { } incidentId) return;
+
+        double delta = clean ? -QuietedWitnessesConfidence : StirredWitnessesConfidence;
+
+        // Materialised before revising: Revise writes into the same record list this enumerates.
+        var about = executor.Cognition.OfKind(ClaimKind.WitnessSawIncident)
+            .Where(r => r.Claim.EventId == incidentId)
+            .ToList();
+
+        foreach (var r in about)
+            executor.Cognition.Revise(r.Claim, r.Confidence + delta, executor.Id, world.Now);
     }
 
     // ------------------------------------------------------------------ investigation

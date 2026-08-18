@@ -63,6 +63,16 @@ public static class Commit
                     StartedAt = world.Now,
                     Deadline = ctx.MyAssignment?.Deadline ?? world.Now.AddDays(30),
                     AssignmentId = agenda.AssignmentId,
+                    // Which incident this is about, carried on the instance so its steps can act on
+                    // it. Commit already recorded the incident in AttemptedConcealments and then
+                    // dropped it, so a concealment knew which incident it must not repeat and not
+                    // which incident it was concealing. Milestone 005's ruling applies here as well:
+                    // the incident is the identity, never "whatever happened at this address", which
+                    // is why this is the event id rather than TargetId. A claim carrying no event id
+                    // names no incident and yields null rather than 0.
+                    SourceEventId = c.AboutIncident is { EventId: not 0 } incidentEvent
+                        ? incidentEvent.EventId
+                        : null,
                     BreachedPolicyId = c.BreachesPolicyId,
                 };
                 actor.Execution.Strategy = s;

@@ -22,6 +22,14 @@ relationship schema and built the instrument that measures it. The rest of the e
 not built, and the MVP has not begun. Milestone 002 was a framework migration, not a step along this
 sequence. Full accounts are in `docs/milestones/`.
 
+Milestone 010 — **implemented 2026-08-17, not reviewed and not accepted** — made concealment act on
+the concealer's own belief and scoped the denial's exposure term to its own incident. Both defects
+were real and both are fixed; **the denial still loses**, and the milestone's deliverable is therefore
+the measured explanation of what else holds it shut rather than the exchange it went looking for. See
+`milestones/010-a-denial-that-can-win.md`. Codex is withdrawn from the review loop from this milestone
+onward, so its findings are the author's own and are recorded as weaker evidence — see
+`REVIEW_LEDGER.md`.
+
 Milestone 009 — **closed and accepted 2026-08-16** after five Codex rounds and one self-review,
 nine findings in all — is the first step off that sequence rather than along it: a Godot
 playable shell over the same kernel, with a person answering one character's decisions.
@@ -70,14 +78,34 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   `−0.5 × loyalty` for what an omission costs net to `0.2 × loyalty`. And grievance was being clamped
   away, not merely outweighing trust. Both are now visible and separately measured. See
   `milestones/008-relationship-readers.md` and `docs/RELATIONSHIPS.md`.
-- **Concealment does not quiet the witnesses it is named for.** **Being addressed by milestone 010.** `AdvanceConceal`'s first step is
-  "quiet the witnesses" and moves only `LegalExposure`; the concealer's own belief that he was seen is
-  untouched. `Utility` prices a denial almost entirely on that belief, so this is what stands between
-  the executor answering his delegator — which now happens — and an executor *denying* to him, which
-  still does not. Surfaced by milestone 007 and deliberately outside it.
-- **`believedWitnesses` is scanned globally.** **Being addressed by milestone 010.** `Utility` maxes over every `WitnessSawIncident` the
-  actor holds, regardless of which incident he would be concealing — the same defect shape as the
-  `SeekCorroboration` scan `404b416` fixed, and the same load-bearing category in `REVIEW_LEDGER.md`.
+- ~~**Concealment does not quiet the witnesses it is named for.**~~ and
+  ~~**`believedWitnesses` is scanned globally.**~~ **Both fixed by milestone 010.** The concealment
+  instance now names its incident, the first step revises the concealer's own confidence that the
+  street can place him there — up on a clumsy job, down on a clean one, and the world untouched
+  either way — and the denial's exposure term is scoped to the incident the suppressed claim belongs
+  to. **Neither fix made the denial win, which is milestone 010's result rather than a failure of
+  it**; the margins and the three reasons the model is still shut are below and in
+  `milestones/010-a-denial-that-can-win.md`.
+- **A man's own conclusions can only firm up, except through one method.** `Cognition.Learn` discards
+  an `Inference` arriving less confident than what is already held, so `Cognition.Revise` was added as
+  the single narrow route by which a character revises something he worked out himself. **Two places
+  still have the old shape and were outside milestone 010's authorized scope**, both in
+  `Strategies.AdvanceInvestigation`: its "the trail went cold" branch calls `Learn` at half confidence
+  intending to demote a dead lead and is therefore a no-op (unreachable in all five variants at seed
+  42, so it has never shown); and it picks and demotes leads by `Claim.Subject == s.TargetId`, which
+  is by **location** rather than by incident — ruling 1's "whatever happened at this address", in the
+  investigation path.
+- **One cleanup is worth `-0.2` and the denial needs about `-0.4`.** Measured by milestone 010. The
+  MVP one-attempt-per-incident rule caps the mechanism at a single step, and the counterfactual shows
+  the denial winning outright once the concealer's witness belief reaches zero. Bound up with the
+  provisional status of the one-attempt rule noted above.
+- **Tommy cannot roll a clean cleanup at any seed, and Vincent is never offered one.** The roll is
+  `discretion + Range(-0.15, 0.15) > 0.45` over a half-open range, and Tommy's Discretion is `0.30` —
+  his largest draw lands exactly on the threshold against a strict comparison. Vincent's Discretion of
+  `0.35` clears it sometimes, but `Generators.FromPressure` offers concealment only when
+  `LegalExposure` is the actor's *dominant* pressure and Vincent's is always `RevenueShortfall`. So
+  the man who can clean up is not offered a cleanup and the man offered one cannot clean up. Both are
+  cast and threshold facts; milestone 010's ruling 3 forbade touching either, so they are recorded.
   It changes nothing in the current scenario, which is why milestone 007 excluded it rather than
   folding a behaviour-neutral fix into a pass that already moved every baseline.
 - **The bakery is never collected from.** Nobody in the organisation knows it is refusing — deliberate,
@@ -207,11 +235,13 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    resentment are separate dimensions or derived, whether provenance should weight the social
    consequence, and whether grievance should be capped — each now carrying a stated condition for
    when it becomes answerable, which is what makes them not-yet-candidates rather than open questions.
-2. ~~**A denial that can win**~~ — **became milestone 010**, authorized 2026-08-16 and active. The
-   concealment step that does not quiet its witnesses, and the global `believedWitnesses` scan.
-   Together they are what keeps an executor from ever denying to his delegator, which is the one
-   exchange in the model that milestone 004's provenance distinction was built for and that no
-   accepted run has produced. Scope and rulings in `CURRENT_MILESTONE.md`.
+2. ~~**A denial that can win**~~ — **became milestone 010**, implemented 2026-08-17 and awaiting
+   review. Both defects are fixed and **the denial still loses**, narrowest margin 1.083. What the
+   milestone delivered instead is the explanation: the mechanism is directionally right and one
+   attempt is not enough of it, and neither man who could use it is in a position to. Anything
+   further here is a tuning or cast question and was explicitly out of bounds under its rulings 3 and
+   7 — so if it returns, it returns as a scope Matt writes, not as unfinished business. See
+   `milestones/010-a-denial-that-can-win.md`.
 3. **Persistence / SQLite** — begin storing the information and decision data now worth querying.
 4. ~~**Godot / .NET compatibility spike**~~ — **subsumed by milestone 009**, which settled the
    constraint (the engine hosts .NET 8) and built the shell in the same pass rather than spiking it

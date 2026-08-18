@@ -528,11 +528,25 @@ public static class Utility
         {
             var loyalty = Loyalty(actor, psy, cand.TargetId);
 
-            // How exposed he believes he already is. A man who thinks the street saw him has
-            // less to gain by denying it, because the denial is what gets caught.
+            // How exposed he believes he already is *about the thing he would be hiding*. A man who
+            // thinks the street saw him has less to gain by denying it, because the denial is what
+            // gets caught.
+            //
+            // Scoped to the incident each suppressed claim belongs to, by Claim.EventId. This used
+            // to be a maximum over every witness belief he held, whatever incident it belonged to,
+            // so a man concealing one thing was priced on the most-witnessed thing he knew about —
+            // the same defect shape as the SeekCorroboration scan `404b416` fixed, where a question
+            // was scored from the weakest unrelated belief in the asker's head. A claim with no
+            // event id names no incident and is skipped rather than matched against every other
+            // idless claim, which would be the same scan back in miniature.
             double believedWitnesses = 0;
-            foreach (var w in perceived.OfKind(ClaimKind.WitnessSawIncident))
-                believedWitnesses = Math.Max(believedWitnesses, w.Confidence);
+            foreach (var s in cand.Suppressed)
+            {
+                if (s.Claim.EventId == 0) continue;
+                foreach (var w in perceived.OfKind(ClaimKind.WitnessSawIncident))
+                    if (w.Claim.EventId == s.Claim.EventId)
+                        believedWitnesses = Math.Max(believedWitnesses, w.Confidence);
+            }
 
             // The weight of what he would be hiding, as he holds it. Used only by the Candid branch
             // below, which prices the cost of handing it over — a cost history cannot discount,

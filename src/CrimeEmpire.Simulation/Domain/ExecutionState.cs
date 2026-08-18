@@ -50,6 +50,20 @@ public sealed class StrategyInstance
     public required DateTime StartedAt { get; init; }
     public DateTime Deadline { get; set; }
     public long? AssignmentId { get; init; }
+
+    /// <summary>
+    /// The incident this instance is about, as the truth-log id of the event that produced it.
+    ///
+    /// Set from <c>Candidate.AboutIncident</c> at commitment, which today means
+    /// <see cref="StrategyKind.ConcealIncident"/> and nothing else: a concealment is about one
+    /// incident, and its steps cannot act on an incident the instance cannot name. Null when the
+    /// strategy is about no particular incident, and also when the incident claim carries no event
+    /// id — an incident nobody can identify is not one a step may act on, and treating the default
+    /// 0 as a key would collapse every unidentified claim into a single shared incident, which is
+    /// the same scan defect one level down.
+    ///
+    /// Declared since milestone 001 and set by nothing at all until milestone 010.
+    /// </summary>
     public long? SourceEventId { get; init; }
 
     /// <summary>

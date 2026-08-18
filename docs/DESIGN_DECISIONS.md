@@ -307,6 +307,48 @@ settles nothing about presentation.
   somebody took to answer, which is the frame-rate dependence the determinism invariants forbid in a
   different hat.
 
+## Exposure and concealment — settled by milestone 010
+
+See `milestones/010-a-denial-that-can-win.md`. What is settled is what a concealment acts on and what a
+character may revise; the coefficients remain provisional tuning and **none of them was touched** —
+ruling 3 forbade tuning anything to make the denial win, and the denial did not win.
+
+- **A man may revise a conclusion he drew himself, and nothing else.** `Cognition.Learn` models
+  acquiring information and `Cognition.Receive` models being told something; neither could lower a
+  character's confidence in his own reasoning, because Learn's override rule is
+  `OverridesPriorRecord() || confidence >= prior.Confidence` and an `Inference` arriving less sure was
+  silently discarded. **A character's own conclusions could only ever firm up.** `Cognition.Revise` is
+  the one route that closes it, and it refuses anything that is not the holder's own `Inference`: what
+  he established by doing or seeing is what `Provenance.OverridesPriorRecord` and `ProtectsStance`
+  exist to defend, and what somebody told him is an account he has to be argued out of rather than one
+  he can set aside. A revision is a reconsideration — stance and acquisition time stand, only the
+  reconsideration stamp moves — which is what re-arms `Reporting.NeedsConveying` for a position he has
+  moved on.
+- **Concealment acts on a belief, not on the world.** Quieting witnesses removes no `Trace`, alters no
+  truth-log entry, and touches nobody else's cognition. What moves is the concealer's own confidence
+  that he can be placed at that incident, and it moves in both directions — down on a clean job, up on
+  a clumsy one, matching the direction the step's existing `LegalExposure` effect already took. So a
+  man who believes he has cleaned up and has not remains exactly as possible as a man who has and does
+  not believe it, which is why `ResolveViolence` files that belief as an `Inference` in the first
+  place.
+- **The belief that moves is the executor's.** He went out and did it and came away with a view; a
+  delegator who sent him learns nothing here, the same rule the approach step and the beating itself
+  already state. The `LegalExposure` applied beside it still goes to the owner — pressure is
+  motivational state borne by whoever carries the consequence, and a belief is cognition that reaches
+  nobody who was not there.
+- **A concealment names its incident, and every step of it is scoped by that name.**
+  `StrategyInstance.SourceEventId` carries the incident as an event id, set from
+  `Candidate.AboutIncident` at commitment. Milestone 005's ruling one level down: the incident is the
+  identity, never "whatever happened at this address". A claim carrying no event id yields null rather
+  than `0`, because treating the default as a key puts every unidentified claim into one shared
+  incident — which is the global-scan defect in miniature.
+- **A denial is priced from the witnesses to the incident it is about**, by `Claim.EventId`, and never
+  from a maximum over every `WitnessSawIncident` the actor holds. Same defect shape as the
+  `SeekCorroboration` scan `404b416` fixed: a term scored from the worst unrelated thing in the actor's
+  head. **The same shape survives in `Strategies.AdvanceInvestigation`**, which picks and demotes leads
+  by location rather than by incident; it was outside milestone 010's authorized scope and is recorded
+  in `ROADMAP.md` rather than silently fixed.
+
 ## Stack
 
 - **Simulation core**: C#, plain classes, engine-agnostic, unit-testable from the command line.

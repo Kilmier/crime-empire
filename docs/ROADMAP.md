@@ -261,15 +261,48 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
 4. ~~**Godot / .NET compatibility spike**~~ — **subsumed by milestone 009**, which settled the
    constraint (the engine hosts .NET 8) and built the shell in the same pass rather than spiking it
    separately.
-5b. **Scenario reach II** — **planned as milestone 012 on 2026-08-18, not authorized to begin.** The
-   scenario is the binding constraint again, and this time it is measured: milestones 010 and 011
-   produced five findings of the form *the fixture cannot exercise this*. The root cause is one thing.
-   `OrgCondition.RevenueLoss` sits at **0.90** in every variant from early on and never falls, the
-   boss issues three assignments all aimed at the one shop his capo has watched start paying, and
-   **nobody in any variant ever learns the bakery is refusing**. The organisation cannot notice a
-   shortfall it cannot attribute. That is a missing inference rather than a tuning problem, and the
-   opening asymmetry — which `Cast.cs` argues for at length and correctly — is preserved rather than
-   removed. Scope and rulings in `CURRENT_MILESTONE.md`.
+5c. **Instruments, not vigilance** — **planned as milestone 012 on 2026-08-18, not authorized to
+   begin**, after Matt established that Codex is unavailable for review or advice for the foreseeable
+   future. What Codex supplied was different priors, not diligence, and the only substitutes available
+   are adversaries with no priors at all. `coverlet.collector` is already a package reference and
+   produces a report the first time it is asked: **92.2% line, 84.2% branch, 376 uncovered lines**,
+   never run before. Sampling separates legitimately-uncovered surface (`Program.cs` is 118 of the
+   376) from **live edges nothing has ever run** — the grievance raised on observing a policy breach,
+   and the price of a candid report made with something at stake. **Before milestone 011,
+   `AdvanceInvestigation`'s cold-trail branch was in that category**, and it was found by accident ten
+   milestones late. Adds no behaviour, so no baseline may move. Scope and rulings in
+   `CURRENT_MILESTONE.md`.
+
+5b. **Scenario reach II** — **planned on 2026-08-18 and deferred to milestone 013** when the
+   instruments milestone was inserted ahead of it. Displaced rather than dropped: it moves every
+   baseline again, and doing that on a third consecutive unreviewed milestone is the risk 012 exists
+   to reduce first. The full plan is at `40f0ded`; the measured evidence and the two load-bearing
+   rulings are preserved here.
+
+   **Ruling A — he infers a gap, not an answer.** The inference may read organisational conditions and
+   his own cognition, and nothing else. He must end up suspecting that *something* is refusing without
+   being told *what*, because a boss who infers the exact shop from his own books has been handed the
+   fixture rather than inferred anything.
+
+   **Ruling B — do not over-claim what a second incident buys.** Two incidents at *different shops*
+   leave location and incident correlated one-to-one, so milestone 011's lead-pickup and completion
+   rules stay staged. What a second incident exercises naturally is milestone 010's witness scoping —
+   one man holding two `WitnessSawIncident` beliefs. State both halves.
+
+   The evidence, at seed 42, every variant, day 90: `OrgCondition.RevenueLoss` sits at **0.90** from
+   early on and never falls; the boss issues **three assignments**, all "restore the harbour tribute",
+   all aimed at the one shop his capo has personally watched start paying; his belief that it refuses
+   survives at 0.75, eroded to 0.47 in `watchful-boss` and 0.37 in `cautious-vincent` where Vincent
+   contradicts him, but never abandoned; and **nobody in any variant ever learns the bakery is
+   refusing**. The organisation cannot notice a shortfall it cannot attribute. The opening asymmetry
+   `Cast.cs` argues for is preserved — what is added is a way *out* of it, late and by his own
+   reasoning.
+
+   **Why it is a candidate at all**: milestones 010 and 011 produced five findings of the form *the
+   fixture cannot exercise this* — two incidents at one shop are only ever staged, the cold-trail
+   branch is unreachable at every seed, nobody holds a scored relationship with Kane, Tommy can never
+   roll a clean cleanup, Vincent is never offered one. That is milestone 006's finding returning, and
+   007 is the precedent for answering it.
 
 5. ~~**Another bounded emergence slice**~~ — **taken up as milestone 011 in one specific form**, chosen
    by Matt on 2026-08-18: the detective's side. Not speculative — looking at `InvestigateIncident`

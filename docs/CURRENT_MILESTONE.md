@@ -7,36 +7,34 @@ do not create a separate handoff document.
 
 ## Status
 
-**Milestone 013 — Instruments, Not Vigilance — is planned and NOT authorized to begin.** Matt chose
-the direction on 2026-08-19. The scope and rulings below are Claude's proposal and need his sign-off
-before any code is written.
+**Milestone 013 — Instruments, Not Vigilance — remains planned and NOT authorized to begin.** Paused
+on 2026-08-19 when Codex's review of milestones 009–012 arrived (reported by Matt) with corrective
+scope; that correction takes priority and is implemented, tested, and self-reviewed in a commit
+appended to milestones 011 and 012's archives. **013's scope and rulings below are unchanged by the
+correction and are not to be revised yet** — Matt's instruction is explicit that 013 is re-baselined
+onto the accepted correction commit only after that commit is accepted, not before. Do not begin 013.
 
-**This is the plan deferred on 2026-08-18**, recovered from `520924b` and `3004d2f` rather than
-re-derived, and updated where the world moved under it. `ROADMAP.md` said nothing about it would decay
-while it waited; that held, and the two named findings below were re-verified at today's `HEAD` rather
-than carried forward on the strength of the old measurement.
+**The correction.** Three findings, addressed in one commit: `AdvanceInvestigation` read and wrote
+the strategy owner's cognition throughout rather than the executor's — harmless while the accepted
+scenario never delegates an investigation, wrong in general, corrected in milestone 011's archive
+since that is where the affected state was added; a reconsideration-stamp test that never checked the
+reconsideration stamp; a stale docstring on `StrategyInstance.SourceEventId`. All three mutation-
+checked, and full verification re-run confirms milestone 012's own recorded baselines are unmoved —
+see the appended corrections in `milestones/011-the-detective-has-no-next-move.md` and
+`milestones/012-a-shortfall-he-cannot-attribute.md` for the complete account.
 
-**Why it was deferred, and why that reason has now inverted.** The 2026-08-18 reasoning was that Codex
-was returning within about two days, and **instrument work is a poor target for an adversary whose
-strength is simulation design** — so Codex should arrive to a design-level milestone rather than to
-tooling. Codex has not arrived, and there are now **two** design-level milestones waiting for it. That
-goal is satisfied twice over, and a third design milestone would only deepen the stack. This one adds
-no behaviour, so it moves nothing underneath the two reviews still pending, and it sharpens the
-self-review method precisely while the adversary is late.
-
-**Milestone 012 is complete, self-reviewed, and NOT accepted**, at `c637092`. **Milestone 011 is
-self-reviewed and cleared to build on, and NOT accepted**, at `6a8a765`. A Codex round is expected on
-both, and this milestone inherits whatever each concludes. `REVIEW_LEDGER.md`'s coverage checkpoint
-stands at `824f3fc`.
+**Milestone 012 is complete, corrected, self-reviewed, and NOT accepted.** **Milestone 011 is
+self-reviewed and cleared to build on, corrected, and NOT accepted.** Both corrections await Matt's
+acceptance and a further Codex round. `REVIEW_LEDGER.md`'s coverage checkpoint stands at `824f3fc`.
 
 Milestones 001–010 are complete and accepted.
 
-**Codex is intermittent rather than withdrawn.** The plan recovered from `520924b` opened "Codex is
-gone and nothing replaces it"; that premise was corrected at `c7ae3d6` and is corrected here rather
-than reproduced. The situation is not *no adversary* but **an adversary that arrives long after the
-work**, which is a different problem and a worse one: a self-review declared clean can sit unchallenged
-across several milestones before anything contradicts it. That is the case this milestone is built
-for.
+**Codex is intermittent rather than withdrawn, and this correction is the case in point.** The plan
+recovered from `520924b` for milestone 013 opened "Codex is gone and nothing replaces it"; that
+premise was already corrected at `c7ae3d6`, and this pause is what the corrected premise predicted —
+an adversary that arrives long after the work rather than not at all, so a self-review declared clean
+can sit unchallenged across several milestones before anything contradicts it. It arrived here across
+four.
 
 ## What this milestone is for
 
@@ -221,10 +219,11 @@ but several are likely to be *measured* for the first time by it.
   it is contradicted; only being told again differently, or working something out himself, would move
   it, and neither happens for that belief.
 
-**From the earlier list:** the developer trace still says "he" for everybody, 59 strings;
-`AdvanceInvestigation` reads and writes `owner` throughout; two incidents at one shop are only ever
-staged; the cold-trail branch is unreachable at every seed tried; nobody holds a scored relationship
-with Kane; four known reasons the denial stays shut, of which loyalty is the smallest; the tuning
+**From the earlier list, one struck: `AdvanceInvestigation` reading and writing `owner` throughout was
+corrected 2026-08-19** — see the correction appended to milestones 011 and 012's archives. The rest
+stands: **the developer trace still says "he" for everybody, 59 strings; two incidents at one shop are
+only ever staged; the cold-trail branch is unreachable at every seed tried; nobody holds a scored
+relationship with Kane; four known reasons the denial stays shut, of which loyalty is the smallest; the tuning
 guesses; the cast ceiling of six; obligation read but never moved; nothing raises trust; negative
 trust and decay deferred; `GrievanceWeight` uncapped; no save/load; the empty-domain
 `ConcealIncident(, target=…)` label; the timing of a pause is observable even when the occasion is

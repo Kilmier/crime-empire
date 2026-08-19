@@ -54,13 +54,17 @@ public sealed class StrategyInstance
     /// <summary>
     /// The incident this instance is about, as the truth-log id of the event that produced it.
     ///
-    /// Set from <c>Candidate.AboutIncident</c> at commitment, which today means
-    /// <see cref="StrategyKind.ConcealIncident"/> and nothing else: a concealment is about one
-    /// incident, and its steps cannot act on an incident the instance cannot name. Null when the
-    /// strategy is about no particular incident, and also when the incident claim carries no event
-    /// id — an incident nobody can identify is not one a step may act on, and treating the default
-    /// 0 as a key would collapse every unidentified claim into a single shared incident, which is
-    /// the same scan defect one level down.
+    /// Set from <c>Candidate.AboutIncident</c> at commitment: a concealment is about the incident it
+    /// is covering up, and an investigation is about the incident its lead belongs to, and neither's
+    /// steps can act on an incident the instance cannot name. Populated for
+    /// <see cref="StrategyKind.ConcealIncident"/> since milestone 010 and for
+    /// <see cref="StrategyKind.InvestigateIncident"/> since milestone 011 — both read it throughout
+    /// their own <c>Strategies.cs</c> advance methods rather than falling back on <c>TargetId</c>,
+    /// which names an address rather than an incident. Null when the strategy is about no particular
+    /// incident, and also when the incident claim carries no event id — an incident nobody can
+    /// identify is not one a step may act on, and treating the default 0 as a key would collapse
+    /// every unidentified claim into a single shared incident, which is the same scan defect one
+    /// level down.
     ///
     /// Declared since milestone 001 and set by nothing at all until milestone 010.
     /// </summary>

@@ -412,3 +412,84 @@ neither `docs/RELATIONSHIPS.md` nor the Godot headless check.
 One implementation-and-archive commit. Status is not established by this file —
 `CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
 thing that counts as acceptance.
+
+---
+
+## Correction from Codex's review of `6a8a765`–`c637092`, 2026-08-19
+
+Appended, not folded in. Matt reported Codex's findings across milestones 009–012 on 2026-08-19.
+Codex-1, the delegated-investigation defect, predates this milestone and is recorded in milestone
+011's own appended correction rather than here, since that is where the affected code first grew the
+state this correction concerns. The two findings below are this milestone's own.
+
+**Codex-2 — `Reconsidering_again_does_not_move_the_reconsideration_stamp_without_new_grounds` never
+checked the reconsideration stamp.** It asserted `AcquiredAt` and `Confidence` were unchanged between
+two calls to `Inference.Reconsider` on identical grounds, and named itself for a claim about
+`ReconsideredAt` that it never read. Both proxies pass whether or not the stamp moved: `Learn`'s
+override branch preserves `AcquiredAt` on every update reaching it, and an identical re-derivation
+reproduces the same `Confidence` regardless. Mutation-checked directly: weakening the re-arming
+guard's `alreadyGap.Confidence >= confidence` to `>` left every original assertion green while
+`ReconsideredAt` moved a full day, which is precisely the defect the test's own name promises to
+catch and did not. Strengthened to assert `first.ReconsideredAt == second.ReconsideredAt` and
+`second.LastReconsideredAt == null` directly, and the same mutation now fails by name.
+
+**Codex-3 — `StrategyInstance.SourceEventId`'s docstring said it was set only for
+`ConcealIncident`, "and nothing else."** Milestone 011 added `InvestigateIncident` as a second
+producer and consumer — `AdvanceInvestigation` reads `s.SourceEventId` throughout, exactly as
+`AdvanceConceal` does — without returning to update the comment that had just been contradicted.
+Documentation-only; corrected in `Domain/ExecutionState.cs` to name both strategies and both
+milestones.
+
+**What this correction is not.** Codex's review covered milestones 009–012; only these three findings
+carried code or documentation consequences into this pass, and no fourth is recorded here or in 011's
+correction because none was reported. Nothing in `Decision/Inference.cs`'s shortfall inference, the
+mark-selection fix, or the disclosure wiring — this milestone's own three central changes — is
+touched by either correction, and the full verification re-run below confirms the natural-run
+behaviour those changes measured is unaffected.
+
+### Verification, re-run after the correction
+
+Full suite from a clean tree — every `bin`, `obj` and `.godot` directory deleted before rebuilding.
+
+- Build: **0 warnings, 0 errors** across four projects.
+- Tests: **458 passed, 0 failed** (454 before this correction). 4 added in
+  `InvestigationTests.cs` for Codex-1's delegated-investigation fix; 2 assertions added to an
+  existing test in `ShortfallAttributionTests.cs` for Codex-2.
+- `--verify` deterministic on `baseline`, `disloyal-vincent`, `resentful-tommy` — **hashes
+  byte-identical to this milestone's own table above**
+  (`FEE45FD886F18CA8` / `45CCF5ADC6EC0302` / `F5BD93386DE04082`).
+- `--compare`: **all five trace hashes and all five chosen-action digests byte-identical** to the
+  table above. Expected and confirmed rather than assumed: nobody in the accepted scenario delegates
+  an investigation, so Codex-1's fix has no natural-run surface to move, and Codex-2's stronger
+  assertion pins behaviour the implementation already had.
+- Both required viewpoint runs (`--variant disloyal-vincent --viewpoint salvatore`,
+  `--variant baseline --viewpoint vincent`) exit 0 and are **byte-identical** to the outputs recorded
+  for this milestone's own measurement pass.
+- Godot headless self-test: **4 choices, 4 decision screens, exit 0, byte-identical** to this
+  milestone's own recorded self-test output.
+
+### Self-review of the correction
+
+Four mutation checks for Codex-1 (one per corrected read/write in `AdvanceInvestigation`) and one for
+Codex-2, each reverting to the pre-correction code and requiring a *named* test to fail — detailed
+above and in milestone 011's appended correction. All five caught; one required strengthening its own
+test first, recorded there rather than smoothed over. Codex-3 is documentation and has no mutation to
+check.
+
+**Recurring-failure list, walked.** *A fix that narrows what can be expressed:* none of the three
+findings remove a code path, only correct which character's cognition it reads or which fact a
+comment states. *A fix that collapses distinct states:* owner and executor remain distinct throughout;
+the fix is that four specific reads now consult the right one. *False-assurance tests:* every new
+assertion drives production entry points (`Commit.Apply`, `Strategies.Advance`, `Inference.Reconsider`)
+rather than a copied predicate. *Rewriting an append-only archive at closure:* this correction is
+appended below the original account in both archives it touches, not folded into either. *Recording a
+review that did not happen:* the finding that started this correction is Matt's report of Codex's
+review, recorded as that — this file does not claim to have observed the review itself, only to have
+acted on what was reported and verified the result.
+
+**Status.** This corrective commit is implemented, tested, self-reviewed by mutation check, and fully
+re-verified against milestone 012's own recorded baselines. It is **not accepted** — Matt's
+confirmation of this named commit is what that requires, and a Codex round on it is expected next,
+per the standing arrangement in `REVIEW_LEDGER.md`. Milestone 013 remains paused pending that outcome;
+its own plan is revised to take this commit as its baseline only once the correction is accepted, not
+before.

@@ -355,3 +355,37 @@ both is identical and is the one milestone 012's ruling 4 already states: an ins
 evidence until it has been shown to report correctly. This one was believed for two commands before it
 was checked. Nothing was written to the repository on the strength of it, which is the only reason it
 is an anecdote rather than a seventh entry in "How this record has failed".
+
+---
+
+## Correction from Codex's review of `6a8a765`–`c637092`, 2026-08-19
+
+Appended, not folded in. Matt reported Codex's findings across milestones 009–012 on 2026-08-19; the
+corrective work is recorded where it happened — see milestone 012's own appended correction for the
+other four items. Labelled Codex-1 rather than continuing this archive's own F1–F3, which were a
+different review (the self-review of `6a8a765`) and should not be read as the same pass.
+
+**Codex-1 — `AdvanceInvestigation` read and wrote `owner` throughout, not `executor`.** This milestone is
+where it starts mattering: before it, `InvestigateIncident` had no incident-scoped state to get wrong;
+this milestone gave it `SourceEventId`, the lead pickup, the named-suspect check, and the cold-trail
+`Revise` call, and every one of those four reads and writes was addressed to `owner.Cognition` rather
+than `executor.Cognition`. Harmless here and in every milestone since, because Kane delegates to
+nobody and `owner == executor` always in the accepted scenario — the same shape as milestone 010's
+`AdvanceConceal` defect, which this method should have been written to match and was not. A delegated
+investigation would have put its findings in the head of a man who was never at the canvass, and the
+cold-trail `Revise` call would have silently refused every time in a delegated case, because
+`Cognition.Revise` only accepts a revision from the record's own source and the lead's source was
+never the owner's to begin with.
+
+Fixed in `Strategy/Strategies.cs`, corrected alongside milestone 012's three items in one commit.
+Four new tests in `InvestigationTests.cs` stage a delegated case directly through the production
+`Commit` path — `OpenDelegatedCase` opens on one character and delegates to another without
+pre-seeding the owner's belief in the lead, so a belief the executor ends up holding can only have
+come from the assertion made directly on her, isolating the fix from `DelegateStrategy`'s own
+(unrelated and correct) belief-transfer. Four mutation checks, each targeting one of the four
+reads/writes and each caught by a named test; one of the four survived the first version of its test
+(the `named`-check mutation left every original assertion passing, because none of them checked the
+completion outcome or that a wrongly-triggered cold-trail branch had not silently halved the very lead
+that had just succeeded) and the test was strengthened before being trusted. See milestone 012's
+appended correction (Codex-2 and Codex-3) for the remaining findings, which are unrelated to this one
+and live with the milestone whose own tests they correct.

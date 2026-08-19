@@ -174,6 +174,15 @@ public sealed class ShortfallAttributionTests
 
         Assert.Equal(first.AcquiredAt, second.AcquiredAt);
         Assert.Equal(first.Confidence, second.Confidence, 6);
+
+        // The claim this test is named for, checked directly rather than through two proxies that
+        // both happen to hold when it does. AcquiredAt and Confidence stay put whether or not the
+        // stamp moved — Learn's override branch preserves AcquiredAt on any update, and an identical
+        // re-derivation obviously reproduces the same Confidence — so neither could have caught a
+        // guard that let the second call reach Learn again on the world.Now.AddDays(1) call: only
+        // ReconsideredAt would move, and nothing above was reading it.
+        Assert.Equal(first.ReconsideredAt, second.ReconsideredAt);
+        Assert.Null(second.LastReconsideredAt);
     }
 
     // ================================================================ mark selection

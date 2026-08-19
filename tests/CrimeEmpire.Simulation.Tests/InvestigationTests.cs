@@ -384,6 +384,164 @@ public sealed class InvestigationTests
             && o.Contains("put hands on", StringComparison.Ordinal));
     }
 
+    // ================================================================ delegated investigation
+    //
+    // Corrective scope, found by review: AdvanceInvestigation read and wrote `owner` throughout,
+    // never `executor`. Harmless in the accepted scenario — Kane delegates to nobody, so
+    // `owner == executor` always and every test above is satisfied by coincidence — and wrong in
+    // general, the same shape milestone 010 had already fixed for concealment. Staged, because the
+    // fixture cannot delegate an investigation on its own; nobody in the cast has both organisational
+    // subordinates and Investigation skill.
+
+    /// <summary>
+    /// Opens a case on the owner and delegates it through the production `Commit` path, exactly as
+    /// `OpenCase` opens one — but without pre-seeding the owner's belief in the lead, so a belief the
+    /// executor ends up holding can only have come from the assertion made directly on her, not from
+    /// `DelegateStrategy`'s own belief transfer (which would otherwise also carry a lead the owner
+    /// held, since a `WitnessSawIncident`'s Subject is the business, the same field `TargetId` names).
+    /// That is what makes the tests below a check on `AdvanceInvestigation` specifically, not a
+    /// second test of delegation's existing transfer.
+    /// </summary>
+    private static StrategyInstance OpenDelegatedCase(World world, Character owner, Character executor, Claim lead)
+    {
+        var ctx = Context(world, owner);
+        var candidate = new Candidate($"investigate:{lead}", ActionKind.StartStrategy, "test",
+            $"open an investigation into events at {lead.Subject}")
+        {
+            TargetId = lead.Subject,
+            Strategy = StrategyKind.InvestigateIncident,
+            Domain = Cast.Harbour,
+            AboutIncident = lead,
+        };
+        Commit.Apply(world, owner, candidate, ctx.Agenda, ctx, new List<string>());
+        var s = owner.Execution.Strategy!;
+
+        var delegateCtx = Context(world, owner);
+        var delegateCandidate = new Candidate($"delegate:{s.Kind}:{executor.Id}", ActionKind.DelegateStrategy,
+            "test", $"have {executor.Name} take it on")
+        {
+            TargetId = executor.Id,
+            Strategy = s.Kind,
+            Domain = Cast.Harbour,
+            RequiredCrew = 1,
+        };
+        Commit.Apply(world, owner, delegateCandidate, delegateCtx.Agenda, delegateCtx, new List<string>());
+        return s;
+    }
+
+    /// <summary>
+    /// The successful canvass. Kane is the executor here rather than the owner — her Investigation
+    /// skill of 0.70 is what the roll actually reads, and nothing about the roll consults who owns
+    /// the strategy.
+    /// </summary>
+    [Fact]
+    public void A_delegated_investigations_lead_is_drawn_from_the_executors_own_belief()
+    {
+        var world = Cast.Build(seed: 1, "baseline");
+        var vincent = world.Get("vincent");
+        var kane = world.Get("kane");
+        var lead = Lead(kane, First);
+
+        var s = OpenDelegatedCase(world, owner: vincent, executor: kane, lead);
+        Assert.Equal(kane.Id, s.DelegatedToId);
+        // Confirms the isolation the helper's own doc comment claims: delegation's belief transfer
+        // had nothing of this claim's subject to carry, because the owner was never given it.
+        Assert.Null(vincent.Cognition.Find(lead));
+
+        Believe(kane, world, lead, 0.6);
+        RunToCompletion(world, kane, s);
+
+        var suspicion = kane.Cognition.OfKind(ClaimKind.PersonUsedViolence).ToList();
+        Assert.Contains(suspicion, r => r.Claim.Subject == "tommy" && r.Claim.EventId == First);
+        Assert.All(suspicion, r => Assert.Equal(SourceKind.Inference, r.SourceKind));
+        Assert.All(suspicion, r => Assert.Equal(kane.Id, r.SourceId));
+
+        // The completion check ("has a name been put to this incident") has to read the same
+        // cognition the name was written to, or a canvass that genuinely succeeded still reports
+        // "the trail went cold" and demotes the very lead it just confirmed. Checked two ways: the
+        // outcome the strategy actually recorded, and that the lead's own confidence was not halved
+        // by a cold-trail branch that should never have run.
+        var completion = Drain(world).Single(e => e.Kind == EventKind.StrategyComplete);
+        Assert.Equal("the canvass turned up a name", completion.Payload.Note);
+        Assert.Equal(0.6, kane.Cognition.ConfidenceIn(lead), 6);
+    }
+
+    /// <summary>
+    /// The owner learns nothing from a case he delegated — not the suspicion the canvass turns up,
+    /// and not even that a canvass happened, unless the executor reports it through the ordinary
+    /// channel. That silence is the correction: before it, this suspicion landed directly in the
+    /// owner's head with no report, no message, and no trace of anyone having said anything.
+    /// </summary>
+    [Fact]
+    public void The_owner_of_a_delegated_investigation_does_not_learn_its_results_invisibly()
+    {
+        var world = Cast.Build(seed: 1, "baseline");
+        var vincent = world.Get("vincent");
+        var kane = world.Get("kane");
+        var lead = Lead(kane, First);
+
+        var s = OpenDelegatedCase(world, owner: vincent, executor: kane, lead);
+        Believe(kane, world, lead, 0.6);
+        RunToCompletion(world, kane, s);
+
+        // Sanity: the canvass really did produce a position — this test is checking who holds it,
+        // not whether anything was found at all.
+        Assert.Contains(kane.Cognition.Records, r => r.Claim.Kind == ClaimKind.PersonUsedViolence);
+        Assert.DoesNotContain(vincent.Cognition.Records, r => r.Claim.Kind == ClaimKind.PersonUsedViolence);
+    }
+
+    /// <summary>
+    /// The cold trail, on a delegated case, and deterministically so regardless of seed: Tommy's
+    /// Investigation skill of 0.10 cannot clear the 0.55 threshold even at the top of the roll's
+    /// range (0.10 + 0.20 = 0.30), so `found` is false on every run without depending on the RNG draw
+    /// at all. This is also the mutation-relevant case: revising the wrong person's copy of the claim
+    /// (owner's id where the executor's own reading is required) would leave this confidence
+    /// unchanged rather than halved, since `Cognition.Revise` refuses a record whose source is not
+    /// the caller.
+    /// </summary>
+    [Fact]
+    public void A_delegated_investigations_cold_trail_demotes_the_executors_own_lead()
+    {
+        var world = Cast.Build(seed: 1, "baseline");
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+        var lead = Lead(tommy, First);
+
+        var s = OpenDelegatedCase(world, owner: vincent, executor: tommy, lead);
+        Believe(tommy, world, lead, 0.6);
+        RunToCompletion(world, tommy, s);
+
+        Assert.Equal(0.3, tommy.Cognition.ConfidenceIn(lead), 6);
+        Assert.DoesNotContain(vincent.Cognition.Records, r => r.Claim.Kind == ClaimKind.WitnessSawIncident);
+    }
+
+    /// <summary>
+    /// Both outcomes — a name turned up, and a cold trail — are as deterministic delegated as they
+    /// already are undelegated: identical seed, identical result, on a freshly built world each time
+    /// rather than a shared one a first run could have left in a different state.
+    /// </summary>
+    [Fact]
+    public void Delegated_investigation_outcomes_are_deterministic()
+    {
+        (double confidence, string? suspect) Run()
+        {
+            var world = Cast.Build(seed: 1, "baseline");
+            var vincent = world.Get("vincent");
+            var kane = world.Get("kane");
+            var lead = Lead(kane, First);
+            var s = OpenDelegatedCase(world, owner: vincent, executor: kane, lead);
+            Believe(kane, world, lead, 0.6);
+            RunToCompletion(world, kane, s);
+            var suspicion = kane.Cognition.OfKind(ClaimKind.PersonUsedViolence).FirstOrDefault();
+            return (kane.Cognition.ConfidenceIn(lead), suspicion?.Claim.Subject);
+        }
+
+        var first = Run();
+        var second = Run();
+        Assert.Equal(first, second);
+        Assert.Equal("tommy", first.suspect);
+    }
+
     // ================================================================ helpers
 
     private static bool Alleges(Candidate c)

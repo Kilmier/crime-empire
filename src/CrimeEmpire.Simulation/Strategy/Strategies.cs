@@ -538,6 +538,18 @@ public static class Strategies
     }
 
     // ------------------------------------------------------------------ investigation
+    /// <summary>
+    /// Every read and write below is the executor's, never the owner's — the man who goes and
+    /// canvasses is the one whose beliefs it draws from and whose beliefs it changes. This was
+    /// written entirely in terms of <c>owner</c> until a corrective pass found it: harmless in the
+    /// accepted scenario, where the one investigator that exists delegates to nobody and
+    /// <c>owner == executor</c> always, and wrong in general — a delegated investigation would put
+    /// its findings in the head of a man who was never at the canvass, exactly the asymmetry
+    /// milestone 010 had already resolved for concealment (<see cref="QuietWitnesses"/>) in the same
+    /// file. The owner learns nothing here; if he wants an account of a delegated case, he gets one
+    /// the way he gets an account of anything else delegated — through the report channel, or by
+    /// asking, like <see cref="Strategy.Strategies"/>'s other delegated work.
+    /// </summary>
     private static void AdvanceInvestigation(
         World world, Character owner, Character executor, StrategyInstance s, string step, Rng rng)
     {
@@ -554,11 +566,11 @@ public static class Strategies
 
         if (found && incidentId is { } incident)
         {
-            // She learns who, only if a witness claim naming a person is already in her head — and
-            // only from a witness to *this* incident. Matching on s.TargetId asked what anybody had
-            // seen at that address, so a second beating at the same shop fed the first case's canvass
-            // a name from an event it was not investigating.
-            var lead = owner.Cognition.OfKind(ClaimKind.WitnessSawIncident)
+            // The executor learns who, only if a witness claim naming a person is already in her
+            // head — and only from a witness to *this* incident. Matching on s.TargetId asked what
+            // anybody had seen at that address, so a second beating at the same shop fed the first
+            // case's canvass a name from an event it was not investigating.
+            var lead = executor.Cognition.OfKind(ClaimKind.WitnessSawIncident)
                 .FirstOrDefault(r => r.Claim.EventId == incident && r.Claim.Object.Length > 0);
 
             if (lead is not null)
@@ -568,9 +580,14 @@ public static class Strategies
                 // terms: the incident's facts come from the incident. It is also the non-nullable
                 // one, so this stops depending on a null check that the incident-scoped guard above
                 // no longer performs.
-                owner.Cognition.Learn(
+                //
+                // Sourced to the executor: this is her own conclusion from her own canvass, not
+                // something anybody told her, and Cognition.Revise below has to find her name on it
+                // later or the cold-trail branch is inert again in exactly the way it was before
+                // milestone 010's Revise fix.
+                executor.Cognition.Learn(
                     new Claim(ClaimKind.PersonUsedViolence, lead.Claim.Object, lead.Claim.Subject, incident),
-                    Stance.Suspects, 0.55, SourceKind.Inference, owner.Id, world.Now);
+                    Stance.Suspects, 0.55, SourceKind.Inference, executor.Id, world.Now);
 
                 // The suspect's own risk rises only if he comes to believe he is being looked at —
                 // about the incident he is being looked at over. A PoliceInvestigating claim naming
@@ -593,16 +610,16 @@ public static class Strategies
             return;
         }
 
-        // Whether she has put a name to *this incident*. Asking whether she had named anybody for
-        // anything at this address meant one closed case at a shop declared every later case there
-        // solved before it started.
-        bool named = incidentId is { } closing && owner.Cognition
+        // Whether the executor has put a name to *this incident*. Asking whether she had named
+        // anybody for anything at this address meant one closed case at a shop declared every later
+        // case there solved before it started.
+        bool named = incidentId is { } closing && executor.Cognition
             .OfKind(ClaimKind.PersonUsedViolence).Any(v => v.Claim.EventId == closing);
 
         if (!named && incidentId is { } cold)
         {
-            // The trail went cold. She stops treating the street talk as something to act on —
-            // otherwise she reopens the same dead case every time the calendar nudges her.
+            // The trail went cold. The executor stops treating the street talk as something to act
+            // on — otherwise she reopens the same dead case every time the calendar nudges her.
             //
             // Through Revise, not Learn. This was written as a Learn at half confidence and did
             // nothing at all: Learn's override rule discards an Inference arriving less confident
@@ -615,11 +632,15 @@ public static class Strategies
             // Her own conclusion is exactly what this is. Nothing was observed and nobody said
             // anything; coming up empty is something she worked out from looking and not finding —
             // which is also why Revise accepts it, since it refuses anything that is not the
-            // holder's own inference. A lead she was *told* therefore survives a failed canvass,
-            // and that is correct: not finding a witness is not evidence the account was false.
-            foreach (var stale in owner.Cognition.OfKind(ClaimKind.WitnessSawIncident)
+            // holder's own inference. Revise refuses a record whose SourceId is not the caller's, so
+            // calling it with the executor's own claim and the executor's own id is not cosmetic:
+            // with the owner's id here instead, on a lead the executor holds, this would silently
+            // refuse every time in a delegated case — inert in a new way rather than fixed. A lead
+            // she was *told* therefore survives a failed canvass, and that is correct: not finding a
+            // witness is not evidence the account was false.
+            foreach (var stale in executor.Cognition.OfKind(ClaimKind.WitnessSawIncident)
                          .Where(r => r.Claim.EventId == cold).ToList())
-                owner.Cognition.Revise(stale.Claim, stale.Confidence * 0.5, owner.Id, world.Now);
+                executor.Cognition.Revise(stale.Claim, stale.Confidence * 0.5, executor.Id, world.Now);
         }
 
         Complete(world, owner, s, named ? "the canvass turned up a name" : "the trail went cold");

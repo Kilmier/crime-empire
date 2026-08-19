@@ -186,7 +186,7 @@ Oldest first — the order review takes them in.
 | `c0bb60f` | Correct a false superlative; advance the checkpoint through `0f52d75`. Docs only | **Not reviewed by Codex** — it was the last commit before Codex was withdrawn. Covered by Matt's acceptance below. |
 | `7ca7819` | Fourth 009 correction: `Relations.Meet`, a truthful occasion, a derived focus, a self-test that presses buttons | **Not reviewed by Codex.** Produced by a self-review at Matt's request, which found four defects — two of them the same P1 Codex had raised twice, still live on generators the fix had not reached and invisible to a test scoped to the one that had. **Matt accepted milestone 009 on the strength of this commit on 2026-08-16. Milestone 009 closed.** |
 | `12d1054` | Close milestone 009 as accepted; open milestone 010. Docs only | Status not established. |
-| `6a8a765` | Milestone 011 implementation: the detective's move, incident-scoped investigation, pronouns | **Self-reviewed by its author on 2026-08-18, three findings** — a coverage gap predating the milestone (`resentful-tommy` in neither insertion-stability theory), a ruling asserted but never tested (actor parity on the new allegation route, which holds), and a legibility wart that is carried. Corrected by the commit that carries this row. **Cleared to build on by Matt; not accepted. A Codex round on this commit is expected.** |
+| `6a8a765` | Milestone 011 implementation: the detective's move, incident-scoped investigation, pronouns | **Self-reviewed by its author on 2026-08-18, three findings** — a coverage gap predating the milestone (`resentful-tommy` in neither insertion-stability theory), a ruling asserted but never tested (actor parity on the new allegation route, which holds), and a legibility wart that is carried. Corrected by the commit that carries this row. **Reviewed by Codex on 2026-08-19 (reported by Matt), one further finding** — `AdvanceInvestigation` read and wrote the strategy owner's cognition throughout rather than the executor's, harmless while the accepted scenario never delegates an investigation and wrong in general. Corrected, mutation-checked, appended to this milestone's archive. **Cleared to build on by Matt; the correction is not yet accepted.** |
 | `40f0ded`, `520924b`, `3004d2f`, `c7ae3d6` | Milestone 012/013 planning and the Codex-premise correction. Docs only | Not yet reviewed. They are later than the checkpoint and still take their turn, oldest first — a docs commit does not stand in for the implementation commit beneath it. |
 | `824f3fc` | Milestone 010 implementation: a concealer acts on his own exposure; the denial is priced from its own incident | **Reviewed by its own author, the only reviewer this project now has.** Eighteen mutation checks, of which two initially caught nothing and exposed three defects in the milestone's own tests — a vacuous boundary assertion, a fixture staging a trace on an incident the concealment did not name, and nothing at all pinning whose belief moves. All three were fixed before the commit; none was found by re-reading. **Matt accepted milestone 010 on the strength of this commit on 2026-08-18. Milestone 010 closed.** |
 
@@ -243,11 +243,15 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 012, complete, not yet reviewed or accepted
+### Measured — milestone 012, corrected, not yet accepted
 
-**Nobody has reviewed this and nobody has accepted it.** See
-`milestones/012-a-shortfall-he-cannot-attribute.md` for the full account, the mutation-check table, and
-the reasoning behind every moved figure below.
+**Codex reviewed milestones 009–012 on 2026-08-19 (reported by Matt) and returned corrective scope —
+one finding predating this milestone, recorded in milestone 011's appended correction, and two
+belonging to this one.** Both are corrected in a commit appended to
+`milestones/012-a-shortfall-he-cannot-attribute.md`, mutation-checked, and fully re-verified: every
+figure below is unchanged by the correction, and the archive states why. **Nobody has accepted either
+the original commit or the correction.** See `milestones/012-a-shortfall-he-cannot-attribute.md` for
+the full account, the mutation-check table, and the reasoning behind every moved figure below.
 
 - Build: **0 warnings, 0 errors** across four projects, measured after deleting every `bin`, `obj` and
   `.godot` directory.

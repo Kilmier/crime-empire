@@ -152,10 +152,35 @@ recorded as such.
    incident-vs-location rules.
 6. **Archive as `docs/milestones/012-…md`, reset this file, one coherent commit, stop.**
 
-## Open questions to settle during implementation, not now
+## Answered during implementation
 
-- Can a decision see an organisational condition at all today, and if not, what is the smallest way in
-  that does not put `World` behind `Utility`? This decides step 1 and is the first thing to check.
+**Where the inference belongs — settled 2026-08-18.** `Decision/Inference.cs`. `Inference.Reconsider`
+already takes `World` and runs **at the top of the pipeline, before `PerceivedSituation` is built**, so
+it never puts a world reference behind the scorer. Its docstring already bounds what it may read, and
+the new inference reads strictly less than the existing one: `org.Condition(RevenueLoss)` and the
+boss's own cognition, and **not** `world.Businesses`, which is the read ruling 2 forbids.
+
+**And the mechanical reason nobody ever goes to the bakery is smaller and worse than the plan
+assumed.** `FromResponsibility`'s collection branch is:
+
+```
+var refusing = ctx.Perceived.OfKind(BusinessRefusesTribute).Select(r => r.Claim.Subject).FirstOrDefault();
+string? mark = refusing ?? ctx.VisibleTargets.FirstOrDefault();
+```
+
+**It picks exactly one shop.** `VisibleTargets` is every business in the domain ordered by id, so the
+fallback is always `bellini-grocery` — the alphabetically first, and the one Vincent has personally
+watched start paying. The candidate it then builds requires `BusinessRefusesTribute(mark)`, which he
+has *rejected*, so the knowledge filter correctly refuses it. **`dorato-bakery` appears zero times in
+the full decision trace — rejected candidates included — in every variant.** It is not outscored and
+not filtered; it is never considered.
+
+So a capo standing on a patch with two shops, who knows the first is paying, is offered nothing about
+the second. That is a defect in mark selection, and it is separable from the inference: the inference
+gives him a *reason* to look, and this is why there is nothing to look *at*. Both are needed, and the
+milestone should report them as two findings rather than one.
+
+## Open questions to settle during implementation, not now
 - Does Nunzio fold at a threat? `Cast.cs` says he is softer on pride and harder on security than
   Marco, deliberately, "so the second cycle is a second experiment rather than a replay". If he folds
   without violence there is no second incident, and ruling 4 says that stands.

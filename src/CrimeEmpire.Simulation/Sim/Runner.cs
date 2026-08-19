@@ -184,7 +184,7 @@ public static class Runner
         if (org.BossId is null) return;
         var boss = world.Get(org.BossId);
 
-        if (org.Condition(OrgCondition.RevenueLoss) < 0.35) return;
+        if (org.Condition(OrgCondition.RevenueLoss) < Organization.SignificantRevenueLoss) return;
 
         var office = org.OfficeForDomain("harbour");
         if (office?.HolderId is null) return;
@@ -201,6 +201,14 @@ public static class Runner
         var disclosed = new List<ReportedClaim>();
         foreach (var r in boss.Cognition.OfKind(ClaimKind.BusinessRefusesTribute))
             disclosed.Add(ReportedClaim.Honest(r.Claim, Stance.Believes, 0.75, r.SourceKind));
+
+        // A gap he suspects but cannot name travels the same channel as a shop he can — the existing
+        // route rulings 2 and 5 require, rather than a fact invented to close it. Passed on at his
+        // own stance and confidence, not firmed up to Believes the way the named-refuser line above
+        // is: this is a suspicion, and it should not arrive at the capo sounding surer than the man
+        // who formed it is himself.
+        foreach (var r in boss.Cognition.OfKind(ClaimKind.UnattributedShortfall))
+            disclosed.Add(ReportedClaim.Honest(r.Claim, r.Stance, r.Confidence, r.SourceKind));
 
         if (policy is not null)
         {

@@ -391,6 +391,42 @@ See `milestones/011-the-detective-has-no-next-move.md`. No coefficient was tuned
   people in the view. **The developer trace is deliberately excluded**: it is a debugging tool the
   architecture doc separates from player-facing accounts by name.
 
+## A shortfall he cannot attribute — settled by milestone 012
+
+See `milestones/012-a-shortfall-he-cannot-attribute.md`. No coefficient was tuned; the one new number,
+`Organization.SignificantRevenueLoss`, is `Sim/Runner.cs`'s pre-existing leadership-review threshold
+extracted to a shared constant, not a fresh one.
+
+- **An organisational condition can be doubted, never resolved, by the character answerable for it.**
+  Only the organisation's boss reads `OrgCondition.RevenueLoss` this way — it is a fact about the
+  family's books, not about any one man's patch. The gate is `InformationRecord.Contested`
+  (`Cognition.IsContested`), a fact `Cognition.Receive` already records at the moment of disagreement,
+  and the condition's own liveness against the shared threshold — never a fresh confidence number
+  invented for the purpose. **`Inference.cs` reads strictly less than its existing policy-breach
+  inference**: `org.Condition` and the boss's own cognition, never `World.Businesses`, the truth log,
+  or another character's cognition.
+- **The conclusion names where to doubt, never what to find.** `ClaimKind.UnattributedShortfall`'s
+  subject is a domain, resolved from `Organization.Offices` — the same institutional read the existing
+  inference already performs to find who holds which office — never a business. `Stance.Suspects`,
+  `SourceKind.Inference`, revisable through `Cognition.Revise` like any other reading of his own.
+- **A suspicion reaches actionability through an existing channel, never a fact invented to close the
+  gap.** The boss's suspicion travels to the officeholder who can act on it through the same
+  assignment-disclosure route that already carries a named refusal — at his own stance and confidence,
+  not firmed up the way a named refusal is disclosed. The officeholder's mark-selection generator reads
+  it the same way it reads a named refusal: as a `RequiredKnowledge` claim gating an otherwise-ordinary
+  candidate, never a special-cased action.
+- **A generator's fallback that always resolves to the same candidate and is then always rejected is
+  not a working fallback**, regardless of how it reads in isolation — `FromResponsibility`'s
+  unconditional `VisibleTargets.FirstOrDefault()` produced a permanently-rejected candidate rather than
+  ever proposing the business it was meant to reach. The fix is gated on the same suspicion claim above
+  and skips whatever the actor has already concluded is paying, rather than any change to which
+  business sorts first.
+- **Actor parity is checked by driving a session, not argued from the shape of the code.**
+  `SimulationSession.ResolveAutomatically` reproduces the batch-accepted history while a test still
+  records what was offered at every pause — "always choose the first option offered" is not equivalent
+  to this, because `PreparedDecision.Available`'s candidate-id ordering (milestone 009, ruling 5) is
+  deliberately not rank order.
+
 ## Stack
 
 - **Simulation core**: C#, plain classes, engine-agnostic, unit-testable from the command line.

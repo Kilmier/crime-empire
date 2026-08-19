@@ -423,12 +423,27 @@ public sealed class RelationalConsequenceTests
     /// `BusinessRefusesTribute(bellini-grocery)` — a position Vincent genuinely came to hold when he
     /// found the shop paying, contradicting what his boss still believes. They appear because the
     /// allegation route produces more accounts, and `watchful-boss` is the variant where Vincent owes
-    /// Salvatore most and therefore reports to him most. The budget's purpose is unchanged: four is
-    /// still small, and a run producing conflicts in bulk would still be the runaway this pins.
+    /// Salvatore most and therefore reports to him most.
+    ///
+    /// <b>And falls from four to three in milestone 012 — a redistribution, not a disappearance.</b>
+    /// Driven directly at seed 42: the run still contains three conflicts, but only one is now
+    /// Salvatore hearing Vincent reject the grocery claim (5 April); the other two are the mirror
+    /// image, Vincent hearing Salvatore reassert it — 6 April and 11 May, both at assignment delivery,
+    /// because `Organization.Assignments` disclosure never stopped re-sending
+    /// `BusinessRefusesTribute(bellini-grocery)` at `Believes` once Salvatore had heard about the gap.
+    /// Salvatore's stance on the grocery never moves off `Believes` (his confidence just erodes), so
+    /// every reissued assignment still carries the stale claim and still contradicts Vincent, whose
+    /// own rejection stays protected (Discovery) and merely erodes in turn. What changed is Vincent's
+    /// side: contradicted twice more, he does not report the same old news to Salvatore a second time
+    /// within the ninety days, because by the second contradiction he has a competing, higher-value
+    /// candidate the fix in this milestone gave him — checking on the bakery — and it wins the
+    /// scoring competition reporting-again would have to win instead. The budget's purpose is
+    /// unchanged: three is still small, and a run producing conflicts in bulk would still be the
+    /// runaway this pins.
     [Theory]
     [InlineData("baseline", 2)]
     [InlineData("cautious-vincent", 3)]
-    [InlineData("watchful-boss", 4)]
+    [InlineData("watchful-boss", 3)]
     [InlineData("disloyal-vincent", 2)]
     [InlineData("resentful-tommy", 2)]
     public void The_scenario_produces_the_expected_number_of_conflicts(string variant, int expected)

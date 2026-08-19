@@ -148,6 +148,7 @@ public static class Filters
         ClaimKind.PoliceInvestigating => $"police are looking at {c.Subject}",
         ClaimKind.PolicyIssued => $"{c.Subject} has a standing rule about {c.Object}",
         ClaimKind.TargetIsVulnerable => $"{c.Subject} is in a weak position",
+        ClaimKind.UnattributedShortfall => $"anything in the {c.Subject} is still not right",
         _ => c.ToString(),
     };
 }

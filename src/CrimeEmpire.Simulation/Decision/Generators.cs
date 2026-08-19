@@ -211,7 +211,45 @@ public static class Generators
         var refusing = ctx.Perceived.OfKind(ClaimKind.BusinessRefusesTribute)
                                     .Select(r => r.Claim.Subject)
                                     .FirstOrDefault();
-        string? mark = refusing ?? ctx.VisibleTargets.FirstOrDefault();
+
+        string? mark = refusing;
+        Claim requirement = default;
+        bool hasRequirement = false;
+
+        if (mark is not null)
+        {
+            requirement = new Claim(ClaimKind.BusinessRefusesTribute, mark);
+            hasRequirement = true;
+        }
+        else
+        {
+            // No named refuser. Milestone 012: this used to fall back to
+            // ctx.VisibleTargets.FirstOrDefault() unconditionally, which named a mark — always the
+            // alphabetically first business — that the required-knowledge check below then refused,
+            // since reaching this branch at all means he holds no BusinessRefusesTribute for anybody.
+            // The candidate was generated and rejected every time; a second business could never be
+            // proposed by any seed, because the same fallback resolved to the same first business on
+            // every call. See docs/CURRENT_MILESTONE.md, "Answered during implementation".
+            //
+            // A suspicion that something in his own domain is still not paying — never a name, per
+            // Decision/Inference.cs's ruling — is what now gives him a reason to check instead: the
+            // businesses he has not already concluded are paying, in the order they are visible from
+            // the street. Without the suspicion, nothing here proposes a target at all; he does not
+            // go checking on a business nobody has given him any reason to doubt.
+            var gap = new Claim(ClaimKind.UnattributedShortfall, domain);
+            if (ctx.Perceived.Holds(gap))
+            {
+                mark = ctx.VisibleTargets.FirstOrDefault(t =>
+                    ctx.Perceived.Position(new Claim(ClaimKind.BusinessRefusesTribute, t))?.Stance
+                        != Stance.Rejects);
+                if (mark is not null)
+                {
+                    requirement = gap;
+                    hasRequirement = true;
+                }
+            }
+        }
+
         if (mark is null) yield break;
 
         foreach (var method in new[] { CoercionMethod.Persuade, CoercionMethod.Threaten, CoercionMethod.Force })
@@ -226,7 +264,7 @@ public static class Generators
                 StrategyKind.SecureTribute,
                 method,
                 domain,
-                requires: new[] { new Claim(ClaimKind.BusinessRefusesTribute, mark) });
+                requires: hasRequirement ? new[] { requirement } : Array.Empty<Claim>());
         }
     }
 

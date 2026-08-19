@@ -34,6 +34,16 @@ public enum ClaimKind
 
     /// <summary>Subject is vulnerable to pressure (weak resistance, no protection).</summary>
     TargetIsVulnerable,
+
+    /// <summary>
+    /// Subject (a domain, never a business) has a revenue shortfall nobody has correctly attributed.
+    ///
+    /// Milestone 012. Deliberately never a business — see <c>Decision/Inference.cs</c>'s shortfall
+    /// suspicion, which is the only place this is ever drawn. A boss who has been contradicted about
+    /// why the takings are short may come to suspect that something else in his own domain is
+    /// refusing, without being told what: the subject names where to look, never what to find.
+    /// </summary>
+    UnattributedShortfall,
 }
 
 /// <summary>A proposition a character can hold, communicate, or be wrong about.</summary>

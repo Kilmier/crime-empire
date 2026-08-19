@@ -41,6 +41,9 @@ public static class PlayerNarration
         ClaimKind.PolicyIssued => $"the rule \"{c.Object}\" stands",
         ClaimKind.PersonBreachedPolicy => $"{name(c.Subject)} went outside \"{c.Object}\"",
         ClaimKind.TargetIsVulnerable => $"{name(c.Subject)} would not stand up to pressure",
+        // Subject is a domain, never a person or a business — name() must not be called on it, or a
+        // display-name lookup would either resolve nothing or, worse, resolve something by accident.
+        ClaimKind.UnattributedShortfall => $"something in the {c.Subject} still is not paying what it owes",
         _ => c.ToString(),
     };
 

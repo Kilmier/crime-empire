@@ -70,6 +70,14 @@ public sealed record Assignment(
 
 public sealed class Organization
 {
+    /// <summary>
+    /// Below this, <see cref="OrgCondition.RevenueLoss"/> is not worth acting on. Shared between the
+    /// leadership review that decides whether a fresh assignment is warranted and the shortfall
+    /// suspicion that decides whether the condition is still live enough to doubt an attribution —
+    /// one threshold rather than two independently chosen numbers standing for the same question.
+    /// </summary>
+    public const double SignificantRevenueLoss = 0.35;
+
     public required string Id { get; init; }
     public required string Name { get; init; }
 

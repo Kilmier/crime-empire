@@ -243,6 +243,52 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 012, complete, not yet reviewed or accepted
+
+**Nobody has reviewed this and nobody has accepted it.** See
+`milestones/012-a-shortfall-he-cannot-attribute.md` for the full account, the mutation-check table, and
+the reasoning behind every moved figure below.
+
+- Build: **0 warnings, 0 errors** across four projects, measured after deleting every `bin`, `obj` and
+  `.godot` directory.
+- Tests: **454 passed, 0 failed** (440 before this milestone). 14 added in new
+  `ShortfallAttributionTests.cs`.
+- `--verify` deterministic on `baseline`, `disloyal-vincent`, `resentful-tommy`. Both required
+  viewpoint runs exit 0.
+- Godot headless self-test: **4 choices, 4 decision screens, exit 0**, unchanged from the accepted
+  baseline — the scenario it drives (`baseline`, seed 42) is one of the three variants where this
+  milestone's mechanism does not fire, so no forbidden string was ever at risk of appearing.
+
+| Variant | Hash | Chosen actions | Decisions | Violence | Bakery |
+|---|---|---|---|---|---|
+| baseline | `FEE45FD886F18CA8` | `7716CDDE3D0CA3A6` | 47 | 1 incident | not paying (0.50) |
+| cautious-vincent | `86EC1ADA4A4E9179` | `7506045DDEB2DE14` | 24 | none | paying (0.25) |
+| watchful-boss | `84AC3F65E4102EBA` | `955921AA69ABA44C` | 51 | 1 incident | paying (0.25) |
+| disloyal-vincent | `45CCF5ADC6EC0302` | `BECCA9ED2E4E7137` | 48 | 1 incident | not paying (0.50) |
+| resentful-tommy | `F5BD93386DE04082` | `B9B6D3BBE6A69200` | 42 | 1 incident | not paying (0.50) |
+
+**The mechanism fires in exactly the two variants where Salvatore's attribution is actually
+contradicted before day 90** — `watchful-boss` and `cautious-vincent`, matching the pre-milestone
+measurement of which variants erode his confidence at all. In the other three the bakery is untouched,
+exactly as before this milestone; the gate is doing what it was built to do, not merely designed to.
+
+**No second incident occurs anywhere.** Violence stays at 1 in every variant. Per ruling 4, that is
+recorded as the result rather than chased: no coefficient governing Nunzio, the bakery's resistance, or
+the escalation ladder was touched. Per ruling 7, milestone 010's witness-scoping and milestone 011's
+incident-vs-location rules are therefore not newly load-bearing and stay exactly where milestone 011
+left them — still real, still correct, still exercised only by staged tests.
+
+**One baseline moved, and the reason is stated in full in the archive.**
+`RelationalConsequenceTests.The_scenario_produces_the_expected_number_of_conflicts(watchful-boss)`:
+4 → 3 — a redistribution between whose side holds the conflict (one Salvatore-side instead of two, two
+Vincent-side instead of zero), not a disappearance of the underlying mechanism. No other pre-existing
+test needed a value change.
+
+**Ruling 1 checked directly: the second errand does not crowd out the delegator's question.** In both
+firing variants, Vincent's delegator's question to Tommy fires in early April, well before the
+shortfall suspicion is even disclosed to him (6 April in `watchful-boss`). Milestone 011's exchanges —
+Kane's allegation, Salvatore's allegation to Vincent, Tommy's answers — all still fire in every variant.
+
 ### Measured — milestone 011, complete, not yet reviewed or accepted
 
 **Nobody has reviewed this and nobody has accepted it.** The section below records items 1–4 alone,
@@ -942,6 +988,32 @@ Added by milestone 011:
   agreement is not a suffix rule, so `They` is usable rather than decorative.
 - **A mutation that does not compile is not a passing test.** The harness reported build failures as
   "no test failed" and hid two unpinned rules until it was fixed.
+
+Added by milestone 012:
+
+- **A boss's suspicion that a shortfall has another cause is gated on facts the model already
+  records** — `InformationRecord.Contested` and the live `OrgCondition.RevenueLoss` — never a fresh
+  confidence threshold invented for the purpose. Both halves of the gate are mutation-checked
+  separately, each against a *named* test.
+- **The suspicion names a domain and never a business.** Checked against both business ids by name in
+  the fixture, not merely against the claim's own subject, which would pass vacuously if the claim
+  happened to be built correctly but rendered wrong.
+- **Only the organisation's leadership forms the suspicion.** Staged by giving a non-boss member the
+  identical contradiction shape directly, so the only thing standing between him and the conclusion is
+  the actor-scoping gate itself.
+- **A mark-selection fallback that always resolves to the same business and is always then rejected is
+  not a working fallback**, whatever it looks like in the generator's source — it produced a rejected
+  candidate every time and a considered one never, in every variant, at every seed, for as long as the
+  fixture has had a second business. Pinned directly: with no named refuser and no suspicion of a gap,
+  nothing is proposed at all, not even the old rejected noise.
+- **`SimulationSession.ResolveAutomatically` reproduces the batch-accepted history while a session-driven
+  test still records what was offered at every pause** — the check ruling 6 needs. "Always choose the
+  first option offered" is not equivalent to it: `PreparedDecision.Available`'s candidate-id ordering
+  (milestone 009, ruling 5) is deliberately not rank order, so that policy drives a different, lower-
+  ranked history and can silently fail to reach the state under test.
+- **A relationship-conflict count that moves is read for its composition, not only its total.** The
+  same total can hide a redistribution between which side of a pair holds the conflicts; the archive
+  records both.
 
 ## Review checklist
 

@@ -8,12 +8,25 @@ do not create a separate handoff document.
 ## Status
 
 **Milestone 012 — Instruments, Not Vigilance — is planned and NOT authorized to begin.** Matt chose
-the direction on 2026-08-18, after establishing that Codex is unavailable for review or advice for
-the foreseeable future. The scope and rulings below are Claude's proposal and need his sign-off.
+the direction on 2026-08-18. The scope and rulings below are Claude's proposal and need his sign-off.
 
-**Milestone 011 is implemented and awaiting Matt's review**, at `6a8a765`. Nobody has reviewed it and
-nobody has accepted it. `REVIEW_LEDGER.md`'s coverage checkpoint stands at `824f3fc`, milestone 010.
+**Milestone 011 is implemented and awaiting review**, at `6a8a765`. Nobody has reviewed it and nobody
+has accepted it. `REVIEW_LEDGER.md`'s coverage checkpoint stands at `824f3fc`, milestone 010.
 **Milestone 012 must not begin before 011 is accepted.**
+
+**Matt intends to have Codex review `6a8a765` at a later date.** So Codex is intermittent rather than
+withdrawn, which is a correction to how this file read earlier on 2026-08-18 — it said "unavailable
+for the foreseeable future", and a sentence like that decides what the next session does. Three
+consequences, none of them optional:
+
+- **011 will end up on a stronger basis than 010**, which was accepted on a self-review alone. Say so
+  when it happens rather than treating the two as equivalent.
+- **The commits after `6a8a765` — `40f0ded`, `520924b`, `3004d2f` — are documentation only and still
+  need their turn.** Reviewing straight to `HEAD` is the mechanic that permanently and silently
+  skipped `e83dacf`; `REVIEW_LEDGER.md` records it under "How this record has failed". Oldest
+  unreviewed first, and a docs commit does not stand in for the implementation commit beneath it.
+- **The review will arrive long after the work.** That is the actual problem this milestone addresses,
+  and it is a different problem from Codex being gone.
 
 Milestones 001–010 are complete and accepted.
 
@@ -25,8 +38,11 @@ exists to reduce first.
 
 ## What this milestone is for
 
-**Codex is gone and nothing replaces it.** That is the premise, and the milestone starts by saying so
-rather than by claiming the remaining process is equivalent.
+**Review now lands long after the work, and sometimes not at all.** That is the premise. It is not the
+same as Codex being gone — Matt intends a Codex round on `6a8a765` eventually — and the milestone is
+worth doing either way, because a defect found by an instrument on the day it is written costs less
+than the same defect found by an adversary three milestones later, and an adversarial round spent on
+things a machine could have caught is a round wasted.
 
 What Codex supplied was not diligence. It was **different priors**. `REVIEW_LEDGER.md` is specific:
 across milestone 009 it returned nine findings on work declared verified each time, and every one was
@@ -117,8 +133,9 @@ tried, rather than shipping a longer hand-written list and calling it systematic
 
 **6 — Nothing here claims to replace an adversary.** The instruments catch *the code does not do what
 the author thinks*. They do not catch *the author's framing of the problem is wrong*, which is the
-class Codex was best at and the class where Matt is now the only backstop. The ledger says so in
-those terms.
+class Codex was best at. They shorten the interval before the first class is caught and they leave the
+second class exactly where it was — with Matt, and with whatever Codex round eventually arrives. The
+ledger says so in those terms.
 
 **7 — No baseline may move.** This milestone adds no behaviour, so every trace hash, chosen-action
 digest, decision count and viewpoint render must be **byte-identical** to `6a8a765`. That is the

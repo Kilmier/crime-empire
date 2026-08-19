@@ -36,7 +36,17 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 ### From milestone 010 onward, review is self-assessment
 
 **Matt withdrew Codex from the loop on 2026-08-16, until further notice.** Claude implements and
-reviews its own work. The rows below are the argument for treating that as a weakened process rather
+reviews its own work.
+
+**Updated 2026-08-18: Codex is intermittent rather than withdrawn.** Matt intends a Codex round on
+`6a8a765` — milestone 011 — at a later date. So the standing arrangement is not "no adversary" but
+**an adversary that arrives long after the work**, which is a different problem and a worse one to
+reason about: a self-review declared clean can sit unchallenged across several milestones before
+anything contradicts it. Two rules follow. **A milestone accepted on a self-review alone and one later
+confirmed by Codex do not have the same standing, and the rows must not read as though they do** —
+milestone 010 is the first kind and 011 is expected to become the second. And **a late review still
+takes commits oldest-unreviewed-first**: `6a8a765` is followed by documentation commits, and reviewing
+straight to `HEAD` is exactly how `e83dacf` was permanently skipped. See "How this record has failed". The rows below are the argument for treating that as a weakened process rather
 than an equivalent one: across milestone 009, Codex returned **nine findings in five rounds** on work
 already declared verified, including the same P1 three times. A self-review then found four more —
 but only after the method changed. Re-reading the code found nothing; dumping what a player actually

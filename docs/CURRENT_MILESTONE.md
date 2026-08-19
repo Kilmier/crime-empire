@@ -130,12 +130,24 @@ real surface empirically and diff it; mutation-check every change by reverting i
 *named* test fail; walk the recurring-failure list. A review returning no findings is weak evidence
 and is recorded as such.
 
+**9 — No new place in the repository. Ruled by Matt on 2026-08-18.** `AGENTS.md`'s boundaries stand as
+written: `docs/`, the two `src/` projects, `tests/`. The mutation harness therefore lives inside
+`tests/CrimeEmpire.Simulation.Tests/`, which is an existing boundary rather than a new concept.
+
+**What that costs, stated now rather than discovered later.** A mutation run edits source files on
+disk, rebuilds, and runs the suite — so it cannot be an ordinary test, because the ordinary suite must
+never trigger it and a test that invokes `dotnet test` on itself is a bad idea. It has to be excluded
+from the default run and invoked deliberately, which means **the one instrument that has found every
+recent defect is also the one nothing runs automatically.** That is a real wart and it is the price of
+this ruling, not an argument against it. If it turns out uglier in practice than a directory would
+have been, the decision is cheap to revisit and this paragraph is why.
+
 ## Implementation plan
 
-1. **Establish the coverage baseline and its exclusions.** Run it, capture the full uncovered list at
-   `6a8a765`, and decide where the report and its exclusion list live. `AGENTS.md`'s repository
-   boundaries name `docs/`, the two `src/` projects and `tests/`; **a tooling directory is a
-   structural change and needs Matt's ruling** rather than my assumption.
+1. **Establish the coverage baseline and its exclusions.** Run it and capture the full uncovered list
+   at `6a8a765`. Per ruling 9 nothing new is created for it: the exclusion list and the accounting go
+   in `docs/` where the rest of the project's reasoning lives, and anything executable goes under
+   `tests/CrimeEmpire.Simulation.Tests/`.
 2. **Triage every uncovered line into the three buckets**, with the reason recorded per region rather
    than per line. Expect `Program.cs` to be the bulk and legitimate.
 3. **Act on bucket 3 — dead code out, live-but-unrun edges tested.** The two already known are the
@@ -152,8 +164,10 @@ and is recorded as such.
 
 ## Open questions to settle during implementation, not now
 
-- **Where does tooling live?** Ruling on the repository boundary is Matt's. If the answer is "nowhere
-  new", the harness stays in the test project as a test, which is workable and worth trying first.
+- **How is the harness excluded from the default suite** without becoming invisible? A trait filter, a
+  skip attribute, or a separate entry point are all workable and all slightly ugly; ruling 9 fixes
+  *where* it lives and leaves *how* it is kept out of the way to implementation. Whichever is chosen
+  has to leave it greppable, because an instrument nobody can find is one nobody runs.
 - **Can coverage be collected over a natural run rather than the test suite?** That is the question
   that answers *what does the scenario never exercise*, which is 013's premise. `coverlet.collector`
   is a test collector; a console collector is not installed. Establish feasibility; if it is not

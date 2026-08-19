@@ -2,6 +2,7 @@ using CrimeSim.Decision;
 using CrimeSim.Domain;
 using CrimeSim.Org;
 using CrimeSim.Scenario;
+using CrimeSim.Session;
 using CrimeSim.Sim;
 using CrimeSim.Strategy;
 
@@ -352,6 +353,35 @@ public sealed class InvestigationTests
         Assert.Equal(
             new[] { ReportCandor.Candid, ReportCandor.False, ReportCandor.Partial },
             answers.Select(a => a.Candor!.Value).OrderBy(c => c.ToString(), StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// Milestone 011's ruling 5, checked rather than argued — and it was not checked at the time.
+    /// The milestone asserted only that <c>PlayerOption</c> renders the <em>kind</em> of candidate
+    /// from typed fields; nothing established that the allegation actually reaches a person
+    /// controlling the investigator. Found by the self-review of `6a8a765`.
+    ///
+    /// No <c>AdvanceTo</c> inside the loop: <c>Choose</c> resumes and runs on to the next pause by
+    /// itself, and advancing again while a choice is outstanding is refused — deliberately, since a
+    /// half-handled decision is not a place the clock may pass through. Writing that loop the other
+    /// way is what made the first attempt at this check report, wrongly, that she was offered nothing.
+    /// </summary>
+    [Fact]
+    public void A_player_controlling_the_investigator_is_offered_the_allegation()
+    {
+        var session = SimulationSession.Start(42, "baseline", "kane", "kane");
+        var offered = new List<string>();
+
+        session.AdvanceTo(Cast.Start.AddDays(90));
+        while (session.Status == SessionStatus.AwaitingChoice)
+        {
+            offered.AddRange(session.Pending!.Options.Select(o => o.Description));
+            session.Choose(session.Pending!.Options[0].Id);
+        }
+
+        Assert.Contains(offered, o =>
+            o.Contains("ask Tommy Nardo", StringComparison.Ordinal)
+            && o.Contains("put hands on", StringComparison.Ordinal));
     }
 
     // ================================================================ helpers

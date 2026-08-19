@@ -296,3 +296,62 @@ Everything carried into milestone 011, plus what it adds.
 One implementation-and-archive commit. Status is not established by this file —
 `CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
 thing that counts as acceptance.
+
+---
+
+## Self-review of `6a8a765`, 2026-08-18
+
+Appended, not folded in. Matt delegated the review function to Claude on 2026-08-18 while Codex was
+unavailable, with a Codex round on this commit expected about two days later. **This is therefore a
+review by the author, and it is recorded as that** — see `REVIEW_LEDGER.md` for why "cleared to build
+on" and "accepted" are being kept apart.
+
+Three findings, two corrected here and one recorded.
+
+**F1 — `resentful-tommy` is absent from both insertion-stability theories, and always has been.**
+`SimulationReplayTests` has two of them — an event id consumed and cancelled, and an unrelated
+truth-log entry — and each runs four variants. `resentful-tommy` appears in **zero** `InlineData`
+entries in that file. It is the variant milestone 006 added, the one where Tommy resents Vincent, and
+the only one milestone 008 found behaviourally divergent, so it is a poor one to be missing. **The gap
+predates milestone 011** and is not a consequence of it. Both theories pass when it is added, so it
+was a coverage gap rather than a hidden failure. Corrected.
+
+**F2 — ruling 5 was asserted and never tested.** Milestone 011 checked that `PlayerOption` renders a
+`SeekCorroboration` from typed fields, and concluded actor parity "by construction". Nothing
+established that the allegation actually reaches a person controlling the investigator. It does: a
+player controlling Kane is offered, on 8 April, *"ask Tommy Nardo for her own account of whether Tommy
+Nardo put hands on Bellini's grocery"*. Now pinned by
+`A_player_controlling_the_investigator_is_offered_the_allegation`, which drives the real session to the
+end and takes the first option at every pause. **The ruling held; the evidence for it did not exist.**
+
+**F3 — the allegation option names the same person twice, and always will.** *"ask Tommy Nardo for her
+own account of whether Tommy Nardo put hands on…"* — the target of an allegation **is** the subject of
+the claim, by construction, so the name appears in both halves of every such option. It is clumsy
+rather than wrong: no fact leaks and nothing is asserted to the player as true. Recorded and not fixed,
+because the phrasing fix has a trap in it — a form like "put it to Tommy Nardo that he…" reads as the
+option asserting the claim, which is exactly what a *question* must not do. Carried.
+
+**Checks that found nothing, recorded because a review that only lists hits is not a review.**
+
+- **No runaway from the new question route.** Milestone 003's corroboration loop produced 318 requests
+  against 5 replies. At `6a8a765`: 7–8 requests per variant, 2–12 reports, 21–48 decisions against a
+  budget of 100, and no character exceeds one strategy instance. The route is bounded by `CanAsk` and
+  by `HasAccountFrom` and the numbers show it.
+- **Unanswered questions are 2–4 of 7–8**, which is the modelled outcome rather than a leak: a question
+  is spent when it is put and the reply is the other man's to give.
+- **The `Revise` widening changed no natural behaviour.** Discovery became revisable in the same pass
+  as items 1–3, and those three moved one character of rendered output between them.
+
+### The review nearly produced a false finding, which is worth more than the findings
+
+The first attempt at F2 reported that **a player controlling Kane is offered nothing at all** — zero
+pauses across ninety days. That would have been a serious defect. It was wrong: the harness called
+`AdvanceTo` again inside its own loop, and `Choose` already resumes and runs on to the next pause, so
+the second call hit the guard that refuses to move time while a choice is outstanding. The exception
+was swallowed by a `grep` that matched nothing, and the empty result read as a finding.
+
+**A false alarm is the mirror of a false-assurance test and costs the same way.** The guard against
+both is identical and is the one milestone 012's ruling 4 already states: an instrument is not
+evidence until it has been shown to report correctly. This one was believed for two commands before it
+was checked. Nothing was written to the repository on the strength of it, which is the only reason it
+is an anecdote rather than a seventh entry in "How this record has failed".

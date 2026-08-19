@@ -10,23 +10,26 @@ do not create a separate handoff document.
 **Milestone 012 — Instruments, Not Vigilance — is planned and NOT authorized to begin.** Matt chose
 the direction on 2026-08-18. The scope and rulings below are Claude's proposal and need his sign-off.
 
-**Milestone 011 is implemented and awaiting review**, at `6a8a765`. Nobody has reviewed it and nobody
-has accepted it. `REVIEW_LEDGER.md`'s coverage checkpoint stands at `824f3fc`, milestone 010.
-**Milestone 012 must not begin before 011 is accepted.**
+**Milestone 011 is self-reviewed and cleared to build on, at `6a8a765`. It is not accepted.** Matt
+delegated the review function to Claude on 2026-08-18 with Codex expected back in about two days. The
+self-review returned **three findings** — see that milestone's archive — and its corrections are in
+the commit that carries this text. `REVIEW_LEDGER.md`'s coverage checkpoint stands at `824f3fc`.
 
-**Matt intends to have Codex review `6a8a765` at a later date.** So Codex is intermittent rather than
-withdrawn, which is a correction to how this file read earlier on 2026-08-18 — it said "unavailable
-for the foreseeable future", and a sentence like that decides what the next session does. Three
-consequences, none of them optional:
+**"Cleared to build on" and "accepted" are deliberately different things**, and the ledger now says so
+in those words. The first unblocks work and establishes nothing about correctness; the second is still
+Matt confirming a named commit, and nothing Claude writes can produce it. **A Codex round on `6a8a765`
+is expected, and everything built on top inherits whatever it concludes.**
 
-- **011 will end up on a stronger basis than 010**, which was accepted on a self-review alone. Say so
-  when it happens rather than treating the two as equivalent.
-- **The commits after `6a8a765` — `40f0ded`, `520924b`, `3004d2f` — are documentation only and still
-  need their turn.** Reviewing straight to `HEAD` is the mechanic that permanently and silently
-  skipped `e83dacf`; `REVIEW_LEDGER.md` records it under "How this record has failed". Oldest
-  unreviewed first, and a docs commit does not stand in for the implementation commit beneath it.
-- **The review will arrive long after the work.** That is the actual problem this milestone addresses,
-  and it is a different problem from Codex being gone.
+**012 is therefore unblocked** — but it is still Matt's to authorize, and the scope below has not been
+signed off.
+
+Two things to carry into that Codex round:
+
+- **The commits after `6a8a765` — `40f0ded`, `520924b`, `3004d2f`, `c7ae3d6` — are documentation only
+  and still take their turn.** Reviewing straight to `HEAD` is the mechanic that permanently and
+  silently skipped `e83dacf`; `REVIEW_LEDGER.md` records it under "How this record has failed".
+- **A self-review and a Codex round do not carry the same weight**, and the rows must not read as
+  though they do.
 
 Milestones 001–010 are complete and accepted.
 

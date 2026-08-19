@@ -38,6 +38,21 @@ and was still rejected on three P1 findings; do not describe such a commit as un
 **Matt withdrew Codex from the loop on 2026-08-16, until further notice.** Claude implements and
 reviews its own work.
 
+**Updated 2026-08-18, second time: Matt delegated the review function to Claude while Codex is
+unavailable, with a Codex round expected about two days later.** That creates a state the four
+standing rules did not have a word for, so it gets one. **"Cleared to build on" is not "accepted."**
+
+- *Cleared to build on* means the author reviewed his own work, recorded the findings, and Matt
+  authorised the next milestone to proceed on top of it. It unblocks work. It establishes nothing
+  about correctness.
+- *Accepted* still means what rule 3 says: Matt confirms a named commit. Nothing Claude writes can
+  produce it.
+
+The two must never be collapsed in a row, because the whole point of the distinction is that the
+first is cheap and reversible and the second is not. A commit cleared-to-build-on that Codex later
+rejects is an ordinary outcome, not a contradiction — and everything built on top of it inherits the
+rejection.
+
 **Updated 2026-08-18: Codex is intermittent rather than withdrawn.** Matt intends a Codex round on
 `6a8a765` — milestone 011 — at a later date. So the standing arrangement is not "no adversary" but
 **an adversary that arrives long after the work**, which is a different problem and a worse one to
@@ -171,6 +186,8 @@ Oldest first — the order review takes them in.
 | `c0bb60f` | Correct a false superlative; advance the checkpoint through `0f52d75`. Docs only | **Not reviewed by Codex** — it was the last commit before Codex was withdrawn. Covered by Matt's acceptance below. |
 | `7ca7819` | Fourth 009 correction: `Relations.Meet`, a truthful occasion, a derived focus, a self-test that presses buttons | **Not reviewed by Codex.** Produced by a self-review at Matt's request, which found four defects — two of them the same P1 Codex had raised twice, still live on generators the fix had not reached and invisible to a test scoped to the one that had. **Matt accepted milestone 009 on the strength of this commit on 2026-08-16. Milestone 009 closed.** |
 | `12d1054` | Close milestone 009 as accepted; open milestone 010. Docs only | Status not established. |
+| `6a8a765` | Milestone 011 implementation: the detective's move, incident-scoped investigation, pronouns | **Self-reviewed by its author on 2026-08-18, three findings** — a coverage gap predating the milestone (`resentful-tommy` in neither insertion-stability theory), a ruling asserted but never tested (actor parity on the new allegation route, which holds), and a legibility wart that is carried. Corrected by the commit that carries this row. **Cleared to build on by Matt; not accepted. A Codex round on this commit is expected.** |
+| `40f0ded`, `520924b`, `3004d2f`, `c7ae3d6` | Milestone 012/013 planning and the Codex-premise correction. Docs only | Not yet reviewed. They are later than the checkpoint and still take their turn, oldest first — a docs commit does not stand in for the implementation commit beneath it. |
 | `824f3fc` | Milestone 010 implementation: a concealer acts on his own exposure; the denial is priced from its own incident | **Reviewed by its own author, the only reviewer this project now has.** Eighteen mutation checks, of which two initially caught nothing and exposed three defects in the milestone's own tests — a vacuous boundary assertion, a fixture staging a trace on an incident the concealment did not name, and nothing at all pinning whose belief moves. All three were fixed before the commit; none was found by re-reading. **Matt accepted milestone 010 on the strength of this commit on 2026-08-18. Milestone 010 closed.** |
 
 Milestone 003 was accepted through `d685015`; milestone 004 through `1fe8a15`; milestone 006 through

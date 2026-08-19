@@ -75,6 +75,7 @@ public sealed class SimulationReplayTests
     [InlineData("cautious-vincent")]
     [InlineData("watchful-boss")]
     [InlineData("disloyal-vincent")]
+    [InlineData("resentful-tommy")]
     public void An_unrelated_cancelled_event_does_not_change_the_history(string variant)
     {
         var unperturbed = Run(seed: 42, variant: variant, days: 90);
@@ -98,6 +99,7 @@ public sealed class SimulationReplayTests
     [InlineData("cautious-vincent")]
     [InlineData("watchful-boss")]
     [InlineData("disloyal-vincent")]
+    [InlineData("resentful-tommy")]
     public void An_unrelated_truth_log_entry_does_not_change_the_history(string variant)
     {
         var unperturbed = Run(seed: 42, variant: variant, days: 90);

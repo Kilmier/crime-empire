@@ -261,9 +261,12 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
 4. ~~**Godot / .NET compatibility spike**~~ — **subsumed by milestone 009**, which settled the
    constraint (the engine hosts .NET 8) and built the shell in the same pass rather than spiking it
    separately.
-5c. **Instruments, not vigilance** — **planned as milestone 012 on 2026-08-18, not authorized to
-   begin**, after Matt established that Codex is unavailable for review or advice for the foreseeable
-   future. What Codex supplied was different priors, not diligence, and the only substitutes available
+5c. **Instruments, not vigilance** — **planned on 2026-08-18 and then deferred the same day**, when
+   Matt confirmed Codex returns in about two days and chose to swap the scenario milestone forward.
+   The reason is worth keeping: **instrument work is a poor target for an adversary whose strength is
+   simulation design**, so Codex should arrive to a design-level milestone rather than to tooling. The
+   plan is at `520924b` and `3004d2f`; nothing about it decays while it waits, and its findings below
+   are real regardless of when it runs. What Codex supplied was different priors, not diligence, and the only substitutes available
    are adversaries with no priors at all. `coverlet.collector` is already a package reference and
    produces a report the first time it is asked: **92.2% line, 84.2% branch, 376 uncovered lines**,
    never run before. Sampling separates legitimately-uncovered surface (`Program.cs` is 118 of the
@@ -273,10 +276,8 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    milestones late. Adds no behaviour, so no baseline may move. Scope and rulings in
    `CURRENT_MILESTONE.md`.
 
-5b. **Scenario reach II** — **planned on 2026-08-18 and deferred to milestone 013** when the
-   instruments milestone was inserted ahead of it. Displaced rather than dropped: it moves every
-   baseline again, and doing that on a third consecutive unreviewed milestone is the risk 012 exists
-   to reduce first. The full plan is at `40f0ded`; the measured evidence and the two load-bearing
+5b. ~~**Scenario reach II**~~ — **became milestone 012**, authorized by Matt on 2026-08-18 after the
+   instruments milestone was swapped behind it. Scope and rulings in `CURRENT_MILESTONE.md`. The full plan is at `40f0ded`; the measured evidence and the two load-bearing
    rulings are preserved here.
 
    **Ruling A — he infers a gap, not an answer.** The inference may read organisational conditions and

@@ -230,7 +230,23 @@ If the core simulation proves compelling, the world can expand toward a state-sc
 
 Long-term depth may include procedural heist spaces; unfolding greed/time/risk decisions; richer evidence chains; detailed money provenance and financial exposure; elections and institutional careers; deeper prison play; family generations; identities, exile, and relocation; more nuanced fronts and legitimate enterprises; factional politics; informant networks; and context-sensitive succession.
 
-These are directions to preserve, not commitments for v1. New features should be added only when they strengthen the core fantasy and interlocking character simulation.
+**Playable institutional roles beyond the criminal one — detective, lawyer, prosecutor, police officer,
+politician — are a possible direction at this same long-term horizon.** The intended shape, if this is
+ever built, is a new character occupying the existing architectural role a player already occupies
+(see `DESIGN_DECISIONS.md`, "Player-neutral architecture and future institutional roles"), built on
+the same relationship, information, and corruption-as-leverage systems the criminal game already
+proves — an investigation, a case, or a corrupt relationship between an officer and an organisation is
+an application of `Relations`, `Claim`, and the belief/testimony model to a new institution type, not
+a second implementation of any of them. A long campaign might let the player choose a new point of
+view at a major chapter break — death, retirement, succession, voluntary exit — into a character such
+as an heir, a rival, a detective who spent years observing fragments of the empire the player built, a
+lawyer, or a politician, carrying none of the player's memory as in-fiction knowledge. Multi-city,
+state-scale simulation with tiered fidelity (an active city simulated closely, others more coarsely) is
+the same kind of long-term direction, for the same reason: it multiplies scope rather than testing
+something new about the core loop.
+
+These are directions to preserve, not commitments for v1. New features should be added only when they
+strengthen the core fantasy and interlocking character simulation.
 
 ## Design Heuristics
 

@@ -1032,6 +1032,13 @@ Added by milestone 012:
 - Do traits influence salience and evaluation without triggering behaviour?
 - Are strategies bounded and authored rather than unrestricted plans?
 - Are policy breaches possible and consequential rather than mechanically forbidden?
+- Does this assume the acting character is a criminal, or a member of one specific organisation,
+  where it could instead be stated in terms any `Character` satisfies? `DESIGN_DECISIONS.md`'s
+  "Player-neutral architecture and future institutional roles" names the shape this must not take —
+  `PlayerHeatManager`, `PlayerWantedLevel`, `PlayerKnownInformation`, an `if player_is_cop` branch, or
+  any new field keyed to "the player" rather than to a character. This is not scope for building other
+  roles; it is a cheap check against quietly closing that door while building the one role that is
+  scoped.
 
 ### Determinism
 

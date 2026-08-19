@@ -427,6 +427,49 @@ extracted to a shared constant, not a fresh one.
   to this, because `PreparedDecision.Available`'s candidate-id ordering (milestone 009, ruling 5) is
   deliberately not rank order.
 
+## Player-neutral architecture and future institutional roles — clarified 2026-08-19
+
+Not a new commitment. This section names something the milestone 009 player boundary already made
+true, and records a scope boundary Matt confirmed in chat rather than in a milestone.
+
+- **The architecture is already role-neutral by construction, not by discipline.** "The player boundary
+  — settled by milestone 009" above is the mechanism: **a player is a preference, not a second action
+  implementation.** `Pipeline.Deliberate` is exactly `Resolve(Prepare(...), null)`, the same call
+  `Runner` makes for every autonomous character, and `Resolve` refuses any id not in
+  `PreparedDecision.Available`. Nothing in that boundary, in `Character`, `Cognition`, `Relations`, or
+  `Claim` reads or assumes a criminal role, an organisation of any particular kind, or `RoleTitle`.
+  A detective, a lawyer, or an officer occupying the same architectural position — a `Character` whose
+  decisions are prepared and resolved through the same pipeline — is already representable. Nothing
+  needs to be built to make this true; something would need to be *added carelessly* to make it stop
+  being true.
+- **v1 remains crime-first, with its own specific systems, and that is not in tension with the above.**
+  The harbour scenario, its six characters, and everything built through milestone 012 stay the whole
+  of the assigned scope. Nothing in this section authorises building another playable role, an
+  investigation/case/warrant system, courts, prosecutors, multi-city simulation, or any institution
+  besides the one organisation that exists today — see `ROADMAP.md`'s candidate scopes and
+  `GAME_VISION.md`'s Long-Term Vision, neither of which grants permission on their own.
+- **What is decided is a standing constraint on future work, not a future milestone.** Other playable
+  institutional roles (detective, lawyer, prosecutor, police officer, politician) are a plausible v5+
+  direction, built from the same `Character`/`Relations`/information/`Claim` systems the criminal
+  scenario already exercises — not a parallel system, not a second implementation of belief, corruption,
+  or reporting. When and whether to build any of it is unscoped and undecided.
+- **Anti-patterns that would quietly close this door, named so review can check against them:**
+  `PlayerHeatManager`, `PlayerWantedLevel`, `PlayerKnownInformation`, `PlayerCriminalReputation`, and
+  any `if player_is_cop`-shaped branch. The existing pattern already avoids all of these —
+  `SimulationSession`'s `World` is `internal`, `PlayerView.Build` is the sole derivation of what any
+  viewpoint character may see, and nothing is keyed to "the player" rather than to a character. Keeping
+  it that way as institutional variety is eventually added is cheaper than any redesign later would be.
+  See `REVIEW_LEDGER.md`'s Architecture checklist, which now asks this directly.
+- **Corruption, investigation, and cross-institutional leverage are not new mechanisms when they
+  eventually get scoped — they are the existing relationship and information systems pointed at new
+  institution types.** `RELATIONSHIPS.md`'s Trust/Fear/Obligation/Grievance model, each dimension
+  required to name a decision reader, already is what a non-modifier corruption relationship looks
+  like; `INFORMATION_AND_LEGIBILITY.md`'s claim/evidence/testimony model already is what cross-character
+  leverage and mutual exposure look like. A future institutions milestone extending these to police,
+  legal, or political characters should be reviewed as an *application* of settled systems, not a
+  proposal for new ones — and if it turns out to need a genuinely new mechanism, that is itself a
+  finding worth surfacing before building it.
+
 ## Stack
 
 - **Simulation core**: C#, plain classes, engine-agnostic, unit-testable from the command line.

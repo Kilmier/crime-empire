@@ -266,7 +266,32 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 013, coverage accounting, corrected twice, not yet accepted
+### Measured — milestone 014, one complete player-owned operation, not yet reviewed or accepted
+
+Adds one field to `PlayerSnapshot` (`Cash`, populated from the viewpoint character's own
+`Capabilities.Cash`) and one display line in `Godot/Game.cs`. Nothing in `Strategies.cs`, `Commit.cs`,
+`Filters.cs`, or `Generators.cs` changes, so every hash below is unmoved from the accepted baseline —
+confirmed rather than assumed, by a full clean-tree re-run. Full account:
+`docs/milestones/014-one-complete-player-owned-operation.md`.
+
+- Build: 0 warnings, 0 errors across four projects. Tests: **467 passed, 0 failed** (458 before this
+  milestone; 9 added in new `PlayerOwnedOperationTests.cs`).
+- `--verify` deterministic and byte-identical on `baseline` (`FEE45FD886F18CA8`), `disloyal-vincent`
+  (`45CCF5ADC6EC0302`), `resentful-tommy` (`F5BD93386DE04082`); `--compare` byte-identical across all
+  five trace hashes and chosen-action digests; both required viewpoint runs exit 0.
+- Godot headless self-test: **4 choices, 4 decision screens, exit 0**, unchanged from the accepted
+  baseline. Transcript shows `· cash on hand 6,000` on every screen, confirming the new field renders
+  — the self-test's own "always take the first option" policy never starts the operation, so this
+  confirms wiring, not the operation itself.
+- **The operation, played interactively through every one of Vincent's own decisions (seven, not the
+  five assumed at planning time — see the archive's "Important discoveries"), reaches the accepted 1
+  April consequence**: `Capabilities.Cash` rises from 6000 to 6840, `Business.PayingTribute` for
+  Bellini's grocery becomes true, and this matches the same seed run autonomously byte for byte.
+
+### Measured — milestone 013, coverage accounting, corrected twice, accepted
+
+**Matt accepted correction commit `a75a54e` on 2026-08-19 and closed the milestone**, with no further
+commit made solely to record the review. Codex reviewed `a75a54e` with no findings.
 
 **Not a behavioural milestone — adds no simulation code, so nothing below is new regression evidence.**
 Recorded here because it is the first time this project has measured and triaged its own line

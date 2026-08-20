@@ -7,22 +7,19 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 014 —
+**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 015 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 013 — Coverage Accounting, Not Vigilance — is complete, corrected twice, not yet
-accepted.** Implemented 2026-08-19; see `docs/milestones/013-coverage-accounting-not-vigilance.md`
-(including its two appended corrections) for the full account, `docs/COVERAGE_ACCOUNTING.md` for the
-corrected coverage triage itself, and `docs/REVIEW_LEDGER.md`'s "Measured — milestone 013" section for
-the verification baselines. **Codex reviewed the implementation commit (`a0c6be8`) on 2026-08-19 and
-returned four findings, then reviewed the correction (`af6e90e`) and returned one further finding** —
-both rounds corrected. Matt has not yet confirmed acceptance of any of the three named commits — see
-`REVIEW_LEDGER.md`'s "cleared to build on is not accepted".
+**Milestone 014 — One Complete Player-Owned Operation — is complete, self-reviewed, not yet
+accepted.** Implemented 2026-08-19; see `docs/milestones/014-one-complete-player-owned-operation.md`
+for the full account, including a correction to the feasibility pass's own decision count (the
+operation naturally produces seven of Vincent's own decisions before the accepted consequence, not
+five), and `docs/REVIEW_LEDGER.md`'s "Measured — milestone 014" section for the verification
+baselines. Matt has not yet confirmed acceptance of a named commit, and Codex has not yet reviewed
+it — see `REVIEW_LEDGER.md`'s "cleared to build on is not accepted".
 
-Milestones 001–012 are complete and accepted — 011 and 012 as corrected by `3c86ba4`, accepted
-2026-08-19. See `REVIEW_LEDGER.md`'s new note on what that correction's four-milestone delay means for
-how much weight "accepted" carries there, and what this milestone's coverage instrument does and does
-not make up for it.
+Milestones 001–013 are complete and accepted — 011 and 012 as corrected by `3c86ba4`, 013 as corrected
+twice, most recently by `a75a54e`, accepted 2026-08-19.
 
 **Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
 meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".
@@ -31,12 +28,12 @@ meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self
 
 Not authorization to start any of it — see `ROADMAP.md`, which is where scope is proposed from, and
 `docs/milestones/013-coverage-accounting-not-vigilance.md`'s "Deferred work" section for the full,
-current list. In brief: **124 live-edge findings and 5 apparently-dead lines**, itemized by region in
-`docs/COVERAGE_ACCOUNTING.md`, none triaged by priority or acted on; systematic mutation automation and
-seed-sweep promotion, both deliberately deferred as unnumbered `ROADMAP.md` candidates before this
-milestone began; whether coverage can be collected over a natural run rather than the test suite, left
-open at planning time and not settled here; and everything carried into milestone 012 that this
-milestone did not touch — the allegation option naming the same person twice, the developer trace's
-uniform "he", nobody holding a scored relationship with Kane, the tuning guesses, the cast ceiling of
-six, obligation read but never moved, no save/load, and the rest listed in that archive's own
-carried-forward section.
+current list. Milestone 014 touched no simulation behaviour, so it adds nothing new to it. In brief:
+**124 live-edge findings and 5 apparently-dead lines**, itemized by region in
+`docs/COVERAGE_ACCOUNTING.md`, none triaged by priority or acted on; systematic mutation automation
+and seed-sweep promotion, both deliberately deferred as unnumbered `ROADMAP.md` candidates; whether
+coverage can be collected over a natural run rather than the test suite, left open at planning time
+and not settled; and everything carried into milestone 012 that neither 013 nor 014 touched — the
+allegation option naming the same person twice, the developer trace's uniform "he", nobody holding a
+scored relationship with Kane, the tuning guesses, the cast ceiling of six, obligation read but never
+moved, no save/load, and the rest listed in that archive's own carried-forward section.

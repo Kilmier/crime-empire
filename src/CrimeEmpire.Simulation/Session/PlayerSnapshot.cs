@@ -61,12 +61,17 @@ public sealed record PlayerAttitude(
 /// <summary>
 /// Everything one character could tell you, at one moment, as immutable data.
 ///
-/// THE RULE THIS TYPE EXISTS TO ENFORCE: every field below is derived from the viewpoint character's
-/// own <see cref="Cognition"/> and <see cref="SocialState"/> and from nothing else.
-/// <see cref="World"/> is consulted only to turn ids into display names, which are public knowledge,
-/// and to ask whether an id names a person at all. Nothing here reads <see cref="World.TruthLog"/>,
-/// <see cref="World.Decisions"/>, <see cref="World.Reports"/>, <see cref="World.Requests"/>, an
-/// organisational condition, or any utility score.
+/// THE RULE THIS TYPE EXISTS TO ENFORCE, amended by milestone 014: every field below is either
+/// derived from the viewpoint character's own <see cref="Cognition"/> and <see cref="SocialState"/>,
+/// or copied out of some other private state that is legitimately his own to know without a belief
+/// record standing in for it — <see cref="Cash"/>, from his own <see cref="Domain.Capabilities"/>,
+/// is the one example today. Nothing here may be derived from <em>another</em> character's private
+/// state — his cash, his scores, his cognition — and nothing here carries a reference back to the
+/// object it was copied from: every field is a value, copied once, not a window onto something that
+/// can still change. <see cref="World"/> is consulted only to turn ids into display names, which are
+/// public knowledge, and to ask whether an id names a person at all. Nothing here reads
+/// <see cref="World.TruthLog"/>, <see cref="World.Decisions"/>, <see cref="World.Reports"/>,
+/// <see cref="World.Requests"/>, an organisational condition, or any utility score.
 ///
 /// It is a snapshot rather than a live view on purpose. A UI holding a reference into the running
 /// world would be one property access away from the truth log; a record built once and handed over
@@ -81,6 +86,14 @@ public sealed record PlayerSnapshot(
     string ViewpointName,
     string ViewpointRole,
     Pronouns ViewpointPronouns,
+    /// <summary>
+    /// His own cash, copied out of <see cref="Domain.Capabilities.Cash"/> as a plain value at
+    /// construction. A character always knows his own balance — this is not mediated truth the way a
+    /// belief is, and it is not scored state the way a relationship reading is, so it is exempt from
+    /// "no number reaches the player" by the same reasoning that exempts a calendar date: it is a fact
+    /// about him, not a measurement the model took of anybody.
+    /// </summary>
+    double Cash,
     IReadOnlyList<PlayerBelief> Known,
     IReadOnlyList<PlayerBelief> Recent,
     IReadOnlyList<PlayerDisagreement> Disagreements,
@@ -241,6 +254,7 @@ public static class PlayerView
             who.Name,
             who.RoleTitle,
             self,
+            who.Capabilities.Cash,
             held,
             recent,
             disagreements,

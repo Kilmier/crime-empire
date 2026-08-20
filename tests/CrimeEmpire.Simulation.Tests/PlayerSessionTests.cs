@@ -840,6 +840,12 @@ public sealed class PlayerSessionTests
             typeof(StepResult), typeof(ScheduledEvent), typeof(EventPayload), typeof(Agenda),
             typeof(Psychology), typeof(InformationRecord), typeof(Testimony),
 
+            // Milestone 014's amendment to the snapshot contract lets Cash cross the boundary as a
+            // copied value; Capabilities itself — the mutable object it lives on, with its own
+            // setter — must never be reachable, or a consumer could both read another character's
+            // cash by walking it and mutate simulation state through it.
+            typeof(Capabilities),
+
             // Milestone 009's second correction. Claim carries EventId — a truth-log counter with no
             // player-facing meaning — so the boundary hands out PlayerClaim instead.
             typeof(Claim),

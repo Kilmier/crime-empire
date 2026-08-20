@@ -195,6 +195,7 @@ public partial class Game : Control
 
         bar.AddChild(Heading(session.Date.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)));
         bar.AddChild(Plain($"· {snapshot.ViewpointName}, {snapshot.ViewpointRole}"));
+        bar.AddChild(Plain($"· cash on hand {snapshot.Cash.ToString("N0", CultureInfo.InvariantCulture)}"));
         bar.AddChild(Plain($"· seed {session.Seed.ToString(CultureInfo.InvariantCulture)} · {session.Variant}"));
 
         var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill };

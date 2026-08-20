@@ -228,3 +228,57 @@ to have observed the review itself.
 mutability checks above were re-run against the corrected file line by line). It is **not accepted** —
 Matt's confirmation of this named commit is what that requires. `docs/CURRENT_MILESTONE.md` and
 `docs/REVIEW_LEDGER.md`'s "Measured — milestone 013" section are updated to the corrected figures.
+
+---
+
+## Correction from Codex's review of `af6e90e`, 2026-08-19
+
+Appended, not folded in. The "Corrected totals" line above and its "apparently dead" classification of
+`Sim/Runner.cs:118` are **superseded by this section**. Corrected figures and the corrected triage are
+in `docs/COVERAGE_ACCOUNTING.md`.
+
+**Codex reviewed `af6e90e` and returned one further P2 finding: `Sim/Runner.cs:118` is not apparently
+dead.** The correction above reclassified `Strategy/Strategies.cs:149-151` from apparently-dead to
+live-edge on the grounds that `World.Businesses` is a public mutable `Dictionary`, so nothing in the
+type system forbids a caller from removing an entry — only current call sites happen not to. The same
+correction, on the same page, then classified `Sim/Runner.cs:118` as apparently dead using the
+argument the reclassification had just rejected: "both event kinds have exactly one scheduling site
+in `src/` today and both are null-guarded there." That is a fact about current callers, not about
+what the public surface permits. `World.Queue` is a public `EventQueue` property; `EventQueue.Schedule(...)`
+is a fully public method accepting `string? ownerId` with no null check; `Runner.Step(World, DateTime,
+string?)` is the public entry point that processes whatever gets scheduled. A caller holding a
+`World` reference — a test, a future Godot script, anything outside `src/CrimeEmpire.Simulation`
+entirely — can call `world.Queue.Schedule(time, EventKind.AssignmentDelivered, null, "...")` directly
+and reach `Handle`'s fallback when `Runner.Step` processes it. Reclassified as a live edge.
+
+**Why the previous correction made this error immediately after naming the rule that forbids it.** The
+"sharper rule for apparently dead" the previous correction introduced was stated in general terms — a
+compile-time-closed enum or a genuinely unreachable path, not "nothing today calls this" — but was
+only checked against the one line Codex had already named (`Strategies.cs:149-151`) plus one line
+found by re-applying it inward, on the same file, to a very similar-looking guard (`Utility.cs:736`).
+`Runner.cs:118` was a *new* line, written into the accounting for the first time in that same
+correction (the P1 above it), and the rule was not re-applied to it before deciding its bucket — the
+old "defensive completeness" instinct filled the gap instead. Stating a corrected rule and applying it
+to the cases already in front of you is not the same as applying it to a case being classified for the
+first time in the same breath.
+
+**Corrected totals: 186 legitimately uncovered, 5 apparently dead, 124 live edges — verified to sum to
+315.** Full corrected accounting: `docs/COVERAGE_ACCOUNTING.md`.
+
+**What this correction is not.** Documentation only — no simulation code, test, or verification
+baseline changed; the figures from both prior accounts (build, test count, hashes, viewpoint renders,
+Godot self-test) are unaffected.
+
+**Recurring-failure list, walked.** *Collapsing distinct states, a third time in the same milestone:*
+"unreachable via current call sites" and "unreachable via the public API" were conflated again, in the
+very correction written to stop conflating them — the clearest demonstration in this milestone's
+history that stating a rule is not the same as having applied it everywhere it is due. *False
+assurance:* the previous correction's own "Where to look" section (in the original account, preserved
+above) had already named the apparently-dead bucket as the highest-risk category for exactly this
+reason, and the risk materialised in the correction meant to address it, not merely in the original.
+
+**Status.** This corrective commit is implemented and self-checked (`World.Queue`'s and
+`EventQueue.Schedule`'s public accessibility verified directly against source, alongside
+`Runner.Step`'s signature). It is **not accepted** — Matt's confirmation of this named commit is what
+that requires. `docs/CURRENT_MILESTONE.md` and `docs/REVIEW_LEDGER.md`'s "Measured — milestone 013"
+section are updated to the corrected figures.

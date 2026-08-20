@@ -4,10 +4,11 @@ Durable record for milestone 013. Not mutable status — `docs/CURRENT_MILESTONE
 `docs/milestones/013-coverage-accounting-not-vigilance.md` carry that. This file is the accounting
 itself: the measurement, what it does and does not cover, and where every uncovered line landed.
 
-**Corrected 2026-08-19 after Codex reviewed `a0c6be8` and returned four findings — see the
-correction appended to `docs/milestones/013-coverage-accounting-not-vigilance.md` for the account.**
-This file states the corrected totals directly rather than carrying the wrong ones alongside a note;
-the wrong version is preserved in git history at `a0c6be8`.
+**Corrected twice, 2026-08-19: after Codex reviewed `a0c6be8` (four findings) and again after Codex
+reviewed the first correction, `af6e90e` (one further finding) — see the corrections appended to
+`docs/milestones/013-coverage-accounting-not-vigilance.md` for the full account.** This file states
+the corrected totals directly rather than carrying the wrong ones alongside a note; the earlier wrong
+versions are preserved in git history at `a0c6be8` and `af6e90e`.
 
 ## Measurement
 
@@ -59,10 +60,12 @@ contains at least one already-confirmed uncovered region without being pointed a
 signal is sound on two known cases — it does not silently report "covered" where there is no
 coverage. It does not establish the reverse (that everything it reports covered is meaningfully
 exercised, only that it was executed at least once) and it does not validate the line-classification
-judgment calls below, which are argued reasoning, not mechanical output — Codex's review of the first
-version of this file is direct evidence of that: the classification judgment calls needed a second
-reader, and the first pass under-enumerated 20 of 315 lines and mis-classified two regions as
-unreachable that a mutable-state check shows are not. See the archive's appended correction.
+judgment calls below, which are argued reasoning, not mechanical output — Codex's two rounds of review
+on this file are direct evidence of that: the classification judgment calls needed more than one
+reader, across more than one pass. The first pass under-enumerated 20 of 315 lines and mis-classified
+two regions as unreachable that a mutable-state check shows are not; the correction that fixed those
+introduced the same category of error a third time in the one line it added new reasoning for
+(`Sim/Runner.cs:118`), caught on a second read. See the archive's two appended corrections.
 
 ## The three buckets
 
@@ -72,19 +75,24 @@ live edge nothing has ever run** (reachable, meaningful behaviour, simply never 
 accepted scenario or test). Per rulings 2 and 3, buckets 2 and 3 are findings recorded here, not work
 performed in this milestone — nothing below was fixed, tested, or removed.
 
-**A sharper rule for "apparently dead," fixed by Codex's review.** A switch default arm is only
-"apparently dead" when the enum it switches over is closed and every other member is handled
-explicitly above it — a compile-time fact (`CoercionMethod`'s three members, `SourceKind`'s
-`ExemptFromSuspicion` pair against its other five members). A guard against a *runtime* condition —
-a dictionary that could lose an entry, a data-construction convention nothing currently violates but
-the type system does not forbid — is reachable in principle even when nothing today reaches it, and
-belongs in the live-edge bucket instead. `Strategy/Strategies.cs:149-151` and
-`Decision/Utility.cs:736` were both moved from apparently-dead to live-edge on this basis; see their
-entries below for why.
+**A sharper rule for "apparently dead," fixed across two rounds of Codex's review.** A switch default
+arm, or any other guard, is only "apparently dead" when what it guards against is closed at compile
+time and every other member or path is handled explicitly above it — a fact about the type system
+(`CoercionMethod`'s three members, `SourceKind`'s `ExemptFromSuspicion` pair against its other five
+members), not a fact about which methods current code happens to call. A guard against a *runtime*
+condition reachable through a public API — a dictionary that could lose an entry, a queue that accepts
+a null owner, a data-construction convention nothing currently violates but the type system does not
+forbid — is reachable in principle even when nothing today reaches it, and belongs in the live-edge
+bucket instead. `Strategy/Strategies.cs:149-151`, `Decision/Utility.cs:736`, and `Sim/Runner.cs:118`
+were each moved from apparently-dead to live-edge on this basis; see their entries below for why.
+`Runner.cs:118` in particular is the same standard applied to `World.Queue`/`EventQueue.Schedule`
+that `Strategies.cs:149-151` established for `World.Businesses`: both are public, both accept
+whatever a caller passes, and "no current scheduler does X" is a fact about today's call sites, not
+about what the public surface permits.
 
-Totals, corrected: **186 legitimately uncovered, 6 apparently dead, 123 live edges.** Outside
+Totals, corrected: **186 legitimately uncovered, 5 apparently dead, 124 live edges.** Outside
 `Program.cs` (which alone accounts for 118 of the 186), the remaining 197 "interesting" lines split
-68 legitimate / 6 dead / **123 live edge** — the large majority of everything worth looking at in this
+68 legitimate / 5 dead / **124 live edge** — the large majority of everything worth looking at in this
 report is real, reachable behaviour nothing has ever run, not dead weight.
 
 Confidence varies by region and is stated where it is lower than the rest: most entries below were
@@ -119,16 +127,15 @@ traced through a call graph, and are marked accordingly.
 | `Decision/Agenda.cs` : 1 (`Agenda.Weight` getter at 23) | Unread positional-property getter; every other `Agenda` field is read by `AgendaSelection` and the trace layer. |
 | `Decision/Candidate.cs` : 1 (`ToString()` at 113) | Debug helper — `Candidate.Description` is what player- and developer-facing code actually reads. |
 
-### Apparently dead (6)
+### Apparently dead (5)
 
 | File : lines | Why it looks dead |
 |---|---|
 | `Decision/Utility.cs` : 3 (148, 156, 164 — the `_ => 0.0` default arms of `BaseRisk`/`BaseEffect`/`Exposure`) | Each switches over `CoercionMethod`, which has exactly three members (`Persuade`, `Threaten`, `Force`), all three handled explicitly above the default in every one of the three methods — a closed enum with no other member the default could ever match. |
 | `Decision/Salience.cs` : 1 (97, the discount switch's `_ => 0.0` default) | Reachable only for `SourceKind.Participant` or `.Witness` — verified against `Provenance.cs`'s `ExemptFromSuspicion()`, which is `kind is SourceKind.Participant or SourceKind.Witness`, a compile-time pattern match. The line immediately above (`r.SourceKind.ExemptFromSuspicion() || suspicion <= 0`) already returns early for exactly those two, and the switch's five explicit cases (`Discovery`, `FirstHandTestimony`, `Report`, `Rumor`, `Inference`) account for `SourceKind`'s remaining members — confirmed against the full seven-member enum in `Domain/Claim.cs`. Unreachable given the guard directly above it. |
-| `Sim/Runner.cs` : 1 (118, the switch's trailing `return null;`) | Reachable only if `Handle`'s switch is entered for an `ObservationOpportunity` or `AssignmentDelivered` event with a null `OwnerId` (the two `when actor is not null` guards on those cases). Both event kinds have exactly one scheduling site in `src/`: `Strategies.cs:437` explicitly guards `if (observerId is null) return;` before scheduling `ObservationOpportunity`, and `Runner.cs:190` guards `if (office?.HolderId is null) return;` before scheduling `AssignmentDelivered`. Neither scheduler can produce a null owner, so this fallback cannot currently be reached. |
 | `Session/PlayerNarration.cs` : 1 (line 47, `Describe`'s default arm `_ => c.ToString()`) | Reclassified from legitimately-uncovered in the prior version of this file, on the same rule as `Utility.cs` above: `Describe`'s switch explicitly handles all ten members of `ClaimKind` (`BusinessRefusesTribute` through `UnattributedShortfall`, verified against the full enum in `Domain/Claim.cs`), so the default cannot be reached by any valid value. `Decision/Filters.cs`'s own `Describe` helper (143-153, in the live-edge section below) has the same shape of default arm but handles only seven of the ten members, so *its* default stays live-edge rather than dead — the two look similar and are not the same finding. |
 
-### Live edges nothing has ever run (123)
+### Live edges nothing has ever run (124)
 
 Grouped by what they'd do if triggered, not file order — several correlate across files, which is
 itself informative: the same missing exercise produces near-simultaneous zero-hit lines in the
@@ -153,6 +160,18 @@ flagged as "disproportionate... worth its own look"; this is that look.
 
 **The two named-at-planning-time edges, re-confirmed** (`Sim/Runner.cs` 311-315, `Decision/Utility.cs`
 563-570) — see the self-check above. Nothing new to add beyond what planning already established.
+
+**`Sim/Runner.cs`'s third region, 118 — reclassified from apparently-dead after Codex's second
+review.** `Handle`'s switch trailing `return null;`, reached when an `ObservationOpportunity` or
+`AssignmentDelivered` event carries a null `OwnerId`. The prior version of this file argued this was
+unreachable because both event kinds have exactly one scheduling site in `src/` today and both are
+null-guarded there. That argument is about current call sites, not about the public surface: `World.Queue`
+is a public `EventQueue` property, `EventQueue.Schedule(...)` is a fully public method that accepts
+`string? ownerId` with no validation, and `Runner.Step(World, DateTime, string?)` is the public entry
+point that would process whatever gets scheduled. Any caller holding a `World` — a test, a future
+Godot script, anything — can call `world.Queue.Schedule(time, EventKind.AssignmentDelivered, null,
+"...")` directly and reach this fallback when `Runner.Step` processes it. The same standard
+`Strategy/Strategies.cs:149-151` established for `World.Businesses` below.
 
 **`TraceWriter.cs`'s other nine lines (`Trace/TraceWriter.cs`, 79-83, 105-107, 177 — the 96 above
 already covered).** `TraceWriter.Render` is exercised by two tests that always call it with `full:
@@ -266,7 +285,8 @@ ever both suspicious and in possession of a rumour at the same time.
 
 **The "nothing was open to him" decision signature (`Decision/DecisionRecord.cs`, 1 line: 54).**
 Correlates directly with `Sim/Runner.cs`'s `Think()` method (148-150, part of the `Runner.cs`
-live-edge total above alongside the named 311-315 edge): when `prepared.Available.Count == 0`,
+live-edge total above alongside the named 311-315 edge and the reclassified 118): when
+`prepared.Available.Count == 0`,
 `Runner.cs` resolves with no candidate and returns without pausing, and `ChosenActionSignature()`'s
 corresponding `"nothing-was-open"` branch is the player-facing signature form for exactly that case.
 Neither has ever fired — every deliberation in the fixture has always had at least one candidate

@@ -266,7 +266,7 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 013, coverage accounting, corrected by the commit following `a0c6be8`, not yet accepted
+### Measured — milestone 013, coverage accounting, corrected twice, not yet accepted
 
 **Not a behavioural milestone — adds no simulation code, so nothing below is new regression evidence.**
 Recorded here because it is the first time this project has measured and triaged its own line
@@ -279,9 +279,16 @@ written into the accounting's tables, so the file's own totals didn't match what
 Cobertura report's scope was overstated as "no exclusions" rather than described as covering only the
 two loaded assemblies, and two "apparently dead" lines (`Strategies.cs:149-151`,
 `Utility.cs:736`) were reachable in principle through a mutable-state path the original reasoning had
-missed. All four corrected in the commit following `a0c6be8`; corrected totals below. Not yet
-accepted — see `docs/milestones/013-coverage-accounting-not-vigilance.md`'s appended correction for
-the full account.
+missed. All four corrected in `af6e90e`.
+
+**Reviewed by Codex a second time on 2026-08-19 (correction commit `af6e90e`), one further P2.** The
+same mutable-state standard that reclassified `Strategies.cs:149-151` was not applied to
+`Sim/Runner.cs:118` in that same correction: `World.Queue` is public, `EventQueue.Schedule(...)` is a
+public method accepting a nullable owner with no validation, and `Runner.Step` is the public entry
+point that would process whatever gets scheduled — so the line is reachable through the public API,
+not merely undertested. Corrected in the commit following `af6e90e`; corrected totals below. Not yet
+accepted — see `docs/milestones/013-coverage-accounting-not-vigilance.md`'s two appended corrections
+for the full account.
 
 - **92.10% line, 84.30% branch, 3676/3991 lines covered, 315 uncovered** — measured from a clean tree
   at `1046704`, which sits on the accepted baseline `3c86ba4` with no `src/` or `tests/` change
@@ -290,7 +297,7 @@ the full account.
   `CrimeEmpire.Simulation` and `CrimeEmpire.Runner` only** — `CrimeEmpire.Godot` is never loaded by
   `dotnet test` (a separate Godot-hosted executable, no project reference from the test assembly) and
   the test assembly itself is not instrumented; neither is a configured exclusion.
-- **315 lines triaged into 186 legitimately uncovered, 6 apparently dead, 123 live edges** — the last
+- **315 lines triaged into 186 legitimately uncovered, 5 apparently dead, 124 live edges** — the last
   bucket is a majority of everything outside `Program.cs`'s CLI entry point. See
   `docs/COVERAGE_ACCOUNTING.md` for the full per-region list, corrected and verified to enumerate all
   315 lines exactly; nothing found was fixed, tested, or removed in this pass, per this milestone's

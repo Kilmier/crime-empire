@@ -103,10 +103,11 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   Milestone 011 fixed the player-facing surfaces and deliberately left this one: it is a debugging
   tool the architecture doc separates from player-facing accounts by name, and changing it would move
   the trace hashes for no player-visible gain.
-- **`AdvanceInvestigation` reads and writes `owner` throughout.** A delegated investigation would put
-  its findings in the head of a man who was not there — the asymmetry milestone 010 resolved for
-  concealment by moving the belief to the executor. Investigation is never delegated in the fixture,
-  so nothing exercises it.
+- ~~**`AdvanceInvestigation` reads and writes `owner` throughout.**~~ **Fixed by the correction appended
+  to milestones 011 and 012, `3c86ba4`, accepted 2026-08-19.** `AdvanceInvestigation` now reads and
+  writes the executor's cognition, not the owner's, matching the asymmetry milestone 010 resolved for
+  concealment. Investigation is still never delegated in the accepted fixture, so the corrected path
+  has no natural-run surface to move — mutation-checked instead; see the archive.
 - **Nobody in the fixture holds a scored relationship with Det. Kane**, so the player-facing attitude
   list can never describe a woman in a natural run. Her one relationship is the all-zero record
   `Relations.Meet` writes when she questions Tommy, and the list filters those out.

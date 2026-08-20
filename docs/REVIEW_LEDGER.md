@@ -77,6 +77,28 @@ or not they flatter the author.
 one of those nine findings was a place the author had convinced himself. A self-review that returns
 no findings is weak evidence, and must be recorded as what it is.
 
+**Milestones 011 and 012 rest on a weaker basis than their "accepted" status alone conveys, and this
+is recorded permanently rather than left implicit in the story above.** Both were self-reviewed first
+and Codex-reviewed only after landing — an adversary that arrived, per the paragraph above, but
+arrived **four milestones late**, across a window in which each was cleared to build on with nothing
+but the author's own reading standing behind it. Codex's own findings on that delayed pass (recorded
+at the `6a8a765` and `3c86ba4` rows) were real: `AdvanceInvestigation`'s owner/executor confusion, a
+reconsideration-stamp test that never checked the reconsideration stamp, a docstring contradicted by a
+later milestone. All three were the kind of defect this file's own recurring-failure list already
+named — a false-assurance test, a distinction quietly narrowed — and a self-review that had already
+walked that list did not catch them.
+
+**What milestone 013's instruments do and do not make up for.** Coverage accounting (`docs/COVERAGE_ACCOUNTING.md`)
+answers a narrower question than "was this reviewed correctly": *what surface has never been
+exercised at all*, which is necessary for catching an unreached branch but has nothing to say about a
+reached branch computing the wrong thing — exactly the shape of all three `3c86ba4` findings, each of
+which ran and passed its own (wrong) assertion. Per ruling 5, coverage does not replace an adversary,
+does not prove exercised code does what the author thinks, and does not catch the author's framing
+being wrong. It closes one specific gap — an unexercised region sitting unnoticed for ten milestones,
+which is exactly how `AdvanceInvestigation`'s cold-trail branch was found before this milestone
+existed — and leaves the rest of what only Codex's different priors have ever caught exactly as open
+as it was.
+
 ## Commit and review coverage
 
 **Coverage checkpoint: `824f3fc`.** The table is complete through that commit and says nothing
@@ -244,15 +266,43 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 012, corrected, not yet accepted
+### Measured — milestone 013, coverage accounting, not yet reviewed or accepted
+
+**Not a behavioural milestone — adds no simulation code, so nothing below is new regression evidence.**
+Recorded here because it is the first time this project has measured and triaged its own line
+coverage rather than carrying `coverlet.collector` as an unused package reference. Full accounting,
+methodology, and per-region reasoning: `docs/COVERAGE_ACCOUNTING.md`.
+
+- **92.10% line, 84.30% branch, 3676/3991 lines covered, 315 uncovered** — measured from a clean tree
+  at `1046704`, which sits on the accepted baseline `3c86ba4` with no `src/` or `tests/` change
+  between them. Repeatable via `dotnet test CrimeEmpire.sln --collect:"XPlat Code Coverage"
+  --results-directory ./coverage-tmp` and reading the resulting Cobertura report.
+- **315 lines triaged into 188 legitimately uncovered, 8 apparently dead, 119 live edges** — the last
+  bucket is a majority of everything outside `Program.cs`'s CLI entry point. See
+  `docs/COVERAGE_ACCOUNTING.md` for the full per-region list; nothing found was fixed, tested, or
+  removed in this pass, per this milestone's rulings 2-3.
+- **Self-check (ruling 7): both live edges named at planning time (`Sim/Runner.cs:311-315`,
+  `Decision/Utility.cs:563-570`) appeared in the measured report unprompted**, confirming the
+  instrument's negative signal is sound on two known cases before the rest of the report was trusted.
+- **Ruling 6, full verification re-run**: build 0 warnings/0 errors across four projects from a clean
+  tree; 458/458 tests; `--verify` deterministic and byte-identical on `baseline`
+  (`FEE45FD886F18CA8`), `disloyal-vincent` (`45CCF5ADC6EC0302`), `resentful-tommy`
+  (`F5BD93386DE04082`); `--compare` byte-identical across all five trace hashes and chosen-action
+  digests in the table below; **all 30 viewpoint renders** (5 variants × the 6-character cast)
+  produced and inspected for exceptions, none found; Godot headless self-test: 4 choices, 4 decision
+  screens, exit 0, transcript byte-identical to the recorded baseline. Nothing moved.
+
+### Accepted — milestone 012, corrected by `3c86ba4`
 
 **Codex reviewed milestones 009–012 on 2026-08-19 (reported by Matt) and returned corrective scope —
 one finding predating this milestone, recorded in milestone 011's appended correction, and two
 belonging to this one.** Both are corrected in a commit appended to
 `milestones/012-a-shortfall-he-cannot-attribute.md`, mutation-checked, and fully re-verified: every
-figure below is unchanged by the correction, and the archive states why. **Nobody has accepted either
-the original commit or the correction.** See `milestones/012-a-shortfall-he-cannot-attribute.md` for
-the full account, the mutation-check table, and the reasoning behind every moved figure below.
+figure below is unchanged by the correction, and the archive states why. **Matt accepted the
+correction (`3c86ba4`) on 2026-08-19 after Codex reviewed it with no findings, and authorized
+milestone 013 to baseline on it.** Milestone 012 is accepted as corrected. See
+`milestones/012-a-shortfall-he-cannot-attribute.md` for the full account, the mutation-check table,
+and the reasoning behind every moved figure below.
 
 - Build: **0 warnings, 0 errors** across four projects, measured after deleting every `bin`, `obj` and
   `.godot` directory.
@@ -294,11 +344,12 @@ firing variants, Vincent's delegator's question to Tommy fires in early April, w
 shortfall suspicion is even disclosed to him (6 April in `watchful-boss`). Milestone 011's exchanges —
 Kane's allegation, Salvatore's allegation to Vincent, Tommy's answers — all still fire in every variant.
 
-### Measured — milestone 011, complete, not yet reviewed or accepted
+### Accepted — milestone 011, complete, corrected by `3c86ba4`
 
-**Nobody has reviewed this and nobody has accepted it.** The section below records items 1–4 alone,
-taken before item 5 existed, because ruling 7 required the two to be measured separately. **Item 5 is
-recorded here, against that intermediate state:**
+**Reviewed by Codex on 2026-08-19 (reported by Matt); Matt accepted the correction the same day and
+milestone 011 is accepted as corrected — see the `3c86ba4` row above.** The section below records
+items 1–4 alone, taken before item 5 existed, because ruling 7 required the two to be measured
+separately. **Item 5 is recorded here, against that intermediate state:**
 
 - **It moved no developer trace at all** — byte-identical in all five variants, so every hash in the
   table below still stands at the end of the milestone.
@@ -309,9 +360,10 @@ recorded here, against that intermediate state:**
 - Tests rise from 428 to **437**; build stays at 0 warnings, 0 errors; the Godot self-test still makes
   4 choices and exits 0.
 
-### Measured — milestone 011, items 1–4, not yet reviewed or accepted
+### Accepted — milestone 011, items 1–4, corrected by `3c86ba4`
 
-**Nobody has reviewed this and nobody has accepted it.** Figures taken by the author of the change.
+**Reviewed by Codex on 2026-08-19 (reported by Matt) and accepted by Matt the same day — see the
+`3c86ba4` row above.** Figures taken by the author of the change.
 Recorded here under milestone 011's ruling 7, which requires the behavioural items and the pronoun
 item to be measured separately so that neither can mask the other: the pronoun item moves every
 viewpoint render, the behavioural items move the trace hashes, and one combined diff would hide
@@ -1098,6 +1150,11 @@ reconsideration time; contestedness after the settled stance changes.
 - Are corrections appended to the milestone archive rather than rewriting history?
 - Is the commit focused and independently reviewable?
 - Is `CURRENT_MILESTONE.md` reset only after verification and closeout?
+- **Does the commit carry a "where to look" note** — a short surface, written by the implementer, that
+  names the claims in this diff that would be expensive if wrong? Introduced in milestone 013 because
+  every defect Codex has ever found here was in a place the author had already convinced himself of;
+  naming the load-bearing claims up front is where a reviewer's attention should land first, not a
+  substitute for reading the rest of the diff.
 
 ## Design review questions
 

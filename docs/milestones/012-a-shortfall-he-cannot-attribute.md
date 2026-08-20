@@ -493,3 +493,8 @@ confirmation of this named commit is what that requires, and a Codex round on it
 per the standing arrangement in `REVIEW_LEDGER.md`. Milestone 013 remains paused pending that outcome;
 its own plan is revised to take this commit as its baseline only once the correction is accepted, not
 before.
+
+**Correction, 2026-08-19.** The paragraph above is superseded, not deleted. Codex reviewed this
+commit the same day and returned no findings; Matt accepted it, and milestone 012 is accordingly
+**accepted as corrected by `3c86ba4`** — see the `3c86ba4` row in `REVIEW_LEDGER.md`. Milestone 013
+was authorized on `3c86ba4` the same day, narrowed to coverage accounting; it did not remain paused.

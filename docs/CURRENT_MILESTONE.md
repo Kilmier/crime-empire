@@ -7,209 +7,34 @@ do not create a separate handoff document.
 
 ## Status
 
-**Milestone 013 — Coverage Accounting, Not Vigilance — is authorized and active.** Matt authorized
-the narrowed scope on 2026-08-19 after Codex reviewed correction commit `3c86ba4` with no findings.
-That commit is the accepted behavioural baseline for this milestone. The systematic mutation harness
-and seed-sweep proposals from the earlier plan are deferred as unnumbered roadmap candidates; they are
-not part of milestone 013 and must not be inferred as the next work.
+**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 014 —
+rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**The correction.** Three findings, addressed in one commit: `AdvanceInvestigation` read and wrote
-the strategy owner's cognition throughout rather than the executor's — harmless while the accepted
-scenario never delegates an investigation, wrong in general, corrected in milestone 011's archive
-since that is where the affected state was added; a reconsideration-stamp test that never checked the
-reconsideration stamp; a stale docstring on `StrategyInstance.SourceEventId`. All three mutation-
-checked, and full verification re-run confirms milestone 012's own recorded baselines are unmoved —
-see the appended corrections in `milestones/011-the-detective-has-no-next-move.md` and
-`milestones/012-a-shortfall-he-cannot-attribute.md` for the complete account.
+**Milestone 013 — Coverage Accounting, Not Vigilance — is complete, self-reviewed, not yet accepted.**
+Implemented 2026-08-19; see `docs/milestones/013-coverage-accounting-not-vigilance.md` for the full
+account, `docs/COVERAGE_ACCOUNTING.md` for the coverage triage itself, and `docs/REVIEW_LEDGER.md`'s
+"Measured — milestone 013" section for the verification baselines. Matt has not yet confirmed
+acceptance of a named commit, and Codex has not yet reviewed it — see `REVIEW_LEDGER.md`'s "cleared to
+build on is not accepted".
 
-**Milestones 011 and 012 are complete and accepted as corrected by `3c86ba4`.** The ledger checkpoint
-still stands at `824f3fc`; the review and acceptance of `3c86ba4` is recorded beyond that checkpoint
-without skipping the intervening commits' turns.
+Milestones 001–012 are complete and accepted — 011 and 012 as corrected by `3c86ba4`, accepted
+2026-08-19. See `REVIEW_LEDGER.md`'s new note on what that correction's four-milestone delay means for
+how much weight "accepted" carries there, and what this milestone's coverage instrument does and does
+not make up for it.
 
-Milestones 001–010 are complete and accepted.
+**Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
+meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".
 
-**Codex is intermittent rather than withdrawn, and this correction is the case in point.** The plan
-recovered from `520924b` for milestone 013 opened "Codex is gone and nothing replaces it"; that
-premise was already corrected at `c7ae3d6`, and this pause is what the corrected premise predicted —
-an adversary that arrives long after the work rather than not at all, so a self-review declared clean
-can sit unchallenged across several milestones before anything contradicts it. It arrived here across
-four.
+## What is deferred, for whoever scopes the next milestone
 
-## What this milestone is for
-
-**What Codex supplied was not diligence. It was different priors.** `REVIEW_LEDGER.md` is specific:
-across milestone 009 it returned nine findings on work declared verified each time, and every one was
-a place the author had convinced himself. Re-reading found nothing; what broke it open was mechanical.
-
-That pattern has held for three milestones since. Milestone 010's self-review found three defects,
-011's found three, and 012's mutation pass confirmed five fixes and caught a false instrument — and
-**every one of those came from a mechanical check rather than from looking again**.
-
-The smallest new mechanical check available is the coverage accounting that already has a collector
-and measured evidence. This milestone makes that one check repeatable and honest. It adds **no
-simulation behaviour**, so its own work can be separated cleanly from any defects it discovers.
-
-### What is already there and has never been run
-
-`coverlet.collector` has been a package reference in the test project since before milestone 009 and
-produces a report the first time it is asked for. **Measured at `HEAD` on 2026-08-19: 92.10% line,
-84.30% branch, 315 uncovered lines.** The previously recorded figure — 92.2% / 84.2% / 376, taken at
-`6a8a765` — is superseded: milestone 012's fourteen tests closed 61 uncovered lines as a side effect
-of testing something else, which is itself a small argument for the report existing.
-
-Sampling separates three different things:
-
-- **Legitimately uncovered.** `Program.cs` alone is **118 of the 315** — the CLI entry point, exercised
-  by the verification commands rather than by unit tests. It is the largest single number in the
-  report and the least interesting, which is exactly how a naive coverage milestone would waste
-  itself. It is now 37.5% of the remainder, up from 31%, because the interesting part shrank.
-- **Live edges nothing has ever run. Both re-verified uncovered at `HEAD`, not assumed:**
-  - **`Runner.cs` 311–315** raises a grievance and resentment when a character observes somebody
-    else's policy breach — a relationship-write path **no test and no run in any variant at any seed
-    has ever executed.**
-  - **`Utility.cs` 563–570** prices a candid report made when the teller has something at stake — the
-    direct counterpart of the denial that milestones 010 and 011 spent two milestones measuring, and
-    **nobody has ever taken it.** The denial's cost is measured to four decimal places; its opposite
-    number has never been evaluated once.
-- **Vocabulary members with no exerciser.** `Filters.cs` carries 28 uncovered lines in a 154-line
-  file — the second-largest block after `Program.cs`, and disproportionate enough to be worth its own
-  look rather than an assumption.
-
-The second category is the reason to do this. **Before milestone 011, `AdvanceInvestigation`'s
-cold-trail branch was in it** — no test, unreachable in every natural run, inert since it was written.
-It was found by accident, ten milestones late. This report would have named it.
-
-## Scope
-
-**In:**
-
-1. **Account for every uncovered line**, as one of: legitimately uncovered and why; apparently dead;
-   or **a live edge nothing has ever run**. The latter two are findings for later correction, not work
-   performed in this milestone. **The deliverable is the accounting, not the percentage.** A number
-   driven up by testing `Program.cs` would be worse
-   than the number it replaced.
-2. **Make coverage a repeatable check**, with its exclusions written down rather than remembered, so
-   the next milestone can be asked what it left untouched.
-3. **Write the "where to look and what to distrust" note** into the review process — a short
-   per-commit surface naming the claims that would be expensive if wrong, so Matt's review lands on
-   those rather than on a whole diff.
-4. **Record in `REVIEW_LEDGER.md`, permanently, that milestones 011 and 012 rest on a weaker basis**,
-   and what the instruments do and do not make up for.
-
-**Out:** no systematic mutation automation and no seed sweeps; no simulation behaviour change of any
-kind — no new claim kinds, characters, variants, generators, coefficients, or behavioural tests; no
-scenario work; no persistence; no tiering; no interface change.
-**If coverage accounting finds dead code or a live edge with no exerciser, it is recorded as a
-finding and not fixed here.** Milestone 013 may improve only the coverage measurement and its own
-documentation. It must not remove simulation code or add behavioural tests in response to what it
-finds; doing both in one pass would make the instrument's evidence impossible to separate from the
-repair.
-
-## Rulings taken at planning time
-
-**1 — The deliverable is the accounting, not the percentage.** A coverage number is a floor and this
-milestone must not treat it as a score. Every uncovered line ends in one of three named buckets, and
-"legitimately uncovered" is a real answer that has to be argued rather than a way of avoiding one.
-
-**2 — A live edge nothing has ever run is a finding, and it is recorded whether or not it flatters
-anybody.** Two are already known and re-verified. There will be more, and the count goes in the
-archive.
-
-**3 — Dead code is a finding, not work for this milestone.** A later corrective change may remove it;
-milestone 013 only identifies and records it. A test written merely to raise coverage would be worse
-than the uncovered line: it would defend code whose need has not been established.
-
-**4 — An instrument this project relies on must itself be checked, and this one has already failed
-twice.** Milestone 011's mutation harness reported build failures as "no test failed" and hid two
-unpinned rules. Milestone 012's actor-parity harness drove the session with a policy that could not
-reach the state it was testing for, and reported a false absence. **An instrument is not evidence
-until it has been shown to report correctly.** Anything promoted out of scratch and into the
-repository gets tests of its own, including a deliberately-broken case proving it reports failure.
-
-**5 — Nothing here claims to replace an adversary.** Coverage catches *this surface was not
-exercised*. It does not prove the exercised code does what the author thinks, and it does not catch
-*the author's framing of the problem is wrong*. The ledger says so in those terms.
-
-**6 — No baseline may move.** This milestone adds no behaviour, so every trace hash, chosen-action
-digest, decision count and viewpoint render must be **byte-identical to `3c86ba4`**, the accepted
-correction and current behavioural state. Any movement is a defect rather than a result.
-
-**7 — Self-review the instrument against a known omission.** Enumerate the real surface empirically,
-diff it, and demonstrate that the report contains at least one already-confirmed uncovered region.
-Walk the recurring-failure list. A review returning no findings is weak evidence and is recorded as
-such.
-
-**8 — No new top-level place in the repository.** `AGENTS.md`'s boundaries stand. Coverage output is
-generated, not committed; durable accounting and exclusions belong in `docs/`, and any small helper
-needed to repeat the measurement belongs under an existing project boundary.
-
-## Implementation plan
-
-1. **Establish the coverage baseline and its exclusions.** The `HEAD` measurement is already taken —
-   92.10% line, 84.30% branch, 315 uncovered — and the per-file distribution is in hand. Capture the
-   full uncovered list and decide the exclusion set. Per ruling 8 nothing new is created for it: the
-   accounting and the exclusion list go in `docs/`, and anything executable goes under
-   `tests/CrimeEmpire.Simulation.Tests/`.
-2. **Triage every uncovered line into the three buckets**, with the reason recorded per region rather
-   than per line. `Program.cs` is 118 and expected to be legitimate; `Filters.cs`'s 28 is the first
-   real question.
-3. **Record bucket 2 and bucket 3 findings without repairing them.** The two verified live edges above
-   are the starting point, not the list. Each finding must name the exact region and why it is believed
-   dead or live-but-unrun; uncertainty stays explicit.
-4. **Make the measurement repeatable and check the instrument.** Record the exact command and
-   exclusions, reproduce the result from a clean tree, and show that a known uncovered region appears.
-5. **Verify nothing moved**, per ruling 6 — full verification plus a byte-comparison of all five
-   traces and all 30 viewpoint renders against `3c86ba4`.
-6. **Write the ledger entries**: the accepted correction, weaker-basis record, coverage baseline, new
-   check, and per-commit review-surface habit.
-7. **Archive as `docs/milestones/013-…md`, reset this file, one coherent commit, stop.**
-
-## Open questions to settle during implementation, not now
-
-- **Can coverage be collected over a natural run rather than the test suite?** That is the question
-  that answers *what does the scenario never exercise*, which is a different and more interesting
-  question than what the tests never exercise. `coverlet.collector` is a test collector; a console
-  collector is not installed. Establish feasibility; if it is not available, say so plainly rather
-  than approximating it.
-- ~~**How much of the 376 is `Program.cs`-shaped?**~~ **Answered while scoping: 118 of 315, 37.5%.**
-  The interesting remainder is under 200 lines, which makes this a smaller milestone than the original
-  figure suggested.
-- **Is `Filters.cs`'s 28 uncovered lines one thing or several?** Disproportionate for a 154-line file,
-  and unexamined.
-
-## Carried forward
-
-Everything carried into milestone 012, plus what it added. Full list at the end of
-`docs/milestones/012-a-shortfall-he-cannot-attribute.md`. Nothing here resolves any of it, by design —
-but several are likely to be *measured* for the first time by it.
-
-**From milestone 012:**
-
-- **The bonus corroboration route** — Vincent asking Tommy about `UnattributedShortfall` — is
-  unauthored and unscoped, a real consequence of routing the suspicion through ordinary testimony.
-- **`Organization.Offices.Select(o => o.Domain).FirstOrDefault()`** is correct for a one-office
-  fixture and needs a real rule the day a second domain exists.
-- **Salvatore's stance on a claim his capo has personally disproven never self-revises**, however often
-  it is contradicted; only being told again differently, or working something out himself, would move
-  it, and neither happens for that belief.
-
-**From the earlier list, one struck: `AdvanceInvestigation` reading and writing `owner` throughout was
-corrected and accepted in `3c86ba4` on 2026-08-19** — see the correction appended to milestones 011
-and 012's archives. The rest
-stands: **the developer trace still says "he" for everybody, 59 strings; two incidents at one shop are
-only ever staged; the cold-trail branch is unreachable at every seed tried; nobody holds a scored
-relationship with Kane; four known reasons the denial stays shut, of which loyalty is the smallest; the tuning
-guesses; the cast ceiling of six; obligation read but never moved; nothing raises trust; negative
-trust and decay deferred; `GrievanceWeight` uncapped; no save/load; the empty-domain
-`ConcealIncident(, target=…)` label; the timing of a pause is observable even when the occasion is
-not; the player cannot see why an option is unavailable; nothing prevents a Godot script calling
-`Cast.Build` directly; `AGENTS.md` mentions neither `docs/RELATIONSHIPS.md` nor the Godot headless
-check.
-
-## Ordered review process
-
-Unchanged, and more load-bearing than before. Matt takes commits in order, oldest first; each review
-names the exact commit whose diff was inspected; the coverage table in `REVIEW_LEDGER.md` is the
-record. **Never write "verified" or "accepted" from a review report alone** — including one of
-Claude's own. Matt's confirmation of a named commit is the only thing that counts, and a self-review
-clears work to build on without establishing anything about correctness.
+Not authorization to start any of it — see `ROADMAP.md`, which is where scope is proposed from, and
+`docs/milestones/013-coverage-accounting-not-vigilance.md`'s "Deferred work" section for the full,
+current list. In brief: **119 live-edge findings and 8 apparently-dead lines**, itemized by region in
+`docs/COVERAGE_ACCOUNTING.md`, none triaged by priority or acted on; systematic mutation automation and
+seed-sweep promotion, both deliberately deferred as unnumbered `ROADMAP.md` candidates before this
+milestone began; whether coverage can be collected over a natural run rather than the test suite, left
+open at planning time and not settled here; and everything carried into milestone 012 that this
+milestone did not touch — the allegation option naming the same person twice, the developer trace's
+uniform "he", nobody holding a scored relationship with Kane, the tuning guesses, the cast ceiling of
+six, obligation read but never moved, no save/load, and the rest listed in that archive's own
+carried-forward section.

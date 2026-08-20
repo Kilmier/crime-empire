@@ -17,17 +17,19 @@ namespace CrimeEmpire.Simulation.Tests;
 /// "1987-04-01 15:00 Tommy Nardo collected from Bellini's grocery" through the same sequence of
 /// Vincent's own decisions: start (persuade), carry on, delegate to Tommy, escalate to threaten,
 /// escalate to force, a reaffirmed carry-on when Kane's investigation changes the picture, and an
-/// immediate report to Salvatore once the money arrives. The candidate ids below are read directly
-/// off that trace and off <c>Decision/Generators.cs</c>'s own id formatting, not invented.
+/// immediate report to Salvatore once the money arrives — seven pauses, pinned below as
+/// <see cref="SevenChoiceSequence"/>, in the exact wording the accepted trace renders for each.
 ///
 /// <b>Every pause here is resolved by an explicit <see cref="SimulationSession.Choose"/> call, never
-/// by <see cref="SimulationSession.ResolveAutomatically"/></b> — per ruling 2, nothing on this thread
-/// is autoplayed. <see cref="ChoosePreferred"/> reads the pipeline's own top-scored candidate and
-/// chooses it through the same token-based path a Godot button press uses, so a run built this way is
-/// the interactive path exercising itself, not a shortcut around it — and it naturally covers however
-/// many decisions the operation actually produces, rather than a fixed count assumed in advance. The
-/// five decisions the operation is named for are asserted to occur, in order, among whatever the
-/// pipeline offers at each pause.
+/// by <see cref="SimulationSession.ResolveAutomatically"/>, and never by inspecting anything beyond
+/// <see cref="PendingDecision.Options"/>'s public <c>Description</c> text and opaque <c>Id</c>
+/// tokens</b> — the same two things a Godot button carries. <see cref="ChooseByDescription"/> and
+/// <see cref="PlayGoldenPath"/> read no candidate id, no score, no <c>PreparedDecision</c>, and use no
+/// reflection into session-private state; a run built this way exercises the interactive path under
+/// the same information a human clicking through the shell would have, not a shortcut that happens to
+/// look like one. The seven choices are independently pinned from a prior run of the accepted trace,
+/// not derived from the pipeline's own ranking at test time, so this remains a check on the
+/// interactive path rather than a restatement of whatever the pipeline currently prefers.
 /// </summary>
 public sealed class PlayerOwnedOperationTests
 {
@@ -43,29 +45,34 @@ public sealed class PlayerOwnedOperationTests
     // and short of Vincent's next pause on an unrelated thread, 3 April 15:00.
     private static DateTime JustAfterCollection => Cast.Start.AddDays(31);
 
-    // The five candidate ids the operation is named for, read from Decision/Generators.cs's id
-    // formatting ($"start:tribute:{mark}:{method}", "continue:{Kind}:{TargetId}",
-    // "delegate:{Kind}:{sub}", "escalate:{TargetId}:{harder}") rather than reconstructed from
-    // wording, so a renderer change cannot silently break these tests. Asserted to occur in order
-    // among the full, undetermined-length sequence of Vincent's real decisions — see the type doc.
-    private const string StartPersuade = "start:tribute:bellini-grocery:Persuade";
-    private const string Continue = "continue:SecureTribute:bellini-grocery";
-    private const string DelegateToTommy = "delegate:SecureTribute:tommy";
-    private const string EscalateThreaten = "escalate:bellini-grocery:Threaten";
-    private const string EscalateForce = "escalate:bellini-grocery:Force";
+    // The exact seven option descriptions PlayerOption renders for Vincent's seven pauses in the
+    // accepted baseline trace at seed 42, read directly from a live run of the interactive path
+    // (SimulationSession.Snapshot()/Pending.Options — the same surface Godot renders) rather than
+    // reconstructed from the developer trace's candidate ids or wording. Pinned in order: start
+    // (persuade), carry on, delegate to Tommy, escalate to threaten, escalate to force, a reaffirmed
+    // carry-on when Kane's investigation interrupts, and the immediate report to Salvatore once the
+    // money arrives.
+    private static readonly string[] SevenChoiceSequence =
+    {
+        "talk Bellini's grocery round",
+        "carry on getting Bellini's grocery to pay",
+        "have Tommy Nardo take it on",
+        "change tack with Bellini's grocery — threats instead",
+        "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
+        "carry on getting Bellini's grocery to pay",
+        "report to Salvatore Greco, leaving out his own part",
+    };
 
-    private static readonly string[] NamedOperationChoices =
-        { StartPersuade, Continue, DelegateToTommy, EscalateThreaten, EscalateForce };
-
-    // FromTrigger's floor candidate — always present, per Generators.cs: "Doing nothing is always
-    // conceivable, so a choice is never forced by an empty set."
-    private const string LetItLie = "nothing";
+    private const string LetItLie = "let it lie";
 
     // ================================================================= natural run
 
     /// <summary>
     /// The operation is not staged for this test suite: it is what the accepted fixture, unmodified,
-    /// already offers Vincent on his very first pause.
+    /// already offers Vincent on his very first pause. This one test also checks the offered
+    /// candidate's structured shape (via <c>PreparedDecision</c>) — a developer-side confirmation that
+    /// what is rendered really is the SecureTribute start it claims to be — distinct from driving the
+    /// interactive path itself, which the rest of this file never does this way (see the type doc).
     /// </summary>
     [Fact]
     public void The_natural_run_offers_vincent_a_secure_tribute_choice_against_bellinis_grocery()
@@ -75,22 +82,24 @@ public sealed class PlayerOwnedOperationTests
 
         Assert.Equal(Controlled, pending.ActorId);
 
-        var available = PreparedOf(session).Available.Select(c => c.Id).ToList();
-        Assert.Contains(StartPersuade, available);
-        Assert.Contains(LetItLie, available);
+        var descriptions = pending.Options.Select(o => o.Description).ToList();
+        Assert.Contains(SevenChoiceSequence[0], descriptions);
+        Assert.Contains(LetItLie, descriptions);
 
-        var start = PreparedOf(session).Available.Single(c => c.Id == StartPersuade);
-        Assert.Equal(ActionKind.StartStrategy, start.Kind);
-        Assert.Equal(StrategyKind.SecureTribute, start.Strategy);
-        Assert.Equal(Cast.Grocery, start.TargetId);
-        Assert.Equal(CoercionMethod.Persuade, start.Method);
+        var start = PreparedOf(session).Available.Single(c =>
+            c.Kind == ActionKind.StartStrategy
+            && c.Strategy == StrategyKind.SecureTribute
+            && c.TargetId == Cast.Grocery
+            && c.Method == CoercionMethod.Persuade);
+        Assert.NotNull(start);
     }
 
     // ================================================================= the golden path (ruling 6)
 
     /// <summary>
-    /// The complete operation, played through every one of Vincent's own decisions up to and through
-    /// collection — none of them resolved automatically, per ruling 2 — reaching the accepted 1 April
+    /// The complete operation, played through every one of Vincent's seven pinned decisions — none of
+    /// them resolved automatically, per ruling 2, and each chosen by matching the exact public option
+    /// text a Godot button would carry, never a candidate id or score — reaching the accepted 1 April
     /// consequence: the business condition changes and Vincent's own cash rises by exactly 840.
     ///
     /// Compared against the same seed run fully autonomously, because ruling 6 asks for both halves:
@@ -101,14 +110,14 @@ public sealed class PlayerOwnedOperationTests
     public void The_golden_path_reaches_collection_through_named_choices_and_matches_autonomous_execution()
     {
         var session = SimulationSession.Start(Seed, "baseline", Controlled);
-        var made = PlayThroughPreferredChoices(session, JustAfterCollection);
-
-        // The five decisions the operation is named for all occurred, in order, among whatever else
-        // the pipeline offered at every pause along the way.
-        AssertOccursInOrder(NamedOperationChoices, made);
+        PlayGoldenPath(session, JustAfterCollection);
 
         Assert.Equal(SessionStatus.Ready, session.Status);
         Assert.Equal(JustAfterCollection, session.Date);
+
+        // Through the player-facing snapshot, not only the internal world — the consequence a person
+        // watching the Godot shell would actually see.
+        Assert.Equal(6840, session.Snapshot().Cash);
 
         var vincent = session.World.Get(Controlled);
         var grocery = session.World.Businesses[Cast.Grocery];
@@ -160,6 +169,7 @@ public sealed class PlayerOwnedOperationTests
 
         Assert.Null(vincent.Execution.Strategy);
         Assert.Equal(startingCash, vincent.Capabilities.Cash);
+        Assert.Equal(startingCash, session.Snapshot().Cash);
         Assert.False(session.World.Businesses[Cast.Grocery].PayingTribute);
     }
 
@@ -173,7 +183,7 @@ public sealed class PlayerOwnedOperationTests
     public void Starting_the_operation_and_abandoning_it_diverge_from_the_identical_decision()
     {
         var started = SimulationSession.Start(Seed, "baseline", Controlled);
-        PlayThroughPreferredChoices(started, JustAfterCollection);
+        PlayGoldenPath(started, JustAfterCollection);
 
         var abandoned = SimulationSession.Start(Seed, "baseline", Controlled);
         DeclineOperationUntil(abandoned, JustAfterCollection);
@@ -201,7 +211,7 @@ public sealed class PlayerOwnedOperationTests
         autonomous.AdvanceTo(End);
 
         var mixed = SimulationSession.Start(Seed, "baseline", Controlled);
-        ChooseByPrefix(mixed, StartPersuade, End);
+        ChooseByDescription(mixed, SevenChoiceSequence[0], End);
 
         while (mixed.Status == SessionStatus.AwaitingChoice) mixed.ResolveAutomatically();
         if (mixed.Status == SessionStatus.Ready && mixed.Date < End) mixed.AdvanceTo(End);
@@ -226,7 +236,7 @@ public sealed class PlayerOwnedOperationTests
         var surface = new System.Text.StringBuilder();
 
         surface.AppendLine(Flatten(session.Snapshot()));
-        PlayThroughPreferredChoices(session, JustAfterCollection, onPause: () =>
+        PlayGoldenPath(session, JustAfterCollection, onPause: () =>
         {
             surface.AppendLine(Flatten(session.Pending!));
             surface.AppendLine(Flatten(session.Snapshot()));
@@ -246,33 +256,42 @@ public sealed class PlayerOwnedOperationTests
 
     /// <summary>
     /// The negative test ruling 5 requires: another character's cash — Marco's, Salvatore's — can
-    /// never appear in Vincent's own snapshot. <see cref="PlayerSnapshot.Cash"/> is a single value
-    /// for the viewpoint character alone, so this is close to definitional; asserted concretely
-    /// anyway, against distinctive sentinel values chosen so a coincidental match would be obvious
-    /// rather than merely inferred.
+    /// never appear anywhere in Vincent's own snapshot. Walks the <em>complete</em> public
+    /// <see cref="PlayerSnapshot"/> value graph reflectively — every string, number, and date reachable
+    /// from any public property, recursively through every nested record and collection — rather than
+    /// comparing the <see cref="PlayerSnapshot.Cash"/> property alone, so a future field that happened
+    /// to carry a leaked value elsewhere on the type would still be caught. Sentinel values are
+    /// distinctive enough that a coincidental match is not plausible.
     /// </summary>
     [Fact]
-    public void Another_characters_cash_never_appears_in_vincents_snapshot()
+    public void Another_characters_cash_never_appears_anywhere_in_vincents_snapshot()
     {
         var world = Cast.Build(Seed, "baseline");
         var vincent = world.Get(Controlled);
         var marco = world.Get(Marco);
         var salvatore = world.Get(Salvatore);
 
-        marco.Capabilities.Cash = 913_311;
-        salvatore.Capabilities.Cash = 271_828;
+        const double marcoSentinel = 913_311;
+        const double salvatoreSentinel = 271_828;
+        marco.Capabilities.Cash = marcoSentinel;
+        salvatore.Capabilities.Cash = salvatoreSentinel;
 
-        var vincentSnapshot = PlayerView.Build(world, vincent.Id, world.Now);
+        var snapshot = PlayerView.Build(world, vincent.Id, world.Now);
+        var values = ValueGraph(snapshot).ToList();
+        Assert.True(values.Count > 8, "the walk reached very little of the snapshot, so this proves nothing");
 
-        Assert.Equal(vincent.Capabilities.Cash, vincentSnapshot.Cash);
-        Assert.NotEqual(marco.Capabilities.Cash, vincentSnapshot.Cash);
-        Assert.NotEqual(salvatore.Capabilities.Cash, vincentSnapshot.Cash);
+        var numbers = values.OfType<double>().ToList();
+        Assert.Contains(vincent.Capabilities.Cash, numbers);
+        Assert.DoesNotContain(marcoSentinel, numbers);
+        Assert.DoesNotContain(salvatoreSentinel, numbers);
 
-        // And building somebody else's snapshot does not change what Vincent's already reads —
-        // there is no shared or lazily-computed state behind the field.
-        _ = PlayerView.Build(world, marco.Id, world.Now);
-        _ = PlayerView.Build(world, salvatore.Id, world.Now);
-        Assert.Equal(vincent.Capabilities.Cash, PlayerView.Build(world, vincent.Id, world.Now).Cash);
+        string marcoText = marcoSentinel.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        string salvatoreText = salvatoreSentinel.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        foreach (var value in values.OfType<string>())
+        {
+            Assert.DoesNotContain(marcoText, value, StringComparison.Ordinal);
+            Assert.DoesNotContain(salvatoreText, value, StringComparison.Ordinal);
+        }
     }
 
     // ================================================================= determinism
@@ -288,7 +307,7 @@ public sealed class PlayerOwnedOperationTests
         string RunOnce()
         {
             var session = SimulationSession.Start(Seed, "baseline", Controlled);
-            PlayThroughPreferredChoices(session, JustAfterCollection);
+            PlayGoldenPath(session, JustAfterCollection);
             return TraceWriter.Render(session.World, "baseline", false);
         }
 
@@ -310,7 +329,7 @@ public sealed class PlayerOwnedOperationTests
         uninterrupted.AdvanceTo(JustAfterCollection);
 
         var interrupted = SimulationSession.Start(Seed, "baseline", Controlled);
-        PlayThroughPreferredChoices(interrupted, JustAfterCollection, onPause: () =>
+        PlayGoldenPath(interrupted, JustAfterCollection, onPause: () =>
         {
             Assert.Throws<InvalidOperationException>(() => interrupted.AdvanceDays(1));
             Assert.Throws<InvalidOperationException>(() => interrupted.StepEvent());
@@ -338,58 +357,43 @@ public sealed class PlayerOwnedOperationTests
     }
 
     /// <summary>
-    /// Chooses the one available candidate whose id starts with <paramref name="prefix"/> — matched
-    /// against <see cref="PreparedDecision.Available"/>, the pipeline's own structured output, never
-    /// against rendered wording, so a change to <see cref="Session.PlayerOption"/>'s phrasing cannot
-    /// silently break which option this test takes.
+    /// Chooses the one offered option whose rendered <see cref="PendingOption.Description"/> exactly
+    /// matches <paramref name="description"/> — the same text and the same opaque token a Godot button
+    /// press would use, and nothing else: no candidate id, no score, no internal session state.
     /// </summary>
-    private static void ChooseByPrefix(SimulationSession session, string prefix, DateTime horizon)
+    private static void ChooseByDescription(SimulationSession session, string description, DateTime horizon)
     {
         var pending = RunToFirstPause(session, horizon);
-        var available = PreparedOf(session).Available;
-        Assert.Equal(available.Count, pending.Options.Count);
 
         int index = -1;
-        for (int i = 0; i < available.Count; i++)
+        for (int i = 0; i < pending.Options.Count; i++)
         {
-            if (!available[i].Id.StartsWith(prefix, StringComparison.Ordinal)) continue;
-            Assert.Equal(-1, index); // exactly one match, or the prefix is not specific enough
+            if (!string.Equals(pending.Options[i].Description, description, StringComparison.Ordinal)) continue;
+            Assert.Equal(-1, index); // exactly one match, or the wording is not specific enough
             index = i;
         }
 
-        Assert.True(index >= 0, $"no offered candidate id starts with \"{prefix}\" on {session.Date:yyyy-MM-dd}");
+        Assert.True(index >= 0,
+            $"no offered option reads \"{description}\" on {session.Date:yyyy-MM-dd} — offered: " +
+            string.Join(" | ", pending.Options.Select(o => o.Description)));
         session.Choose(pending.Options[index].Id);
     }
 
     /// <summary>
-    /// Drives the session to <paramref name="horizon"/>, and at every pause along the way chooses the
-    /// candidate the pipeline's own scoring prefers — through <see cref="SimulationSession.Choose"/>,
-    /// never <see cref="SimulationSession.ResolveAutomatically"/>, so the run is the interactive path
-    /// exercising itself rather than a shortcut around it. Returns every candidate id chosen, in
-    /// order, so a caller can verify a known sub-sequence occurred without having had to predict the
-    /// exact, possibly longer, full sequence in advance.
+    /// Drives the session through <see cref="SevenChoiceSequence"/>, in order, up to
+    /// <paramref name="horizon"/> — each choice made by <see cref="ChooseByDescription"/>, never
+    /// <see cref="SimulationSession.ResolveAutomatically"/>, matching only the public option text a
+    /// Godot button carries. This is a pinned, independently-scripted sequence, not a query of the
+    /// pipeline's own preference at test time.
     /// </summary>
-    private static List<string> PlayThroughPreferredChoices(
-        SimulationSession session, DateTime horizon, Action? onPause = null)
+    private static void PlayGoldenPath(SimulationSession session, DateTime horizon, Action? onPause = null)
     {
-        var made = new List<string>();
-        session.AdvanceTo(horizon);
-
-        while (session.Status == SessionStatus.AwaitingChoice)
+        foreach (string description in SevenChoiceSequence)
         {
+            RunToFirstPause(session, horizon);
             onPause?.Invoke();
-
-            var pending = session.Pending!;
-            var prepared = PreparedOf(session);
-            string preferredId = prepared.Scored[0].Candidate.Id;
-            int index = prepared.Available.ToList().FindIndex(c => c.Id == preferredId);
-            Assert.True(index >= 0, $"the preferred candidate {preferredId} is not among the offered options");
-
-            made.Add(preferredId);
-            session.Choose(pending.Options[index].Id);
+            ChooseByDescription(session, description, horizon);
         }
-
-        return made;
     }
 
     /// <summary>Declines every pause up to <paramref name="horizon"/> — the operation's own first
@@ -400,23 +404,7 @@ public sealed class PlayerOwnedOperationTests
     {
         session.AdvanceTo(horizon);
         while (session.Status == SessionStatus.AwaitingChoice)
-            ChooseByPrefix(session, LetItLie, horizon);
-    }
-
-    /// <summary>Asserts every id in <paramref name="expected"/> appears in <paramref name="actual"/>,
-    /// in the same relative order, allowing other ids to appear between and around them.</summary>
-    private static void AssertOccursInOrder(IReadOnlyList<string> expected, IReadOnlyList<string> actual)
-    {
-        int cursor = 0;
-        foreach (string id in actual)
-        {
-            if (cursor < expected.Count && string.Equals(id, expected[cursor], StringComparison.Ordinal))
-                cursor++;
-        }
-
-        Assert.True(cursor == expected.Count,
-            $"expected [{string.Join(", ", expected)}] to occur in order within " +
-            $"[{string.Join(", ", actual)}], but only matched {cursor} of {expected.Count}");
+            ChooseByDescription(session, LetItLie, horizon);
     }
 
     private static PreparedDecision PreparedOf(SimulationSession session)
@@ -424,6 +412,42 @@ public sealed class PlayerOwnedOperationTests
         var field = typeof(SimulationSession)
             .GetField("_prepared", BindingFlags.NonPublic | BindingFlags.Instance)!;
         return (PreparedDecision)field.GetValue(session)!;
+    }
+
+    /// <summary>
+    /// Every string, number, and date reachable from <paramref name="node"/>'s public instance
+    /// properties, recursively — through nested records and any <see cref="System.Collections.IEnumerable"/>
+    /// collection — used to search a whole DTO graph for a leaked value without needing to name every
+    /// field on the type by hand.
+    /// </summary>
+    private static IEnumerable<object> ValueGraph(object? node)
+    {
+        switch (node)
+        {
+            case null:
+                yield break;
+            case string s:
+                yield return s;
+                yield break;
+            case double or int or long or bool or DateTime:
+                yield return node;
+                yield break;
+            case System.Collections.IEnumerable seq:
+                foreach (var item in seq)
+                foreach (var v in ValueGraph(item))
+                    yield return v;
+                yield break;
+            default:
+                var type = node.GetType();
+                if (type.IsEnum) { yield return node; yield break; }
+                foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    if (property.GetIndexParameters().Length > 0) continue;
+                    foreach (var v in ValueGraph(property.GetValue(node)))
+                        yield return v;
+                }
+                yield break;
+        }
     }
 
     private static IEnumerable<string> Phrases(PlayerSnapshot s)

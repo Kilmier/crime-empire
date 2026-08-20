@@ -10,13 +10,20 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 015 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 014 — One Complete Player-Owned Operation — is complete, self-reviewed, not yet
-accepted.** Implemented 2026-08-19; see `docs/milestones/014-one-complete-player-owned-operation.md`
-for the full account, including a correction to the feasibility pass's own decision count (the
-operation naturally produces seven of Vincent's own decisions before the accepted consequence, not
-five), and `docs/REVIEW_LEDGER.md`'s "Measured — milestone 014" section for the verification
-baselines. Matt has not yet confirmed acceptance of a named commit, and Codex has not yet reviewed
-it — see `REVIEW_LEDGER.md`'s "cleared to build on is not accepted".
+**Milestone 014 — One Complete Player-Owned Operation — is complete, corrected, not yet accepted.**
+Implemented 2026-08-19; see `docs/milestones/014-one-complete-player-owned-operation.md` (including
+its appended correction) for the full account, and `docs/REVIEW_LEDGER.md`'s "Measured — milestone
+014" section for the verification baselines. **Codex reviewed the implementation commit (`712a125`)
+on 2026-08-20 and returned two P1 and two P2 findings**, corrected in the commit following it. The
+central finding: the original golden-path test discovered which option to choose at each pause by
+reading `PreparedDecision.Scored` through reflection — internal state no Godot button carries — so
+despite resolving every pause through an explicit `Choose` call, it was not actually driving the
+interactive path under the same information a person clicking through the shell would have. The
+correction replaces that mechanism with a pinned, independently-scripted sequence of the seven exact
+option texts, matched only against `PendingDecision.Options`' public `Description` and `Id`, and adds
+a genuine Godot headless check that presses those seven buttons for real and reads the rendered cash
+off the live screen. Matt has not yet confirmed acceptance of either named commit — see
+`REVIEW_LEDGER.md`'s "cleared to build on is not accepted".
 
 Milestones 001–013 are complete and accepted — 011 and 012 as corrected by `3c86ba4`, 013 as corrected
 twice, most recently by `a75a54e`, accepted 2026-08-19.

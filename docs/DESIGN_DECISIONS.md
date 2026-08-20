@@ -119,6 +119,17 @@ testimony and known relationships; never enumerates the authoritative roster to 
 people; uses qualitative confidence; presents conflicting accounts with attribution; and does not
 expose utility scores, hidden intentions, or the authoritative truth log.
 
+**Amended by milestone 014, ruling 1: a snapshot may also expose the viewpoint character's own
+private state directly, not only what he holds as a belief.** `PlayerSnapshot.Cash`, copied from his
+own `Capabilities.Cash`, is the first instance — a character always knows his own balance without
+needing a `Cognition` record to stand in for that self-knowledge, so this is not a widening of what
+counts as "known" so much as a second, narrower category alongside it. The full rule, stated
+precisely: a snapshot may expose the viewpoint character's own private state, cognition, and
+legitimately known information; it must never expose **another** character's private state, world
+truth, a utility score, or any reference or path back to mutable simulation state — every such field
+is a value copied once at construction, never a handle onto the object it came from. See
+`milestones/014-one-complete-player-owned-operation.md` and its correction.
+
 ## Relationships — settled by milestone 006
 
 See `milestones/006-relational-consequence.md`. What is settled is the conflict rule and the shape of

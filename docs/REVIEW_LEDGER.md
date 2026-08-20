@@ -266,7 +266,7 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 014, one complete player-owned operation, not yet reviewed or accepted
+### Measured — milestone 014, one complete player-owned operation, corrected, not yet accepted
 
 Adds one field to `PlayerSnapshot` (`Cash`, populated from the viewpoint character's own
 `Capabilities.Cash`) and one display line in `Godot/Game.cs`. Nothing in `Strategies.cs`, `Commit.cs`,
@@ -274,19 +274,42 @@ Adds one field to `PlayerSnapshot` (`Cash`, populated from the viewpoint charact
 confirmed rather than assumed, by a full clean-tree re-run. Full account:
 `docs/milestones/014-one-complete-player-owned-operation.md`.
 
+**Reviewed by Codex on 2026-08-20 (implementation commit `712a125`), two P1 and two P2 findings.**
+The implementation commit's own claim — quoted above until this correction, and false as stated — was
+that the golden-path test played the operation "through every one of Vincent's own decisions... none
+of them resolved automatically." That was true of the resolution mechanism (every pause did go
+through `SimulationSession.Choose`) but not of how the *choice itself* was determined: the test read
+`PreparedDecision.Scored[0]` through reflection into session-private state, information no Godot
+button carries, to decide which option to press. Corrected in the commit following `712a125`: the
+seven choices are now a pinned, independently-scripted sequence matched only against
+`PendingDecision.Options`'s public `Description` text and opaque `Id` tokens, and a new Godot headless
+check (`--selftest-goldenpath`) presses those same seven buttons for real and reads the rendered cash
+off the live screen — the genuine end-to-end proof the original claim asserted but had not built. Full
+account of the finding and fix: the archive's appended correction.
+
 - Build: 0 warnings, 0 errors across four projects. Tests: **467 passed, 0 failed** (458 before this
-  milestone; 9 added in new `PlayerOwnedOperationTests.cs`).
+  milestone; 9 in `PlayerOwnedOperationTests.cs`, rewritten by the correction).
 - `--verify` deterministic and byte-identical on `baseline` (`FEE45FD886F18CA8`), `disloyal-vincent`
   (`45CCF5ADC6EC0302`), `resentful-tommy` (`F5BD93386DE04082`); `--compare` byte-identical across all
   five trace hashes and chosen-action digests; both required viewpoint runs exit 0.
-- Godot headless self-test: **4 choices, 4 decision screens, exit 0**, unchanged from the accepted
-  baseline. Transcript shows `· cash on hand 6,000` on every screen, confirming the new field renders
-  — the self-test's own "always take the first option" policy never starts the operation, so this
-  confirms wiring, not the operation itself.
-- **The operation, played interactively through every one of Vincent's own decisions (seven, not the
-  five assumed at planning time — see the archive's "Important discoveries"), reaches the accepted 1
-  April consequence**: `Capabilities.Cash` rises from 6000 to 6840, `Business.PayingTribute` for
-  Bellini's grocery becomes true, and this matches the same seed run autonomously byte for byte.
+- Godot general headless self-test: **4 choices, 4 decision screens, exit 0**, unchanged from the
+  accepted baseline. Transcript shows `· cash on hand 6,000` on every screen, confirming the field
+  renders — the general self-test's own "always take the first option" policy never starts the
+  operation, so this confirms wiring, not the operation itself.
+- **Godot golden-path headless self-test (`--selftest-goldenpath`, new in the correction): presses
+  the seven pinned decision buttons for real, in order, on the correct dates (2/11/14/17/23/27 March,
+  1 April), and the rendered screen reads `· cash on hand 6,840` immediately after the seventh press,
+  with no unaddressed eighth decision. Exit 0.**
+- **The operation, played through the corrected interactive mechanism, reaches the accepted 1 April
+  consequence**: `Capabilities.Cash` rises from 6000 to 6840 — confirmed through
+  `session.Snapshot().Cash`, not only `session.World` — `Business.PayingTribute` for Bellini's grocery
+  becomes true, and this matches the same seed run autonomously byte for byte. Seven decisions occur
+  on this thread before 1 April, not the five assumed at planning time — see the archive's "Important
+  discoveries".
+- **The other-character-cash negative test now walks the complete public `PlayerSnapshot` value graph**
+  reflectively rather than comparing the `Cash` property alone, and was mutation-checked: temporarily
+  making `PlayerView.Build` return another character's cash was confirmed to fail the test before the
+  mutation was reverted.
 
 ### Measured — milestone 013, coverage accounting, corrected twice, accepted
 

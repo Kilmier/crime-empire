@@ -13,11 +13,14 @@ namespace CrimeEmpire.GodotShell;
 /// The whole interface.
 ///
 /// <b>What it is allowed to know.</b> One <see cref="SimulationSession"/>, and through it exactly
-/// two things: a <see cref="PlayerSnapshot"/>, which is bounded by the viewpoint character's own
-/// cognition and relationships, and a <see cref="PendingDecision"/>, which is the controlled
-/// character's own options. It cannot reach the world, the truth log, a decision record, a utility
-/// score or anybody else's beliefs, because the session does not expose them — that is enforced by
-/// the type system, not by this file's restraint.
+/// two things: a <see cref="PlayerSnapshot"/> and a <see cref="PendingDecision"/>, which is the
+/// controlled character's own options. Ruling 1 (milestone 014) states the snapshot's contract
+/// precisely: it may expose the viewpoint character's own private state, cognition, and legitimately
+/// known information — his own cash among it — but no other character's private state, no world
+/// truth, no utility score, and no reference or path back to mutable simulation state. It cannot
+/// reach the world, the truth log, a decision record, a utility score or anybody else's beliefs,
+/// because the session does not expose them — that is enforced by the type system, not by this
+/// file's restraint.
 ///
 /// <b>It consumes structured data and never parses text.</b> Nothing here reads
 /// <c>IntelligenceWriter</c>'s console rendering; every label below is built from a snapshot field.
@@ -33,6 +36,14 @@ public partial class Game : Control
 {
     /// <summary>Command-line switch that drives the real interface headlessly and dumps what it built.</summary>
     private const string SelfTestFlag = "--selftest";
+
+    /// <summary>
+    /// Command-line switch for milestone 014's golden path: Vincent's existing seed-42
+    /// <c>SecureTribute</c> operation against Bellini's grocery, played through real button presses
+    /// rather than the general self-test's "always take the first option" policy, reaching the
+    /// accepted 1 April consequence and reading the rendered cash off the live screen.
+    /// </summary>
+    private const string GoldenPathFlag = "--selftest-goldenpath";
 
     /// <summary>How far the self-test runs the scenario, matching the runner's default span.</summary>
     private const int SelfTestDays = 90;
@@ -66,6 +77,12 @@ public partial class Game : Control
         if (SelfTestRequested())
         {
             RunSelfTest();
+            return;
+        }
+
+        if (GoldenPathRequested())
+        {
+            RunGoldenPathSelfTest();
             return;
         }
 
@@ -487,6 +504,115 @@ public partial class Game : Control
             "answered a decision, so it proves nothing");
         GetTree().Quit(1);
     }
+
+    // ================================================================= golden path (milestone 014)
+
+    /// <summary>
+    /// Drives Vincent's own seed-42 <c>SecureTribute</c> operation against Bellini's grocery through
+    /// real button presses — the interactive playthrough itself, not a claim about it. Presses the
+    /// seven pinned option texts in order (independently derived from the same accepted trace as
+    /// <c>PlayerOwnedOperationTests</c> in the test project, not shared with it, so the two checks
+    /// cannot both be wrong about the same assumption), and reads the rendered cash label off the
+    /// live screen — never <see cref="SimulationSession"/>'s internal state — to confirm the accepted
+    /// 1 April consequence: 6,000 rising to 6,840. No further time advance is needed after the
+    /// seventh choice: the collection that pays Vincent happens in the same event sweep that produces
+    /// his seventh decision (reporting the outcome to Salvatore), so the rendered cash is already
+    /// current by the time that screen is on-screen.
+    /// </summary>
+    private void RunGoldenPathSelfTest()
+    {
+        try
+        {
+            GoldenPathSelfTest();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-GOLDENPATH FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void GoldenPathSelfTest()
+    {
+        GD.Print("CE-GOLDENPATH begin");
+
+        StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
+        var session = _session!;
+
+        string[] sequence =
+        {
+            "talk Bellini's grocery round",
+            "carry on getting Bellini's grocery to pay",
+            "have Tommy Nardo take it on",
+            "change tack with Bellini's grocery — threats instead",
+            "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
+            "carry on getting Bellini's grocery to pay",
+            "report to Salvatore Greco, leaving out his own part",
+        };
+
+        int choiceIndex = 0;
+        for (int guard = 0; guard < 2000 && choiceIndex < sequence.Length; guard++)
+        {
+            if (session.Status == SessionStatus.AwaitingChoice)
+            {
+                string expected = sequence[choiceIndex];
+                GD.Print($"CE-GOLDENPATH decision {choiceIndex + 1} on {session.Date:yyyy-MM-dd} — pressing \"{expected}\"");
+                if (!Press(expected))
+                    throw new InvalidOperationException(
+                        $"the decision on {session.Date:yyyy-MM-dd} does not offer \"{expected}\"");
+                choiceIndex++;
+            }
+            else
+            {
+                // "Next event" rather than "Advance a week": StepEvent() clears any outstanding
+                // fast-forward horizon before advancing, so resolving the next decision cannot
+                // resume a stale multi-day request and silently sail past the seventh choice into
+                // an unrelated eighth decision the way "Advance a week" was found to.
+                if (!Press("Next event"))
+                    throw new InvalidOperationException("no \"Next event\" control is available");
+            }
+        }
+
+        if (choiceIndex < sequence.Length)
+            throw new InvalidOperationException(
+                $"only reached choice {choiceIndex} of {sequence.Length} before giving up");
+
+        // No eighth pause should follow the seventh choice unaddressed — if one does, something
+        // (an unaddressed decision, a fast-forward that outran the choice just made) has silently
+        // moved past the point this check claims to have reached.
+        if (session.Status == SessionStatus.AwaitingChoice)
+            throw new InvalidOperationException(
+                $"an unaddressed decision followed the seventh choice, on {session.Date:yyyy-MM-dd} — " +
+                "the run has moved past the point it should have stopped at");
+
+        // The rendered screen, exactly as a person watching would read it — collected the same way
+        // the general self-test proves its own transcript, never by reading World or Capabilities.
+        var screenText = new StringBuilder();
+        Collect(this, screenText);
+        string screen = screenText.ToString();
+
+        GD.Print("== CE-GOLDENPATH-SCREEN-BEGIN ==");
+        GD.Print(screen);
+        GD.Print("== CE-GOLDENPATH-SCREEN-END ==");
+
+        bool proved = choiceIndex == sequence.Length
+            && screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
+
+        if (proved)
+        {
+            GD.Print("CE-GOLDENPATH ok");
+            GetTree().Quit();
+            return;
+        }
+
+        GD.PrintErr(
+            "CE-GOLDENPATH FAILED — did not reach the accepted 1 April consequence with cash on hand " +
+            "reading 6,840 on screen, so it proves nothing");
+        GetTree().Quit(1);
+    }
+
+    private static bool GoldenPathRequested()
+        => OS.GetCmdlineArgs().Contains(GoldenPathFlag) || OS.GetCmdlineUserArgs().Contains(GoldenPathFlag);
 
     /// <summary>
     /// Presses the button reading this text, as a person would, and lets its own handler do the rest

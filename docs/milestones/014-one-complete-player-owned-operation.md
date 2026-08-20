@@ -159,3 +159,92 @@ commentary on it.
 One implementation-and-archive commit. Status is not established by this file —
 `docs/CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
 thing that counts as acceptance.
+
+---
+
+## Correction from Codex's review of `712a125`, 2026-08-20
+
+Appended, not folded in. The account above — including its description of
+`PlayThroughPreferredChoices`, its "five named decisions... asserted to occur, in order" framing, and
+its "Where to look" paragraph's defence of that mechanism — is preserved as originally written and is
+**superseded by this section** wherever it describes how the interactive choices were determined.
+
+**Codex reviewed `712a125` and returned two P1 and two P2 findings, all about how "interactive"
+the golden path actually was — no simulation code was touched by the implementation, so none of this
+concerns behaviour.**
+
+**P1 — the golden-path mechanism was not actually driving the interactive path.** `ChoosePreferred`
+(named `PlayThroughPreferredChoices` in the account above) read `PreparedDecision.Scored[0]` through
+reflection into `SimulationSession`'s private `_prepared` field to decide which option to press. Every
+pause *was* resolved through an explicit `Choose` call rather than `ResolveAutomatically` — ruling 2's
+letter was honoured — but the question "which button do I press" was answered with information no
+Godot button carries: a candidate id, a utility score, session-private state reached by reflection.
+The account's own "Where to look" section had already named this exact mechanism as the highest-risk
+claim in the milestone and argued it was sound because `Scored[0]` was read from the real, unmodified
+`PreparedDecision` — a true statement that answered the wrong question. Whether the read value happens
+to equal the pipeline's true preference was never in doubt; whether reading it *at all* constitutes an
+interactive playthrough is what needed to be true, and was not.
+
+**Fix.** `PlayerOwnedOperationTests.cs` was rewritten: the seven decisions are now
+`SevenChoiceSequence`, a hardcoded array of the exact `PendingOption.Description` text the accepted
+trace renders at each pause, obtained by running the real interactive path once and reading what it
+actually offered (not reconstructed from the developer trace's wording). `ChooseByDescription` matches
+against that public text and the opaque `Id` token alone — the same two things a Godot button carries
+— and `PlayGoldenPath` drives all seven in order. No candidate id, no score, and no reflection remain
+anywhere in the choice-making path; `PreparedDecision` is used in exactly one place left in the file,
+the natural-run test's structural check that the offered candidate really is a `SecureTribute`/
+`Persuade` start — a developer-side assertion about what was offered, not a mechanism for choosing.
+
+**P2 — Godot itself had no end-to-end proof, only the general self-test's incidental confirmation that
+the `Cash` field renders.** Added `Game.cs`'s `--selftest-goldenpath`: it presses the same seven
+option texts as real button clicks, using "Next event" between decisions rather than "Advance a week"
+— a genuine bug this correction found in its first draft, where "Advance a week" leaves a fast-forward
+horizon that survives across `Choose` calls and silently carried the run past the seventh choice into
+an unaddressed eighth decision on a different thread. The check now asserts no eighth pause follows
+the seventh, then reads `· cash on hand 6,840` off the live rendered screen. Godot still touches only
+`PlayerSnapshot` and `PendingDecision`, as before.
+
+**P2 — the negative cash test compared one property instead of the whole snapshot.** Rewritten to
+walk the complete public `PlayerSnapshot` value graph reflectively (`ValueGraph`, mirroring the
+structural-walk pattern already used in `PlayerSessionTests.cs`) and check both sentinel amounts
+against every number and string reachable from it. Mutation-checked directly: `PlayerView.Build` was
+temporarily changed to return `world.Get("marco").Capabilities.Cash` instead of the viewpoint
+character's own, the strengthened test was confirmed to fail (`Collection: [913311], Not found: 6000`),
+and the mutation was reverted before this commit.
+
+**P1 — the simulation golden-path test asserted the consequence only through `session.World`.** Added
+`Assert.Equal(6840, session.Snapshot().Cash);` alongside the existing `session.World.Get(...)
+.Capabilities.Cash` and `Business.PayingTribute` assertions, so the test checks the same surface a
+player would actually see, not only the internal state behind it.
+
+**Documentation.** `Game.cs`'s class doc comment, which still described the snapshot as "bounded by
+the viewpoint character's own cognition and relationships" — stale since `Cash` is neither — is
+corrected to state ruling 1 precisely. `docs/DESIGN_DECISIONS.md`'s information-channel section is
+amended the same way, citing this correction. `docs/CURRENT_MILESTONE.md` and
+`docs/REVIEW_LEDGER.md`'s "Measured — milestone 014" section are corrected to withdraw the claim that
+the original golden-path test was a complete, non-autoplay interactive playthrough — it resolved every
+pause without autoplay, which is true and stays true, but it was not interactive in the sense of using
+only information available to a real player, which is what "playthrough" implies and what the
+correction now actually builds.
+
+**What this correction is not.** Documentation and test/interface-boundary work only — no simulation
+code changed, and the verification figures that depend on `Strategies.cs`/`Commit.cs`/`Filters.cs`/
+`Generators.cs` (all five trace hashes, all chosen-action digests) are unaffected and were re-confirmed
+by a full clean-tree re-run rather than assumed.
+
+**Recurring-failure list, walked.** *False-assurance claim:* "the interactive path exercising itself"
+was asserted about a mechanism that read internal ranking state to make its choices — the exact shape
+this project's own review checklist exists to catch, and exactly why a second reader found it. *A fix
+introducing the error it was meant to remove:* the first draft of the Godot check, written specifically
+to prove a genuine end-to-end interactive path, initially overshot past the seventh choice for the same
+underlying reason milestone 013's second correction diagnosed in itself — a stated rule ("stop after
+the seventh choice") not re-verified against the mechanism actually used ("Advance a week" carries a
+fast-forward horizon across choices) until a second check caught it. *Recording a review that did not
+happen:* this correction is Matt's report of Codex's review, acted on and re-verified, not a claim to
+have observed the review itself.
+
+**Status.** This corrective commit is implemented, tested (9 tests in `PlayerOwnedOperationTests.cs`,
+all rewritten to the description-based mechanism), and both Godot headless checks pass
+(`--selftest`: 4 choices, 4 decision screens, exit 0; `--selftest-goldenpath`: seven choices pressed by
+exact text on the correct dates, `cash on hand 6,840` read off the live screen, exit 0). It is **not
+accepted** — Matt's confirmation of this named commit is what that requires.

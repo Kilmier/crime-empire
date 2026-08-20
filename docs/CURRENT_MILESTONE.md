@@ -10,20 +10,32 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 015 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 014 — One Complete Player-Owned Operation — is complete, corrected, not yet accepted.**
-Implemented 2026-08-19; see `docs/milestones/014-one-complete-player-owned-operation.md` (including
-its appended correction) for the full account, and `docs/REVIEW_LEDGER.md`'s "Measured — milestone
-014" section for the verification baselines. **Codex reviewed the implementation commit (`712a125`)
-on 2026-08-20 and returned two P1 and two P2 findings**, corrected in the commit following it. The
+**Milestone 014 — One Complete Player-Owned Operation — is complete, corrected twice, not yet
+accepted.** Implemented 2026-08-19; see `docs/milestones/014-one-complete-player-owned-operation.md`
+(including its two appended corrections) for the full account, and `docs/REVIEW_LEDGER.md`'s
+"Measured — milestone 014" section for the verification baselines.
+
+**First round (`712a125`, reviewed 2026-08-20, two P1 and two P2), corrected by `556f2b2`.** The
 central finding: the original golden-path test discovered which option to choose at each pause by
 reading `PreparedDecision.Scored` through reflection — internal state no Godot button carries — so
 despite resolving every pause through an explicit `Choose` call, it was not actually driving the
-interactive path under the same information a person clicking through the shell would have. The
-correction replaces that mechanism with a pinned, independently-scripted sequence of the seven exact
-option texts, matched only against `PendingDecision.Options`' public `Description` and `Id`, and adds
-a genuine Godot headless check that presses those seven buttons for real and reads the rendered cash
-off the live screen. Matt has not yet confirmed acceptance of either named commit — see
-`REVIEW_LEDGER.md`'s "cleared to build on is not accepted".
+interactive path under the same information a person clicking through the shell would have. Replaced
+with a pinned, independently-scripted sequence of the seven exact option texts, matched only against
+`PendingDecision.Options`'s public `Description` and `Id`, and a genuine Godot headless check that
+presses those seven buttons for real and reads the rendered cash off the live screen.
+
+**Second round (`556f2b2`, reviewed 2026-08-20, two P2), corrected in the commit following it.** Both
+findings were about the strength of the first correction's own verification, not new defects in the
+fix: the Godot golden-path check asserted only the final `6,840` reading, which a toolbar hardcoded to
+that value would also have satisfied, so it now also asserts the opening screen reads `6,000` before
+any button is pressed; and the negative-cash mutation check replaced Vincent's own `Cash` with Marco's
+sentinel, which is exactly the leak shape the original single-property test (before this milestone's
+own strengthening) already caught — it now leaks Marco's sentinel into a nested field,
+`PlayerAttitude.Standing`, and confirms the test fails on the string check specifically, proving the
+recursive walk earns its keep rather than restating what the simpler test already covered.
+
+Matt has not yet confirmed acceptance of any of the three named commits — see `REVIEW_LEDGER.md`'s
+"cleared to build on is not accepted".
 
 Milestones 001–013 are complete and accepted — 011 and 012 as corrected by `3c86ba4`, 013 as corrected
 twice, most recently by `a75a54e`, accepted 2026-08-19.

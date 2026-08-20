@@ -518,6 +518,11 @@ public partial class Game : Control
     /// seventh choice: the collection that pays Vincent happens in the same event sweep that produces
     /// his seventh decision (reporting the outcome to Salvatore), so the rendered cash is already
     /// current by the time that screen is on-screen.
+    ///
+    /// <b>Asserts the opening screen too, before any button is pressed.</b> A check that only reads
+    /// the final screen cannot tell a real 6,000-to-6,840 change from a toolbar that always rendered
+    /// 6,840 regardless of what happened — confirmed by mutation: temporarily hardcoding the toolbar
+    /// to a fixed "6,840" made the opening assertion fail, before the mutation was reverted.
     /// </summary>
     private void RunGoldenPathSelfTest()
     {
@@ -538,6 +543,16 @@ public partial class Game : Control
 
         StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
         var session = _session!;
+
+        // Proves a displayed *change*, not merely that the final screen happens to read 6,840 — a
+        // check that only asserted the end value would pass just as well against a toolbar that
+        // always rendered 6,840 regardless of the snapshot behind it.
+        var startScreen = new StringBuilder();
+        Collect(this, startScreen);
+        if (!startScreen.ToString().Contains("cash on hand 6,000", StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "the opening screen does not read \"cash on hand 6,000\" — the golden path's own " +
+                "starting point is wrong, so the later 6,840 would prove nothing");
 
         string[] sequence =
         {

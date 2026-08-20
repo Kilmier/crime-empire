@@ -248,3 +248,58 @@ all rewritten to the description-based mechanism), and both Godot headless check
 (`--selftest`: 4 choices, 4 decision screens, exit 0; `--selftest-goldenpath`: seven choices pressed by
 exact text on the correct dates, `cash on hand 6,840` read off the live screen, exit 0). It is **not
 accepted** — Matt's confirmation of this named commit is what that requires.
+
+---
+
+## Second correction from Codex's review of `556f2b2`, 2026-08-20
+
+Appended, not folded in. Both findings below are about the *strength of the verification* the first
+correction added, not new defects in what it fixed — the P1 findings above stand as corrected.
+
+**P2 — the Godot golden-path check proved a value, not a change.** It asserted the final screen read
+`· cash on hand 6,840` after the seventh press, but never checked what the screen read before the
+first one. A toolbar hardcoded to always render `6,840`, ignoring `PlayerSnapshot.Cash` entirely,
+would have passed the check exactly as written — the assertion named the right number but not the
+right claim. Fixed: immediately after `StartSession`, before any button is pressed, the check now
+collects the live screen and requires it to read `· cash on hand 6,000`. Mutation-checked directly:
+`Game.cs`'s toolbar line was temporarily hardcoded to `"· cash on hand 6,840"` regardless of
+`snapshot.Cash`; running `--selftest-goldenpath` against that mutation failed exactly as expected, on
+the new opening-screen assertion (`CE-GOLDENPATH FAILED — ... the opening screen does not read "cash
+on hand 6,000"`); the mutation was reverted and the check re-confirmed passing before this commit.
+
+**P2 — the negative-cash mutation proof did not discriminate between the old test and the new one.**
+The prior correction's mutation check made `PlayerView.Build` return `world.Get("marco")
+.Capabilities.Cash` in place of the viewpoint character's own — a leak that overwrites `Cash` itself.
+That is precisely the shape of defect the *original*, unstrengthened, single-property version of this
+test (compare `vincentSnapshot.Cash` against the sentinels) would already have caught; the mutation
+proved the test still worked, not that the recursive `ValueGraph` walk added anything the simpler
+version lacked. Fixed: the mutation now leaves `Cash` untouched and instead appends
+`world.Get("marco").Capabilities.Cash` onto `PlayerAttitude.Standing` inside `PlayerView.Build`'s
+attitude construction — a value nested inside the `Attitudes` list that only a recursive walk reaches
+at all. Confirmed discriminating directly: with the mutation in place,
+`Another_characters_cash_never_appears_anywhere_in_vincents_snapshot` failed specifically on the
+string-membership assertion (`Assert.DoesNotContain() Failure: Sub-string found ... String: "he takes
+him as he finds him 913311"`), with the numeric `Cash`-property assertions still passing throughout —
+proof that the failure came from the graph walk finding a leak elsewhere, not from the property check
+every version of this test has always had. The mutation was reverted and the full suite re-confirmed
+green before this commit.
+
+**What this correction is not.** Test and Godot-interface verification strength only — no simulation
+code changed, no test assertion's *target* changed (both corrected checks still prove exactly the
+claims the first correction already made; they now prove those claims more precisely), and the
+verification figures depending on `Strategies.cs`/`Commit.cs`/`Filters.cs`/`Generators.cs` are
+unaffected and were re-confirmed by a full clean-tree re-run.
+
+**Recurring-failure list, walked.** *False assurance, twice more, both about the shape of a mutation
+check rather than its presence:* both P2s here are cases where a mutation check existed, ran, and
+passed — the practice the recurring-failure list usually credits — but the *specific* mutation chosen
+did not exercise the *specific* claim under test (a value check that a hardcoded constant would also
+satisfy; a property-leak mutation that an older, weaker test already caught). The lesson carried
+forward is sharper than "mutation-check it": ask what a passing check would look like if the fix were
+subtly wrong in the way most likely to slip past a first draft, and mutate exactly that. *Recording a
+review that did not happen:* this correction is Matt's report of Codex's second review, acted on and
+re-verified, not a claim to have observed the review itself.
+
+**Status.** This second corrective commit is implemented and both mutation checks above were run and
+reverted as described. It is **not accepted** — Matt's confirmation of this named commit is what that
+requires.

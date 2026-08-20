@@ -259,9 +259,15 @@ public sealed class PlayerOwnedOperationTests
     /// never appear anywhere in Vincent's own snapshot. Walks the <em>complete</em> public
     /// <see cref="PlayerSnapshot"/> value graph reflectively — every string, number, and date reachable
     /// from any public property, recursively through every nested record and collection — rather than
-    /// comparing the <see cref="PlayerSnapshot.Cash"/> property alone, so a future field that happened
-    /// to carry a leaked value elsewhere on the type would still be caught. Sentinel values are
-    /// distinctive enough that a coincidental match is not plausible.
+    /// comparing the <see cref="PlayerSnapshot.Cash"/> property alone, so a leak reaching the player
+    /// through a <em>different</em> field — a belief's statement, an attitude's standing text, any
+    /// nested string or number the walk can reach — is still caught, not only a leak that happened to
+    /// overwrite <c>Cash</c> itself. Confirmed discriminating by construction: mutation-checked by
+    /// temporarily leaking Marco's sentinel into <c>PlayerAttitude.Standing</c> (nested inside
+    /// <see cref="PlayerSnapshot"/> — a value the single-property version of this test could not have
+    /// reached at all) while leaving Vincent's own <c>Cash</c> correct, and confirming this test failed
+    /// specifically on the string check rather than the numeric one, before reverting. Sentinel values
+    /// are distinctive enough that a coincidental match is not plausible.
     /// </summary>
     [Fact]
     public void Another_characters_cash_never_appears_anywhere_in_vincents_snapshot()

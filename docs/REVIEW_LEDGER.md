@@ -266,7 +266,7 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 014, one complete player-owned operation, corrected, not yet accepted
+### Measured — milestone 014, one complete player-owned operation, corrected twice, not yet accepted
 
 Adds one field to `PlayerSnapshot` (`Cash`, populated from the viewpoint character's own
 `Capabilities.Cash`) and one display line in `Godot/Game.cs`. Nothing in `Strategies.cs`, `Commit.cs`,
@@ -296,20 +296,38 @@ account of the finding and fix: the archive's appended correction.
   accepted baseline. Transcript shows `· cash on hand 6,000` on every screen, confirming the field
   renders — the general self-test's own "always take the first option" policy never starts the
   operation, so this confirms wiring, not the operation itself.
-- **Godot golden-path headless self-test (`--selftest-goldenpath`, new in the correction): presses
-  the seven pinned decision buttons for real, in order, on the correct dates (2/11/14/17/23/27 March,
-  1 April), and the rendered screen reads `· cash on hand 6,840` immediately after the seventh press,
-  with no unaddressed eighth decision. Exit 0.**
+- **Godot golden-path headless self-test (`--selftest-goldenpath`): presses the seven pinned decision
+  buttons for real, in order, on the correct dates (2/11/14/17/23/27 March, 1 April), asserts the
+  *opening* screen reads `· cash on hand 6,000` before any button is pressed, and the screen after the
+  seventh press reads `· cash on hand 6,840`, with no unaddressed eighth decision. Exit 0. The opening
+  assertion was added in a second correction — see below — after Codex found the original check proved
+  only the final value, which a toolbar hardcoded to 6,840 would also have passed.**
 - **The operation, played through the corrected interactive mechanism, reaches the accepted 1 April
   consequence**: `Capabilities.Cash` rises from 6000 to 6840 — confirmed through
   `session.Snapshot().Cash`, not only `session.World` — `Business.PayingTribute` for Bellini's grocery
   becomes true, and this matches the same seed run autonomously byte for byte. Seven decisions occur
   on this thread before 1 April, not the five assumed at planning time — see the archive's "Important
   discoveries".
-- **The other-character-cash negative test now walks the complete public `PlayerSnapshot` value graph**
-  reflectively rather than comparing the `Cash` property alone, and was mutation-checked: temporarily
-  making `PlayerView.Build` return another character's cash was confirmed to fail the test before the
-  mutation was reverted.
+- **The other-character-cash negative test walks the complete public `PlayerSnapshot` value graph**
+  reflectively rather than comparing the `Cash` property alone. Mutation-checked twice: the first
+  check (superseded — see below) replaced Vincent's own `Cash` with Marco's, which the original,
+  unstrengthened single-property test would already have caught; the second correction replaced it
+  with a discriminating mutation that leaves Vincent's `Cash` correct and leaks Marco's sentinel into
+  `PlayerAttitude.Standing`, a nested field the single-property test could never have reached, and
+  confirmed this test fails specifically on the string check rather than the numeric one.
+
+**Reviewed by Codex a second time on 2026-08-20 (correction commit `556f2b2`), two further P2
+findings, both about the strength of the verification rather than the fix itself.** First: the golden-
+path Godot check asserted only the final `6,840` reading, which a toolbar hardcoded to that value
+would also satisfy — it never proved a *change* occurred. Second: the negative-cash mutation check
+replaced Vincent's own `Cash` with Marco's sentinel, which is exactly the leak shape the *original*,
+unstrengthened single-property test already caught before this milestone's own strengthening — it did
+not exercise what the recursive `ValueGraph` walk specifically adds. Corrected in the commit following
+`556f2b2`: the Godot check now asserts `cash on hand 6,000` on the opening screen, mutation-checked by
+temporarily hardcoding the toolbar (confirmed to fail, reverted); the cash-graph test's mutation now
+leaks Marco's sentinel into `PlayerAttitude.Standing` instead of `Cash` itself, confirmed to fail
+specifically on the nested-string check, reverted. Full account: the archive's second appended
+correction.
 
 ### Measured — milestone 013, coverage accounting, corrected twice, accepted
 

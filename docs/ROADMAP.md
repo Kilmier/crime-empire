@@ -320,6 +320,19 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    decided that. Small, and it would give the trust dimension a second update path to be read
    against.
 
+### Deferred instrumentation candidates
+
+These are unnumbered candidates, not a sequence and not authorization. Milestone 013 was deliberately
+narrowed to coverage accounting before either was attempted.
+
+- **Systematic mutation automation.** Replace author-selected mutations with mechanical target
+  discovery over a changed surface, with a self-test proving build failures and surviving mutations
+  are distinguished correctly. The earlier proposal bundled this with coverage accounting; it is
+  large enough and operationally different enough to earn independent scope.
+- **Seed-sweep promotion.** Inventory which invariants are genuinely seed-independent, then run those
+  across a declared seed set without turning seed-specific stories into universal assertions. This
+  needs its own cost and runtime budget before it becomes milestone work.
+
 Provenance precision was a candidate and became milestone 004, which is closed. RNG keying and the
 concealment runaway were a candidate and became milestone 005, which is closed. The relationship
 design pass was candidate 1 and became milestone 006 in its executable form; the schema document it

@@ -266,21 +266,35 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 013, coverage accounting, not yet reviewed or accepted
+### Measured — milestone 013, coverage accounting, corrected by the commit following `a0c6be8`, not yet accepted
 
 **Not a behavioural milestone — adds no simulation code, so nothing below is new regression evidence.**
 Recorded here because it is the first time this project has measured and triaged its own line
 coverage rather than carrying `coverlet.collector` as an unused package reference. Full accounting,
 methodology, and per-region reasoning: `docs/COVERAGE_ACCOUNTING.md`.
 
+**Reviewed by Codex on 2026-08-19 (implementation commit `a0c6be8`), four findings — two P1, two
+P2.** The triage under-enumerated 20 of 315 lines (they were reasoned about but never actually
+written into the accounting's tables, so the file's own totals didn't match what it enumerated), the
+Cobertura report's scope was overstated as "no exclusions" rather than described as covering only the
+two loaded assemblies, and two "apparently dead" lines (`Strategies.cs:149-151`,
+`Utility.cs:736`) were reachable in principle through a mutable-state path the original reasoning had
+missed. All four corrected in the commit following `a0c6be8`; corrected totals below. Not yet
+accepted — see `docs/milestones/013-coverage-accounting-not-vigilance.md`'s appended correction for
+the full account.
+
 - **92.10% line, 84.30% branch, 3676/3991 lines covered, 315 uncovered** — measured from a clean tree
   at `1046704`, which sits on the accepted baseline `3c86ba4` with no `src/` or `tests/` change
   between them. Repeatable via `dotnet test CrimeEmpire.sln --collect:"XPlat Code Coverage"
-  --results-directory ./coverage-tmp` and reading the resulting Cobertura report.
-- **315 lines triaged into 188 legitimately uncovered, 8 apparently dead, 119 live edges** — the last
+  --results-directory ./coverage-tmp` and reading the resulting Cobertura report. **Covers
+  `CrimeEmpire.Simulation` and `CrimeEmpire.Runner` only** — `CrimeEmpire.Godot` is never loaded by
+  `dotnet test` (a separate Godot-hosted executable, no project reference from the test assembly) and
+  the test assembly itself is not instrumented; neither is a configured exclusion.
+- **315 lines triaged into 186 legitimately uncovered, 6 apparently dead, 123 live edges** — the last
   bucket is a majority of everything outside `Program.cs`'s CLI entry point. See
-  `docs/COVERAGE_ACCOUNTING.md` for the full per-region list; nothing found was fixed, tested, or
-  removed in this pass, per this milestone's rulings 2-3.
+  `docs/COVERAGE_ACCOUNTING.md` for the full per-region list, corrected and verified to enumerate all
+  315 lines exactly; nothing found was fixed, tested, or removed in this pass, per this milestone's
+  rulings 2-3.
 - **Self-check (ruling 7): both live edges named at planning time (`Sim/Runner.cs:311-315`,
   `Decision/Utility.cs:563-570`) appeared in the measured report unprompted**, confirming the
   instrument's negative signal is sound on two known cases before the rest of the report was trusted.

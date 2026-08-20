@@ -10,12 +10,13 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 014 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 013 — Coverage Accounting, Not Vigilance — is complete, self-reviewed, not yet accepted.**
-Implemented 2026-08-19; see `docs/milestones/013-coverage-accounting-not-vigilance.md` for the full
-account, `docs/COVERAGE_ACCOUNTING.md` for the coverage triage itself, and `docs/REVIEW_LEDGER.md`'s
-"Measured — milestone 013" section for the verification baselines. Matt has not yet confirmed
-acceptance of a named commit, and Codex has not yet reviewed it — see `REVIEW_LEDGER.md`'s "cleared to
-build on is not accepted".
+**Milestone 013 — Coverage Accounting, Not Vigilance — is complete, corrected, not yet accepted.**
+Implemented 2026-08-19; see `docs/milestones/013-coverage-accounting-not-vigilance.md` (including its
+appended correction) for the full account, `docs/COVERAGE_ACCOUNTING.md` for the corrected coverage
+triage itself, and `docs/REVIEW_LEDGER.md`'s "Measured — milestone 013" section for the verification
+baselines. **Codex reviewed the implementation commit (`a0c6be8`) on 2026-08-19 and returned four
+findings** — corrected in the commit following it. Matt has not yet confirmed acceptance of either
+named commit — see `REVIEW_LEDGER.md`'s "cleared to build on is not accepted".
 
 Milestones 001–012 are complete and accepted — 011 and 012 as corrected by `3c86ba4`, accepted
 2026-08-19. See `REVIEW_LEDGER.md`'s new note on what that correction's four-milestone delay means for
@@ -29,7 +30,7 @@ meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self
 
 Not authorization to start any of it — see `ROADMAP.md`, which is where scope is proposed from, and
 `docs/milestones/013-coverage-accounting-not-vigilance.md`'s "Deferred work" section for the full,
-current list. In brief: **119 live-edge findings and 8 apparently-dead lines**, itemized by region in
+current list. In brief: **123 live-edge findings and 6 apparently-dead lines**, itemized by region in
 `docs/COVERAGE_ACCOUNTING.md`, none triaged by priority or acted on; systematic mutation automation and
 seed-sweep promotion, both deliberately deferred as unnumbered `ROADMAP.md` candidates before this
 milestone began; whether coverage can be collected over a natural run rather than the test suite, left

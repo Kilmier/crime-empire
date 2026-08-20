@@ -139,3 +139,92 @@ re-running, matters.
 One implementation-and-archive commit, docs-only. Status is not established by this file —
 `docs/CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
 thing that counts as acceptance.
+
+---
+
+## Correction from Codex's review of `a0c6be8`, 2026-08-19
+
+Appended, not folded in. The account above — including its "119 live-edge findings" and "8
+apparently-dead lines" figures — is preserved as originally written and is **superseded by this
+section**. Corrected figures and the full corrected triage are in `docs/COVERAGE_ACCOUNTING.md`,
+which was updated in place (it is a living reference, not an append-only archive); this section
+records what Codex found and why each correction was made.
+
+**Codex reviewed `a0c6be8` and returned two P1 and two P2 findings, all documentation/accounting
+defects — no simulation code was touched by the implementation, so none of this concerns behaviour.**
+
+**P1 — 20 of 315 uncovered lines were reasoned about but never actually written into the accounting's
+tables**, so the document's own stated totals (188/8/119) did not match what its tables and prose
+actually enumerated (which summed to 295, not 315). Missing: `Decision/Utility.cs:67`,
+`Trace/TraceWriter.cs:79-83,105-107,177`, `Sim/Runner.cs:118`,
+`Decision/PerceivedSituation.cs:50-54,148`, `Strategy/Strategies.cs:121-123`. Re-verified against a
+fresh coverage run from a clean tree (deterministic — identical to the original measurement) and
+against a line-by-line reconciliation of every file's raw uncovered-line list against
+`COVERAGE_ACCOUNTING.md`'s tables, confirming these five regions were the only gaps. Each was read
+against source, classified, and added: `Utility.cs:67` (legitimately uncovered, an unread record
+getter); `TraceWriter.cs`'s three regions and `PerceivedSituation.cs`'s two (live edges — see the
+corrected file for the specific gating conditions each never crosses); `Runner.cs:118` and
+`Strategies.cs:121-123` are addressed under the P1 below and the "important discoveries" note,
+respectively.
+
+**P1 — "Exclusions: none" overstated what the Cobertura report covers.** The report's `<package>`
+elements are `CrimeEmpire.Runner` and `CrimeEmpire.Simulation` only, confirmed directly against the
+regenerated XML. `CrimeEmpire.Godot` is never loaded by `dotnet test` — it has no project reference
+from the test assembly, so it was never a candidate for instrumentation — and the test assembly
+itself is not instrumented either. Neither is a configured exclusion; the original phrasing implied a
+completeness the run does not have. Corrected to state plainly what is and is not in scope.
+
+**P2 — `Strategy/Strategies.cs:149-151` was misclassified as apparently dead.** The original reasoning
+— "no code removes a business, so the guard is unreachable" — is a claim about current call sites, not
+about what the type system permits. `World.Businesses` is `public Dictionary<string, Business> {
+get; }`: the getter has no setter, but the dictionary it returns is fully mutable through its own
+public API, so any code holding a `World` reference can call `world.Businesses.Remove(...)` directly.
+Nothing enforces the "never removed" invariant the original classification relied on. Reclassified as
+a live edge. Applying the same corrected standard on re-review surfaced one more instance of the same
+error the reviewer's own "where to look" section had flagged as the highest-risk category:
+`Decision/Utility.cs:736` (`SelfProtection`'s default arm, reachable if a `Candid`-labelled candidate
+ever carried a non-empty `Suppressed` list — every current generator call site happens not to, but
+nothing in the type declares that impossible) was reclassified the same way, unprompted by Codex, for
+consistency.
+
+**P2 — `Session/PlayerNarration.cs:47` needed reconciling against the rule used for `Utility.cs`'s
+switch defaults.** `Describe`'s switch explicitly handles all ten members of `ClaimKind` (verified
+against the enum in `Domain/Claim.cs`), so its default arm cannot be reached by any valid value —
+the same shape as `Utility.cs`'s three `CoercionMethod` defaults, and unlike `Decision/Filters.cs`'s
+own `Describe` helper, whose switch handles only seven of the ten members and stays a live edge.
+Reclassified from legitimately-uncovered to apparently-dead.
+
+**Applying the sharper apparently-dead standard to `Sim/Runner.cs:118` turned up a third
+reclassification, found during this correction rather than named by Codex.** The line was originally
+missing from the accounting entirely (the first P1 above); writing it in required deciding which
+bucket it belonged to, and the original "defensive completeness" instinct is exactly what Codex's
+review had just shown to be unreliable without checking. Verified instead: both `ObservationOpportunity`
+and `AssignmentDelivered` have exactly one scheduling site each in `src/`, and both are explicitly
+null-guarded before scheduling (`Strategies.cs:437`, `Runner.cs:190`) — so `Handle`'s fallback
+`return null;` is provably unreachable given the current codebase, not merely undertested.
+Classified as apparently dead.
+
+**Corrected totals: 186 legitimately uncovered, 6 apparently dead, 123 live edges — verified to sum to
+315 and to match the raw per-file uncovered-line list from a regenerated coverage run exactly, file by
+file.** Full corrected accounting: `docs/COVERAGE_ACCOUNTING.md`.
+
+**What this correction is not.** It is documentation and accounting only — no simulation code changed,
+no test was added or removed, and the verification figures from the original account (build, test
+count, hashes, viewpoint renders, Godot self-test) are unaffected and were not re-measured, since
+nothing that produces them changed.
+
+**Recurring-failure list, walked.** *False-assurance claim:* the "Exclusions: none" line and the
+188/8/119 totals were both claims the document made about itself that a direct check (rereading the
+Cobertura XML's package list; re-summing the tables against the raw uncovered-line list) disproved —
+exactly the shape of defect this project's own review checklist exists to catch, and exactly why a
+second reader found it. *Collapsing distinct states:* "unreachable" and "unexercised" were briefly
+collapsed for `Strategies.cs:149-151`, `Utility.cs:736`, and (in the other direction, undercounted
+before this correction) `PlayerNarration.cs:47` — all three now argued from a stated, checkable rule
+rather than an unverified instinct about what "probably" never happens. *Recording a review that did
+not happen:* this correction is Matt's report of Codex's review, acted on and re-verified, not a claim
+to have observed the review itself.
+
+**Status.** This corrective commit is implemented and self-checked (the reconciliation and the two
+mutability checks above were re-run against the corrected file line by line). It is **not accepted** —
+Matt's confirmation of this named commit is what that requires. `docs/CURRENT_MILESTONE.md` and
+`docs/REVIEW_LEDGER.md`'s "Measured — milestone 013" section are updated to the corrected figures.

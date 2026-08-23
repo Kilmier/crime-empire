@@ -25,5 +25,11 @@
       replay-state identity. Nothing else — not Godot, not the Runner — gets this.
     -->
     <InternalsVisibleTo Include="CrimeEmpire.Simulation.Tests" />
+    <!--
+      The interrupted-write test harness (a separate OS process spawned by PersistenceTests.cs) needs
+      to set SaveStore.OnTransactionOpenedForTest, the test-only synchronization seam milestone 015's
+      correction added — nothing else about this grant, and nothing production-facing uses the hook.
+    -->
+    <InternalsVisibleTo Include="CrimeEmpire.Persistence.InterruptedWriteHarness" />
   </ItemGroup>
 </Project>

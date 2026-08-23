@@ -32,6 +32,13 @@
     -->
     <ProjectReference Include="..\..\src\CrimeEmpire.Runner\CrimeEmpire.Runner.csproj" />
     <ProjectReference Include="..\..\src\CrimeEmpire.Persistence\CrimeEmpire.Persistence.csproj" />
+    <!--
+      Not consumed as a library — referenced only so `dotnet build`/`dotnet test` always builds the
+      interrupted-write harness first and copies its output assembly into this project's own output
+      directory, where PersistenceTests.cs locates and spawns it as a separate OS process by path
+      relative to AppContext.BaseDirectory.
+    -->
+    <ProjectReference Include="..\CrimeEmpire.Persistence.InterruptedWriteHarness\CrimeEmpire.Persistence.InterruptedWriteHarness.csproj" />
   </ItemGroup>
 
 </Project>

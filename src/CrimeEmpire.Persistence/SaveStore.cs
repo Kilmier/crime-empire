@@ -24,6 +24,23 @@ public static class SaveStore
     /// </summary>
     public const int CurrentSchemaVersion = 1;
 
+    /// <summary>
+    /// Test-only synchronization seam. Invoked once, inside <see cref="WriteDatabase"/>, immediately
+    /// after the fresh <c>.tmp</c> database's transaction is opened for the meta/commands inserts —
+    /// the exact point a genuinely killed writer process leaves a real, incomplete <c>.tmp</c>
+    /// artifact behind (schema created and durably committed in auto-commit mode; the transaction
+    /// that would populate it never committed). Null — its default, and the only value any real save
+    /// ever sees — makes this a no-op; nothing about a real save's behaviour changes because this
+    /// field exists. Only a dedicated interrupted-write test harness
+    /// (<c>CrimeEmpire.Persistence.InterruptedWriteHarness</c>) ever sets it, using it to signal a
+    /// named cross-process event and then block forever, so a parent test process can kill the
+    /// harness at a deterministic point via explicit synchronization rather than a timing guess. See
+    /// milestone 015's correction for the full account of why this replaced a weaker, pre-write file
+    /// lock as the proof of ruling 7's "failed/interrupted writes leave the previous valid save
+    /// loadable".
+    /// </summary>
+    internal static Action? OnTransactionOpenedForTest;
+
     public static bool Exists(string path) => File.Exists(path);
 
     public static void Write(string path, SaveData data)
@@ -106,6 +123,10 @@ public static class SaveStore
         }
 
         using var transaction = connection.BeginTransaction();
+
+        // Test-only synchronization seam — see OnTransactionOpenedForTest's own doc comment. Null,
+        // and therefore free, on every real save.
+        OnTransactionOpenedForTest?.Invoke();
 
         using (var insertMeta = connection.CreateCommand())
         {

@@ -1,4 +1,7 @@
+using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
+using System.Threading;
 using CrimeEmpire.Persistence;
 using CrimeEmpire.Persistence.Session;
 using CrimeSim.Decision;
@@ -259,10 +262,15 @@ public sealed class PersistenceTests
 
     /// <summary>
     /// Milestone 014's negative test, re-run against a session that went through a save and a load:
-    /// another character's cash still cannot appear anywhere in the reachable snapshot. Mutation
-    /// rather than a plain read, matching the discriminating shape milestone 014's own correction
-    /// settled on — a leak that overwrote <c>Cash</c> itself would already be caught by the simplest
-    /// possible check, so this proves the walk, not just the property.
+    /// another character's cash still cannot appear anywhere in the reachable snapshot, in any
+    /// representation — a number reachable as itself, or the same value's text reachable inside some
+    /// other string. Checking only the numeric case (as this test originally did — corrected per
+    /// Codex's review of `9537b38`) would have missed a leak that arrived as text, which is exactly
+    /// the shape milestone 014's own correction (`ff4213a`) found and fixed once already, by leaking a
+    /// sentinel into <see cref="PlayerAttitude.Standing"/> — a nested string field the numeric-only
+    /// check could never have reached at all. Mutation-checked the same way: see this milestone's
+    /// appended correction for the confirmation that the string check below fails specifically, with
+    /// <c>Cash</c> itself left correct.
     /// </summary>
     [Fact]
     public void Another_characters_cash_never_appears_in_a_loaded_sessions_snapshot()
@@ -282,6 +290,10 @@ public sealed class PersistenceTests
             var values = ValueGraph(loaded.Snapshot()).ToList();
             Assert.True(values.Count > 8, "the walk reached very little of the snapshot, so this proves nothing");
             Assert.DoesNotContain(marcoSentinel, values.OfType<double>());
+
+            string marcoText = marcoSentinel.ToString(CultureInfo.InvariantCulture);
+            foreach (string text in values.OfType<string>())
+                Assert.DoesNotContain(marcoText, text, StringComparison.Ordinal);
         }
         finally
         {
@@ -446,39 +458,75 @@ public sealed class PersistenceTests
     // ================================================================= interrupted writes
 
     /// <summary>
-    /// A write that fails partway — here, because the <c>.tmp</c> file it needs is locked by another
-    /// handle, a real OS-level failure rather than an injected test hook — leaves whatever was
-    /// previously at the real save path exactly as it was. <see cref="SaveStore"/>'s atomic swap is
-    /// what makes this true: the failing write never touches the real path at all.
+    /// A genuinely killed writer process — a real, separate OS process (<c>CrimeEmpire.Persistence.
+    /// InterruptedWriteHarness</c>), terminated after it has actually begun writing the <c>.tmp</c>
+    /// database (schema created, its transaction open) but before that transaction could commit or
+    /// the file could be moved onto the real path — leaves the real save path byte-for-byte unchanged
+    /// and still loadable.
+    ///
+    /// Corrected per Codex's review of `9537b38`: the original version locked the <c>.tmp</c> path
+    /// <em>before</em> calling <c>Save</c>, so the write it exercised failed at the very first attempt
+    /// to open the file — a real failure, but "fails before writing begins" rather than "interrupted
+    /// after writing begins", which is what ruling 7 actually asks for and a materially easier case
+    /// for <see cref="SaveStore"/> to get right. The harness process and a named, manual-reset
+    /// <see cref="EventWaitHandle"/> replace that with explicit, deterministic synchronization rather
+    /// than a timing guess: the harness signals the event from inside
+    /// <see cref="SaveStore.OnTransactionOpenedForTest"/> and then blocks forever, so this test's own
+    /// <see cref="Process.Kill(bool)"/> call always lands at the same point in the harness's progress,
+    /// not wherever a race happened to catch it.
     /// </summary>
     [Fact]
-    public void An_interrupted_write_leaves_the_previous_valid_save_loadable()
+    public void A_genuinely_interrupted_writer_process_leaves_the_previous_valid_save_loadable()
     {
         string path = NewSavePath();
         string tmpPath = path + ".tmp";
+        string eventName = $"ce-interrupt-{Guid.NewGuid():N}";
+        Process? harness = null;
         try
         {
             var first = PersistentSession.Start(Seed, Variant, Controlled);
             AdvanceToNextPause(first);
             first.Save(path);
-            var before = TraceWriter.Render(PersistentSession.Load(path).InnerSession.World, Variant, false);
 
-            using (new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                var second = PersistentSession.Start(Seed, Variant, Controlled);
-                AdvanceToNextPause(second);
-                ChooseByDescription(second, SevenChoiceSequence[0]);
+            byte[] beforeBytes = File.ReadAllBytes(path);
+            string beforeTrace = TraceWriter.Render(PersistentSession.Load(path).InnerSession.World, Variant, false);
 
-                Assert.ThrowsAny<Exception>(() => second.Save(path));
-            }
+            using var started = new EventWaitHandle(false, EventResetMode.ManualReset, eventName);
 
-            string after = TraceWriter.Render(PersistentSession.Load(path).InnerSession.World, Variant, false);
-            Assert.Equal(before, after);
+            string harnessDll = Path.Combine(AppContext.BaseDirectory, "CrimeEmpire.Persistence.InterruptedWriteHarness.dll");
+            Assert.True(File.Exists(harnessDll),
+                $"harness assembly not found at '{harnessDll}' — was its ProjectReference removed from the test project?");
+
+            var startInfo = new ProcessStartInfo("dotnet") { UseShellExecute = false };
+            startInfo.ArgumentList.Add(harnessDll);
+            startInfo.ArgumentList.Add(path);
+            startInfo.ArgumentList.Add(eventName);
+
+            harness = Process.Start(startInfo);
+            Assert.NotNull(harness);
+
+            bool signaled = started.WaitOne(TimeSpan.FromSeconds(15));
+            Assert.True(signaled,
+                "the harness process never signalled that it had opened a write transaction — this test is not exercising the intended interruption point");
+
+            harness!.Kill(entireProcessTree: true);
+            Assert.True(harness.WaitForExit(TimeSpan.FromSeconds(15)), "the harness process did not exit after being killed");
+
+            Assert.True(File.Exists(tmpPath),
+                "the killed harness left no .tmp artifact behind — this test is not exercising the intended interruption point");
+
+            byte[] afterBytes = File.ReadAllBytes(path);
+            string afterTrace = TraceWriter.Render(PersistentSession.Load(path).InnerSession.World, Variant, false);
+
+            Assert.Equal(beforeBytes, afterBytes);
+            Assert.Equal(beforeTrace, afterTrace);
         }
         finally
         {
+            harness?.Dispose();
             Cleanup(path);
-            if (File.Exists(tmpPath)) File.Delete(tmpPath);
+            foreach (string leftover in new[] { tmpPath, tmpPath + "-journal", tmpPath + "-wal", tmpPath + "-shm" })
+                if (File.Exists(leftover)) File.Delete(leftover);
         }
     }
 
@@ -530,13 +578,23 @@ public sealed class PersistenceTests
     }
 
     /// <summary>
-    /// Everything ruling 7 asks "exact internal replay-state identity" to cover: the clock and any
-    /// outstanding fast-forward (private fields, reached the same way <c>PlayerOwnedOperationTests</c>
-    /// reaches <c>SimulationSession</c>'s private <c>_prepared</c>), the full rendered developer trace
-    /// (truth log, every decision with its RNG-influenced scores, every wording — the standing
-    /// "byte-identical" instrument this project has used since milestone 009), the event queue's
-    /// size, the world's own identifier counters, and each active character's ongoing strategy
-    /// execution — owner, delegate, method, step, everything <see cref="StrategyInstance"/> carries.
+    /// Everything ruling 7 asks "exact internal replay-state identity" to cover, proven by one
+    /// mechanism rather than a hand-picked list that a future field can silently fall outside of:
+    /// <see cref="DeepFingerprint"/> walks every field — public and private, recursively — reachable
+    /// from <see cref="SimulationSession.World"/> (so <c>_prepared</c> and <c>_optionIds</c> below are
+    /// the only things it does not already cover, since they live on the session rather than the
+    /// world), including <c>EventQueue</c>'s own private <c>_queue</c>, <c>_cancelled</c> and
+    /// <c>_nextId</c>, every <c>World</c> identifier counter, and every character's cognition,
+    /// relationships, motivations, capabilities, and execution state. <c>TraceWriter.Render</c> is
+    /// kept alongside it as a second, independent instrument — the one this project has used as its
+    /// "byte-identical" proof since milestone 009 — not because the deep fingerprint needs help, but
+    /// because two differently-built checks agreeing is stronger evidence than one.
+    ///
+    /// Corrected per Codex's review of `9537b38`: the original version checked <c>World.Queue.Count</c>
+    /// and a hand-picked list of counters and per-character strategy fields, and could not have caught
+    /// a swapped <c>_optionIds</c> mapping, an altered queued event, or a moved <c>_nextId</c> — see
+    /// this milestone's appended correction for the mutation checks that found this and confirmed the
+    /// fix.
     /// </summary>
     private static void AssertExactInternalIdentity(PersistentSession original, PersistentSession loaded)
     {
@@ -550,19 +608,23 @@ public sealed class PersistenceTests
 
         Assert.Equal(TraceWriter.Render(a.World, original.Variant, false), TraceWriter.Render(b.World, loaded.Variant, false));
 
-        Assert.Equal(a.World.Queue.Count, b.World.Queue.Count);
-        Assert.Equal(a.World.TruthLog.Count, b.World.TruthLog.Count);
-        Assert.Equal(a.World.Decisions.Count, b.World.Decisions.Count);
-        Assert.Equal(a.World.Reports.Count, b.World.Reports.Count);
-        Assert.Equal(a.World.Requests.Count, b.World.Requests.Count);
+        var worldFingerprintA = DeepFingerprint(a.World, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList();
+        var worldFingerprintB = DeepFingerprint(b.World, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList();
+        Assert.True(worldFingerprintA.Count > 100,
+            "the deep fingerprint reached very little of World, so this proves nothing");
+        Assert.Equal(worldFingerprintA, worldFingerprintB);
 
-        foreach (string field in new[] { "_nextWorldEventId", "_nextAssignmentId", "_nextDecisionId", "_nextReportId", "_nextRequestId" })
-            Assert.Equal(PrivateField<long>(a.World, field), PrivateField<long>(b.World, field));
+        var preparedA = PrivateField<object?>(a, "_prepared");
+        var preparedB = PrivateField<object?>(b, "_prepared");
+        Assert.Equal(
+            DeepFingerprint(preparedA, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList(),
+            DeepFingerprint(preparedB, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList());
 
-        foreach (string id in a.World.ActiveCharacters().Select(c => c.Id))
-            Assert.Equal(
-                StrategyFingerprint(a.World.Get(id).Execution.Strategy),
-                StrategyFingerprint(b.World.Get(id).Execution.Strategy));
+        var optionIdsA = PrivateField<Dictionary<string, string>>(a, "_optionIds");
+        var optionIdsB = PrivateField<Dictionary<string, string>>(b, "_optionIds");
+        Assert.Equal(
+            optionIdsA.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList(),
+            optionIdsB.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList());
 
         if (a.Status == SessionStatus.AwaitingChoice)
         {
@@ -583,17 +645,109 @@ public sealed class PersistenceTests
         }
     }
 
-    private static object StrategyFingerprint(StrategyInstance? s) => s is null
-        ? "none"
-        : (s.OwnerId, s.LocalSequence, s.Kind, s.Domain, s.TargetId, s.Method, s.StepIndex, s.StartedAt,
-           s.Deadline, s.AssignmentId, s.SourceEventId, s.NextAdvanceOrdinal, s.DelegatedToId,
-           s.BreachedPolicyId, s.PendingStepEventId, s.FailedAttempts, s.PressureApplied);
-
     private static T PrivateField<T>(object obj, string name)
     {
         var field = obj.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException($"{obj.GetType().Name} has no field '{name}'");
         return (T)field.GetValue(obj)!;
+    }
+
+    /// <summary>
+    /// A structural fingerprint of every field reachable from <paramref name="node"/> — public and
+    /// private, instance, recursively through objects, dictionaries, and any other collection — used
+    /// only by this test file, never by production code, to prove two independently-built object
+    /// graphs are identical in every respect capable of affecting future execution, not merely in the
+    /// respects a curated list or a rendered trace happens to cover.
+    ///
+    /// Dictionaries and <see cref="PriorityQueue{TElement,TPriority}"/> are unwrapped through their
+    /// own public logical-content surface (<see cref="IDictionary"/>, <c>UnorderedItems</c>) rather
+    /// than by reflecting their backing arrays directly — a backing array can carry excess capacity
+    /// and stale slots beyond the collection's logical length, which would make two logically-equal
+    /// collections fingerprint as different for a reason that has nothing to do with the state under
+    /// test. Every other reference type falls through to raw field reflection, which is what reaches
+    /// <c>EventQueue</c>'s own private <c>_queue</c>, <c>_cancelled</c>, and <c>_nextId</c>, and every
+    /// one of <c>World</c>'s private identifier counters, without needing to name any of them here.
+    ///
+    /// Cycle-safe via a caller-supplied, reference-identity-keyed visited set — reference identity
+    /// rather than the default equality, because several reachable types are records with their own
+    /// structural <c>Equals</c>, and treating two distinct-but-equal records as "already visited"
+    /// would under-traverse rather than merely deduplicate.
+    /// </summary>
+    private static IEnumerable<object> DeepFingerprint(object? node, HashSet<object> visited)
+    {
+        switch (node)
+        {
+            case null:
+                yield break;
+            case string s:
+                yield return s;
+                yield break;
+            case bool or byte or sbyte or short or ushort or int or uint or long or ulong
+                or float or double or decimal or DateTime or DateTimeOffset or TimeSpan or Guid:
+                yield return node;
+                yield break;
+        }
+
+        var type = node.GetType();
+
+        if (type.IsEnum)
+        {
+            yield return node;
+            yield break;
+        }
+
+        if (!type.IsValueType && !visited.Add(node))
+        {
+            yield return "<cycle>";
+            yield break;
+        }
+
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(PriorityQueue<,>))
+        {
+            var unorderedItems = (System.Collections.IEnumerable)type.GetProperty("UnorderedItems")!.GetValue(node)!;
+            foreach (var item in unorderedItems)
+            foreach (var v in DeepFingerprint(item, visited))
+                yield return v;
+            yield break;
+        }
+
+        if (node is System.Collections.IDictionary dictionary)
+        {
+            foreach (System.Collections.DictionaryEntry entry in dictionary)
+            {
+                foreach (var v in DeepFingerprint(entry.Key, visited)) yield return v;
+                foreach (var v in DeepFingerprint(entry.Value, visited)) yield return v;
+            }
+            yield break;
+        }
+
+        if (node is System.Collections.IEnumerable sequence)
+        {
+            foreach (var item in sequence)
+            foreach (var v in DeepFingerprint(item, visited))
+                yield return v;
+            yield break;
+        }
+
+        foreach (var field in AllInstanceFields(type))
+        {
+            object? value;
+            try { value = field.GetValue(node); }
+            catch { continue; }
+
+            // The field's own name, not only its value — so a value moving from one field to a
+            // different field of the same type cannot cancel out in a flat sequence comparison.
+            yield return field.Name;
+            foreach (var v in DeepFingerprint(value, visited))
+                yield return v;
+        }
+    }
+
+    private static IEnumerable<FieldInfo> AllInstanceFields(Type type)
+    {
+        for (var t = type; t is not null && t != typeof(object); t = t.BaseType)
+            foreach (var f in t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                yield return f;
     }
 
     /// <summary>Every string, number, and date reachable from a DTO graph — copied from

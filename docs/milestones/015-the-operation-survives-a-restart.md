@@ -201,3 +201,163 @@ established by this file — `docs/CURRENT_MILESTONE.md` says what is active, an
 of this named commit is what acceptance requires. Milestone 014's acceptance of `ff4213a` is recorded
 in this same commit's `docs/CURRENT_MILESTONE.md` and `docs/REVIEW_LEDGER.md` updates, per Matt's own
 instruction not to spend a commit solely recording it.
+
+---
+
+## Correction from Codex's review of `9537b38`, 2026-08-23
+
+Appended, not folded in. The account above is preserved as originally written and is **superseded by
+this section** wherever it describes the four items below — none of the rest of the milestone's
+account (the persistence architecture, the Godot integration, the schema/build compatibility design,
+the two-process restart proof itself) is affected.
+
+**Codex reviewed `9537b38` and returned four findings, two P1 and two P2, all about the strength of
+this milestone's own verification rather than the persistence mechanism it verifies** — the save/load
+architecture, the restart proof, and every baseline hash are unchanged by this correction.
+
+**P1 — the exact-internal-replay-state proof checked a hand-picked list, not the state.**
+`AssertExactInternalIdentity` compared only `TraceWriter.Render` output, `World.Queue.Count`, five
+named `World` counters, and each active character's `StrategyInstance` fields — a list assembled at
+planning time, not derived from the actual shape of `SimulationSession`/`World`. It could not have
+caught a corrupted `_prepared`, a swapped `_optionIds` mapping (the actual data
+`SimulationSession.Choose` trusts to translate a pressed button into a candidate id), an altered
+queued event, or a moved `EventQueue._nextId` — all real state a wrong replay could plausibly get
+wrong while every checked figure still matched.
+
+**Fix.** `PersistenceTests.cs` gained `DeepFingerprint`, a test-only (never production) reflective
+walker that reaches every field — public and private, recursively — from a root object: dictionaries
+and `PriorityQueue<TElement,TPriority>` are unwrapped through their own public logical-content surface
+(`IDictionary`, `UnorderedItems`) rather than their backing arrays, which can carry stale slots and
+excess capacity unrelated to logical content; every other reference type falls through to raw field
+reflection, which is what reaches `EventQueue`'s private `_queue`, `_cancelled`, and `_nextId`, and
+every one of `World`'s private identifier counters, without naming any of them by hand.
+`AssertExactInternalIdentity` now deep-fingerprints `World` in full (in addition to keeping
+`TraceWriter.Render` as a second, independent instrument) and separately deep-fingerprints
+`SimulationSession`'s private `_prepared` and `_optionIds` fields, which live on the session rather
+than `World` and so are not reached by the `World` walk at all.
+
+**Mutation-checked both ways ruling asked for, confirmed and reverted:**
+- Swapped two `_optionIds` token→candidate mappings on a loaded session without touching the public
+  `PendingDecision.Options` it points at. Both identity tests still passed on the public projection
+  (confirmed identical before failing); `AssertExactInternalIdentity` failed specifically on the
+  `_optionIds` comparison — `Collections differ`, position 3, the two swapped values — proving that
+  check, not the `World` fingerprint, is what catches this class of defect.
+- Incremented `EventQueue`'s private `_nextId` by one on a loaded session without changing
+  `Queue.Count`. `AssertExactInternalIdentity` failed on the deep `World` fingerprint at the exact
+  `_nextId` field (`"_nextId", 16` vs `"_nextId", 17`), confirming the walk reaches `EventQueue`'s
+  internals through nothing more than generic field reflection.
+
+Both mutations were reverted before this commit; neither is retained as a test (mutation checks in
+this project are a verification activity performed and recorded, not permanent code — see e.g.
+milestone 014's own corrections).
+
+**P1 — the Godot restart self-test wrote to the production save slot.** `--selftest-restart-save`
+deleted and overwrote `user://crime-empire-save.db` directly — the exact file a real player's own save
+lives in. Running the self-test suite on a machine with a real save at that path would have destroyed
+it.
+
+**Fix.** `Game.cs` now resolves `_activeSavePath` once, in `_Ready`, before any button exists: a real
+launch resolves it to `ProductionSavePath` (the actual `user://crime-empire-save.db`, unchanged);
+launching with `--selftest-restart-save` or `--selftest-restart-load` resolves it to
+`SelfTestRestartSavePath` (`user://crime-empire-selftest-restart-save.db`) instead. Every Save/Load
+button handler reads `_activeSavePath`, never either constant directly, so the self-test flags press
+the exact same production button-handler code a player uses while structurally never being able to
+reach the player's own file. `ProductionSavePath` also gained a `CE_SAVE_PATH_OVERRIDE` environment
+variable override, unset (and therefore inert) in every real launch, added solely so the negative
+check below could exist without ever touching a real save file to prove it. `RestartLoadSelfTest`
+(process B) now deletes its own self-test fixture — the save and any stray `.tmp` sibling — in a
+`finally` block covering both its success and its thrown-exception paths.
+
+**Verified directly, twice.** First, empirically, against the real production file: a real save
+existed at `user://crime-empire-save.db` from earlier manual verification
+(`sha256: 35937d3b...78e59`); both restart self-test flags were run in sequence; the production file's
+hash was unchanged afterward, and the self-test's own fixture file was gone (cleaned up by process B).
+Second, the negative check ruling 7 asked for, without touching that real file at all: a throwaway
+fixture file was written with known dummy bytes, `CE_SAVE_PATH_OVERRIDE` was pointed at it, both
+restart flags were run (using their own, unrelated, isolated self-test slot throughout), and the
+fixture's hash was confirmed byte-for-byte unchanged afterward — `sha256: 04a700ec...50102` before and
+after in the final recorded run.
+
+**P2 — the loaded-snapshot cash-boundary test checked only the numeric case.** It mutated Marco's
+`Capabilities.Cash` and then checked only `values.OfType<double>()` for the sentinel, so a leak that
+reached the player as text — the exact shape milestone 014's own correction (`ff4213a`) already found
+once, leaking into `PlayerAttitude.Standing` — would not have been caught here even though the
+`ValueGraph` walk it runs already collects every string too.
+
+**Fix.** The test now also converts the sentinel to its invariant-culture string form and asserts it
+is not a substring of any string the walk reaches, matching the discriminating shape `ff4213a`
+established. Mutation-checked directly: `PlayerSnapshot.cs`'s attitude construction was temporarily
+changed to append the sentinel's text onto every rendered `Standing` line; this test failed
+specifically on the new string-membership assertion (`Sub-string found`, `"he takes him as he finds
+him 555444"`), confirming the added check — not the pre-existing numeric one — is what catches this
+class of leak. Reverted before this commit; `PlayerSnapshot.cs` is otherwise unchanged.
+
+**P2 — the interrupted-write proof locked a file before the write began, rather than interrupting one
+in progress.** The original test opened `path.tmp` with `FileShare.None` and then called `Save`, so
+the write it exercised failed at its very first attempt to open the file. That is a real failure mode,
+but not the one ruling 7 names — "failed/interrupted writes" — and it is a materially easier case:
+`SaveStore.Write` never got to create anything at all.
+
+**Fix.** A new project, `tests/CrimeEmpire.Persistence.InterruptedWriteHarness` (a small,
+single-purpose console app, not a general framework), is spawned by the replacement test as a
+genuinely separate OS process. `SaveStore` gained one test-only synchronization seam,
+`internal static Action? OnTransactionOpenedForTest`, invoked once inside `WriteDatabase` immediately
+after the `.tmp` database's schema is created (auto-commit, already durable) and its meta/commands
+transaction is opened — null, and therefore a no-op, in every real save; only the harness ever sets
+it. The harness sets the hook to signal a named, manual-reset `EventWaitHandle` and then block forever
+(`Thread.Sleep(Timeout.Infinite)`), so the parent test's synchronization is explicit rather than a
+timing guess: it waits on the named event, and only once the event fires — proving the harness has
+genuinely opened a real write transaction on the real `.tmp` file — does it call
+`Process.Kill(entireProcessTree: true)`. The new test,
+`A_genuinely_interrupted_writer_process_leaves_the_previous_valid_save_loadable`, confirms a `.tmp`
+artifact exists (proving the interruption landed where intended) and that the real save path's bytes
+and rendered trace are unchanged.
+
+**Mutation-checked twice, for two different properties:**
+- Changed `WriteDatabase`'s target from `tmpPath` to `path` (removing the tmp-file indirection
+  entirely). The test failed — not inside the interruption logic, but at the earlier
+  `first.Save(path)` baseline call, with `File.Move` throwing `FileNotFoundException` because
+  `tmpPath` was never created — confirming this mutation breaks writing in general, as expected, and
+  ruling out that this specific mutation could pass silently.
+- Reverted that, then mutated `Write`'s startup cleanup from `TryDelete(tmpPath)` to `TryDelete(path)`
+  — corrupting the guarantee under test directly, by having every write attempt delete the
+  *previous* valid save up front rather than only a stale `.tmp` leftover. The test failed, as
+  intended: the harness was killed as designed, but the real save path no longer existed
+  (`FileNotFoundException` reading `afterBytes`), proving the test does notice when an interrupted
+  write is allowed to reach the real path.
+
+Both mutations were reverted before this commit and the full suite re-confirmed green.
+
+**What this correction is not.** No change to the persistence architecture, the SQLite schema, the
+Godot UI beyond the save-path indirection above, or any simulation behaviour. Tests: **482 passed, 0
+failed**, same count as `9537b38` (one test was replaced, not added, for finding 4; the rest are
+strengthened in place). Two new files:
+`tests/CrimeEmpire.Persistence.InterruptedWriteHarness/CrimeEmpire.Persistence.InterruptedWriteHarness.csproj`
+and its `Program.cs`.
+
+**Full verification re-run from a clean tree:** build 0 warnings/0 errors across **six** projects (the
+harness project is new); 482/482 tests; `--verify` deterministic and byte-identical on `baseline`
+(`FEE45FD886F18CA8`), `disloyal-vincent` (`45CCF5ADC6EC0302`), `resentful-tommy` (`F5BD93386DE04082`)
+— all unmoved from `ff4213a`; `--compare` byte-identical across all five trace hashes and
+chosen-action digests; both required viewpoint runs exit 0; Godot `--selftest` and
+`--selftest-goldenpath` both unchanged; the two-process restart proof re-run in full (process A saves
+to the isolated slot after delegation, process B loads it and reaches `1 April 1987`,
+`cash on hand 6,840`); the production save slot confirmed byte-identical before and after both restart
+flags, both empirically against a real file and via the isolated `CE_SAVE_PATH_OVERRIDE` fixture
+proof; `git diff --check` clean (only pre-existing CRLF-normalization notices, no whitespace errors).
+
+**Recurring-failure list, walked.** *A hand-picked list standing in for a completeness claim:* the
+original identity check named the fields planning-time reasoning expected to matter, which is exactly
+the shape of gap a reviewer without the author's assumptions is positioned to find — and did. *A test
+proving less than its name claims:* both the file-lock write test and the numeric-only cash check
+were real, passing checks whose specific mechanism did not match the specific claim in their own name
+or doc comment — the same failure pattern milestone 014's corrections found twice in its own
+mutation-check shapes. *A production file at risk from a verification step:* the restart self-test's
+use of the real save path is the kind of defect that would not show up in `dotnet test` at all (which
+never loads `CrimeEmpire.Godot`), and was only visible to a reviewer reading the Godot-side commands
+this milestone's own archive documented running.
+
+**Status.** This correction is implemented, tested, and mutation-checked as described above. It is
+**not accepted**, and milestone 015 as a whole remains **not accepted** — Matt's confirmation of this
+named commit is what that requires. The account of milestone 015 above is not rewritten to read as
+though it were correct from the start; this section is the record of what was wrong and what changed.

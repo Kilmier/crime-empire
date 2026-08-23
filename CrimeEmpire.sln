@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrimeEmpire.Godot", "src\Cr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrimeEmpire.Persistence", "src\CrimeEmpire.Persistence\CrimeEmpire.Persistence.csproj", "{3F546B65-1144-419F-B25C-B664B0F4A234}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrimeEmpire.Persistence.InterruptedWriteHarness", "tests\CrimeEmpire.Persistence.InterruptedWriteHarness\CrimeEmpire.Persistence.InterruptedWriteHarness.csproj", "{C7637026-EBE0-4515-99B7-8D67EB064EAD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,18 @@ Global
 		{3F546B65-1144-419F-B25C-B664B0F4A234}.Release|x64.Build.0 = Release|Any CPU
 		{3F546B65-1144-419F-B25C-B664B0F4A234}.Release|x86.ActiveCfg = Release|Any CPU
 		{3F546B65-1144-419F-B25C-B664B0F4A234}.Release|x86.Build.0 = Release|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Debug|x64.Build.0 = Debug|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Debug|x86.Build.0 = Debug|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Release|x64.ActiveCfg = Release|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Release|x64.Build.0 = Release|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Release|x86.ActiveCfg = Release|Any CPU
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -97,5 +111,6 @@ Global
 		{7D43D9ED-DA41-468D-B237-47C98C93A14F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{5FC66D9D-EF4F-4E6B-88BB-F338FB22CF3D} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{3F546B65-1144-419F-B25C-B664B0F4A234} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{C7637026-EBE0-4515-99B7-8D67EB064EAD} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

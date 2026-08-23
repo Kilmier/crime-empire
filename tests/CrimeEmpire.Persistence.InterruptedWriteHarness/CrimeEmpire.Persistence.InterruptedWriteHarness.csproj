@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      Milestone 015's correction (Codex review of 9537b38, finding 4): a genuine, separate-process
+      interrupted-write proof needs a genuine separate process, not another mechanism run in the same
+      one. This is that process — a tiny, single-purpose console app, not a general test harness
+      framework, spawned by PersistenceTests.cs and killed deterministically via a named cross-process
+      event rather than a timing guess. It exists to be spawned and killed, nothing else.
+    -->
+    <TargetFramework>$(CrimeEmpireHostTfm)</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CrimeEmpire.Persistence\CrimeEmpire.Persistence.csproj" />
+  </ItemGroup>
+</Project>

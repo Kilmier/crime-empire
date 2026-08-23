@@ -34,10 +34,20 @@ namespace CrimeEmpire.GodotShell;
 /// forbids polish beyond a clear functional layout, and there is a reason beyond time: a shell that
 /// looked finished would invite judgements about the game that only the simulation can earn.
 ///
-/// <b>Save and load (milestone 015).</b> One fixed slot, <see cref="SavePath"/> — no file picker, no
-/// slot management, no autosave. <see cref="PersistentSession"/> is the only new thing this file
-/// knows about beyond milestone 014's boundary: it still hands out nothing but
+/// <b>Save and load (milestone 015).</b> One fixed slot, <see cref="ProductionSavePath"/> — no file
+/// picker, no slot management, no autosave. <see cref="PersistentSession"/> is the only new thing
+/// this file knows about beyond milestone 014's boundary: it still hands out nothing but
 /// <see cref="PlayerSnapshot"/> and <see cref="PendingDecision"/>, and never <c>World</c>.
+///
+/// <b>The restart self-tests never touch the production slot.</b> Corrected per Codex's review of
+/// `9537b38`, which found `--selftest-restart-save` deleting and overwriting
+/// <c>user://crime-empire-save.db</c> directly — the same file a real player's save lives in.
+/// <see cref="_activeSavePath"/> is resolved once, in <see cref="_Ready"/>, before any button exists:
+/// a real launch resolves it to <see cref="ProductionSavePath"/>, and a restart self-test launch
+/// resolves it to <see cref="SelfTestRestartSavePath"/> instead. Every Save/Load button's handler
+/// reads <see cref="_activeSavePath"/>, never either constant directly, so the two self-test flags
+/// exercise the exact same button-press code path a player uses while never being able to reach the
+/// player's own file.
 /// </summary>
 public partial class Game : Control
 {
@@ -55,16 +65,17 @@ public partial class Game : Control
     /// <summary>
     /// Command-line switch for milestone 015's restart proof, process A: plays the golden path's
     /// first three choices (start, carry on, delegate to Tommy) through real buttons, saves to
-    /// <see cref="SavePath"/>, and exits. Meant to be run as a genuinely separate OS process from
-    /// <see cref="RestartLoadFlag"/> — see the milestone archive for the exact two-invocation proof.
+    /// <see cref="SelfTestRestartSavePath"/> (never the production slot — see the type header), and
+    /// exits. Meant to be run as a genuinely separate OS process from <see cref="RestartLoadFlag"/> —
+    /// see the milestone archive for the exact two-invocation proof.
     /// </summary>
     private const string RestartSaveFlag = "--selftest-restart-save";
 
     /// <summary>
     /// Command-line switch for milestone 015's restart proof, process B: loads
-    /// <see cref="SavePath"/> — written by a prior, separate <see cref="RestartSaveFlag"/> process —
-    /// and plays the golden path's remaining four choices through real buttons, reaching the accepted
-    /// 1 April consequence.
+    /// <see cref="SelfTestRestartSavePath"/> — written by a prior, separate
+    /// <see cref="RestartSaveFlag"/> process — and plays the golden path's remaining four choices
+    /// through real buttons, reaching the accepted 1 April consequence.
     /// </summary>
     private const string RestartLoadFlag = "--selftest-restart-load";
 
@@ -72,14 +83,41 @@ public partial class Game : Control
     private const int SelfTestDays = 90;
 
     /// <summary>
-    /// The one fixed save slot (ruling 4). Globalized once, at first use, rather than a compile-time
-    /// constant: <c>user://</c> only resolves to a real path once Godot's engine is up.
+    /// The one fixed save slot a real player's Save/Load buttons write to (ruling 4). Overridable via
+    /// <c>CE_SAVE_PATH_OVERRIDE</c> purely so a verification can prove the restart self-tests never
+    /// touch it without writing to Matt's own real file to do so — unset, which is every real launch,
+    /// this resolves to the actual <c>user://</c> slot exactly as before. Globalized rather than a
+    /// compile-time constant: <c>user://</c> only resolves to a real path once Godot's engine is up.
     /// </summary>
-    private static string SavePath => ProjectSettings.GlobalizePath("user://crime-empire-save.db");
+    private static string ProductionSavePath
+    {
+        get
+        {
+            string? overridePath = System.Environment.GetEnvironmentVariable("CE_SAVE_PATH_OVERRIDE");
+            return string.IsNullOrEmpty(overridePath)
+                ? ProjectSettings.GlobalizePath("user://crime-empire-save.db")
+                : overridePath;
+        }
+    }
+
+    /// <summary>
+    /// The restart self-tests' own dedicated slot — a different file from
+    /// <see cref="ProductionSavePath"/> under every circumstance, including the override above, so a
+    /// misconfigured environment cannot accidentally point both at the same file.
+    /// </summary>
+    private static string SelfTestRestartSavePath
+        => ProjectSettings.GlobalizePath("user://crime-empire-selftest-restart-save.db");
 
     private VBoxContainer _root = null!;
     private PersistentSession? _session;
     private string? _statusMessage;
+
+    /// <summary>
+    /// Which file this process's Save/Load buttons actually read and write. Resolved once, in
+    /// <see cref="_Ready"/>, before any button exists — see the type header's "restart self-tests
+    /// never touch the production slot".
+    /// </summary>
+    private string _activeSavePath = null!;
 
     // Start-screen state, read once when the game begins and not consulted afterwards.
     private LineEdit _seedField = null!;
@@ -103,6 +141,10 @@ public partial class Game : Control
 
         _cast = Roster.Characters("baseline");
         _variants = Roster.Variants();
+
+        _activeSavePath = FlagRequested(RestartSaveFlag) || FlagRequested(RestartLoadFlag)
+            ? SelfTestRestartSavePath
+            : ProductionSavePath;
 
         if (SelfTestRequested())
         {
@@ -187,7 +229,7 @@ public partial class Game : Control
         begin.Pressed += BeginFromStartScreen;
         buttons.AddChild(begin);
 
-        var load = new Button { Text = "Load saved game", Disabled = !SaveStore.Exists(SavePath) };
+        var load = new Button { Text = "Load saved game", Disabled = !SaveStore.Exists(_activeSavePath) };
         load.Pressed += LoadFixedSlot;
         buttons.AddChild(load);
 
@@ -243,7 +285,7 @@ public partial class Game : Control
     {
         try
         {
-            _session = PersistentSession.Load(SavePath);
+            _session = PersistentSession.Load(_activeSavePath);
             _statusMessage = "loaded";
         }
         catch (Exception ex) when (ex is SaveFormatException or InvalidOperationException)
@@ -258,7 +300,7 @@ public partial class Game : Control
     {
         try
         {
-            session.Save(SavePath);
+            session.Save(_activeSavePath);
             _statusMessage = "saved";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -776,8 +818,10 @@ public partial class Game : Control
         GD.Print("CE-RESTART-SAVE begin");
 
         // A fresh slot for this proof, not whatever a prior manual run left behind — the point is to
-        // prove process B can only have reached its result through this process's own save.
-        if (SaveStore.Exists(SavePath)) System.IO.File.Delete(SavePath);
+        // prove process B can only have reached its result through this process's own save. This is
+        // always the isolated self-test slot (_activeSavePath, resolved in _Ready before this method
+        // runs), never the production one.
+        if (SaveStore.Exists(_activeSavePath)) System.IO.File.Delete(_activeSavePath);
 
         StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
         var session = _session!;
@@ -795,10 +839,10 @@ public partial class Game : Control
         if (_statusMessage != "saved")
             throw new InvalidOperationException($"pressing Save did not report success — status: {_statusMessage}");
 
-        if (!SaveStore.Exists(SavePath))
-            throw new InvalidOperationException($"pressing Save did not create a save at '{SavePath}'");
+        if (!SaveStore.Exists(_activeSavePath))
+            throw new InvalidOperationException($"pressing Save did not create a save at '{_activeSavePath}'");
 
-        GD.Print($"CE-RESTART-SAVE saved to {SavePath} on {session.Date:yyyy-MM-dd}");
+        GD.Print($"CE-RESTART-SAVE saved to {_activeSavePath} on {session.Date:yyyy-MM-dd}");
         GD.Print("CE-RESTART-SAVE ok");
         GetTree().Quit();
     }
@@ -827,47 +871,80 @@ public partial class Game : Control
     {
         GD.Print("CE-RESTART-LOAD begin");
 
-        if (!SaveStore.Exists(SavePath))
-            throw new InvalidOperationException(
-                $"no save at '{SavePath}' — run with {RestartSaveFlag} first, as a separate process");
-
-        BuildStartScreen();
-
-        if (!Press("Load saved game"))
-            throw new InvalidOperationException("no \"Load saved game\" control is available");
-
-        if (_session is not { } session)
-            throw new InvalidOperationException($"loading did not produce a session — status: {_statusMessage}");
-
-        GD.Print($"CE-RESTART-LOAD loaded at {session.Date:yyyy-MM-dd}, status={session.Status}");
-
-        PressChoicesInOrder(session, SevenChoiceSequence.Skip(3).ToArray(), "CE-RESTART-LOAD");
-
-        // Same check GoldenPathSelfTest makes: nothing unaddressed should follow the seventh choice.
-        if (session.Status == SessionStatus.AwaitingChoice)
-            throw new InvalidOperationException(
-                $"an unaddressed decision followed the seventh choice, on {session.Date:yyyy-MM-dd}");
-
-        var screenText = new StringBuilder();
-        Collect(this, screenText);
-        string screen = screenText.ToString();
-
-        GD.Print("== CE-RESTART-LOAD-SCREEN-BEGIN ==");
-        GD.Print(screen);
-        GD.Print("== CE-RESTART-LOAD-SCREEN-END ==");
-
-        bool proved = screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
-        if (proved)
+        // The self-test fixture is cleaned up here regardless of outcome — success, a thrown
+        // exception, or the explicit failure path below — so a failed run never leaves a stale file
+        // that could make the next run's "no pre-existing save" assumptions silently wrong. This
+        // process is the last of the two by construction (it consumes what process A wrote), so it
+        // is the natural place for cleanup to live; process A's own file is always the isolated
+        // self-test slot, never the production one, per the type header.
+        try
         {
-            GD.Print("CE-RESTART-LOAD ok");
-            GetTree().Quit();
-            return;
-        }
+            if (!SaveStore.Exists(_activeSavePath))
+                throw new InvalidOperationException(
+                    $"no save at '{_activeSavePath}' — run with {RestartSaveFlag} first, as a separate process");
 
-        GD.PrintErr(
-            "CE-RESTART-LOAD FAILED — did not reach the accepted 1 April consequence with cash on hand " +
-            "reading 6,840 on screen, so it proves nothing");
-        GetTree().Quit(1);
+            BuildStartScreen();
+
+            if (!Press("Load saved game"))
+                throw new InvalidOperationException("no \"Load saved game\" control is available");
+
+            if (_session is not { } session)
+                throw new InvalidOperationException($"loading did not produce a session — status: {_statusMessage}");
+
+            GD.Print($"CE-RESTART-LOAD loaded at {session.Date:yyyy-MM-dd}, status={session.Status}");
+
+            PressChoicesInOrder(session, SevenChoiceSequence.Skip(3).ToArray(), "CE-RESTART-LOAD");
+
+            // Same check GoldenPathSelfTest makes: nothing unaddressed should follow the seventh choice.
+            if (session.Status == SessionStatus.AwaitingChoice)
+                throw new InvalidOperationException(
+                    $"an unaddressed decision followed the seventh choice, on {session.Date:yyyy-MM-dd}");
+
+            var screenText = new StringBuilder();
+            Collect(this, screenText);
+            string screen = screenText.ToString();
+
+            GD.Print("== CE-RESTART-LOAD-SCREEN-BEGIN ==");
+            GD.Print(screen);
+            GD.Print("== CE-RESTART-LOAD-SCREEN-END ==");
+
+            bool proved = screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
+            if (proved)
+            {
+                GD.Print("CE-RESTART-LOAD ok");
+                GetTree().Quit();
+                return;
+            }
+
+            GD.PrintErr(
+                "CE-RESTART-LOAD FAILED — did not reach the accepted 1 April consequence with cash on hand " +
+                "reading 6,840 on screen, so it proves nothing");
+            GetTree().Quit(1);
+        }
+        finally
+        {
+            CleanupSelfTestRestartSlot();
+        }
+    }
+
+    /// <summary>
+    /// Deletes the restart self-tests' own dedicated save (and its <c>.tmp</c> sibling, in case a
+    /// prior run's write was itself interrupted) — never the production slot, which this never
+    /// references. Best-effort: a cleanup failure is not the claim this self-test exists to prove, so
+    /// it is swallowed rather than turned into a false failure of the restart proof itself.
+    /// </summary>
+    private static void CleanupSelfTestRestartSlot()
+    {
+        try
+        {
+            if (SaveStore.Exists(SelfTestRestartSavePath)) System.IO.File.Delete(SelfTestRestartSavePath);
+            string tmp = SelfTestRestartSavePath + ".tmp";
+            if (System.IO.File.Exists(tmp)) System.IO.File.Delete(tmp);
+        }
+        catch
+        {
+            // Best effort, per the doc comment above.
+        }
     }
 
     private static bool GoldenPathRequested()

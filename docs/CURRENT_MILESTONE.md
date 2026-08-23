@@ -10,17 +10,21 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 016 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 015 — The Operation Survives a Restart — is complete, not yet reviewed by Codex, not yet
-accepted.** Implemented 2026-08-23; see
-`docs/milestones/015-the-operation-survives-a-restart.md` for the full account — replay-backed SQLite
-persistence in a new `src/CrimeEmpire.Persistence` project, one fixed Godot save slot, and a
-two-process restart proof of the existing baseline seed-42 Vincent `SecureTribute` operation, run for
-real and recorded in that archive. `docs/REVIEW_LEDGER.md`'s "Measured — milestone 015" section has
-the verification baselines.
+**Milestone 015 — The Operation Survives a Restart — is complete, corrected once, not yet
+accepted.** Implemented 2026-08-23, commit `9537b38`; reviewed by Codex the same day (four findings,
+two P1 and two P2, all about verification strength rather than the persistence mechanism itself) and
+corrected in the commit that follows it. See
+`docs/milestones/015-the-operation-survives-a-restart.md` for the full account, including the
+appended correction — replay-backed SQLite persistence in a new `src/CrimeEmpire.Persistence`
+project, one fixed Godot save slot never reachable from the restart self-tests, and a two-process
+restart proof of the existing baseline seed-42 Vincent `SecureTribute` operation, run for real and
+recorded in that archive. `docs/REVIEW_LEDGER.md`'s "Measured — milestone 015" section has the
+verification baselines.
 
 Milestones 001–015 are implemented; 001–014 are accepted (011 and 012 as corrected by `3c86ba4`, 013
 as corrected twice by `a75a54e`, 014 as corrected twice by `ff4213a`, accepted 2026-08-23). Milestone
-015 is self-reviewed only so far — Matt has not yet confirmed acceptance of its commit.
+015 has had one Codex review and one correction so far — Matt has not yet confirmed acceptance of any
+named commit for it.
 
 **Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
 meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".

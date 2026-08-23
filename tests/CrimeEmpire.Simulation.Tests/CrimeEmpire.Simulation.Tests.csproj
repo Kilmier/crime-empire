@@ -31,6 +31,7 @@
       Runner for that one type.
     -->
     <ProjectReference Include="..\..\src\CrimeEmpire.Runner\CrimeEmpire.Runner.csproj" />
+    <ProjectReference Include="..\..\src\CrimeEmpire.Persistence\CrimeEmpire.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

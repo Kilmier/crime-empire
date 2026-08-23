@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using CrimeEmpire.Persistence;
+using CrimeEmpire.Persistence.Session;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using Godot;
@@ -27,10 +29,15 @@ namespace CrimeEmpire.GodotShell;
 /// The console renderer and this file are two layouts over one source-limited derivation, which is
 /// the point of <see cref="PlayerView"/> existing.
 ///
-/// <b>It is deliberately plain.</b> No theme, no art, no animation, no map, no save. Labels in
-/// columns and buttons that move the clock. Milestone 009's scope forbids polish beyond a clear
-/// functional layout, and there is a reason beyond time: a shell that looked finished would invite
-/// judgements about the game that only the simulation can earn.
+/// <b>It is deliberately plain.</b> No theme, no art, no animation, no map. Labels in columns and
+/// buttons that move the clock, plus milestone 015's one fixed save slot. Milestone 009's scope
+/// forbids polish beyond a clear functional layout, and there is a reason beyond time: a shell that
+/// looked finished would invite judgements about the game that only the simulation can earn.
+///
+/// <b>Save and load (milestone 015).</b> One fixed slot, <see cref="SavePath"/> — no file picker, no
+/// slot management, no autosave. <see cref="PersistentSession"/> is the only new thing this file
+/// knows about beyond milestone 014's boundary: it still hands out nothing but
+/// <see cref="PlayerSnapshot"/> and <see cref="PendingDecision"/>, and never <c>World</c>.
 /// </summary>
 public partial class Game : Control
 {
@@ -45,11 +52,34 @@ public partial class Game : Control
     /// </summary>
     private const string GoldenPathFlag = "--selftest-goldenpath";
 
+    /// <summary>
+    /// Command-line switch for milestone 015's restart proof, process A: plays the golden path's
+    /// first three choices (start, carry on, delegate to Tommy) through real buttons, saves to
+    /// <see cref="SavePath"/>, and exits. Meant to be run as a genuinely separate OS process from
+    /// <see cref="RestartLoadFlag"/> — see the milestone archive for the exact two-invocation proof.
+    /// </summary>
+    private const string RestartSaveFlag = "--selftest-restart-save";
+
+    /// <summary>
+    /// Command-line switch for milestone 015's restart proof, process B: loads
+    /// <see cref="SavePath"/> — written by a prior, separate <see cref="RestartSaveFlag"/> process —
+    /// and plays the golden path's remaining four choices through real buttons, reaching the accepted
+    /// 1 April consequence.
+    /// </summary>
+    private const string RestartLoadFlag = "--selftest-restart-load";
+
     /// <summary>How far the self-test runs the scenario, matching the runner's default span.</summary>
     private const int SelfTestDays = 90;
 
+    /// <summary>
+    /// The one fixed save slot (ruling 4). Globalized once, at first use, rather than a compile-time
+    /// constant: <c>user://</c> only resolves to a real path once Godot's engine is up.
+    /// </summary>
+    private static string SavePath => ProjectSettings.GlobalizePath("user://crime-empire-save.db");
+
     private VBoxContainer _root = null!;
-    private SimulationSession? _session;
+    private PersistentSession? _session;
+    private string? _statusMessage;
 
     // Start-screen state, read once when the game begins and not consulted afterwards.
     private LineEdit _seedField = null!;
@@ -83,6 +113,18 @@ public partial class Game : Control
         if (GoldenPathRequested())
         {
             RunGoldenPathSelfTest();
+            return;
+        }
+
+        if (FlagRequested(RestartSaveFlag))
+        {
+            RunRestartSaveSelfTest();
+            return;
+        }
+
+        if (FlagRequested(RestartLoadFlag))
+        {
+            RunRestartLoadSelfTest();
             return;
         }
 
@@ -137,14 +179,24 @@ public partial class Game : Control
 
         _root.AddChild(new HSeparator());
 
+        var buttons = new HBoxContainer();
+        buttons.AddThemeConstantOverride("separation", 12);
+        _root.AddChild(buttons);
+
         var begin = new Button { Text = "Begin" };
         begin.Pressed += BeginFromStartScreen;
-        _root.AddChild(begin);
+        buttons.AddChild(begin);
+
+        var load = new Button { Text = "Load saved game", Disabled = !SaveStore.Exists(SavePath) };
+        load.Pressed += LoadFixedSlot;
+        buttons.AddChild(load);
 
         _root.AddChild(Plain(
             "Controlling somebody stops the clock whenever they have a decision to make, and offers " +
             "what actually occurred to them. Everyone else goes on deciding for themselves either " +
             "way."));
+
+        if (_statusMessage is { } status) _root.AddChild(Faint($"· {status}"));
     }
 
     private int IndexOfCharacter(string id)
@@ -175,8 +227,54 @@ public partial class Game : Control
 
     private void StartSession(int seed, string variant, string? controlled, string viewpoint)
     {
-        _session = SimulationSession.Start(seed, variant, controlled, viewpoint);
+        _session = PersistentSession.Start(seed, variant, controlled, viewpoint);
+        _statusMessage = null;
         Refresh();
+    }
+
+    /// <summary>
+    /// Loads the one fixed save slot. A save that fails <see cref="SaveStore"/>'s own checks — wrong
+    /// schema, a different simulation build, a corrupted or reordered command log — throws rather
+    /// than falling back to anything, and this catches only to turn that throw into the same plain
+    /// status line a failed save reports, not to paper over it: the session is left exactly as it was
+    /// (unset, if this is the start screen) rather than half-loaded.
+    /// </summary>
+    private void LoadFixedSlot()
+    {
+        try
+        {
+            _session = PersistentSession.Load(SavePath);
+            _statusMessage = "loaded";
+        }
+        catch (Exception ex) when (ex is SaveFormatException or InvalidOperationException)
+        {
+            _statusMessage = $"load failed — {ex.Message}";
+        }
+
+        RefreshCurrentScreen();
+    }
+
+    private void SaveFixedSlot(PersistentSession session)
+    {
+        try
+        {
+            session.Save(SavePath);
+            _statusMessage = "saved";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _statusMessage = $"save failed — {ex.Message}";
+        }
+
+        RefreshCurrentScreen();
+    }
+
+    /// <summary>Rebuilds whichever screen is live — the start screen when no session exists yet
+    /// (a failed load from there leaves it that way), the main screen otherwise.</summary>
+    private void RefreshCurrentScreen()
+    {
+        if (_session is null) BuildStartScreen();
+        else Refresh();
     }
 
     // ================================================================= main screen
@@ -190,6 +288,7 @@ public partial class Game : Control
         var snapshot = session.Snapshot();
 
         _root.AddChild(BuildToolbar(session, snapshot));
+        if (_statusMessage is { } status) _root.AddChild(Faint($"· {status}"));
         _root.AddChild(new HSeparator());
 
         var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -204,7 +303,7 @@ public partial class Game : Control
             BuildDecision(session, snapshot)));
     }
 
-    private Control BuildToolbar(SimulationSession session, PlayerSnapshot snapshot)
+    private Control BuildToolbar(PersistentSession session, PlayerSnapshot snapshot)
     {
         var p = snapshot.ViewpointPronouns;
         var bar = new HBoxContainer();
@@ -223,6 +322,16 @@ public partial class Game : Control
         bar.AddChild(Advance("Next event", paused, () => session.StepEvent()));
         bar.AddChild(Advance("Advance a day", paused, () => session.AdvanceDays(1)));
         bar.AddChild(Advance("Advance a week", paused, () => session.AdvanceDays(7)));
+
+        // Save and load work in either state (ruling 6) — unlike the three clock controls above,
+        // neither is disabled while paused.
+        var save = new Button { Text = "Save" };
+        save.Pressed += () => SaveFixedSlot(session);
+        bar.AddChild(save);
+
+        var load = new Button { Text = "Load" };
+        load.Pressed += LoadFixedSlot;
+        bar.AddChild(load);
 
         bar.AddChild(Plain(paused
             ? $"· paused — {p.Subject} {p.Verb("has", "have")} something to decide"
@@ -340,7 +449,7 @@ public partial class Game : Control
     /// pending decision to take them from — the two are the same character in this shell, and where
     /// they are not, the panel is describing the man being watched rather than the man deciding.
     /// </summary>
-    private IEnumerable<Control> BuildDecision(SimulationSession session, PlayerSnapshot snapshot)
+    private IEnumerable<Control> BuildDecision(PersistentSession session, PlayerSnapshot snapshot)
     {
         var p = snapshot.ViewpointPronouns;
 
@@ -524,6 +633,56 @@ public partial class Game : Control
     /// 6,840 regardless of what happened — confirmed by mutation: temporarily hardcoding the toolbar
     /// to a fixed "6,840" made the opening assertion fail, before the mutation was reverted.
     /// </summary>
+    /// <summary>
+    /// The exact seven option descriptions Vincent's accepted seed-42 <c>SecureTribute</c> operation
+    /// offers, in order — shared by <see cref="GoldenPathSelfTest"/> and milestone 015's two-process
+    /// restart proof, which is this same sequence split after the third choice rather than a second,
+    /// independently-typed copy of it.
+    /// </summary>
+    private static readonly string[] SevenChoiceSequence =
+    {
+        "talk Bellini's grocery round",
+        "carry on getting Bellini's grocery to pay",
+        "have Tommy Nardo take it on",
+        "change tack with Bellini's grocery — threats instead",
+        "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
+        "carry on getting Bellini's grocery to pay",
+        "report to Salvatore Greco, leaving out his own part",
+    };
+
+    /// <summary>
+    /// Presses each of <paramref name="choices"/> in order, using "Next event" to reach each pause —
+    /// never "Advance a week", which carries an outstanding fast-forward horizon across a
+    /// <c>Choose</c> call and can silently sail past the decision this is looking for. Throws rather
+    /// than returning a partial result if the run gives up before every choice is made, so a caller
+    /// never has to remember to check how far it got.
+    /// </summary>
+    private void PressChoicesInOrder(PersistentSession session, IReadOnlyList<string> choices, string logTag)
+    {
+        int choiceIndex = 0;
+        for (int guard = 0; guard < 2000 && choiceIndex < choices.Count; guard++)
+        {
+            if (session.Status == SessionStatus.AwaitingChoice)
+            {
+                string expected = choices[choiceIndex];
+                GD.Print($"{logTag} decision {choiceIndex + 1} on {session.Date:yyyy-MM-dd} — pressing \"{expected}\"");
+                if (!Press(expected))
+                    throw new InvalidOperationException(
+                        $"the decision on {session.Date:yyyy-MM-dd} does not offer \"{expected}\"");
+                choiceIndex++;
+            }
+            else
+            {
+                if (!Press("Next event"))
+                    throw new InvalidOperationException("no \"Next event\" control is available");
+            }
+        }
+
+        if (choiceIndex < choices.Count)
+            throw new InvalidOperationException(
+                $"only reached choice {choiceIndex} of {choices.Count} before giving up");
+    }
+
     private void RunGoldenPathSelfTest()
     {
         try
@@ -554,43 +713,7 @@ public partial class Game : Control
                 "the opening screen does not read \"cash on hand 6,000\" — the golden path's own " +
                 "starting point is wrong, so the later 6,840 would prove nothing");
 
-        string[] sequence =
-        {
-            "talk Bellini's grocery round",
-            "carry on getting Bellini's grocery to pay",
-            "have Tommy Nardo take it on",
-            "change tack with Bellini's grocery — threats instead",
-            "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
-            "carry on getting Bellini's grocery to pay",
-            "report to Salvatore Greco, leaving out his own part",
-        };
-
-        int choiceIndex = 0;
-        for (int guard = 0; guard < 2000 && choiceIndex < sequence.Length; guard++)
-        {
-            if (session.Status == SessionStatus.AwaitingChoice)
-            {
-                string expected = sequence[choiceIndex];
-                GD.Print($"CE-GOLDENPATH decision {choiceIndex + 1} on {session.Date:yyyy-MM-dd} — pressing \"{expected}\"");
-                if (!Press(expected))
-                    throw new InvalidOperationException(
-                        $"the decision on {session.Date:yyyy-MM-dd} does not offer \"{expected}\"");
-                choiceIndex++;
-            }
-            else
-            {
-                // "Next event" rather than "Advance a week": StepEvent() clears any outstanding
-                // fast-forward horizon before advancing, so resolving the next decision cannot
-                // resume a stale multi-day request and silently sail past the seventh choice into
-                // an unrelated eighth decision the way "Advance a week" was found to.
-                if (!Press("Next event"))
-                    throw new InvalidOperationException("no \"Next event\" control is available");
-            }
-        }
-
-        if (choiceIndex < sequence.Length)
-            throw new InvalidOperationException(
-                $"only reached choice {choiceIndex} of {sequence.Length} before giving up");
+        PressChoicesInOrder(session, SevenChoiceSequence, "CE-GOLDENPATH");
 
         // No eighth pause should follow the seventh choice unaddressed — if one does, something
         // (an unaddressed decision, a fast-forward that outran the choice just made) has silently
@@ -610,8 +733,7 @@ public partial class Game : Control
         GD.Print(screen);
         GD.Print("== CE-GOLDENPATH-SCREEN-END ==");
 
-        bool proved = choiceIndex == sequence.Length
-            && screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
+        bool proved = screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
 
         if (proved)
         {
@@ -626,8 +748,133 @@ public partial class Game : Control
         GetTree().Quit(1);
     }
 
+    // ================================================================= restart proof (milestone 015)
+
+    /// <summary>
+    /// Process A of the two-process restart proof: plays <see cref="SevenChoiceSequence"/>'s first
+    /// three choices (start, carry on, delegate to Tommy) through real buttons, presses the real
+    /// "Save" button, and exits. Run as a genuinely separate OS process from
+    /// <see cref="RunRestartLoadSelfTest"/> — two independent headless Godot invocations against the
+    /// same real save slot, not two calls within one process. See the milestone archive for the exact
+    /// commands and recorded output.
+    /// </summary>
+    private void RunRestartSaveSelfTest()
+    {
+        try
+        {
+            RestartSaveSelfTest();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-RESTART-SAVE FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void RestartSaveSelfTest()
+    {
+        GD.Print("CE-RESTART-SAVE begin");
+
+        // A fresh slot for this proof, not whatever a prior manual run left behind — the point is to
+        // prove process B can only have reached its result through this process's own save.
+        if (SaveStore.Exists(SavePath)) System.IO.File.Delete(SavePath);
+
+        StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
+        var session = _session!;
+
+        var startScreen = new StringBuilder();
+        Collect(this, startScreen);
+        if (!startScreen.ToString().Contains("cash on hand 6,000", StringComparison.Ordinal))
+            throw new InvalidOperationException("the opening screen does not read \"cash on hand 6,000\"");
+
+        PressChoicesInOrder(session, SevenChoiceSequence.Take(3).ToArray(), "CE-RESTART-SAVE");
+
+        if (!Press("Save"))
+            throw new InvalidOperationException("no \"Save\" control is available");
+
+        if (_statusMessage != "saved")
+            throw new InvalidOperationException($"pressing Save did not report success — status: {_statusMessage}");
+
+        if (!SaveStore.Exists(SavePath))
+            throw new InvalidOperationException($"pressing Save did not create a save at '{SavePath}'");
+
+        GD.Print($"CE-RESTART-SAVE saved to {SavePath} on {session.Date:yyyy-MM-dd}");
+        GD.Print("CE-RESTART-SAVE ok");
+        GetTree().Quit();
+    }
+
+    /// <summary>
+    /// Process B of the two-process restart proof: loads the save <see cref="RunRestartSaveSelfTest"/>
+    /// wrote — in a prior, separate OS process — through the real "Load saved game" button, then plays
+    /// <see cref="SevenChoiceSequence"/>'s remaining four choices through real buttons, reaching the
+    /// same accepted 1 April consequence <see cref="GoldenPathSelfTest"/> reaches in one continuous
+    /// process: 6,840 on the rendered screen.
+    /// </summary>
+    private void RunRestartLoadSelfTest()
+    {
+        try
+        {
+            RestartLoadSelfTest();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-RESTART-LOAD FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void RestartLoadSelfTest()
+    {
+        GD.Print("CE-RESTART-LOAD begin");
+
+        if (!SaveStore.Exists(SavePath))
+            throw new InvalidOperationException(
+                $"no save at '{SavePath}' — run with {RestartSaveFlag} first, as a separate process");
+
+        BuildStartScreen();
+
+        if (!Press("Load saved game"))
+            throw new InvalidOperationException("no \"Load saved game\" control is available");
+
+        if (_session is not { } session)
+            throw new InvalidOperationException($"loading did not produce a session — status: {_statusMessage}");
+
+        GD.Print($"CE-RESTART-LOAD loaded at {session.Date:yyyy-MM-dd}, status={session.Status}");
+
+        PressChoicesInOrder(session, SevenChoiceSequence.Skip(3).ToArray(), "CE-RESTART-LOAD");
+
+        // Same check GoldenPathSelfTest makes: nothing unaddressed should follow the seventh choice.
+        if (session.Status == SessionStatus.AwaitingChoice)
+            throw new InvalidOperationException(
+                $"an unaddressed decision followed the seventh choice, on {session.Date:yyyy-MM-dd}");
+
+        var screenText = new StringBuilder();
+        Collect(this, screenText);
+        string screen = screenText.ToString();
+
+        GD.Print("== CE-RESTART-LOAD-SCREEN-BEGIN ==");
+        GD.Print(screen);
+        GD.Print("== CE-RESTART-LOAD-SCREEN-END ==");
+
+        bool proved = screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
+        if (proved)
+        {
+            GD.Print("CE-RESTART-LOAD ok");
+            GetTree().Quit();
+            return;
+        }
+
+        GD.PrintErr(
+            "CE-RESTART-LOAD FAILED — did not reach the accepted 1 April consequence with cash on hand " +
+            "reading 6,840 on screen, so it proves nothing");
+        GetTree().Quit(1);
+    }
+
     private static bool GoldenPathRequested()
         => OS.GetCmdlineArgs().Contains(GoldenPathFlag) || OS.GetCmdlineUserArgs().Contains(GoldenPathFlag);
+
+    private static bool FlagRequested(string flag)
+        => OS.GetCmdlineArgs().Contains(flag) || OS.GetCmdlineUserArgs().Contains(flag);
 
     /// <summary>
     /// Presses the button reading this text, as a person would, and lets its own handler do the rest

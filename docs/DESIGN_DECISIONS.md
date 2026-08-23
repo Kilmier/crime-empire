@@ -486,7 +486,14 @@ true, and records a scope boundary Matt confirmed in chat rather than in a miles
 - **Simulation core**: C#, plain classes, engine-agnostic, unit-testable from the command line.
   No Godot/engine dependency in this layer.
 - **Persistence**: SQLite — chosen specifically for the explainability requirements (decision
-  traces need real queries) and promotion/demotion tiering, not JSON/binary blobs.
+  traces need real queries) and promotion/demotion tiering, not JSON/binary blobs. **Executed
+  2026-08-23** by milestone 015, `src/CrimeEmpire.Persistence` — but narrower than this paragraph's
+  original vision, deliberately: a save is a replay log (seed, variant, controlled/viewpoint
+  character ids, and the ordered session-input log), not a queryable decision-trace store. It
+  satisfies "not JSON/binary blobs" and the choice of SQLite itself; it does not yet satisfy "decision
+  traces need real queries" or tiering, both still open and still `ROADMAP.md` candidates. Read this
+  paragraph's two reasons as separate claims: milestone 015 executed the storage-technology decision,
+  not the querying capability that motivated it.
 - **Rendering/engine**: Godot 4 with C# (not GDScript) — same language as the sim core, no FFI
   boundary. Chosen over Unity for licensing simplicity, 2D/tilemap support, and UI toolkit fit
   for a text/menu-dense management game. **Executed 2026-08-16** by milestone 009: the project is

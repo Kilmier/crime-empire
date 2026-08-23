@@ -266,7 +266,44 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 014, one complete player-owned operation, corrected twice, not yet accepted
+### Measured — milestone 015, the operation survives a restart, self-reviewed, not yet reviewed by Codex
+
+**Self-implemented and self-verified; not yet reviewed by Codex.** Adds `src/CrimeEmpire.Persistence`
+(replay-backed SQLite save/load) and Godot Save/Load controls. `CrimeEmpire.Simulation` gained no new
+member and no behavioural change — nothing in `Strategies.cs`, `Commit.cs`, `Filters.cs`, or
+`Generators.cs` changed, so every hash below is unmoved from milestone 014's accepted baseline,
+confirmed by a full clean-tree re-run rather than assumed. Full account:
+`docs/milestones/015-the-operation-survives-a-restart.md`, including four mutation checks on the
+highest-risk new claims (exact replay-state identity, the schema/build compatibility checks, and the
+information-boundary walk) and the two-process restart proof's exact recorded output.
+
+- Build: 0 warnings, 0 errors across **five** projects (new: `CrimeEmpire.Persistence`, multi-targeted
+  `net8.0;net10.0`). Tests: **482 passed, 0 failed** (467 before this milestone; 15 new in
+  `PersistenceTests.cs`).
+- `--verify` deterministic and byte-identical on `baseline` (`FEE45FD886F18CA8`), `disloyal-vincent`
+  (`45CCF5ADC6EC0302`), `resentful-tommy` (`F5BD93386DE04082`) — all three unmoved from milestone
+  014's accepted baseline. `--compare` byte-identical across all five trace hashes and chosen-action
+  digests. Both required viewpoint runs exit 0.
+- Godot `--selftest` (4 choices, 4 decision screens, exit 0) and `--selftest-goldenpath` (seven
+  choices, `6,000` → `6,840`, exit 0) both unchanged, confirming the shared-sequence refactor in
+  `Game.cs` (extracting `SevenChoiceSequence` and `PressChoicesInOrder` so the two new restart
+  self-tests reuse the golden path's pinned sequence rather than duplicating it) is
+  behaviour-preserving.
+- **The two-process restart proof, run as two genuinely separate OS processes against the real fixed
+  save slot**: `--selftest-restart-save` plays the first three choices (start, carry on, delegate to
+  Tommy), saves, and exits; a second, independent Godot invocation, `--selftest-restart-load`, loads
+  that save and plays the remaining four, reaching `1 April 1987` with `cash on hand 6,840` read off
+  the live screen — the exact accepted milestone 014 consequence, reconstructed entirely through
+  deterministic replay with `World` never serialized. Full command transcript in the milestone
+  archive. Both of the authorizing message's stop conditions were cleared, not triggered:
+  `Microsoft.Data.Sqlite` runs under Godot's .NET 8 headless host, and exact reconstruction needed no
+  `World` serialization.
+
+### Measured — milestone 014, one complete player-owned operation, corrected twice, accepted
+
+**Matt accepted correction commit `ff4213a` on 2026-08-23 and closed the milestone**, with no further
+commit made solely to record the review, per standing practice (e.g. `53e912e`, `b8e5ed4`) — recorded
+here, folded into milestone 015's own documentation commit.
 
 Adds one field to `PlayerSnapshot` (`Cash`, populated from the viewpoint character's own
 `Capabilities.Cash`) and one display line in `Godot/Game.cs`. Nothing in `Strategies.cs`, `Commit.cs`,

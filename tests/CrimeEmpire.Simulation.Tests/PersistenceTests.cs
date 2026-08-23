@@ -1,0 +1,652 @@
+using System.Reflection;
+using CrimeEmpire.Persistence;
+using CrimeEmpire.Persistence.Session;
+using CrimeSim.Decision;
+using CrimeSim.Domain;
+using CrimeSim.Scenario;
+using CrimeSim.Session;
+using CrimeSim.Sim;
+using CrimeSim.Trace;
+using Microsoft.Data.Sqlite;
+
+namespace CrimeEmpire.Simulation.Tests;
+
+/// <summary>
+/// Milestone 015: the existing baseline seed-42 Vincent <c>SecureTribute</c> operation survives a
+/// save and a fresh <see cref="SimulationSession"/> rebuilt from it — replay-backed, not a copy of
+/// <c>World</c>. <see cref="PersistentSession"/>, the wrapper under test, is driven the same way the
+/// Godot shell drives it: <c>StepEvent</c> to reach each pause, an option matched only by its public
+/// <see cref="PendingOption.Description"/> text, never a candidate id or score — the same discipline
+/// <c>PlayerOwnedOperationTests</c> established for milestone 014's golden path, reused here rather
+/// than re-derived.
+///
+/// The genuine two-process restart proof — a real save written by one OS process and loaded by a
+/// second, driven through actual Godot button presses — is a Godot headless check, not an xunit test:
+/// <c>CrimeEmpire.Godot</c> is never loaded by <c>dotnet test</c> (the same reason
+/// <c>--selftest</c>/<c>--selftest-goldenpath</c> are not here either). See the milestone archive for
+/// that proof's exact commands and recorded output. What belongs here is everything ruling 7 asks for
+/// that a single process, and this project's own conventions, can prove directly.
+/// </summary>
+public sealed class PersistenceTests
+{
+    private const int Seed = 42;
+    private const string Variant = "baseline";
+    private const string Controlled = "vincent";
+    private const string Marco = "marco";
+
+    // Independently pinned, matching PlayerOwnedOperationTests.cs and Game.cs's own copy — not
+    // shared code, so the three cannot all be wrong about the same assumption together.
+    private static readonly string[] SevenChoiceSequence =
+    {
+        "talk Bellini's grocery round",
+        "carry on getting Bellini's grocery to pay",
+        "have Tommy Nardo take it on",
+        "change tack with Bellini's grocery — threats instead",
+        "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
+        "carry on getting Bellini's grocery to pay",
+        "report to Salvatore Greco, leaving out his own part",
+    };
+
+    private const string LetItLie = "let it lie";
+
+    // ================================================================= exact internal identity (ruling 7)
+
+    /// <summary>
+    /// Save and load while <see cref="SessionStatus.Ready"/> (ruling 6, first half): every piece of
+    /// internal state ruling 7 names — the clock, any outstanding fast-forward, the event queue's
+    /// size, the developer trace (which carries every RNG-influenced score and every identifier), and
+    /// Vincent and Tommy's ongoing <c>SecureTribute</c> execution state (owner, delegate, method,
+    /// step) — matches exactly between the session that was saved and the fresh one replay rebuilt.
+    /// </summary>
+    [Fact]
+    public void Exact_internal_state_is_identical_before_save_and_after_load_at_a_ready_point()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var original = PersistentSession.Start(Seed, Variant, Controlled);
+            PlayChoices(original, SevenChoiceSequence.Take(3));
+            Assert.Equal(SessionStatus.Ready, original.Status);
+
+            original.Save(path);
+            var loaded = PersistentSession.Load(path);
+
+            AssertExactInternalIdentity(original, loaded);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    /// <summary>
+    /// Save and load while <see cref="SessionStatus.AwaitingChoice"/> (ruling 6, second half): the
+    /// same identity as above, plus the reproduced pause itself — date, actor, occasion, focus, and
+    /// every offered option's exact public description and opaque token, field for field.
+    /// </summary>
+    [Fact]
+    public void Exact_internal_state_is_identical_before_save_and_after_load_at_an_awaiting_choice_pause()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var original = PersistentSession.Start(Seed, Variant, Controlled);
+            PlayChoices(original, SevenChoiceSequence.Take(3));
+            AdvanceToNextPause(original);
+            Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
+
+            original.Save(path);
+            var loaded = PersistentSession.Load(path);
+
+            AssertExactInternalIdentity(original, loaded);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    // ================================================================= golden-path equivalence
+
+    /// <summary>
+    /// The same seven choices, made across a save and a fresh process-equivalent reload after the
+    /// third, reach the identical accepted 1 April consequence a wholly uninterrupted run reaches —
+    /// same rendered trace, same cash.
+    /// </summary>
+    [Fact]
+    public void Loaded_and_uninterrupted_golden_path_reach_the_same_outcome()
+    {
+        var uninterrupted = PersistentSession.Start(Seed, Variant, Controlled);
+        PlayChoices(uninterrupted, SevenChoiceSequence);
+
+        string path = NewSavePath();
+        try
+        {
+            var interrupted = PersistentSession.Start(Seed, Variant, Controlled);
+            PlayChoices(interrupted, SevenChoiceSequence.Take(3));
+            interrupted.Save(path);
+
+            var resumed = PersistentSession.Load(path);
+            PlayChoices(resumed, SevenChoiceSequence.Skip(3));
+
+            Assert.Equal(6840, resumed.Snapshot().Cash);
+            Assert.Equal(uninterrupted.Snapshot().Cash, resumed.Snapshot().Cash);
+            Assert.Equal(
+                TraceWriter.Render(uninterrupted.InnerSession.World, Variant, false),
+                TraceWriter.Render(resumed.InnerSession.World, Variant, false));
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    // ================================================================= determinism
+
+    /// <summary>Loading the same save twice, then playing the same continuation on each, produces
+    /// byte-identical history both immediately after loading and after the continuation.</summary>
+    [Fact]
+    public void Repeated_loads_of_the_same_save_are_deterministic()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var setup = PersistentSession.Start(Seed, Variant, Controlled);
+            PlayChoices(setup, SevenChoiceSequence.Take(3));
+            setup.Save(path);
+
+            var loadedOnce = PersistentSession.Load(path);
+            var loadedTwice = PersistentSession.Load(path);
+
+            Assert.Equal(
+                TraceWriter.Render(loadedOnce.InnerSession.World, Variant, false),
+                TraceWriter.Render(loadedTwice.InnerSession.World, Variant, false));
+
+            PlayChoices(loadedOnce, SevenChoiceSequence.Skip(3));
+            PlayChoices(loadedTwice, SevenChoiceSequence.Skip(3));
+
+            Assert.Equal(
+                TraceWriter.Render(loadedOnce.InnerSession.World, Variant, false),
+                TraceWriter.Render(loadedTwice.InnerSession.World, Variant, false));
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    // ================================================================= counterfactual choice
+
+    /// <summary>
+    /// Two independent loads of the identical save, sent down different valid options at the very
+    /// pause it was saved at, diverge on their own — no coefficient tuned, nothing hardcoded to make
+    /// either branch win. Starting the operation and letting it lie are the same fork milestone 014's
+    /// own counterfactual test uses; this is that fork, taken from a save instead of a fresh session.
+    /// </summary>
+    [Fact]
+    public void Counterfactual_valid_choices_from_the_same_save_diverge_naturally()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var setup = PersistentSession.Start(Seed, Variant, Controlled);
+            AdvanceToNextPause(setup);
+            setup.Save(path);
+
+            var golden = PersistentSession.Load(path);
+            PlayChoices(golden, SevenChoiceSequence);
+
+            var declined = PersistentSession.Load(path);
+            ChooseByDescription(declined, LetItLie);
+
+            Assert.Equal(6840, golden.Snapshot().Cash);
+            Assert.NotEqual(golden.Snapshot().Cash, declined.Snapshot().Cash);
+            Assert.True(golden.InnerSession.World.Businesses[Cast.Grocery].PayingTribute);
+            Assert.False(declined.InnerSession.World.Businesses[Cast.Grocery].PayingTribute);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    // ================================================================= information boundary
+
+    /// <summary>
+    /// The structural version of milestone 009's boundary test, walked from
+    /// <see cref="PersistentSession"/> instead of <see cref="SimulationSession"/>: nothing the
+    /// persistence wrapper adds gives an interface a path to <c>World</c>, a decision record, a
+    /// score, a report, or the mutable <c>Capabilities</c> object another character's cash lives on.
+    /// </summary>
+    [Fact]
+    public void The_persistence_surface_exposes_no_developer_state()
+    {
+        Type[] forbidden =
+        {
+            typeof(World), typeof(SimulationSession), typeof(WorldEvent), typeof(DecisionRecord),
+            typeof(ScoreBreakdown), typeof(ScoreComponent), typeof(PreparedDecision), typeof(Candidate),
+            typeof(Rejection), typeof(Report), typeof(ReportedClaim), typeof(InformationRequest),
+            typeof(Character), typeof(CharacterView), typeof(Cognition), typeof(SocialState),
+            typeof(IRelationship), typeof(StepResult), typeof(ScheduledEvent), typeof(EventPayload),
+            typeof(Agenda), typeof(Psychology), typeof(InformationRecord), typeof(Testimony),
+            typeof(Capabilities), typeof(Claim),
+        };
+
+        var seen = new HashSet<Type>();
+        var queue = new Queue<Type>(new[] { typeof(PersistentSession), typeof(PendingDecision), typeof(PlayerSnapshot) });
+
+        while (queue.Count > 0)
+        {
+            var surface = queue.Dequeue();
+            if (!seen.Add(surface)) continue;
+
+            foreach (var member in surface.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
+            {
+                foreach (var type in TypesReferencedBy(member))
+                {
+                    Assert.False(forbidden.Contains(type),
+                        $"{surface.Name}.{member.Name} exposes {type.Name} to whatever holds it");
+
+                    if (type.Assembly == typeof(SimulationSession).Assembly || type.Assembly == typeof(PersistentSession).Assembly)
+                        queue.Enqueue(type);
+                }
+            }
+        }
+
+        Assert.Contains(typeof(PlayerBelief), seen);
+        Assert.Contains(typeof(PendingOption), seen);
+    }
+
+    /// <summary>
+    /// Milestone 014's negative test, re-run against a session that went through a save and a load:
+    /// another character's cash still cannot appear anywhere in the reachable snapshot. Mutation
+    /// rather than a plain read, matching the discriminating shape milestone 014's own correction
+    /// settled on — a leak that overwrote <c>Cash</c> itself would already be caught by the simplest
+    /// possible check, so this proves the walk, not just the property.
+    /// </summary>
+    [Fact]
+    public void Another_characters_cash_never_appears_in_a_loaded_sessions_snapshot()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var setup = PersistentSession.Start(Seed, Variant, Controlled);
+            PlayChoices(setup, SevenChoiceSequence.Take(3));
+            setup.Save(path);
+
+            var loaded = PersistentSession.Load(path);
+
+            const double marcoSentinel = 555_444;
+            loaded.InnerSession.World.Get(Marco).Capabilities.Cash = marcoSentinel;
+
+            var values = ValueGraph(loaded.Snapshot()).ToList();
+            Assert.True(values.Count > 8, "the walk reached very little of the snapshot, so this proves nothing");
+            Assert.DoesNotContain(marcoSentinel, values.OfType<double>());
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    // ================================================================= malformed input (ruling 7)
+
+    [Fact]
+    public void Loading_a_file_that_is_not_a_database_fails_visibly()
+    {
+        string path = NewSavePath();
+        File.WriteAllBytes(path, new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04 });
+        try
+        {
+            Assert.Throws<SaveFormatException>(() => SaveStore.Read(path));
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    [Fact]
+    public void Loading_a_sqlite_file_with_no_save_tables_fails_visibly()
+    {
+        string path = NewSavePath();
+        try
+        {
+            using (var connection = new SqliteConnection($"Data Source={path};Pooling=False"))
+            {
+                connection.Open();
+                using var create = connection.CreateCommand();
+                create.CommandText = "CREATE TABLE unrelated (x INTEGER);";
+                create.ExecuteNonQuery();
+            }
+
+            Assert.Throws<SaveFormatException>(() => SaveStore.Read(path));
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    [Fact]
+    public void Loading_a_save_with_an_unrecognised_command_kind_fails_visibly_without_autoplay()
+    {
+        string path = NewSavePath();
+        try
+        {
+            SaveStore.Write(path, new SaveData(SaveStore.CurrentSchemaVersion, SimulationBuild.CurrentId, Seed, Variant, Controlled, Controlled, Array.Empty<SessionCommand>()));
+
+            using (var connection = new SqliteConnection($"Data Source={path};Pooling=False"))
+            {
+                connection.Open();
+                using var insert = connection.CreateCommand();
+                insert.CommandText = "INSERT INTO save_commands (ordinal, kind, arg) VALUES (0, 'banana', NULL);";
+                insert.ExecuteNonQuery();
+            }
+
+            var ex = Assert.Throws<SaveFormatException>(() => SaveStore.Read(path));
+            Assert.Contains("banana", ex.Message);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    [Fact]
+    public void Loading_a_save_with_a_gapped_command_ordinal_fails_visibly_without_autoplay()
+    {
+        string path = NewSavePath();
+        try
+        {
+            SaveStore.Write(path, new SaveData(SaveStore.CurrentSchemaVersion, SimulationBuild.CurrentId, Seed, Variant, Controlled, Controlled, Array.Empty<SessionCommand>()));
+
+            using (var connection = new SqliteConnection($"Data Source={path};Pooling=False"))
+            {
+                connection.Open();
+                using var insert = connection.CreateCommand();
+                insert.CommandText = "INSERT INTO save_commands (ordinal, kind, arg) VALUES (0, 'StepEvent', NULL), (2, 'StepEvent', NULL);";
+                insert.ExecuteNonQuery();
+            }
+
+            var ex = Assert.Throws<SaveFormatException>(() => SaveStore.Read(path));
+            Assert.Contains("ordinal", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    /// <summary>
+    /// An option token nothing offers at its point in the replay — the shape a hand-edited or
+    /// truncated save would take — throws during <see cref="PersistentSession.Load"/> rather than
+    /// silently substituting the pipeline's own preference (autoplay) or any default option
+    /// (fallback). The same <see cref="SimulationInvariantException"/> a live session already throws
+    /// for an unrecognised token, wrapped with the replay ordinal it failed at.
+    /// </summary>
+    [Fact]
+    public void Loading_a_save_with_an_option_token_nothing_offers_fails_visibly_without_autoplay()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var probe = PersistentSession.Start(Seed, Variant, Controlled);
+            AdvanceToNextPause(probe);
+            probe.Save(path);
+            var stepsOnly = SaveStore.Read(path).Commands;
+
+            var tampered = new SaveData(
+                SaveStore.CurrentSchemaVersion, SimulationBuild.CurrentId, Seed, Variant, Controlled, Controlled,
+                stepsOnly.Append(SessionCommand.Choose("not-a-real-option-token")).ToList());
+            SaveStore.Write(path, tampered);
+
+            Assert.Throws<SaveFormatException>(() => PersistentSession.Load(path));
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    [Fact]
+    public void Loading_a_save_with_a_different_schema_version_fails_visibly()
+    {
+        string path = NewSavePath();
+        try
+        {
+            SaveStore.Write(path, new SaveData(SaveStore.CurrentSchemaVersion + 1, SimulationBuild.CurrentId, Seed, Variant, Controlled, Controlled, Array.Empty<SessionCommand>()));
+
+            var ex = Assert.Throws<SaveFormatException>(() => SaveStore.Read(path));
+            Assert.Contains("schema version", ex.Message);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    [Fact]
+    public void Loading_a_save_from_a_different_simulation_build_fails_visibly()
+    {
+        string path = NewSavePath();
+        try
+        {
+            SaveStore.Write(path, new SaveData(SaveStore.CurrentSchemaVersion, "not-the-real-build-id", Seed, Variant, Controlled, Controlled, Array.Empty<SessionCommand>()));
+
+            var ex = Assert.Throws<SaveFormatException>(() => SaveStore.Read(path));
+            Assert.Contains("build", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    // ================================================================= interrupted writes
+
+    /// <summary>
+    /// A write that fails partway — here, because the <c>.tmp</c> file it needs is locked by another
+    /// handle, a real OS-level failure rather than an injected test hook — leaves whatever was
+    /// previously at the real save path exactly as it was. <see cref="SaveStore"/>'s atomic swap is
+    /// what makes this true: the failing write never touches the real path at all.
+    /// </summary>
+    [Fact]
+    public void An_interrupted_write_leaves_the_previous_valid_save_loadable()
+    {
+        string path = NewSavePath();
+        string tmpPath = path + ".tmp";
+        try
+        {
+            var first = PersistentSession.Start(Seed, Variant, Controlled);
+            AdvanceToNextPause(first);
+            first.Save(path);
+            var before = TraceWriter.Render(PersistentSession.Load(path).InnerSession.World, Variant, false);
+
+            using (new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                var second = PersistentSession.Start(Seed, Variant, Controlled);
+                AdvanceToNextPause(second);
+                ChooseByDescription(second, SevenChoiceSequence[0]);
+
+                Assert.ThrowsAny<Exception>(() => second.Save(path));
+            }
+
+            string after = TraceWriter.Render(PersistentSession.Load(path).InnerSession.World, Variant, false);
+            Assert.Equal(before, after);
+        }
+        finally
+        {
+            Cleanup(path);
+            if (File.Exists(tmpPath)) File.Delete(tmpPath);
+        }
+    }
+
+    // ================================================================= helpers
+
+    private static string NewSavePath() => Path.Combine(Path.GetTempPath(), $"ce-persistence-test-{Guid.NewGuid():N}.db");
+
+    private static void Cleanup(string path)
+    {
+        if (File.Exists(path)) File.Delete(path);
+    }
+
+    /// <summary>Presses "Next event" (via <see cref="PersistentSession.StepEvent"/>) until the
+    /// controlled character has a decision waiting — the same discipline the Godot shell's "Next
+    /// event" button and its self-tests use, bounded so a defect fails the test rather than hangs
+    /// it.</summary>
+    private static void AdvanceToNextPause(PersistentSession session)
+    {
+        for (int guard = 0; guard < 5000 && session.Status != SessionStatus.AwaitingChoice; guard++)
+            session.StepEvent();
+
+        Assert.Equal(SessionStatus.AwaitingChoice, session.Status);
+    }
+
+    /// <summary>Chooses the one offered option whose rendered description exactly matches — the same
+    /// text and opaque token a Godot button carries, nothing else.</summary>
+    private static void ChooseByDescription(PersistentSession session, string description)
+    {
+        AdvanceToNextPause(session);
+        var pending = session.Pending!;
+
+        int index = -1;
+        for (int i = 0; i < pending.Options.Count; i++)
+        {
+            if (!string.Equals(pending.Options[i].Description, description, StringComparison.Ordinal)) continue;
+            Assert.Equal(-1, index);
+            index = i;
+        }
+
+        Assert.True(index >= 0,
+            $"no offered option reads \"{description}\" on {session.Date:yyyy-MM-dd} — offered: " +
+            string.Join(" | ", pending.Options.Select(o => o.Description)));
+        session.Choose(pending.Options[index].Id);
+    }
+
+    private static void PlayChoices(PersistentSession session, IEnumerable<string> descriptions)
+    {
+        foreach (string description in descriptions) ChooseByDescription(session, description);
+    }
+
+    /// <summary>
+    /// Everything ruling 7 asks "exact internal replay-state identity" to cover: the clock and any
+    /// outstanding fast-forward (private fields, reached the same way <c>PlayerOwnedOperationTests</c>
+    /// reaches <c>SimulationSession</c>'s private <c>_prepared</c>), the full rendered developer trace
+    /// (truth log, every decision with its RNG-influenced scores, every wording — the standing
+    /// "byte-identical" instrument this project has used since milestone 009), the event queue's
+    /// size, the world's own identifier counters, and each active character's ongoing strategy
+    /// execution — owner, delegate, method, step, everything <see cref="StrategyInstance"/> carries.
+    /// </summary>
+    private static void AssertExactInternalIdentity(PersistentSession original, PersistentSession loaded)
+    {
+        var a = original.InnerSession;
+        var b = loaded.InnerSession;
+
+        Assert.Equal(a.Status, b.Status);
+        Assert.Equal(original.Date, loaded.Date);
+        Assert.Equal(PrivateField<DateTime>(a, "_clock"), PrivateField<DateTime>(b, "_clock"));
+        Assert.Equal(PrivateField<DateTime?>(a, "_runUntil"), PrivateField<DateTime?>(b, "_runUntil"));
+
+        Assert.Equal(TraceWriter.Render(a.World, original.Variant, false), TraceWriter.Render(b.World, loaded.Variant, false));
+
+        Assert.Equal(a.World.Queue.Count, b.World.Queue.Count);
+        Assert.Equal(a.World.TruthLog.Count, b.World.TruthLog.Count);
+        Assert.Equal(a.World.Decisions.Count, b.World.Decisions.Count);
+        Assert.Equal(a.World.Reports.Count, b.World.Reports.Count);
+        Assert.Equal(a.World.Requests.Count, b.World.Requests.Count);
+
+        foreach (string field in new[] { "_nextWorldEventId", "_nextAssignmentId", "_nextDecisionId", "_nextReportId", "_nextRequestId" })
+            Assert.Equal(PrivateField<long>(a.World, field), PrivateField<long>(b.World, field));
+
+        foreach (string id in a.World.ActiveCharacters().Select(c => c.Id))
+            Assert.Equal(
+                StrategyFingerprint(a.World.Get(id).Execution.Strategy),
+                StrategyFingerprint(b.World.Get(id).Execution.Strategy));
+
+        if (a.Status == SessionStatus.AwaitingChoice)
+        {
+            var pa = a.Pending!;
+            var pb = b.Pending!;
+            Assert.Equal(pa.At, pb.At);
+            Assert.Equal(pa.ActorId, pb.ActorId);
+            Assert.Equal(pa.Occasion, pb.Occasion);
+            Assert.Equal(pa.Focus, pb.Focus);
+            Assert.Equal(
+                pa.Options.Select(o => (o.Id, o.Description)).ToList(),
+                pb.Options.Select(o => (o.Id, o.Description)).ToList());
+        }
+        else
+        {
+            Assert.Null(a.Pending);
+            Assert.Null(b.Pending);
+        }
+    }
+
+    private static object StrategyFingerprint(StrategyInstance? s) => s is null
+        ? "none"
+        : (s.OwnerId, s.LocalSequence, s.Kind, s.Domain, s.TargetId, s.Method, s.StepIndex, s.StartedAt,
+           s.Deadline, s.AssignmentId, s.SourceEventId, s.NextAdvanceOrdinal, s.DelegatedToId,
+           s.BreachedPolicyId, s.PendingStepEventId, s.FailedAttempts, s.PressureApplied);
+
+    private static T PrivateField<T>(object obj, string name)
+    {
+        var field = obj.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException($"{obj.GetType().Name} has no field '{name}'");
+        return (T)field.GetValue(obj)!;
+    }
+
+    /// <summary>Every string, number, and date reachable from a DTO graph — copied from
+    /// <c>PlayerOwnedOperationTests.cs</c> rather than shared, matching this test suite's existing
+    /// per-file convention for this helper.</summary>
+    private static IEnumerable<object> ValueGraph(object? node)
+    {
+        switch (node)
+        {
+            case null:
+                yield break;
+            case string s:
+                yield return s;
+                yield break;
+            case double or int or long or bool or DateTime:
+                yield return node;
+                yield break;
+            case System.Collections.IEnumerable seq:
+                foreach (var item in seq)
+                foreach (var v in ValueGraph(item))
+                    yield return v;
+                yield break;
+            default:
+                var type = node.GetType();
+                if (type.IsEnum) { yield return node; yield break; }
+                foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    if (property.GetIndexParameters().Length > 0) continue;
+                    foreach (var v in ValueGraph(property.GetValue(node)))
+                        yield return v;
+                }
+                yield break;
+        }
+    }
+
+    private static IEnumerable<Type> TypesReferencedBy(MemberInfo member) => member switch
+    {
+        PropertyInfo p => Unwrap(p.PropertyType),
+        FieldInfo f => Unwrap(f.FieldType),
+        MethodInfo m => Unwrap(m.ReturnType).Concat(m.GetParameters().SelectMany(x => Unwrap(x.ParameterType))),
+        ConstructorInfo c => c.GetParameters().SelectMany(x => Unwrap(x.ParameterType)),
+        _ => Array.Empty<Type>(),
+    };
+
+    private static IEnumerable<Type> Unwrap(Type t)
+    {
+        yield return t;
+        if (t.IsGenericType)
+            foreach (var arg in t.GetGenericArguments())
+                foreach (var inner in Unwrap(arg))
+                    yield return inner;
+        if (t.IsArray && t.GetElementType() is { } element)
+            foreach (var inner in Unwrap(element))
+                yield return inner;
+    }
+}

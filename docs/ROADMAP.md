@@ -223,8 +223,10 @@ worth anything once it is shown" to **which readers are worth strengthening, and
 
 ## Not yet implemented
 
-- **Persistence.** SQLite is selected (`DESIGN_DECISIONS.md` §Stack) but not implemented. Save/load
-  is absent.
+- **Persistence, narrowly.** Milestone 015 implemented replay-backed SQLite save/load — one fixed
+  Godot slot, same-build-only compatibility, no migrations. What `DESIGN_DECISIONS.md` §Stack's
+  original persistence entry actually asked for, a queryable decision-trace store, is still absent;
+  see candidate 3 below.
 - **Relevance tiering.** Active / Supporting / Background promotion and demotion are designed in
   `SIMULATION_ARCHITECTURE.md` and not implemented. The six-character cast makes this a non-issue
   at present scale, which also means it is unvalidated.
@@ -233,7 +235,9 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   Godot project is on `net8.0` while the runner and tests stay on `net10.0`. The library gained no
   Godot reference. `src/CrimeEmpire.Godot` builds as part of `CrimeEmpire.sln` and starts headlessly.
   **Not retired by that:** everything in the presentation list below is still absent — no map, no art
-  pipeline, no animation, no save/load, and the interface is a deliberately plain functional layout.
+  pipeline, no animation, and the interface is a deliberately plain functional layout. Save/load
+  exists since milestone 015, but as one fixed slot with no picker or browser — see the persistence
+  entry above.
 - **Generalized rumor propagation.** Explicitly excluded from milestone 003 and still out.
   `SourceKind.Rumor` remains in the vocabulary; no path produces it.
 - Media and public-information channels, the case-board investigation model, prosecution, broader
@@ -259,6 +263,10 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    7 — so if it returns, it returns as a scope Matt writes, not as unfinished business. See
    `milestones/010-a-denial-that-can-win.md`.
 3. **Persistence / SQLite** — begin storing the information and decision data now worth querying.
+   **Narrowed and partly executed by milestone 015**, 2026-08-23: SQLite save/load exists, but as a
+   replay log (seed, variant, character ids, ordered session inputs), not a queryable decision-trace
+   store — ruling 9 explicitly excluded opaque JSON/world blobs and anything beyond what replay
+   needs. What this candidate originally asked for — decision data worth querying — is still open.
 4. ~~**Godot / .NET compatibility spike**~~ — **subsumed by milestone 009**, which settled the
    constraint (the engine hosts .NET 8) and built the shell in the same pass rather than spiking it
    separately.

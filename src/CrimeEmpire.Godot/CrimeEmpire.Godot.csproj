@@ -12,5 +12,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CrimeEmpire.Simulation\CrimeEmpire.Simulation.csproj" />
+    <ProjectReference Include="..\CrimeEmpire.Persistence\CrimeEmpire.Persistence.csproj" />
   </ItemGroup>
 </Project>

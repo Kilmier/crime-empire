@@ -7,38 +7,20 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 015 —
+**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 016 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 014 — One Complete Player-Owned Operation — is complete, corrected twice, not yet
-accepted.** Implemented 2026-08-19; see `docs/milestones/014-one-complete-player-owned-operation.md`
-(including its two appended corrections) for the full account, and `docs/REVIEW_LEDGER.md`'s
-"Measured — milestone 014" section for the verification baselines.
+**Milestone 015 — The Operation Survives a Restart — is complete, not yet reviewed by Codex, not yet
+accepted.** Implemented 2026-08-23; see
+`docs/milestones/015-the-operation-survives-a-restart.md` for the full account — replay-backed SQLite
+persistence in a new `src/CrimeEmpire.Persistence` project, one fixed Godot save slot, and a
+two-process restart proof of the existing baseline seed-42 Vincent `SecureTribute` operation, run for
+real and recorded in that archive. `docs/REVIEW_LEDGER.md`'s "Measured — milestone 015" section has
+the verification baselines.
 
-**First round (`712a125`, reviewed 2026-08-20, two P1 and two P2), corrected by `556f2b2`.** The
-central finding: the original golden-path test discovered which option to choose at each pause by
-reading `PreparedDecision.Scored` through reflection — internal state no Godot button carries — so
-despite resolving every pause through an explicit `Choose` call, it was not actually driving the
-interactive path under the same information a person clicking through the shell would have. Replaced
-with a pinned, independently-scripted sequence of the seven exact option texts, matched only against
-`PendingDecision.Options`'s public `Description` and `Id`, and a genuine Godot headless check that
-presses those seven buttons for real and reads the rendered cash off the live screen.
-
-**Second round (`556f2b2`, reviewed 2026-08-20, two P2), corrected in the commit following it.** Both
-findings were about the strength of the first correction's own verification, not new defects in the
-fix: the Godot golden-path check asserted only the final `6,840` reading, which a toolbar hardcoded to
-that value would also have satisfied, so it now also asserts the opening screen reads `6,000` before
-any button is pressed; and the negative-cash mutation check replaced Vincent's own `Cash` with Marco's
-sentinel, which is exactly the leak shape the original single-property test (before this milestone's
-own strengthening) already caught — it now leaks Marco's sentinel into a nested field,
-`PlayerAttitude.Standing`, and confirms the test fails on the string check specifically, proving the
-recursive walk earns its keep rather than restating what the simpler test already covered.
-
-Matt has not yet confirmed acceptance of any of the three named commits — see `REVIEW_LEDGER.md`'s
-"cleared to build on is not accepted".
-
-Milestones 001–013 are complete and accepted — 011 and 012 as corrected by `3c86ba4`, 013 as corrected
-twice, most recently by `a75a54e`, accepted 2026-08-19.
+Milestones 001–015 are implemented; 001–014 are accepted (011 and 012 as corrected by `3c86ba4`, 013
+as corrected twice by `a75a54e`, 014 as corrected twice by `ff4213a`, accepted 2026-08-23). Milestone
+015 is self-reviewed only so far — Matt has not yet confirmed acceptance of its commit.
 
 **Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
 meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".
@@ -46,13 +28,13 @@ meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self
 ## What is deferred, for whoever scopes the next milestone
 
 Not authorization to start any of it — see `ROADMAP.md`, which is where scope is proposed from, and
-`docs/milestones/013-coverage-accounting-not-vigilance.md`'s "Deferred work" section for the full,
-current list. Milestone 014 touched no simulation behaviour, so it adds nothing new to it. In brief:
-**124 live-edge findings and 5 apparently-dead lines**, itemized by region in
+`docs/milestones/015-the-operation-survives-a-restart.md`'s "Deferred work" section for the full,
+current list. In brief: **124 live-edge findings and 5 apparently-dead lines**, itemized by region in
 `docs/COVERAGE_ACCOUNTING.md`, none triaged by priority or acted on; systematic mutation automation
-and seed-sweep promotion, both deliberately deferred as unnumbered `ROADMAP.md` candidates; whether
-coverage can be collected over a natural run rather than the test suite, left open at planning time
-and not settled; and everything carried into milestone 012 that neither 013 nor 014 touched — the
-allegation option naming the same person twice, the developer trace's uniform "he", nobody holding a
-scored relationship with Kane, the tuning guesses, the cast ceiling of six, obligation read but never
-moved, no save/load, and the rest listed in that archive's own carried-forward section.
+and seed-sweep promotion; the allegation option naming the same person twice; the developer trace's
+uniform "he"; nobody holding a scored relationship with Kane; the tuning guesses; the cast ceiling of
+six; obligation read but never moved; and, new from milestone 015 and deliberately excluded rather
+than accidentally omitted — slot management, autosave, cloud save, a save-browser UI, and cross-build
+save migrations. `ROADMAP.md` candidate 3's original framing (decision data worth querying) remains
+open; milestone 015 executed the storage-technology half of `DESIGN_DECISIONS.md` §Stack's persistence
+entry, not the querying-capability half.

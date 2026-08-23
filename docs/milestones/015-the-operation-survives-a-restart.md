@@ -361,3 +361,90 @@ this milestone's own archive documented running.
 **not accepted**, and milestone 015 as a whole remains **not accepted** — Matt's confirmation of this
 named commit is what that requires. The account of milestone 015 above is not rewritten to read as
 though it were correct from the start; this section is the record of what was wrong and what changed.
+
+---
+
+## Second correction from Codex's review of `af7d34f`, 2026-08-23
+
+Appended, not folded in. The two corrections above are preserved as originally written. **This
+section withdraws the first correction's closing claim that all four of Codex's `9537b38` findings
+were fixed — three were; the exact-internal-replay-state P1 was not fully fixed, and this section is
+that fix.** The other three items the first correction addressed (the isolated Godot self-test slot,
+the textual cash-leak check, the genuinely interrupted writer process) are unaffected and not
+redesigned here.
+
+**Codex reviewed `af7d34f` and found the P1 residual: `AssertExactInternalIdentity`'s complete-`World`
+fingerprint, added by the first correction, still left `SimulationSession` and `PersistentSession`
+themselves checked by a second hand-picked list — `_controlledId` (which determines whose decisions
+pause), `ViewpointCharacterId` (which determines the player projection), `Seed`, `StartedOn`, and
+`PersistentSession._log` (what a later save would replay) were not checked at all; the complete
+`_pending` record was checked through four named properties (`At`, `ActorId`, `Occasion`, `Focus`,
+`Options`) rather than all seven — `ActorName`, `ActorRole`, and `ActorPronouns` were silently absent.
+The exact failure shape ruling 7's "not a hand-picked list" instruction was written to rule out,
+found again one level up from where the first correction fixed it.**
+
+**Fix.** `AssertExactInternalIdentity` now calls `DeepFingerprint` on the complete
+`PersistentSession` — `original` and `loaded` themselves, not `SimulationSession.World` beneath
+them — as its sole completeness mechanism. Because `DeepFingerprint` already walks every field,
+public and private, recursively, pointing it at the wrapper root rather than one field within it
+requires no new mechanism: `PersistentSession._log`, `SimulationSession._controlledId`,
+`ViewpointCharacterId`'s and `Seed`'s and `StartedOn`'s auto-property backing fields, `_prepared`,
+the complete `_pending` record (all seven properties, via the same generic field reflection that
+already reaches every property on every other record it encounters), `_optionIds`, `_clock`, and
+`_runUntil` are all reached as a consequence of walking `PersistentSession`'s own two fields
+(`_session`, `_log`) outward — not because any of them is named in the test. The five previously
+separate hand-picked checks (`_prepared`, `_optionIds`, clock, fast-forward, and the four-property
+`Pending` comparison) were removed rather than kept alongside the fingerprint, since keeping them
+would have re-created exactly the "second list" shape this correction exists to close.
+`TraceWriter.Render` is kept, per the review's instruction, as a second, independently-built
+instrument; `Status` and `Date` are asserted first purely so a failure reads as "paused vs. running"
+or "wrong date" before the much larger fingerprint diff — both are already implied by the
+fingerprint (`Status` is a pure function of `_pending`'s nullness, `Date` of the fingerprinted
+`_clock`), so neither is claimed as part of the completeness proof.
+
+**Mutation-checked both ways requested, confirmed and reverted:**
+- Reflectively set the loaded session's private `_controlledId` field to `"salvatore"` (from
+  `"vincent"`) without touching `World`. `TraceWriter.Render` on both sessions' `World` was confirmed
+  identical first, then `AssertExactInternalIdentity` failed on the fingerprint comparison
+  specifically — the diff isolated to `"_controlledId", "vincent"` vs. `"_controlledId",
+  "salvatore"` at the exact position in both fingerprints, nothing else differing.
+- Reflectively removed the last entry from the loaded `PersistentSession`'s private `_log` field
+  without touching its current `World`. `TraceWriter.Render` was again confirmed identical first,
+  then `AssertExactInternalIdentity` failed on the fingerprint comparison — the diff showing the
+  original's fingerprint carrying one more `Choose` command (with its `Kind`/`Days`/`OptionToken`
+  backing fields) than the mutated loaded session's, proving a later save from the mutated session
+  would silently replay a shorter, wrong history.
+
+Both mutations were reverted before this commit and the full suite re-confirmed green. Neither
+mutation is retained as a test, matching this project's standing mutation-check practice.
+
+**What this correction is not.** No change to the persistence architecture, the Godot self-test
+isolation, the cash-boundary check, or the interrupted-write harness — all three stand as the first
+correction left them. No simulation behaviour changed. Tests: **482 passed, 0 failed**, unchanged in
+count (the fix simplified `AssertExactInternalIdentity` and removed the now-unused `PrivateField`
+reflection helper it no longer needed; no test was added or removed).
+
+**Full verification re-run from a clean tree:** build 0 warnings/0 errors across six projects; 482/482
+tests, including all 15 focused persistence tests; `--verify` deterministic and byte-identical on
+`baseline` (`FEE45FD886F18CA8`), `disloyal-vincent` (`45CCF5ADC6EC0302`), `resentful-tommy`
+(`F5BD93386DE04082`) — all unmoved from `ff4213a`; `--compare` byte-identical across all five trace
+hashes and chosen-action digests; both required viewpoint runs exit 0; Godot `--selftest` and
+`--selftest-goldenpath` both unchanged; the two-process restart proof re-run in full on the isolated
+self-test slot, reaching `1 April 1987`, `cash on hand 6,840`; the production save slot's hash
+confirmed unchanged before and after (`35937d3b...78e59` both times), and the self-test slot confirmed
+absent both before the run and after process B's own cleanup, matching its state before any of this
+correction's verification began; `git diff --check` clean.
+
+**Recurring-failure list, walked.** *A hand-picked list standing in for a completeness claim, twice
+in the same mechanism:* the first correction replaced one hand-picked list (a handful of `World`
+counters and strategy fields) with a deep fingerprint, and in the same commit introduced a second one
+one level up (the session/wrapper fields checked individually) — the fix this time was recognising
+that the *root* the fingerprint starts from, not the fingerprint mechanism itself, was the thing still
+hand-picked. *A fix that narrows scope just enough to look complete:* fingerprinting `World`
+addressed everything Codex's first review named by name, which made the remaining gap easy to miss
+without independently asking "what does `PersistentSession` itself carry that `World` does not."
+
+**Status.** This second correction is implemented, tested, and mutation-checked as described above.
+Milestone 015 remains **not accepted** — Matt's confirmation of this named commit is what that
+requires. Neither this section nor either correction above rewrites the original account to read as
+though it were correct from the start.

@@ -10,21 +10,24 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 016 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 015 — The Operation Survives a Restart — is complete, corrected once, not yet
+**Milestone 015 — The Operation Survives a Restart — is complete, corrected twice, not yet
 accepted.** Implemented 2026-08-23, commit `9537b38`; reviewed by Codex the same day (four findings,
 two P1 and two P2, all about verification strength rather than the persistence mechanism itself) and
-corrected in the commit that follows it. See
-`docs/milestones/015-the-operation-survives-a-restart.md` for the full account, including the
-appended correction — replay-backed SQLite persistence in a new `src/CrimeEmpire.Persistence`
-project, one fixed Godot save slot never reachable from the restart self-tests, and a two-process
-restart proof of the existing baseline seed-42 Vincent `SecureTribute` operation, run for real and
-recorded in that archive. `docs/REVIEW_LEDGER.md`'s "Measured — milestone 015" section has the
-verification baselines.
+corrected in `af7d34f`. That correction fixed three of the four findings; Codex reviewed it and found
+the fourth (the exact-internal-replay-state proof) only partly fixed — it still checked
+`SimulationSession`/`PersistentSession` themselves through a second hand-picked list of fields rather
+than the same complete mechanism it had just applied to `World`. Corrected a second time in the
+commit that follows `af7d34f`. See `docs/milestones/015-the-operation-survives-a-restart.md` for the
+full account, including both appended corrections — replay-backed SQLite persistence in a new
+`src/CrimeEmpire.Persistence` project, one fixed Godot save slot never reachable from the restart
+self-tests, and a two-process restart proof of the existing baseline seed-42 Vincent `SecureTribute`
+operation, run for real and recorded in that archive. `docs/REVIEW_LEDGER.md`'s "Measured — milestone
+015" section has the verification baselines.
 
 Milestones 001–015 are implemented; 001–014 are accepted (011 and 012 as corrected by `3c86ba4`, 013
 as corrected twice by `a75a54e`, 014 as corrected twice by `ff4213a`, accepted 2026-08-23). Milestone
-015 has had one Codex review and one correction so far — Matt has not yet confirmed acceptance of any
-named commit for it.
+015 has had two Codex reviews and two corrections so far — Matt has not yet confirmed acceptance of
+any named commit for it.
 
 **Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
 meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".

@@ -578,78 +578,49 @@ public sealed class PersistenceTests
     }
 
     /// <summary>
-    /// Everything ruling 7 asks "exact internal replay-state identity" to cover, proven by one
-    /// mechanism rather than a hand-picked list that a future field can silently fall outside of:
-    /// <see cref="DeepFingerprint"/> walks every field — public and private, recursively — reachable
-    /// from <see cref="SimulationSession.World"/> (so <c>_prepared</c> and <c>_optionIds</c> below are
-    /// the only things it does not already cover, since they live on the session rather than the
-    /// world), including <c>EventQueue</c>'s own private <c>_queue</c>, <c>_cancelled</c> and
-    /// <c>_nextId</c>, every <c>World</c> identifier counter, and every character's cognition,
-    /// relationships, motivations, capabilities, and execution state. <c>TraceWriter.Render</c> is
-    /// kept alongside it as a second, independent instrument — the one this project has used as its
-    /// "byte-identical" proof since milestone 009 — not because the deep fingerprint needs help, but
-    /// because two differently-built checks agreeing is stronger evidence than one.
+    /// Everything ruling 7 asks "exact internal replay-state identity" to cover, proven by fingerprinting
+    /// the complete <paramref name="original"/>/<paramref name="loaded"/> <see cref="PersistentSession"/>
+    /// wrapper itself — not <see cref="SimulationSession.World"/> alone — so the mechanism's own
+    /// completeness does not depend on which fields somebody thought to name. <see cref="DeepFingerprint"/>
+    /// walks every field, public and private, recursively, from that one root: <c>PersistentSession</c>'s
+    /// own <c>_log</c> (what a later save would replay), <c>SimulationSession</c>'s <c>_controlledId</c>,
+    /// <c>ViewpointCharacterId</c>, <c>Seed</c>, <c>StartedOn</c>, <c>_prepared</c>, <c>_pending</c> in
+    /// full (actor name, role, pronouns included, not only the handful of properties a hand-picked check
+    /// happened to compare), <c>_optionIds</c>, the clock and fast-forward state, and — through
+    /// <c>_world</c> — every field <c>World</c> and everything it owns carries, exactly as before.
     ///
-    /// Corrected per Codex's review of `9537b38`: the original version checked <c>World.Queue.Count</c>
-    /// and a hand-picked list of counters and per-character strategy fields, and could not have caught
-    /// a swapped <c>_optionIds</c> mapping, an altered queued event, or a moved <c>_nextId</c> — see
-    /// this milestone's appended correction for the mutation checks that found this and confirmed the
-    /// fix.
+    /// <b>Corrected twice per Codex's review of `9537b38` and `af7d34f`.</b> The first correction fixed
+    /// a version that checked <c>World.Queue.Count</c> and a hand-picked list of counters and
+    /// per-character strategy fields by deep-fingerprinting <c>World</c> — but still checked
+    /// <c>_controlledId</c>, <c>ViewpointCharacterId</c>, <c>Seed</c>, <c>StartedOn</c>, the complete
+    /// <c>_pending</c> record, and <c>PersistentSession._log</c> through a second hand-picked list
+    /// (or, for the first three and <c>_log</c>, not at all) — the exact failure mode ruling 7's own
+    /// "not a hand-picked list" instruction exists to rule out, found again one level up. Fingerprinting
+    /// the whole wrapper removes the second list rather than extending it.
+    ///
+    /// <c>TraceWriter.Render</c> is kept alongside the fingerprint as a second, independently-built
+    /// instrument — the one this project has used as its "byte-identical" proof since milestone 009 —
+    /// not because the fingerprint needs help, but because two differently-built checks agreeing is
+    /// stronger evidence than one. <c>Status</c> and <c>Date</c> are asserted first only so a failure
+    /// reads as "paused vs. running" or "wrong date" before the much larger fingerprint diff, not as an
+    /// additional completeness mechanism of their own — both are already implied by the fingerprint,
+    /// since <c>Status</c> is a pure function of <c>_pending</c>'s nullness and <c>Date</c> of the
+    /// fingerprinted <c>_clock</c>.
     /// </summary>
     private static void AssertExactInternalIdentity(PersistentSession original, PersistentSession loaded)
     {
-        var a = original.InnerSession;
-        var b = loaded.InnerSession;
-
-        Assert.Equal(a.Status, b.Status);
+        Assert.Equal(original.Status, loaded.Status);
         Assert.Equal(original.Date, loaded.Date);
-        Assert.Equal(PrivateField<DateTime>(a, "_clock"), PrivateField<DateTime>(b, "_clock"));
-        Assert.Equal(PrivateField<DateTime?>(a, "_runUntil"), PrivateField<DateTime?>(b, "_runUntil"));
 
-        Assert.Equal(TraceWriter.Render(a.World, original.Variant, false), TraceWriter.Render(b.World, loaded.Variant, false));
-
-        var worldFingerprintA = DeepFingerprint(a.World, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList();
-        var worldFingerprintB = DeepFingerprint(b.World, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList();
-        Assert.True(worldFingerprintA.Count > 100,
-            "the deep fingerprint reached very little of World, so this proves nothing");
-        Assert.Equal(worldFingerprintA, worldFingerprintB);
-
-        var preparedA = PrivateField<object?>(a, "_prepared");
-        var preparedB = PrivateField<object?>(b, "_prepared");
         Assert.Equal(
-            DeepFingerprint(preparedA, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList(),
-            DeepFingerprint(preparedB, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList());
+            TraceWriter.Render(original.InnerSession.World, original.Variant, false),
+            TraceWriter.Render(loaded.InnerSession.World, loaded.Variant, false));
 
-        var optionIdsA = PrivateField<Dictionary<string, string>>(a, "_optionIds");
-        var optionIdsB = PrivateField<Dictionary<string, string>>(b, "_optionIds");
-        Assert.Equal(
-            optionIdsA.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList(),
-            optionIdsB.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList());
-
-        if (a.Status == SessionStatus.AwaitingChoice)
-        {
-            var pa = a.Pending!;
-            var pb = b.Pending!;
-            Assert.Equal(pa.At, pb.At);
-            Assert.Equal(pa.ActorId, pb.ActorId);
-            Assert.Equal(pa.Occasion, pb.Occasion);
-            Assert.Equal(pa.Focus, pb.Focus);
-            Assert.Equal(
-                pa.Options.Select(o => (o.Id, o.Description)).ToList(),
-                pb.Options.Select(o => (o.Id, o.Description)).ToList());
-        }
-        else
-        {
-            Assert.Null(a.Pending);
-            Assert.Null(b.Pending);
-        }
-    }
-
-    private static T PrivateField<T>(object obj, string name)
-    {
-        var field = obj.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException($"{obj.GetType().Name} has no field '{name}'");
-        return (T)field.GetValue(obj)!;
+        var fingerprintA = DeepFingerprint(original, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList();
+        var fingerprintB = DeepFingerprint(loaded, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList();
+        Assert.True(fingerprintA.Count > 100,
+            "the deep fingerprint reached very little of the session, so this proves nothing");
+        Assert.Equal(fingerprintA, fingerprintB);
     }
 
     /// <summary>

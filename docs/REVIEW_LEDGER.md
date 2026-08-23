@@ -266,42 +266,54 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 015, the operation survives a restart, corrected once, not yet accepted
+### Measured — milestone 015, the operation survives a restart, corrected twice, not yet accepted
 
-**Self-implemented; reviewed once by Codex, on implementation commit `9537b38`, and corrected in the
-commit that follows it.** Adds `src/CrimeEmpire.Persistence` (replay-backed SQLite save/load), Godot
-Save/Load controls, and (from the correction) a small dedicated
-`CrimeEmpire.Persistence.InterruptedWriteHarness` project used only by one test.
-`CrimeEmpire.Simulation` gained no new member and no behavioural change — nothing in `Strategies.cs`,
-`Commit.cs`, `Filters.cs`, or `Generators.cs` changed, so every hash below is unmoved from milestone
-014's accepted baseline, confirmed by a full clean-tree re-run rather than assumed. Full account,
-including the original implementation and the appended correction:
+**Self-implemented; reviewed twice by Codex, on implementation commit `9537b38` and again on the
+first correction commit, `af7d34f`; corrected each time in the commit that follows.** Adds
+`src/CrimeEmpire.Persistence` (replay-backed SQLite save/load), Godot Save/Load controls, and (from
+the first correction) a small dedicated `CrimeEmpire.Persistence.InterruptedWriteHarness` project
+used only by one test. `CrimeEmpire.Simulation` gained no new member and no behavioural change —
+nothing in `Strategies.cs`, `Commit.cs`, `Filters.cs`, or `Generators.cs` changed, so every hash below
+is unmoved from milestone 014's accepted baseline, confirmed by a full clean-tree re-run rather than
+assumed. Full account, including the original implementation and both appended corrections:
 `docs/milestones/015-the-operation-survives-a-restart.md`.
 
 **Codex reviewed `9537b38` and returned four findings, two P1 and two P2, all about the strength of
-this milestone's own verification rather than the persistence mechanism it verifies.** Corrected in
-the following commit: (1) the exact-internal-replay-state proof compared a hand-picked list of fields
-rather than the actual state, and could not have caught a corrupted `_prepared`, a swapped
-`_optionIds` mapping, an altered queued event, or a moved `EventQueue._nextId` — replaced with a
-test-only deep reflective fingerprint of the complete `World` object graph plus the session's private
-decision-state fields, mutation-checked both ways Codex specified; (2) `--selftest-restart-save` wrote
-directly to the production save slot (`user://crime-empire-save.db`) — the exact file a real player's
-save lives in — fixed with a per-process `_activeSavePath` resolved once at startup, so the restart
-self-tests use a dedicated isolated slot while still exercising the real Save/Load button handlers,
-verified both empirically against a real production file and via an isolated
-`CE_SAVE_PATH_OVERRIDE` fixture that never touches Matt's actual save; (3) the loaded-snapshot
-cash-boundary test checked the leaked sentinel only among numeric values, missing the nested-text leak
-shape milestone 014's own correction (`ff4213a`) already found once — fixed and mutation-checked the
-same way; (4) the interrupted-write proof locked a file *before* a write began rather than
+this milestone's own verification rather than the persistence mechanism it verifies.** The first
+correction (`af7d34f`) addressed all four, but **only fully fixed three of them** — see the second
+review below. (1) the exact-internal-replay-state proof compared a hand-picked list of fields rather
+than the actual state — the first correction replaced the `World`-counter portion of that list with a
+deep reflective fingerprint of the complete `World` object graph, but left `_prepared`, `_optionIds`,
+the clock/fast-forward state, and the pending decision checked through a second hand-picked list one
+level up, which is what the second review found; (2) `--selftest-restart-save` wrote directly to the
+production save slot — fixed with a per-process `_activeSavePath` resolved once at startup, so the
+restart self-tests use a dedicated isolated slot while still exercising the real Save/Load button
+handlers, verified both empirically against a real production file and via an isolated
+`CE_SAVE_PATH_OVERRIDE` fixture that never touches Matt's actual save — **confirmed fixed, unaffected
+by the second review**; (3) the loaded-snapshot cash-boundary test checked the leaked sentinel only
+among numeric values, missing the nested-text leak shape milestone 014's own correction (`ff4213a`)
+already found once — fixed and mutation-checked the same way — **confirmed fixed, unaffected by the
+second review**; (4) the interrupted-write proof locked a file *before* a write began rather than
 interrupting a write genuinely in progress — replaced with a real, separate OS process killed via
 explicit named-event synchronization at a deterministic point after it opened a real write
-transaction. Full account, including every mutation check's exact result: the archive's appended
-correction.
+transaction — **confirmed fixed, unaffected by the second review**.
 
-- Build: 0 warnings, 0 errors across **six** projects (new since `9537b38`:
-  `CrimeEmpire.Persistence.InterruptedWriteHarness`). Tests: **482 passed, 0 failed** — unchanged in
-  count from `9537b38` (finding 4 replaced one test rather than adding one; every other finding
-  strengthened an existing test in place).
+**Codex reviewed `af7d34f` and found the P1 residual: the exact-internal-replay-state fix above still
+checked `SimulationSession`/`PersistentSession` through a second hand-picked list** —
+`_controlledId`, `ViewpointCharacterId`, `Seed`, `StartedOn`, and `PersistentSession._log` were not
+checked at all, and the pending decision was checked through four of its seven properties, silently
+missing `ActorName`, `ActorRole`, and `ActorPronouns`. **Corrected in the second correction
+commit**, by pointing the same deep-fingerprint mechanism at the complete `PersistentSession` wrapper
+itself as its sole completeness check, rather than at `World` alone plus a supplementary list —
+mutation-checked both ways specified (a swapped `_controlledId` with `World` untouched; a removed
+`PersistentSession._log` entry with `World` untouched), both confirmed to fail specifically on the
+fingerprint comparison and reverted before committing. Full account, including every mutation check's
+exact result for both corrections: the archive's two appended corrections.
+
+- Build: 0 warnings, 0 errors across **six** projects. Tests: **482 passed, 0 failed** throughout —
+  unchanged in count across the original implementation and both corrections (finding 4 of the first
+  review replaced one test rather than adding one; every other finding strengthened an existing test
+  in place, including the second correction's simplification of `AssertExactInternalIdentity`).
 - `--verify` deterministic and byte-identical on `baseline` (`FEE45FD886F18CA8`), `disloyal-vincent`
   (`45CCF5ADC6EC0302`), `resentful-tommy` (`F5BD93386DE04082`) — all three unmoved from milestone
   014's accepted baseline. `--compare` byte-identical across all five trace hashes and chosen-action
@@ -309,7 +321,7 @@ correction.
 - Godot `--selftest` (4 choices, 4 decision screens, exit 0) and `--selftest-goldenpath` (seven
   choices, `6,000` → `6,840`, exit 0) both unchanged.
 - **The two-process restart proof, run as two genuinely separate OS processes against the restart
-  self-tests' own isolated slot** (not the production one, per the correction above):
+  self-tests' own isolated slot** (not the production one, per the first correction):
   `--selftest-restart-save` plays the first three choices (start, carry on, delegate to Tommy), saves,
   and exits; a second, independent Godot invocation, `--selftest-restart-load`, loads that save and
   plays the remaining four, reaching `1 April 1987` with `cash on hand 6,840` read off the live
@@ -320,7 +332,8 @@ correction.
   not triggered: `Microsoft.Data.Sqlite` runs under Godot's .NET 8 headless host, and exact
   reconstruction needed no `World` serialization.
 
-**Not accepted.** Matt's confirmation of the correction commit is what that requires.
+**Not accepted.** Matt's confirmation of a named commit is what that requires; none of the three
+(the implementation or either correction) has it yet.
 
 ### Measured — milestone 014, one complete player-owned operation, corrected twice, accepted
 

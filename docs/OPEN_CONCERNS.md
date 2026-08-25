@@ -102,6 +102,16 @@ dimensions or derived** (needs a reader); **whether provenance should weight the
 (unchanged since 006); and **whether `GrievanceWeight` should be capped** — considered as milestone
 008's remedy and explicitly rejected in favour of unbundling, so it is open rather than answered.
 
+**Updated 2026-08-23 with milestone 016's evidence, and still not retired.** Trust could previously
+only fall; it can now rise, through the mirror-image mechanism (`AccountAgreement`/
+`Relations.RecordAccountAgreement`) reusing `Cognition.Receive`'s existing fresh-agreement branch. The
+same finding milestone 008 recorded for the downward direction holds for the upward one, demonstrated
+rather than assumed: Tommy's trust in Salvatore, raised by one fresh corroboration on 7 April, measures
+as a real but small change in the `relationship effects` component of his 8 April report decision
+(`+0.0945` to `+0.1031`) — decision-relevant, not choice-changing on this seed. None of the items listed
+above as still open are resolved by this: decay, negative trust, dimension separateness, provenance
+weighting, and the `GrievanceWeight` cap are all unaffected and unchanged.
+
 ### 4. ~~Trait/value vocabulary must be closed, but the concrete list still isn't committed~~
 **Retired 2026-08-14.** Milestone 001 closed the list in `Domain/Psychology.cs` and it is now
 recorded in `DESIGN_DECISIONS.md` under "Actor parity and simulation tractability" — traits

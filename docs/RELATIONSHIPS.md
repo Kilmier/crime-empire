@@ -47,12 +47,21 @@ see Deferred below.
 |---|---|---|
 | `Relations.Establish` | scenario construction only | sets the starting value |
 | `Relations.RecordAccountConflict` | somebody asserts the opposite of a position the listener holds | `−ConflictTrustCost × strength`, floored at 0 |
+| `Relations.RecordAccountAgreement` | a fresh, non-repeated account agrees with a position the listener holds | `+AccountAgreementTrustGain × strength`, capped at 1 |
 
-`ConflictTrustCost = 0.35` is **provisional tuning**, unchanged since milestone 006 and deliberately
-not tuned since. `strength` is the listener's prior confidence times the asserted confidence — both
-things he can perceive.
+`ConflictTrustCost = 0.35` and `AccountAgreementTrustGain = 0.35` are both **provisional tuning** —
+deliberately separate named constants (milestone 016, ruling 1) rather than one value reused in both
+directions, so a later evidence-led pass can move either without moving the other. The two happen to
+start equal, which is a provisional symmetric starting point and not a claim that corroboration and
+contradiction are worth the same thing. Neither has been tuned since it was introduced. `strength` is
+the listener's prior confidence times the asserted confidence — both things he can perceive — for
+either direction.
 
-There is no path that *raises* trust at runtime. That is a real gap and is named as one.
+**Milestone 016 closed the "no path raises trust" gap this section used to name.** The trigger is
+narrow by design, reusing `Cognition.Receive`'s existing state machine rather than a new one: only a
+*new* voice agreeing with the held direction, or a voice that has just reversed into agreeing with it,
+counts — the same speaker reaffirming a position he already gave, or repeating himself verbatim, does
+not fire it again. See `Domain/Cognition.cs`'s `AccountAgreement` and `Receipt.Agreement`.
 
 **Decision readers.** Only through `Utility.Loyalty`, at weight `0.45`:
 
@@ -221,8 +230,6 @@ Deferred is not retired. Each of these returns when the stated condition is met.
 - **Decay.** No dimension decays. **Returns when the calendar and relevance tiers supply a timescale**
   to decay against; a rate chosen inside a 90-day fixture with no ageing would be a guess dressed as
   a schema.
-- **A runtime path that raises trust.** Only conflicts move it, and only downward. A relationship that
-  can be damaged and never repaired is a modelling choice nobody has made deliberately.
 - **A cap on `GrievanceWeight`.** Unbounded today. Considered as milestone 008's remedy for grievance
   dominating loyalty and explicitly rejected in favour of unbundling the clamp, so the question of a
   cap is open rather than answered.
@@ -231,7 +238,8 @@ Deferred is not retired. Each of these returns when the stated condition is met.
 
 Coefficients are in `Decision/Utility.cs`; the dimensions and their update paths in
 `Domain/Relations.cs`. Provisional tuning is labelled as such at its definition:
-`Relations.ConflictTrustCost` (0.35) and `LoyaltyReading.GrievanceWeight` (0.50).
+`Relations.ConflictTrustCost` (0.35), `Relations.AccountAgreementTrustGain` (0.35), and
+`LoyaltyReading.GrievanceWeight` (0.50).
 
 Measured behaviour, and the counterfactual figures behind the claims above, are in
 `milestones/008-relationship-readers.md` and `REVIEW_LEDGER.md`'s verification baselines.

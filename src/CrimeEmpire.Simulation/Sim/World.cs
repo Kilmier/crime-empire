@@ -31,6 +31,16 @@ public sealed class Business
 public sealed record PerceivedConflict(string ListenerId, AccountConflict Conflict, DateTime At);
 
 /// <summary>
+/// One perceived account agreement, as it reached one listener. Developer/test state: never
+/// consulted by any decision, and never rendered to the player.
+///
+/// Milestone 016. Mirrors <see cref="PerceivedConflict"/> exactly, for the same reason: the run-wide
+/// property "trust rose because of a real, fresh, non-repeated corroboration, and only that" needs to
+/// be asserted directly against something rather than argued for from call-site structure.
+/// </summary>
+public sealed record PerceivedAgreement(string ListenerId, AccountAgreement Agreement, DateTime At);
+
+/// <summary>
 /// One encounter: this character now knows that one exists, because they met.
 ///
 /// Developer/test state. No decision consults it — the consequence lives on the relationship
@@ -101,6 +111,13 @@ public sealed class World
     /// and test state only — see <see cref="PerceivedConflict"/>.
     /// </summary>
     public List<PerceivedConflict> AccountConflicts { get; } = new();
+
+    /// <summary>
+    /// Every perceived account agreement that reached anybody, in the order they occurred.
+    /// Developer and test state only — see <see cref="PerceivedAgreement"/>. Mirrors
+    /// <see cref="AccountConflicts"/>.
+    /// </summary>
+    public List<PerceivedAgreement> AccountAgreements { get; } = new();
 
     /// <summary>
     /// Every encounter that established one character knows another exists, in order. Developer and

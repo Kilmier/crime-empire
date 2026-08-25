@@ -173,6 +173,19 @@ public static class Relations
     /// </summary>
     public const double ConflictTrustCost = 0.35;
 
+    /// <summary>
+    /// PROVISIONAL TUNING, not a derived figure. What a single fresh, non-repeated corroborating
+    /// account is worth in trust, before it is scaled by how firmly both sides held their positions.
+    ///
+    /// Milestone 016, ruling 1: deliberately a separate named constant from
+    /// <see cref="ConflictTrustCost"/> rather than the same value reused in the positive direction.
+    /// The two starting at the same number (0.35) is a provisional symmetric choice and nothing
+    /// more — nothing yet distinguishes what a corroboration is worth from what a contradiction
+    /// costs, and naming them separately means a later evidence-led pass can move one without
+    /// moving the other. Neither value is tuned by the milestone that introduced this one.
+    /// </summary>
+    public const double AccountAgreementTrustGain = 0.35;
+
     // ---------------------------------------------------------------- the conflict consequence
     /// <summary>
     /// Applies the social consequence of a perceived account conflict: the listener trusts the
@@ -208,6 +221,30 @@ public static class Relations
         // Scaled by how hard the disagreement was, from the listener's side only: how firmly he held
         // the position, times how firmly it was contradicted. Both are actor-visible.
         rel.Trust = Clamp(rel.Trust - ConflictTrustCost * conflict.Strength);
+    }
+
+    // ---------------------------------------------------------------- the agreement consequence
+    /// <summary>
+    /// Applies the social consequence of a perceived account agreement: the listener trusts the
+    /// speaker more.
+    ///
+    /// Milestone 016. Mirrors <see cref="RecordAccountConflict"/> exactly, sign reversed, for the
+    /// same reasons stated there: <b>perceived, not detected</b> — nothing here knows or can know
+    /// whether the speaker was sincere, and nothing here can reach far enough to find out, because
+    /// <see cref="AccountAgreement"/> is assembled entirely from the listener's own side of the
+    /// exchange and carries no reference to the truth log, the report log,
+    /// <c>ReportedClaim.ActualBasis</c>, or <c>Report.Candor</c> — enforced by the argument type,
+    /// not by discipline. <b>Directional</b> — only the listener's own relationship toward the
+    /// speaker moves; the speaker is not told his account landed as support. <b>One rule, whatever
+    /// the prior was</b> — the epistemic difference between direct observation and testimony is
+    /// already charged in <see cref="Cognition.Receive"/>'s confidence raise; charging it again here
+    /// would bill the same distinction twice, which is why this reads only
+    /// <see cref="AccountAgreement.Strength"/> and nothing else about the prior's provenance.
+    /// </summary>
+    public static void RecordAccountAgreement(Character listener, AccountAgreement agreement)
+    {
+        var rel = Writable(listener.Social.Ensure(agreement.SpeakerId));
+        rel.Trust = Clamp(rel.Trust + AccountAgreementTrustGain * agreement.Strength);
     }
 
     // ---------------------------------------------------------------- ordinary movement

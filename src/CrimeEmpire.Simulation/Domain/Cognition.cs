@@ -84,14 +84,68 @@ public readonly record struct AccountConflict(
 }
 
 /// <summary>
-/// The result of being told something: the resulting record, and whether the telling was a conflict.
+/// Somebody has asserted, to this character, a fresh, non-repeated account agreeing with a
+/// position he currently holds — a new voice on the claim, or one who has just come round to it.
+///
+/// <b>Support, not confirmation.</b> Milestone 016: the mirror image of <see cref="AccountConflict"/>,
+/// built the same way and for the same reason. Nothing here says the speaker was sincere, and
+/// nothing in it could — it is assembled entirely from the listener's side of the exchange, exactly
+/// like <see cref="AccountConflict"/>, so whoever consumes this cannot reach <c>Report.Candor</c>,
+/// <c>ReportedClaim.ActualBasis</c>, the truth log, or the speaker's private cognition, because none
+/// of that is in scope to read from this type at all.
+///
+/// <b>Why this exists as its own type rather than a flag on <see cref="AccountConflict"/>.</b> A
+/// conflict and an agreement are different questions answered from the same exchange — "did this
+/// contradict him" and "did this support him" — and collapsing them into one nullable-versus-signed
+/// value would make "neither" (news, repetition, unchanged reaffirmation) indistinguishable from a
+/// zero-strength instance of either. <see cref="Cognition.Receive"/> guarantees at most one of
+/// <see cref="Receipt.Conflict"/> and <see cref="Receipt.Agreement"/> is ever non-null for a single
+/// account — see <see cref="Cognition.MakeReceipt"/> — but the two remain separate types because a
+/// caller that only wants one signal should not have to know the other is structurally excluded.
+/// </summary>
+public readonly record struct AccountAgreement(
+    Claim Claim,
+    string SpeakerId,
+    Stance AssertedStance,
+    double AssertedConfidence,
+    SourceKind ClaimedBasis,
+    Stance PriorStance,
+    double PriorConfidence,
+    SourceKind PriorSourceKind,
+    string PriorSourceId)
+{
+    /// <summary>
+    /// How firm the agreement was, as the listener can perceive it: how firmly he already held the
+    /// position, times how firmly the speaker put himself behind agreeing with it. Same shape as
+    /// <see cref="AccountConflict.Strength"/>, deliberately — both factors are things this character
+    /// has, neither is world truth, and neither is the candour of the report that carried it.
+    /// </summary>
+    public double Strength => PriorConfidence * AssertedConfidence;
+
+    public override string ToString()
+        => $"{SpeakerId} corroborated {Claim} (held {PriorConfidence:0.00} via {PriorSourceKind}, " +
+           $"asserted {AssertedStance} {AssertedConfidence:0.00})";
+}
+
+/// <summary>
+/// The result of being told something: the resulting record, and whether the telling was a
+/// conflict, an agreement, or neither.
 ///
 /// <see cref="Cognition.Receive"/> used to return the record alone, which meant the one place that
 /// knows a contradiction occurred had no way to say so, and the fact was recoverable afterwards only
 /// by inspecting <see cref="InformationRecord.Contested"/> — a flag that stays true forever and so
-/// cannot distinguish "he was contradicted just now" from "he was contradicted in March".
+/// cannot distinguish "he was contradicted just now" from "he was contradicted in March". Milestone
+/// 016 added <see cref="Agreement"/> alongside <see cref="Conflict"/> the same way, for the
+/// mirror-image gap: an agreement used to raise the belief's confidence and vanish, leaving no
+/// caller a way to apply a social consequence to it either.
+///
+/// <b>The two fields being independently nullable does not, by itself, guarantee at most one is
+/// set — that is not something a type signature can enforce.</b> The guarantee is enforced at
+/// construction, by <see cref="Cognition.MakeReceipt"/>, which every return in
+/// <see cref="Cognition.Receive"/> is routed through; tests assert the invariant directly rather
+/// than trusting the shape of this record.
 /// </summary>
-public readonly record struct Receipt(InformationRecord Record, AccountConflict? Conflict);
+public readonly record struct Receipt(InformationRecord Record, AccountConflict? Conflict, AccountAgreement? Agreement);
 
 /// <summary>
 /// What a character knows, believes and suspects. This is the only source of situational fact a
@@ -252,9 +306,10 @@ public sealed class Cognition
                 asserted.Claim, asserted.AssertedStance, asserted.AssertedConfidence,
                 asserted.ClaimedBasis.AsHeardFrom(), senderId, at);
             _records.Add(fresh);
-            // Nothing to conflict with. Being told something he has no position on either way is
-            // news, not a disagreement, however wrong it may be.
-            return new Receipt(fresh, null);
+            // Nothing to conflict with, and nothing to agree with either. Being told something he
+            // has no position on either way is news, not a disagreement and not support, however
+            // wrong it may be.
+            return MakeReceipt(fresh, null, null);
         }
 
         // Word for word what he said last time: the record is left exactly as it was, including
@@ -266,7 +321,7 @@ public sealed class Cognition
         // before the disagreement branch below is what makes "new, non-repeated" structural rather
         // than a second rule that could disagree with this one. The same early return is what stops
         // repeated denials compounding confidence loss, so the two guarantees cannot drift apart.
-        if (verbatimRepeat) return new Receipt(prior, null);
+        if (verbatimRepeat) return MakeReceipt(prior, null, null);
 
         // Whether this account is better sourced than the one the belief currently rests on, and
         // therefore ought to become the thing he would cite.
@@ -280,16 +335,31 @@ public sealed class Cognition
         // He has said something at least slightly different. That is worth registering as a
         // development even when it does not shift the belief — which is the case for a man firming
         // up or softening a position he already gave: still one voice, so it must not compound.
+        // Milestone 016: this is also, deliberately, not agreement — the same voice reaffirming
+        // without reversing is still one man's single voice, and ruling 4 requires the trigger stay
+        // this narrow rather than broadening to every same-direction account.
         if (!reversal && prior.IsHeld == affirms)
-            return new Receipt(Replace(prior, upgraded with { LastReconsideredAt = at }), null);
+            return MakeReceipt(Replace(prior, upgraded with { LastReconsideredAt = at }), null, null);
 
         // Agreement, from a voice that is new to this claim or has just come round to it. Either
-        // way it is support the belief did not have before.
+        // way it is support the belief did not have before — captured as an AccountAgreement,
+        // built the same way AccountConflict is below: entirely from what this listener already
+        // held and what was just asserted to him, before the confidence raise that follows.
         if (prior.IsHeld == affirms)
         {
             double raised = Math.Clamp(prior.Confidence + 0.15 * asserted.AssertedConfidence, 0, 1);
-            return new Receipt(
-                Replace(prior, upgraded with { Confidence = raised, LastReconsideredAt = at }), null);
+            var agreement = new AccountAgreement(
+                asserted.Claim,
+                senderId,
+                asserted.AssertedStance,
+                asserted.AssertedConfidence,
+                asserted.ClaimedBasis,
+                prior.Stance,
+                prior.Confidence,
+                prior.SourceKind,
+                prior.SourceId);
+            return MakeReceipt(
+                Replace(prior, upgraded with { Confidence = raised, LastReconsideredAt = at }), null, agreement);
         }
 
         // Disagreement: a first denial from this man, or a reversal of what he told him before.
@@ -324,7 +394,7 @@ public sealed class Cognition
         // The prior's provenance travels whether or not any rule currently reads it. Milestone 004's
         // lesson, four times over, was that a distinction drawn in one place and dropped on the way
         // to the next is the defect this codebase produces most reliably.
-        return new Receipt(contradicted, new AccountConflict(
+        return MakeReceipt(contradicted, new AccountConflict(
             asserted.Claim,
             senderId,
             asserted.AssertedStance,
@@ -333,7 +403,25 @@ public sealed class Cognition
             prior.Stance,
             prior.Confidence,
             prior.SourceKind,
-            prior.SourceId));
+            prior.SourceId), null);
+    }
+
+    /// <summary>
+    /// The single point every <see cref="Receive"/> return goes through. Enforces, at construction
+    /// rather than by inspection of the branches above, milestone 016's requirement that a
+    /// <see cref="Receipt"/> never carries both a <see cref="Receipt.Conflict"/> and a
+    /// <see cref="Receipt.Agreement"/> — an account is a disagreement, an agreement, or neither, and
+    /// never both at once. The two nullable fields on <see cref="Receipt"/> do not enforce this by
+    /// themselves; this method is what does.
+    /// </summary>
+    private static Receipt MakeReceipt(InformationRecord record, AccountConflict? conflict, AccountAgreement? agreement)
+    {
+        if (conflict is not null && agreement is not null)
+            throw new InvalidOperationException(
+                "a single account cannot be both a conflict and an agreement — this is a defect in " +
+                "Cognition.Receive's branches, not a state a caller can reach through normal input.");
+
+        return new Receipt(record, conflict, agreement);
     }
 
     /// <summary>

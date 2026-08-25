@@ -266,7 +266,48 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 015, the operation survives a restart, corrected twice, not yet accepted
+### Measured — milestone 016, trust can be earned, self-reviewed, not yet reviewed by Codex
+
+**Self-implemented and self-verified; not yet reviewed by Codex.** Adds `AccountAgreement` and
+`Relations.RecordAccountAgreement` — the mirror image of milestone 006's `AccountConflict`/
+`RecordAccountConflict` — reusing `Cognition.Receive`'s existing fresh-agreement branch rather than a
+new state machine. Full account: `docs/milestones/016-trust-can-be-earned.md`, including all four
+mutation checks' exact results and the complete baseline-movement accounting.
+
+- Build: 0 warnings, 0 errors across six projects (unchanged from milestone 015 — no new project).
+  Tests: **504 passed, 0 failed** (482 before this milestone; 22 new in `AccountAgreementTests.cs`).
+- **Three of five variants' trace hashes move, disclosed and accounted for exactly, not assumed
+  stable**: `baseline` `FEE45FD886F18CA8` → `9AF57665067AEA11`; `disloyal-vincent` `45CCF5ADC6EC0302`
+  → `9A6E0E518294532F`; `resentful-tommy` `F5BD93386DE04082` → `3C4483640153DA88`.
+  `cautious-vincent` (`86EC1ADA4A4E9179`) and `watchful-boss` (`84AC3F65E4102EBA`) are unchanged — a
+  checked scenario-timing fact (the natural chain's shape does not occur, or occurs in the wrong
+  order, in those two), not an unexplained gap. **Every chosen-action digest is unchanged across all
+  five variants** (`7716CDDE3D0CA3A6`, `7506045DDEB2DE14`, `955921AA69ABA44C`, `BECCA9ED2E4E7137`,
+  `B9B6D3BBE6A69200`) — no decision anywhere picked a different winner. In each of the three moved
+  traces, a full-trace `diff` against the pre-milestone baseline shows exactly 24 changed lines, all
+  within the single 8 April Tommy-answers-Salvatore panel — see the archive for the exact lines.
+- `--verify` deterministic (run A = run B) on all three moved variants at their new hashes;
+  `--compare` shows 5 distinct traces, 5 distinct chosen-action sequences. Both required viewpoint
+  runs exit 0.
+- Godot `--selftest` and `--selftest-goldenpath` both unchanged (that thread completes by 1 April,
+  before the 6–8 April window this milestone touches). The two-process restart proof unchanged on the
+  restart self-tests' own isolated slot: `1 April 1987`, `cash on hand 6,840`. Production save slot
+  hash confirmed unchanged before and after.
+- **The natural seed-42 chain, demonstrated before authorization and proven again in the test suite**:
+  Tommy already holds `TargetIsVulnerable(bellini-grocery)` from Vincent's delegation briefing; asks
+  Salvatore on 6 April; Salvatore — the first and only account he ever gives Tommy about this claim —
+  answers on 7 April; Tommy's trust in Salvatore rises from its scenario-established `0.30` by exactly
+  `AccountAgreementTrustGain * Strength`; his 8 April decision about an unrelated claim
+  (`PersonUsedViolence`) reads the changed trust through the existing, unmodified `AddLoyaltyParts`
+  components of `ActionKind.ReportToSuperior`/`ReportCandor.Partial` in `Utility.cs`. The winner at
+  that decision is unaffected in every variant where it fires.
+- **Four mutation checks, each confirmed to fail for the intended reason and reverted**: missing
+  emission (disabled `Runner.cs`'s block); repetition/reaffirmation farming (made the
+  no-reversal branch also emit agreement); wrong relationship direction (wrote to `listener.Id`
+  instead of `agreement.SpeakerId`); private-truth leakage (let `ReportedClaim.ActualBasis` move the
+  emitted confidence). Exact failure messages in the archive.
+
+### Measured — milestone 015, the operation survives a restart, corrected twice, accepted
 
 **Self-implemented; reviewed twice by Codex, on implementation commit `9537b38` and again on the
 first correction commit, `af7d34f`; corrected each time in the commit that follows.** Adds
@@ -332,8 +373,9 @@ exact result for both corrections: the archive's two appended corrections.
   not triggered: `Microsoft.Data.Sqlite` runs under Godot's .NET 8 headless host, and exact
   reconstruction needed no `World` serialization.
 
-**Not accepted.** Matt's confirmation of a named commit is what that requires; none of the three
-(the implementation or either correction) has it yet.
+**Matt accepted correction commit `bc79425` on 2026-08-23 and closed the milestone**, with no further
+commit made solely to record the review, per standing practice — recorded here, folded into
+milestone 016's own documentation commit.
 
 ### Measured — milestone 014, one complete player-owned operation, corrected twice, accepted
 

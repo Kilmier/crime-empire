@@ -147,11 +147,13 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   man is worth. Nothing was tuned. **Recorded with its fragility:** the winning margin is 0.0279
   against ±0.05 per-candidate noise, and the divergence holds at seeds 42 and 31337 but not at 1, 7,
   99 or 2024.
-- **Trust cannot go negative, and nothing raises it.** Absence of trust and distrust are the same
-  state; separately, the only runtime path that moves trust is a perceived account conflict, which
-  only lowers it, so a relationship can be damaged and never repaired. Both **deferred rather than
-  retired** by milestone 008 — negative trust returns when a decision reads distrust differently from
-  indifference. See `docs/RELATIONSHIPS.md`.
+- **Trust cannot go negative.** Absence of trust and distrust are the same state. **Deferred rather
+  than retired** by milestone 008 — negative trust returns when a decision reads distrust differently
+  from indifference. See `docs/RELATIONSHIPS.md`.
+- ~~**Nothing raises trust at runtime.**~~ **Became milestone 016**, 2026-08-23: a fresh,
+  non-repeated account agreeing with a position the listener holds now raises his trust in the
+  speaker, through the mirror image of the conflict mechanism and the same `Cognition.Receive` state
+  machine. See `docs/RELATIONSHIPS.md` and `docs/milestones/016-trust-can-be-earned.md`.
 - **`GrievanceWeight` is unbounded**, and a cap was considered as milestone 008's remedy for grievance
   dominating loyalty and explicitly rejected in favour of unbundling the clamp. Open, not answered.
 - **Obligation is read but never moves.** `Relations.Establish` is its only writer and that is
@@ -324,10 +326,13 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    reporting requires a superior and she belongs to no institution. Scope and rulings in
    `CURRENT_MILESTONE.md`. What remains of this candidate afterwards is rival activity and tier
    transitions, which are still unbuilt.
-6. **A runtime path that raises trust.** Surfaced by milestone 008 writing the schema down: conflicts
-   lower trust and nothing restores it, so a relationship can be damaged and never repaired. Nobody
-   decided that. Small, and it would give the trust dimension a second update path to be read
-   against.
+6. ~~**A runtime path that raises trust.**~~ **Became milestone 016**, 2026-08-23. Surfaced by
+   milestone 008 writing the schema down: conflicts lowered trust and nothing restored it. A fresh,
+   non-repeated account agreeing with a position the listener holds now raises it, at a separately
+   named provisional coefficient (`AccountAgreementTrustGain`, 0.35) reusing the same
+   fresh-agreement branch `Cognition.Receive` already had. Demonstrated against the unmodified
+   baseline seed-42 scenario before being scoped, not invented for it. See
+   `docs/milestones/016-trust-can-be-earned.md`.
 
 ### Deferred instrumentation candidates
 

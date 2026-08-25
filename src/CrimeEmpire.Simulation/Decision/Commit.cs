@@ -163,6 +163,15 @@ public static class Commit
                         world.AccountConflicts.Add(new PerceivedConflict(sub.Id, conflict, world.Now));
                         Relations.RecordAccountConflict(sub, conflict);
                     }
+
+                    // Milestone 016: the mirror-image consequence, at the same site, for the same
+                    // reason ruling 7 requires all three receipt paths to carry it — a briefing can
+                    // corroborate what the man already holds just as readily as it can contradict it.
+                    if (receipt.Agreement is { } agreement)
+                    {
+                        world.AccountAgreements.Add(new PerceivedAgreement(sub.Id, agreement, world.Now));
+                        Relations.RecordAccountAgreement(sub, agreement);
+                    }
                 }
 
                 sub.Execution.Commitments.Add(new Commitment(

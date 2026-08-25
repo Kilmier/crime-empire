@@ -264,6 +264,14 @@ public static class Runner
                 world.AccountConflicts.Add(new PerceivedConflict(actor.Id, conflict, world.Now));
                 Relations.RecordAccountConflict(actor, conflict);
             }
+
+            // Milestone 016: the third receipt path. A boss whose briefing corroborates what his
+            // capo already holds earns the same trust rise any other fresh corroboration would.
+            if (receipt.Agreement is { } agreement)
+            {
+                world.AccountAgreements.Add(new PerceivedAgreement(actor.Id, agreement, world.Now));
+                Relations.RecordAccountAgreement(actor, agreement);
+            }
         }
 
         actor.Motivations.Responsibilities.Add(

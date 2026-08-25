@@ -1,0 +1,675 @@
+using CrimeEmpire.Persistence.Session;
+using CrimeSim.Decision;
+using CrimeSim.Domain;
+using CrimeSim.Org;
+using CrimeSim.Scenario;
+using CrimeSim.Session;
+using CrimeSim.Sim;
+using CrimeSim.Trace;
+
+namespace CrimeEmpire.Simulation.Tests;
+
+/// <summary>
+/// Milestone 016: the social consequence of a perceived account agreement — the mirror image of
+/// milestone 006's <see cref="AccountConflict"/>/<see cref="Relations.RecordAccountConflict"/>, built
+/// the same way and tested the same way. See <c>docs/CURRENT_MILESTONE.md</c> for the ruling each of
+/// these pins, and <c>RelationalConsequenceTests.cs</c> for the conflict-direction original this
+/// mirrors — deliberately not shared code between the two files, so the two cannot both be wrong
+/// about the same fixture assumption.
+///
+/// The load-bearing pair is the natural seed-42 chain and the staged counterfactual, kept separate
+/// per ruling 9: the natural-run test proves the real exchange, the real emitted
+/// <see cref="AccountAgreement"/>, the real trust movement, and the real later score read, all off
+/// the unmodified baseline scenario; the counterfactual proves the mechanism's behavioural relevance
+/// off two deliberately staged, otherwise-identical fixtures, so neither test's evidence depends on
+/// the other's.
+/// </summary>
+public sealed class AccountAgreementTests
+{
+    private static readonly DateTime At = new(1987, 3, 2, 8, 0, 0, DateTimeKind.Utc);
+    private static readonly Claim Beating = new(ClaimKind.PersonUsedViolence, "tommy", "bellini-grocery");
+    private static readonly Claim Vulnerable = new(ClaimKind.TargetIsVulnerable, "bellini-grocery");
+
+    // ---------------------------------------------------------------- the state machine (ruling 4)
+
+    [Fact]
+    public void News_is_neither_an_agreement_nor_a_conflict()
+    {
+        var listener = new Cognition();
+
+        var receipt = listener.Receive(Affirm(0.8), "tommy", At);
+
+        Assert.Null(receipt.Agreement);
+        Assert.Null(receipt.Conflict);
+    }
+
+    [Fact]
+    public void A_new_voice_agreeing_with_the_held_position_is_an_agreement()
+    {
+        var listener = new Cognition();
+        listener.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, "someone", At);
+
+        var receipt = listener.Receive(Affirm(0.8), "tommy", At.AddDays(1));
+
+        var agreement = Assert.NotNull(receipt.Agreement);
+        Assert.Null(receipt.Conflict);
+        Assert.Equal("tommy", agreement.SpeakerId);
+        Assert.Equal(Beating, agreement.Claim);
+        Assert.Equal(Stance.Believes, agreement.AssertedStance);
+        Assert.Equal(0.8, agreement.AssertedConfidence, 9);
+        Assert.Equal(Stance.Believes, agreement.PriorStance);
+        Assert.Equal(0.6, agreement.PriorConfidence, 9);
+        Assert.Equal(SourceKind.Discovery, agreement.PriorSourceKind);
+        Assert.Equal("someone", agreement.PriorSourceId);
+    }
+
+    /// <summary>
+    /// Ruling 4's second agreement-producing case: a speaker who previously denied the claim and has
+    /// since come round to agree with what the listener still holds. The prior denial is staged
+    /// exactly as <c>RelationalConsequenceTests.Affirm_deny_affirm_emits_one_conflict_per_genuine_reversal</c>
+    /// stages it (same starting confidence, same denial strength), because that test already proves
+    /// this specific denial erodes the belief without displacing it — the listener still holds the
+    /// claim when the speaker comes back round, which is what "while the listener still holds that
+    /// direction" requires.
+    /// </summary>
+    [Fact]
+    public void A_speaker_reversing_into_agreement_while_the_listener_still_holds_it_is_an_agreement()
+    {
+        var listener = Character("salvatore");
+        Relations.Establish(listener, "tommy", trust: 0.90);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
+
+        var denial = listener.Cognition.Receive(Denial(0.9), "tommy", At.AddDays(1));
+        Assert.NotNull(denial.Conflict);
+        Assert.True(listener.Cognition.Holds(Beating), "the fixture must not displace the belief, or this is not the case under test");
+
+        var comesRound = listener.Cognition.Receive(Affirm(0.8), "tommy", At.AddDays(2));
+
+        var agreement = Assert.NotNull(comesRound.Agreement);
+        Assert.Null(comesRound.Conflict);
+        Assert.Equal("tommy", agreement.SpeakerId);
+    }
+
+    /// <summary>
+    /// Ruling 4's explicit exclusion: the trigger must not broaden to every same-direction account.
+    /// The same voice affirming again, without having reversed in between, is still one man's single
+    /// voice — <c>Cognition.Receive</c>'s own comment calls this "firming up or softening" — and must
+    /// not fire agreement a second time even though the direction still agrees.
+    /// </summary>
+    [Fact]
+    public void The_same_speaker_reaffirming_without_reversal_is_not_an_agreement()
+    {
+        var listener = new Cognition();
+        listener.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, "someone", At);
+
+        var first = listener.Receive(Affirm(0.7), "tommy", At.AddDays(1));
+        Assert.NotNull(first.Agreement);
+
+        var second = listener.Receive(Affirm(0.9), "tommy", At.AddDays(2));
+
+        Assert.Null(second.Agreement);
+        Assert.Null(second.Conflict);
+    }
+
+    [Fact]
+    public void Verbatim_repetition_is_not_an_agreement()
+    {
+        var listener = new Cognition();
+        listener.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, "someone", At);
+
+        var first = listener.Receive(Affirm(0.8), "tommy", At.AddDays(1));
+        Assert.NotNull(first.Agreement);
+
+        var second = listener.Receive(Affirm(0.8), "tommy", At.AddDays(2));
+
+        Assert.Null(second.Agreement);
+        Assert.Null(second.Conflict);
+    }
+
+    [Fact]
+    public void Disagreement_is_a_conflict_never_an_agreement()
+    {
+        var listener = new Cognition();
+        listener.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, "someone", At);
+
+        var receipt = listener.Receive(Denial(0.9), "tommy", At.AddDays(1));
+
+        Assert.NotNull(receipt.Conflict);
+        Assert.Null(receipt.Agreement);
+    }
+
+    // ---------------------------------------------------------------- mutual exclusivity (ruling 3)
+
+    /// <summary>
+    /// The nullable fields on <see cref="Receipt"/> do not enforce this by themselves — ruling 3 is
+    /// explicit that the type system claim would be false. This walks every branch of the state
+    /// machine above and checks the invariant directly against what <see cref="Cognition.Receive"/>
+    /// actually returned, rather than trusting the shape of the type.
+    /// </summary>
+    [Fact]
+    public void Agreement_and_conflict_are_never_both_present_across_the_whole_state_machine()
+    {
+        Receipt News()
+        {
+            var l = new Cognition();
+            return l.Receive(Affirm(0.8), "tommy", At);
+        }
+
+        Receipt FreshAgreement()
+        {
+            var l = new Cognition();
+            l.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, "x", At);
+            return l.Receive(Affirm(0.8), "tommy", At.AddDays(1));
+        }
+
+        Receipt Reaffirmation()
+        {
+            var l = new Cognition();
+            l.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, "x", At);
+            l.Receive(Affirm(0.7), "tommy", At.AddDays(1));
+            return l.Receive(Affirm(0.9), "tommy", At.AddDays(2));
+        }
+
+        Receipt VerbatimRepeat()
+        {
+            var l = new Cognition();
+            l.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, "x", At);
+            l.Receive(Affirm(0.8), "tommy", At.AddDays(1));
+            return l.Receive(Affirm(0.8), "tommy", At.AddDays(2));
+        }
+
+        Receipt Conflict()
+        {
+            var l = new Cognition();
+            l.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, "x", At);
+            return l.Receive(Denial(0.8), "tommy", At.AddDays(1));
+        }
+
+        Receipt Reversal()
+        {
+            var l = Character("salvatore");
+            Relations.Establish(l, "tommy", trust: 0.90);
+            l.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, l.Id, At);
+            l.Cognition.Receive(Denial(0.9), "tommy", At.AddDays(1));
+            return l.Cognition.Receive(Affirm(0.8), "tommy", At.AddDays(2));
+        }
+
+        var cases = new (string Name, Receipt Receipt)[]
+        {
+            ("news", News()),
+            ("fresh agreement", FreshAgreement()),
+            ("reaffirmation", Reaffirmation()),
+            ("verbatim repeat", VerbatimRepeat()),
+            ("conflict", Conflict()),
+            ("reversal into agreement", Reversal()),
+        };
+
+        foreach (var (name, receipt) in cases)
+            Assert.False(receipt.Conflict is not null && receipt.Agreement is not null,
+                $"[{name}] a single receipt carried both a conflict and an agreement");
+    }
+
+    // ---------------------------------------------------------------- ruling 5: directionality and boundary
+
+    [Fact]
+    public void Only_the_listener_relationship_moves()
+    {
+        var listener = Character("salvatore");
+        var speaker = Character("tommy");
+        Relations.Establish(listener, "tommy", trust: 0.30);
+        Relations.Establish(speaker, "salvatore", trust: 0.30);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, listener.Id, At);
+
+        Apply(listener, listener.Cognition.Receive(Affirm(0.8), "tommy", At.AddDays(1)));
+
+        Assert.True(listener.Social.Toward("tommy").Trust > 0.30);
+        Assert.Equal(0.30, speaker.Social.Toward("salvatore").Trust, 9);
+    }
+
+    [Fact]
+    public void Trust_cannot_be_driven_above_one()
+    {
+        var listener = Character("salvatore");
+        Relations.Establish(listener, "tommy", trust: 0.98);
+        listener.Cognition.Learn(Beating, Stance.Knows, 1.0, SourceKind.Participant, listener.Id, At);
+
+        Apply(listener, listener.Cognition.Receive(Affirm(1.0), "tommy", At.AddDays(1)));
+
+        Assert.Equal(1.0, listener.Social.Toward("tommy").Trust, 9);
+    }
+
+    [Fact]
+    public void Strength_is_how_firmly_he_held_it_times_how_firmly_it_was_agreed()
+    {
+        var listener = new Cognition();
+        listener.Learn(Beating, Stance.Believes, 0.60, SourceKind.Discovery, "someone", At);
+
+        var agreement = Assert.NotNull(listener.Receive(Affirm(0.50), "tommy", At.AddDays(1)).Agreement);
+
+        Assert.Equal(0.60, agreement.PriorConfidence, 9);
+        Assert.Equal(0.50, agreement.AssertedConfidence, 9);
+        Assert.Equal(0.30, agreement.Strength, 9);
+    }
+
+    [Fact]
+    public void The_trust_gain_uses_the_dedicated_agreement_constant_not_the_conflict_one()
+    {
+        var listener = Character("salvatore");
+        Relations.Establish(listener, "tommy", trust: 0.30);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
+
+        var agreement = Assert.NotNull(listener.Cognition.Receive(Affirm(0.9), "tommy", At.AddDays(1)).Agreement);
+        Relations.RecordAccountAgreement(listener, agreement);
+
+        Assert.Equal(0.30 + Relations.AccountAgreementTrustGain * agreement.Strength,
+            listener.Social.Toward("tommy").Trust, 9);
+
+        // Ruling 1: a separately named constant, not ConflictTrustCost reused. They are equal at
+        // 0.35 today, which is a provisional symmetric starting point and not evidence the two
+        // constants are actually the same value in code.
+        Assert.Equal(0.35, Relations.AccountAgreementTrustGain, 9);
+        Assert.Equal(0.35, Relations.ConflictTrustCost, 9);
+    }
+
+    /// <summary>
+    /// Ruling 5: this must consume only <see cref="AccountAgreement"/> and reach nothing else. Two
+    /// <see cref="ReportedClaim"/>s differing only in <see cref="ReportedClaim.ActualBasis"/> — the
+    /// speaker's private truth, never the recipient's — must produce byte-identical agreements and
+    /// identical trust movement, because <c>ActualBasis</c> never crosses into what
+    /// <see cref="Cognition.Receive"/> reads to build one.
+    /// </summary>
+    [Fact]
+    public void The_agreement_does_not_depend_on_the_speakers_private_actual_basis()
+    {
+        double TrustAfter(SourceKind actualBasis)
+        {
+            var listener = Character("salvatore");
+            Relations.Establish(listener, "tommy", trust: 0.30);
+            listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
+
+            var claimed = ReportedClaim.Misrepresenting(
+                Beating, Stance.Believes, 0.8, claimed: SourceKind.Report, actual: actualBasis);
+            Apply(listener, listener.Cognition.Receive(claimed, "tommy", At.AddDays(1)));
+            return listener.Social.Toward("tommy").Trust;
+        }
+
+        double viaHonestParticipant = TrustAfter(SourceKind.Participant);
+        double viaRumor = TrustAfter(SourceKind.Rumor);
+        double viaReport = TrustAfter(SourceKind.Report);
+
+        Assert.Equal(viaHonestParticipant, viaRumor, 9);
+        Assert.Equal(viaHonestParticipant, viaReport, 9);
+    }
+
+    /// <summary>
+    /// The same boundary, exercised through <c>Report.Candor</c> — which does not even reach
+    /// <see cref="Cognition.Receive"/>'s parameter list, since <see cref="Reporting.Deliver"/> passes
+    /// only the individual <see cref="ReportedClaim"/>s from <c>Report.Asserted</c>. Two reports
+    /// differing only in <c>Candor</c>, with identical asserted claims, must land identically.
+    /// </summary>
+    [Fact]
+    public void The_agreement_does_not_depend_on_the_reports_candor()
+    {
+        double TrustAfter(ReportCandor candor)
+        {
+            var world = Cast.Build(42, "baseline");
+            var salvatore = world.Get("salvatore");
+            Relations.Establish(salvatore, "tommy", trust: 0.30);
+            salvatore.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, salvatore.Id, world.Now);
+
+            var report = new Report(
+                world.NextReportId(), "tommy", salvatore.Id, world.Now, candor,
+                new[] { ReportedClaim.Honest(Beating, Stance.Believes, 0.8, SourceKind.Participant) },
+                Array.Empty<Claim>(), "framing");
+
+            Reporting.Deliver(world, report, salvatore);
+            return salvatore.Social.Toward("tommy").Trust;
+        }
+
+        Assert.Equal(TrustAfter(ReportCandor.Candid), TrustAfter(ReportCandor.Partial), 9);
+    }
+
+    // ---------------------------------------------------------------- all three receipt paths (ruling 7)
+
+    [Fact]
+    public void A_report_that_agrees_gains_the_recipient_trust()
+    {
+        var world = Cast.Build(42, "baseline");
+        var salvatore = world.Get("salvatore");
+        var tommy = world.Get("tommy");
+        Relations.Establish(salvatore, "tommy", trust: 0.30);
+        salvatore.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, salvatore.Id, world.Now);
+
+        var report = new Report(
+            world.NextReportId(), tommy.Id, salvatore.Id, world.Now, ReportCandor.Candid,
+            new[] { ReportedClaim.Honest(Beating, Stance.Believes, 0.9, SourceKind.Participant) },
+            Array.Empty<Claim>(), "framing");
+
+        Reporting.Deliver(world, report, salvatore);
+
+        Assert.True(salvatore.Social.Toward("tommy").Trust > 0.30);
+        Assert.Single(world.AccountAgreements);
+        Assert.Equal("salvatore", world.AccountAgreements[0].ListenerId);
+        Assert.Empty(world.AccountConflicts);
+    }
+
+    [Fact]
+    public void An_assignment_briefing_that_agrees_gains_the_recipient_trust()
+    {
+        var world = Cast.Build(42, "baseline");
+        var vincent = world.Get("vincent");
+        Relations.Establish(vincent, "salvatore", trust: 0.30);
+
+        vincent.Cognition.Learn(Vulnerable, Stance.Believes, 0.7, SourceKind.Discovery, vincent.Id, world.Now);
+
+        var assignment = new Assignment(
+            world.NextAssignmentId(), "restore the harbour tribute", "salvatore", vincent.Id, Cast.Harbour,
+            Array.Empty<string>(),
+            new[] { ReportedClaim.Honest(Vulnerable, Stance.Believes, 0.9, SourceKind.Report) },
+            world.Now, world.Now.AddDays(30));
+        world.Org.Assignments.Add(assignment);
+
+        world.Queue.Schedule(world.Now, EventKind.AssignmentDelivered, vincent.Id, "briefed",
+            new EventPayload { AssignmentId = assignment.Id });
+        Runner.Run(world, world.Now.AddMinutes(1));
+
+        Assert.True(vincent.Social.Toward("salvatore").Trust > 0.30);
+        Assert.Contains(world.AccountAgreements, a => a.ListenerId == "vincent" && a.Agreement.SpeakerId == "salvatore");
+    }
+
+    [Fact]
+    public void A_delegation_briefing_that_agrees_gains_the_delegate_trust()
+    {
+        var world = Cast.Build(42, "baseline");
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+
+        vincent.Cognition.Learn(Vulnerable, Stance.Believes, 0.9, SourceKind.Discovery, vincent.Id, world.Now);
+        tommy.Cognition.Learn(Vulnerable, Stance.Believes, 0.6, SourceKind.Witness, tommy.Id, world.Now);
+
+        double before = tommy.Social.Toward("vincent").Trust;
+        Assert.True(before > 0, "the fixture needs a real starting relationship for this to be visible");
+
+        Delegate(world, vincent, tommy);
+
+        Assert.True(tommy.Social.Toward("vincent").Trust > before);
+        Assert.Contains(world.AccountAgreements, a => a.ListenerId == "tommy" && a.Agreement.SpeakerId == "vincent");
+    }
+
+    // ---------------------------------------------------------------- the natural seed-42 chain (ruling 8)
+
+    /// <summary>
+    /// The demonstrated chain, off the unmodified baseline scenario: Tommy already holds
+    /// <c>TargetIsVulnerable(bellini-grocery)</c> from Vincent's delegation briefing; he asks
+    /// Salvatore on 6 April; Salvatore — who independently suspects the same thing — answers on 7
+    /// April; the account is fresh (Salvatore has never told Tommy anything about this claim before)
+    /// and agrees with what Tommy already holds, so it is an agreement, not news and not a conflict;
+    /// Tommy's trust in Salvatore rises from its scenario-established 0.30 by exactly
+    /// <c>AccountAgreementTrustGain * Strength</c>.
+    /// </summary>
+    [Fact]
+    public void The_natural_seed42_chain_raises_tommys_trust_in_salvatore()
+    {
+        var world = Cast.Build(42, "baseline");
+        var tommy = world.Get("tommy");
+
+        double before = tommy.Social.Toward("salvatore").Trust;
+        Assert.Equal(0.30, before, 9);
+
+        // Just past Salvatore's 7 April 15:00 answer, short of Tommy's own 8 April decision.
+        Runner.Run(world, new DateTime(1987, 4, 7, 16, 0, 0));
+
+        var agreement = Assert.Single(world.AccountAgreements,
+            a => a.ListenerId == "tommy" && a.Agreement.SpeakerId == "salvatore" && a.Agreement.Claim.Equals(Vulnerable));
+
+        Assert.DoesNotContain(world.AccountConflicts, c => c.ListenerId == "tommy" && c.Conflict.SpeakerId == "salvatore");
+
+        double expected = Math.Clamp(before + Relations.AccountAgreementTrustGain * agreement.Agreement.Strength, 0, 1);
+        Assert.Equal(expected, tommy.Social.Toward("salvatore").Trust, 9);
+        Assert.True(tommy.Social.Toward("salvatore").Trust > before);
+    }
+
+    /// <summary>
+    /// The read: Tommy's 8 April decision about answering Salvatore's own question — an entirely
+    /// different claim, <c>PersonUsedViolence</c> — scores its report-related components differently
+    /// once the corroboration above has happened, through the existing, unmodified
+    /// <c>AddLoyaltyParts</c> component of <see cref="ActionKind.ReportToSuperior"/> and
+    /// <see cref="ReportCandor.Partial"/> in <c>Utility.cs</c>. This is the natural-run half of ruling
+    /// 9's pair — see <see cref="The_agreement_measurably_changes_a_later_staged_score"/> for the
+    /// staged counterfactual half.
+    /// </summary>
+    [Fact]
+    public void Tommys_8_april_answer_score_reads_the_trust_the_natural_agreement_raised()
+    {
+        var undisturbed = Cast.Build(42, "baseline");
+        Runner.Run(undisturbed, new DateTime(1987, 4, 6, 16, 0, 0)); // before Salvatore answers
+        double trustBefore = undisturbed.Get("tommy").Social.Toward("salvatore").Trust;
+
+        var afterAgreement = Cast.Build(42, "baseline");
+        Runner.Run(afterAgreement, new DateTime(1987, 4, 7, 16, 0, 0)); // after Salvatore answers
+        double trustAfter = afterAgreement.Get("tommy").Social.Toward("salvatore").Trust;
+
+        Assert.True(trustAfter > trustBefore);
+
+        var reportCandid = new Candidate("answer:salvatore", ActionKind.ReportToSuperior, "test", "give his account")
+        { TargetId = "salvatore", Domain = Cast.Harbour, Candor = ReportCandor.Candid };
+
+        double ScoreFor(World world)
+        {
+            var tommy = world.Get("tommy");
+            var ctx = Context(world, tommy);
+            var rng = Rng.ForOccasion(world.Seed, "test|fixed");
+            return Utility.Score(reportCandid, tommy.View, tommy.Psychology, ctx.Perceived, ctx.Agenda, rng).RelationshipNet();
+        }
+
+        Assert.NotEqual(ScoreFor(undisturbed), ScoreFor(afterAgreement));
+    }
+
+    // ---------------------------------------------------------------- ruling 9: the staged counterfactual
+
+    /// <summary>
+    /// The counterfactual, kept deliberately separate from the natural-run pair above: two
+    /// otherwise-identical staged fixtures, one with the agreement consequence applied through the
+    /// real <see cref="Cognition.Receive"/>/<see cref="Relations.RecordAccountAgreement"/> path, one
+    /// without, scoring the same candidate with the same deterministic noise stream. No production
+    /// switch, no stubbed receipt call, no manipulation of the natural fixture — exactly the shape
+    /// <c>RelationalConsequenceTests.A_conflict_changes_a_later_score</c> already uses for the
+    /// conflict direction.
+    /// </summary>
+    [Fact]
+    public void The_agreement_measurably_changes_a_later_staged_score()
+    {
+        double undisturbed = ReportScoreAfter(agreement: false);
+        double agreed = ReportScoreAfter(agreement: true);
+
+        Assert.True(agreed > undisturbed,
+            $"a corroborated man should weigh reporting to that person differently: " +
+            $"{agreed} was not above {undisturbed}");
+    }
+
+    // ---------------------------------------------------------------- actor-neutral and deterministic
+
+    /// <summary>
+    /// Ruling 10: controlled-versus-autonomous equivalence. Vincent player-controlled, resolving
+    /// every pause with the pipeline's own preference through <c>SimulationSession.ResolveAutomatically</c>,
+    /// must reach the identical <c>World.AccountAgreements</c> and trust state as nobody being
+    /// controlled at all — the agreement mechanism sits inside <c>Commit</c>/<c>Reporting</c>/<c>Runner</c>,
+    /// not inside any player-only branch, so it must not care which path drove it there.
+    /// </summary>
+    [Fact]
+    public void The_agreement_mechanism_is_identical_whether_vincent_is_controlled_or_autonomous()
+    {
+        var end = new DateTime(1987, 4, 10, 0, 0, 0);
+
+        var autonomous = SimulationSession.Start(42, "baseline", controlledCharacterId: null, viewpointCharacterId: "tommy");
+        autonomous.AdvanceTo(end);
+
+        var controlled = SimulationSession.Start(42, "baseline", "vincent");
+        controlled.AdvanceTo(end);
+        while (controlled.Status == SessionStatus.AwaitingChoice)
+        {
+            controlled.ResolveAutomatically();
+            if (controlled.Status == SessionStatus.Ready) controlled.AdvanceTo(end);
+        }
+
+        Assert.Equal(
+            TraceWriter.Render(autonomous.World, "baseline", false),
+            TraceWriter.Render(controlled.World, "baseline", false));
+
+        Assert.Equal(autonomous.World.AccountAgreements.Count, controlled.World.AccountAgreements.Count);
+        Assert.True(autonomous.World.AccountAgreements.Count > 0, "the run needs to actually exercise the mechanism to prove anything");
+        Assert.Equal(
+            autonomous.World.Get("tommy").Social.Toward("salvatore").Trust,
+            controlled.World.Get("tommy").Social.Toward("salvatore").Trust, 9);
+    }
+
+    [Fact]
+    public void The_natural_chain_is_deterministic_across_independent_runs()
+    {
+        double TrustAfterIndependentRun()
+        {
+            var world = Cast.Build(42, "baseline");
+            Runner.Run(world, new DateTime(1987, 4, 10, 0, 0, 0));
+            return world.Get("tommy").Social.Toward("salvatore").Trust;
+        }
+
+        Assert.Equal(TrustAfterIndependentRun(), TrustAfterIndependentRun(), 9);
+    }
+
+    /// <summary>
+    /// Milestone 015's replay must reconstruct the agreement consequence exactly, not merely the
+    /// trace text: a save taken partway through the chain, loaded and continued, must reach the same
+    /// <c>AccountAgreements</c> and trust as an uninterrupted run — through
+    /// <see cref="PersistentSession"/>'s real save/load, not a hand-rolled comparison.
+    /// </summary>
+    [Fact]
+    public void Save_and_load_replay_reproduces_the_agreement_and_trust_state()
+    {
+        var end = new DateTime(1987, 4, 10, 0, 0, 0);
+        var split = new DateTime(1987, 4, 2, 0, 0, 0); // before the 6 April question, well short of the answer
+
+        var uninterrupted = PersistentSession.Start(42, "baseline", controlledCharacterId: null, viewpointCharacterId: "tommy");
+        uninterrupted.AdvanceDays((int)Math.Ceiling((end - uninterrupted.StartedOn).TotalDays));
+
+        string path = Path.Combine(Path.GetTempPath(), $"ce-agreement-test-{Guid.NewGuid():N}.db");
+        try
+        {
+            var toSave = PersistentSession.Start(42, "baseline", controlledCharacterId: null, viewpointCharacterId: "tommy");
+            toSave.AdvanceDays((int)Math.Ceiling((split - toSave.StartedOn).TotalDays));
+            toSave.Save(path);
+
+            var loaded = PersistentSession.Load(path);
+            loaded.AdvanceDays((int)Math.Ceiling((end - split).TotalDays));
+
+            Assert.Equal(
+                TraceWriter.Render(uninterrupted.InnerSession.World, "baseline", false),
+                TraceWriter.Render(loaded.InnerSession.World, "baseline", false));
+
+            Assert.Equal(uninterrupted.InnerSession.World.AccountAgreements.Count, loaded.InnerSession.World.AccountAgreements.Count);
+            Assert.True(uninterrupted.InnerSession.World.AccountAgreements.Count > 0);
+            Assert.Equal(
+                uninterrupted.InnerSession.World.Get("tommy").Social.Toward("salvatore").Trust,
+                loaded.InnerSession.World.Get("tommy").Social.Toward("salvatore").Trust, 9);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    // ---------------------------------------------------------------- fixtures
+
+    private static ReportedClaim Denial(double confidence)
+        => ReportedClaim.Misrepresenting(
+            Beating, Stance.Rejects, confidence, claimed: SourceKind.Report, actual: SourceKind.Participant);
+
+    private static ReportedClaim Affirm(double confidence)
+        => ReportedClaim.Honest(Beating, Stance.Believes, confidence, SourceKind.Participant);
+
+    private static void Apply(Character listener, Receipt receipt)
+    {
+        if (receipt.Conflict is { } conflict) Relations.RecordAccountConflict(listener, conflict);
+        if (receipt.Agreement is { } agreement) Relations.RecordAccountAgreement(listener, agreement);
+    }
+
+    private static Character Character(string id) => new()
+    {
+        Id = id,
+        Name = id,
+        RoleTitle = "test",
+        Capabilities = new Capabilities(new Dictionary<Skill, double>(), 1, 1000, 1, new[] { Cast.Harbour }),
+        Psychology = new Psychology(new Dictionary<Trait, double>(), new Dictionary<Drive, double>()),
+    };
+
+    private static void Delegate(World world, Character from, Character to)
+    {
+        from.Execution.Strategy = new StrategyInstance
+        {
+            OwnerId = from.Id,
+            LocalSequence = from.StrategyCount++,
+            Kind = StrategyKind.SecureTribute,
+            Domain = Cast.Harbour,
+            TargetId = Cast.Grocery,
+            Method = CoercionMethod.Threaten,
+            StartedAt = world.Now,
+            Deadline = world.Now.AddDays(30),
+        };
+
+        var candidate = new Candidate($"delegate:{to.Id}", ActionKind.DelegateStrategy, "test", "hand it over")
+        { TargetId = to.Id, Domain = Cast.Harbour };
+
+        var ctx = Context(world, from);
+        Commit.Apply(world, from, candidate, ctx.Agenda, ctx, new List<string>());
+    }
+
+    private static GeneratorContext Context(World world, Character actor)
+    {
+        var perceived = new PerceivedSituation(
+            actor.Id, world.Now, actor.Cognition.Records, actor.Cognition.Testimony);
+
+        return new GeneratorContext(
+            actor.View, perceived,
+            new Agenda(AgendaKind.DischargeResponsibility, "get the harbour earning", "assigned", Cast.Harbour),
+            world.Now,
+            new ScheduledEvent
+            {
+                Id = 1,
+                Time = world.Now,
+                Kind = EventKind.RoleReview,
+                OwnerId = actor.Id,
+                Cause = "test",
+            },
+            world.Org.OfficeForDomain(Cast.Harbour), null, Array.Empty<Policy>(),
+            Pipeline.SuperiorOf(world, actor), Pipeline.SubordinatesOf(world, actor),
+            Pipeline.OrgMembersOf(world, actor),
+            Acquaintance.KnownTo(world, actor),
+            Array.Empty<Report>(), Array.Empty<InformationRequest>(), new[] { Cast.Grocery });
+    }
+
+    /// <summary>
+    /// One staged Tommy weighing an answer to Salvatore, optionally after Salvatore has corroborated
+    /// something Tommy already held. Everything but the agreement is held identical, including the
+    /// noise stream — mirrors <c>RelationalConsequenceTests.ReportScoreAfter</c> exactly, sign
+    /// reversed.
+    /// </summary>
+    private static double ReportScoreAfter(bool agreement)
+    {
+        var world = Cast.Build(42, "baseline");
+        var tommy = world.Get("tommy");
+        Relations.Establish(tommy, "salvatore", trust: 0.30, obligation: 0.40);
+
+        tommy.Cognition.Learn(Vulnerable, Stance.Believes, 0.7, SourceKind.Discovery, tommy.Id, world.Now);
+
+        if (agreement)
+            Apply(tommy, tommy.Cognition.Receive(
+                ReportedClaim.Honest(Vulnerable, Stance.Believes, 0.8, SourceKind.Report),
+                "salvatore", world.Now));
+
+        var candidate = new Candidate("answer:salvatore", ActionKind.ReportToSuperior, "test", "give his account")
+        { TargetId = "salvatore", Domain = Cast.Harbour, Candor = ReportCandor.Candid };
+
+        var ctx = Context(world, tommy);
+        var rng = Rng.ForOccasion(world.Seed, "test|fixed");
+        return Utility.Score(candidate, tommy.View, tommy.Psychology, ctx.Perceived, ctx.Agenda, rng).RelationshipNet();
+    }
+}

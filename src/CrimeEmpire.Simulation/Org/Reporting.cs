@@ -345,6 +345,15 @@ public static class Reporting
                 world.AccountConflicts.Add(new PerceivedConflict(recipient.Id, conflict, report.At));
                 Relations.RecordAccountConflict(recipient, conflict);
             }
+
+            // Milestone 016: the mirror-image consequence. Same reasoning as the conflict branch
+            // above — applied from the receipt, never the report, so report.Candor and the asserted
+            // claims' ActualBasis stay out of reach here exactly as they already are for conflict.
+            if (receipt.Agreement is { } agreement)
+            {
+                world.AccountAgreements.Add(new PerceivedAgreement(recipient.Id, agreement, report.At));
+                Relations.RecordAccountAgreement(recipient, agreement);
+            }
         }
 
         world.Reports.Add(report);

@@ -7,27 +7,19 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 016 —
+**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 017 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 015 — The Operation Survives a Restart — is complete, corrected twice, not yet
-accepted.** Implemented 2026-08-23, commit `9537b38`; reviewed by Codex the same day (four findings,
-two P1 and two P2, all about verification strength rather than the persistence mechanism itself) and
-corrected in `af7d34f`. That correction fixed three of the four findings; Codex reviewed it and found
-the fourth (the exact-internal-replay-state proof) only partly fixed — it still checked
-`SimulationSession`/`PersistentSession` themselves through a second hand-picked list of fields rather
-than the same complete mechanism it had just applied to `World`. Corrected a second time in the
-commit that follows `af7d34f`. See `docs/milestones/015-the-operation-survives-a-restart.md` for the
-full account, including both appended corrections — replay-backed SQLite persistence in a new
-`src/CrimeEmpire.Persistence` project, one fixed Godot save slot never reachable from the restart
-self-tests, and a two-process restart proof of the existing baseline seed-42 Vincent `SecureTribute`
-operation, run for real and recorded in that archive. `docs/REVIEW_LEDGER.md`'s "Measured — milestone
-015" section has the verification baselines.
+**Milestone 016 — Trust Can Be Earned — is complete, not yet reviewed by Codex, not yet accepted.**
+Implemented 2026-08-23; see `docs/milestones/016-trust-can-be-earned.md` for the full account — a
+perceived account agreement now raises the listener's trust toward the speaker, the mirror image of
+milestone 006's account-conflict consequence, reusing `Cognition.Receive`'s existing fresh-agreement
+branch. `docs/REVIEW_LEDGER.md`'s "Measured — milestone 016" section has the verification baselines,
+including the exact accounting of which trace hashes moved and why.
 
-Milestones 001–015 are implemented; 001–014 are accepted (011 and 012 as corrected by `3c86ba4`, 013
-as corrected twice by `a75a54e`, 014 as corrected twice by `ff4213a`, accepted 2026-08-23). Milestone
-015 has had two Codex reviews and two corrections so far — Matt has not yet confirmed acceptance of
-any named commit for it.
+Milestones 001–016 are implemented; 001–015 are accepted (015 as corrected twice by `bc79425`,
+accepted 2026-08-23). Milestone 016 is self-reviewed only so far — Matt has not yet confirmed
+acceptance of its commit.
 
 **Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
 meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".
@@ -35,13 +27,13 @@ meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self
 ## What is deferred, for whoever scopes the next milestone
 
 Not authorization to start any of it — see `ROADMAP.md`, which is where scope is proposed from, and
-`docs/milestones/015-the-operation-survives-a-restart.md`'s "Deferred work" section for the full,
-current list. In brief: **124 live-edge findings and 5 apparently-dead lines**, itemized by region in
-`docs/COVERAGE_ACCOUNTING.md`, none triaged by priority or acted on; systematic mutation automation
-and seed-sweep promotion; the allegation option naming the same person twice; the developer trace's
-uniform "he"; nobody holding a scored relationship with Kane; the tuning guesses; the cast ceiling of
-six; obligation read but never moved; and, new from milestone 015 and deliberately excluded rather
-than accidentally omitted — slot management, autosave, cloud save, a save-browser UI, and cross-build
-save migrations. `ROADMAP.md` candidate 3's original framing (decision data worth querying) remains
-open; milestone 015 executed the storage-technology half of `DESIGN_DECISIONS.md` §Stack's persistence
-entry, not the querying-capability half.
+`docs/milestones/016-trust-can-be-earned.md`'s "Deferred work" section. In brief, unchanged by this
+milestone: **124 live-edge findings and 5 apparently-dead lines** (`docs/COVERAGE_ACCOUNTING.md`);
+systematic mutation automation and seed-sweep promotion; a queryable decision-trace store
+(`ROADMAP.md` candidate 3's original framing, narrowed by milestone 015 to a replay log); the
+allegation option naming the same person twice; the developer trace's uniform "he"; nobody holding a
+scored relationship with Kane; the tuning guesses; the cast ceiling of six; obligation read but never
+moved; slot management, autosave, cloud save, a save-browser UI, and cross-build save migrations
+(milestone 015's exclusions). From `docs/OPEN_CONCERNS.md` #3, still open after this milestone: decay
+and its rate, negative trust, whether respect/resentment are separate dimensions, whether provenance
+should weight the social consequence, and whether `GrievanceWeight` should be capped.

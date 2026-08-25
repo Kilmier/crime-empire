@@ -266,7 +266,7 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 016, trust can be earned, corrected twice, not yet accepted
+### Measured — milestone 016, trust can be earned, corrected twice, accepted
 
 **Self-implemented; reviewed twice by Codex, on implementation commit `66917c7` and again on the
 first correction commit, `380a241`; corrected each time in the commit that follows.** Adds
@@ -346,9 +346,29 @@ corrections: the archive's two appended corrections.
   read at all, since the mutated line reads a `const` that is inlined rather than loaded via `ldsfld`.
   Exact failure messages in the archive.
 
-**Not accepted.** Matt's confirmation of a named commit is what that requires; none of the
-implementation or either correction has it yet, and this milestone still awaits a Codex pass that
-finds nothing further.
+**Reviewed a third time — not by Codex, but by the `implementation-fidelity-reviewer` agent standing
+in for it — on `809fe60`, with no findings above NOTE level.** Independently confirmed rather than
+taken from the commit message: `git diff 380a241..809fe60` touches exactly the five files claimed,
+with `Relations.cs`'s hunk limited to the field declaration and its doc comment; `dotnet build`
+(0/0) and `dotnet test` (505/505) reproduced directly; `--verify` on all three moved variants and
+`--compare` across all five reproduced the exact hashes this section already records; a live
+reflection probe (`FieldInfo.SetValue` against the `static readonly` field, in an isolated scratch
+project on the same target framework) threw `FieldAccessException`, confirming the P1 — process-global
+mutable state — is genuinely closed rather than relocated; the new `StaticFieldsReadBy` IL walker was
+read in full and assessed as correct for `RecordAccountAgreement`'s specific branch-free body,
+including the two-byte opcode space and the variable-length `InlineSwitch` operand its own
+opcode-size table has to account for even though this method never uses one. Two NOTE-level
+observations, neither a defect: `static readonly`'s cross-assembly behaviour differs from `const` in
+a direction that favours correctness rather than undermining it; `docs/RELATIONSHIPS.md` still calls
+the field a "constant" in prose, pre-existing and unrelated to this commit. Godot's headless
+self-tests and the two-process restart proof were not independently re-run inside that review (no
+Godot binary in its isolated environment) — covered instead by this author's own direct run of both,
+on this exact commit, immediately before it was made: `--selftest` and `--selftest-goldenpath`
+unchanged, the two-process restart proof unchanged on the isolated slot (`1 April 1987`, `cash on
+hand 6,840`), production save slot hash confirmed unchanged before and after.
+
+**Matt accepted correction commit `809fe60` on 2026-08-23 and closed the milestone**, on the strength
+of that review, with no further commit made solely to record it.
 
 ### Measured — milestone 015, the operation survives a restart, corrected twice, accepted
 

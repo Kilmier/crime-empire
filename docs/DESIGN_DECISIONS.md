@@ -220,6 +220,56 @@ changed **no coefficient**; everything here is about shape.
   back: a decision that reads distrust differently from indifference, and a calendar/tier timescale to
   decay against. — milestone 008 rulings 5 and 6.
 
+## Relationships — the agreement direction, settled by milestone 016
+
+See `milestones/016-trust-can-be-earned.md`. The mirror image of the milestone 006 conflict rule
+above, reusing the same information-boundary and directionality guarantees rather than restating them
+under a different name — a corroboration and a contradiction are the same kind of event, told apart
+only by which way the account points.
+
+- **The trigger is exactly `Cognition.Receive`'s existing fresh-agreement branch, not every
+  same-direction account.** No prior position is news, and produces neither an agreement nor a
+  conflict. A *new* voice asserting the direction the listener already holds is an agreement. A
+  speaker who previously asserted the opposite and has now reversed into agreeing with what the
+  listener still holds is also an agreement — the reversal is what makes it a fresh event rather than
+  a continuation of a voice already on the record. The *same* speaker reaffirming a position he
+  already gave, without an intervening reversal, is not an agreement, even though the direction still
+  agrees — still one man's single voice, exactly as milestone 003's non-compounding rule already
+  required for repeated denials. Verbatim repetition is not an agreement, inheriting the existing
+  repeat guard structurally rather than through a second check that could disagree with it.
+  Disagreement is a conflict and is never also an agreement — the two are mutually exclusive by
+  construction, enforced at the point `Receipt` is built (`Cognition.MakeReceipt`), not claimed as a
+  property the type signature itself guarantees.
+- **The trigger and the consequence are both perceived, never detected, and the boundary is
+  structural.** `AccountAgreement` is assembled entirely from the listener's own side of the exchange
+  — his own prior stance and confidence, and what was asserted to him — with no field able to carry
+  `World.TruthLog`, `World.Reports`, `ReportedClaim.ActualBasis`, or `Report.Candor`. Whether the
+  speaker was sincere is unavailable to this path, not merely unused by it.
+- **The consequence is directional and is trust alone.** Only the listener's relationship toward the
+  speaker moves; the speaker's does not. No dimension besides trust is touched — there is no
+  equivalent of a grievance for having been agreed with.
+- **A separately named, separately valued provisional coefficient — not the conflict cost reused.**
+  `Relations.AccountAgreementTrustGain` starts equal to `Relations.ConflictTrustCost` (both `0.35`),
+  which is a provisional symmetric starting point and not a claim that corroboration and contradiction
+  are worth the same thing socially. Naming them separately is what lets a later evidence-led pass
+  move either without moving the other; milestone 016 tuned neither.
+- **Provenance is preserved and deliberately left unweighted, not "already accounted for" by
+  anything else.** Unlike the conflict rule above — where `Cognition`'s own erosion rates and stance
+  protection genuinely do charge the epistemic difference between direct observation and testimony
+  before the social layer ever sees it — nothing in `Cognition.Receive`'s agreement branch discounts a
+  corroboration by how the listener came to hold the belief being corroborated. Milestone 016
+  deliberately applies one flat social rule regardless of the prior's provenance, the same way the
+  conflict rule does, but for a different and more honest reason: not because the distinction is
+  charged elsewhere, but because nobody has yet decided it should be. `AccountAgreement` carries
+  `PriorSourceKind`/`PriorSourceId` regardless, so a later pass can weight on it without reconstructing
+  what was dropped — the mechanism for that pass exists; the decision to use it does not.
+- **All three receipt paths apply it** — the report channel, delegation briefings, and assignment
+  briefings — the identical set the conflict rule applies to, and for the identical reason: a rule
+  applied where it was noticed and missing everywhere else the value travels is this project's most
+  reliably recurring defect.
+- **`Domain/Relations.cs` remains the only code that can change relationship state.** No new mutation
+  surface was opened; `RecordAccountAgreement` is a second method on the same exclusive API.
+
 ## The player boundary — settled by milestone 009
 
 See `milestones/009-godot-playable-shell.md`. What is settled is where a person enters the decision

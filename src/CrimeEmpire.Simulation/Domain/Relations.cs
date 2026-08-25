@@ -183,8 +183,23 @@ public static class Relations
     /// more — nothing yet distinguishes what a corroboration is worth from what a contradiction
     /// costs, and naming them separately means a later evidence-led pass can move one without
     /// moving the other. Neither value is tuned by the milestone that introduced this one.
+    ///
+    /// <b>A plain mutable <c>static</c> field, not <c>const</c>, and that is deliberate.</b> A
+    /// <c>const</c> field is inlined as a literal at every call site at compile time, so two
+    /// <c>const</c> fields that happen to share a value — this one and
+    /// <see cref="ConflictTrustCost"/>, both `0.35` today — compile to the identical IL and become
+    /// indistinguishable afterwards: a defect that reads the wrong one of the two produces no
+    /// observable difference at all until the two values diverge. That gap is exactly what let a
+    /// review mutation (swapping this constant for <see cref="ConflictTrustCost"/> inside
+    /// <see cref="RecordAccountAgreement"/>) pass every existing test. A test needs to vary this
+    /// field's runtime value and observe whether <see cref="RecordAccountAgreement"/>'s output
+    /// tracks it, to prove which field the method actually reads — <c>static readonly</c> was tried
+    /// first and rejected: the CLR refuses <c>FieldInfo.SetValue</c> against an <c>initonly</c> static
+    /// field outside the type initializer, even via reflection. A plain mutable field is the smallest
+    /// change that makes the field genuinely test-observable; nothing outside
+    /// <c>AccountAgreementTests.cs</c> writes to it, and production code only ever reads it.
     /// </summary>
-    public const double AccountAgreementTrustGain = 0.35;
+    public static double AccountAgreementTrustGain = 0.35;
 
     // ---------------------------------------------------------------- the conflict consequence
     /// <summary>
@@ -228,18 +243,31 @@ public static class Relations
     /// Applies the social consequence of a perceived account agreement: the listener trusts the
     /// speaker more.
     ///
-    /// Milestone 016. Mirrors <see cref="RecordAccountConflict"/> exactly, sign reversed, for the
-    /// same reasons stated there: <b>perceived, not detected</b> — nothing here knows or can know
-    /// whether the speaker was sincere, and nothing here can reach far enough to find out, because
-    /// <see cref="AccountAgreement"/> is assembled entirely from the listener's own side of the
-    /// exchange and carries no reference to the truth log, the report log,
-    /// <c>ReportedClaim.ActualBasis</c>, or <c>Report.Candor</c> — enforced by the argument type,
-    /// not by discipline. <b>Directional</b> — only the listener's own relationship toward the
-    /// speaker moves; the speaker is not told his account landed as support. <b>One rule, whatever
-    /// the prior was</b> — the epistemic difference between direct observation and testimony is
-    /// already charged in <see cref="Cognition.Receive"/>'s confidence raise; charging it again here
-    /// would bill the same distinction twice, which is why this reads only
-    /// <see cref="AccountAgreement.Strength"/> and nothing else about the prior's provenance.
+    /// Milestone 016. Mirrors <see cref="RecordAccountConflict"/>'s shape, sign reversed, but its
+    /// "one rule, whatever the prior was" reasoning does not carry over unchanged — see below.
+    /// <b>Perceived, not detected</b> — nothing here knows or can know whether the speaker was
+    /// sincere, and nothing here can reach far enough to find out, because <see cref="AccountAgreement"/>
+    /// is assembled entirely from the listener's own side of the exchange and carries no reference to
+    /// the truth log, the report log, <c>ReportedClaim.ActualBasis</c>, or <c>Report.Candor</c> —
+    /// enforced by the argument type, not by discipline. <b>Directional</b> — only the listener's own
+    /// relationship toward the speaker moves; the speaker is not told his account landed as support.
+    ///
+    /// <b>One rule, whatever the prior was — but, unlike <see cref="RecordAccountConflict"/>, not
+    /// because the distinction is charged somewhere else.</b> On the conflict side, `Cognition`
+    /// genuinely does charge the epistemic difference between direct observation and testimony first
+    /// — a testimonial prior erodes faster (0.45) than an unmediated one (0.15) and only the latter's
+    /// stance is protected — so re-weighting it here really would bill the same distinction twice.
+    /// The agreement branch that produces <see cref="AccountAgreement"/> has no equivalent: the
+    /// confidence raise in <see cref="Cognition.Receive"/> is a flat `0.15 × asserted confidence`
+    /// regardless of the prior's `SourceKind`. So this method reading only
+    /// <see cref="AccountAgreement.Strength"/> is not "the distinction is charged elsewhere" — it is
+    /// milestone 016 deliberately applying one flat social rule regardless of provenance, the same
+    /// choice the conflict rule makes but for a different and more honest reason: nobody has decided
+    /// whether a corroboration from a man who saw it himself should count for more trust than one from
+    /// a man who only heard it. `AccountAgreement.PriorSourceKind`/`PriorSourceId` are preserved
+    /// anyway, so that decision — if it is ever made — has something to weight against without
+    /// reconstructing what this method dropped. See `docs/DESIGN_DECISIONS.md`, "Relationships — the
+    /// agreement direction, settled by milestone 016".
     /// </summary>
     public static void RecordAccountAgreement(Character listener, AccountAgreement agreement)
     {

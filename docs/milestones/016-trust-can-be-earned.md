@@ -232,3 +232,166 @@ established by this file — `docs/CURRENT_MILESTONE.md` says what is active, an
 of this named commit is what acceptance requires. Milestone 015's acceptance of `bc79425` is recorded
 in this same commit's `docs/CURRENT_MILESTONE.md` and `docs/REVIEW_LEDGER.md` updates, per Matt's own
 instruction not to spend a commit solely recording it.
+
+---
+
+## Correction from Codex's review of `66917c7`, 2026-08-23
+
+Appended, not folded in. The account above is preserved as originally written and is **superseded by
+this section** wherever it describes the provenance of the eleven planning rulings, the dedicated
+constant's discriminating test, and one doc comment's claim about `Cognition.Receive`.
+
+**Codex found four things wrong with `66917c7`, none of them behavioural:**
+
+**1. `docs/DESIGN_DECISIONS.md` had no entry for this milestone's durable rule.** Every other
+relationship-consequence milestone (006, 008) settled a durable rule there; this one did not. Fixed:
+a new section, "Relationships — the agreement direction, settled by milestone 016", added alongside
+the existing milestone 006 and 008 sections, covering the precise trigger and its exclusions, the
+perceived-information boundary, directional trust gain, the separate provisional coefficient, all
+three receipt paths, and — corrected per finding 4 below — that provenance weighting remains open
+rather than already resolved.
+
+**2. The dedicated-coefficient test did not actually discriminate.**
+`The_trust_gain_uses_the_dedicated_agreement_constant_not_the_conflict_one` computed its own expected
+value from `Relations.AccountAgreementTrustGain` and compared it against production's result. Codex
+mutated `Relations.RecordAccountAgreement` to read `Relations.ConflictTrustCost` instead, and all 22
+agreement tests — including this one — still passed, because both constants equal `0.35` today and
+the test's own formula silently tracked whichever one production actually used.
+
+**Fix, in two parts.** First, `Relations.AccountAgreementTrustGain` changed from `public const double`
+to a plain mutable `public static double` — a `const` is inlined as a literal at every call site at
+compile time, so two `const`s sharing a value are compiled to identical IL and cannot be
+distinguished by any test, ever, however written; `static readonly` was tried first and rejected, since
+the CLR refuses `FieldInfo.SetValue` against an `initonly` static field outside the type initializer
+even via reflection. Second, the test was replaced with
+`RecordAccountAgreement_reads_its_own_dedicated_field_not_conflicttrustcost`, which sets the field to
+a value (`0.10`) chosen to differ from `ConflictTrustCost`, calls the real production method, and
+checks the resulting trust delta reflects the mutated value — which it can only do if production is
+actually reading that field. Mutation-checked directly against Codex's own exact mutation: temporarily
+changed `RecordAccountAgreement` to read `ConflictTrustCost`, ran the suite, confirmed exactly one
+test failed — the new one, on `Assert.Equal` — and reverted. The value `0.35` itself is unchanged in
+both constants; only the second constant's storage mechanism and one test's proof strategy changed.
+
+**3. This archive's own "Commit" section, above, claims something false.** It states the complete
+eleven planning rulings "are recorded in this milestone's entry in the version of
+`docs/CURRENT_MILESTONE.md` this commit replaces (visible in this commit's diff)". They are not.
+`docs/CURRENT_MILESTONE.md` at the parent commit (`bc79425`) records milestone 015's status only —
+milestone 016 had not yet been authorized when that commit was made. This milestone's own scope was
+written into `CURRENT_MILESTONE.md` mid-implementation, in this session, and then *overwritten* by the
+completion summary before anything was committed — the two versions were never committed separately,
+so neither the rulings-in-full version nor a diff showing it exists anywhere in git history. What the
+commit's diff actually shows is the transition from milestone 015's final status directly to milestone
+016's *completion summary* — itself a faithful restatement of the rulings in this archive's own
+"Rulings taken at planning time" section above, but a restatement, not a preserved original.
+
+The original rulings were recoverable — not from git, but from the conversation in which Matt issued
+them, which was still available when this correction was written. They are reproduced verbatim below,
+so the record no longer depends on an incorrect claim about where they live:
+
+> 1. Add a separately named provisional constant, AccountAgreementTrustGain = 0.35. Do not reuse
+>    ConflictTrustCost directly. The equal initial values express a provisional symmetric starting
+>    point, while separate names allow later evidence-led tuning. Do not tune either value during
+>    this milestone.
+>
+> 2. AccountAgreement should mirror AccountConflict's complete listener-visible field set: Claim,
+>    SpeakerId, AssertedStance, AssertedConfidence, ClaimedBasis, PriorStance, PriorConfidence,
+>    PriorSourceKind, PriorSourceId, and Strength = PriorConfidence × AssertedConfidence.
+>
+> 3. Extend Receipt additively with AccountAgreement? Agreement alongside AccountConflict? Conflict.
+>    This shape is accepted as the smallest change, but do not claim that nullable fields enforce
+>    exclusivity in the type system. Cognition.Receive must enforce that at most one outcome is
+>    present, and tests must prove that agreement and conflict are never emitted together.
+>
+> 4. Use exactly Cognition.Receive's existing fresh-agreement branch:
+>    - no prior position: news, no agreement;
+>    - new voice agreeing with the held direction: agreement;
+>    - a speaker reversing into agreement while the listener still holds that direction: agreement;
+>    - same speaker reaffirming without reversal: no agreement;
+>    - verbatim repetition: no agreement;
+>    - disagreement: conflict, never agreement.
+>    Do not broaden the trigger to every same-direction account.
+>
+> 5. Add Relations.RecordAccountAgreement and apply it directionally to the listener's trust toward
+>    the speaker, clamped to [0,1]. It must consume only AccountAgreement and must have no access to
+>    World truth, Report.Candor, ActualBasis, or the speaker's private cognition.
+>
+> 6. Add PerceivedAgreement and World.AccountAgreements as deterministic developer-facing state,
+>    mirroring the existing perceived-conflict record. Do not expose it through PlayerSnapshot or add
+>    Godot UI.
+>
+> 7. Apply the consequence at all three existing production receipt sites: delegation briefing in
+>    Decision/Commit.cs; report delivery in Org/Reporting.cs; assignment briefing in Sim/Runner.cs.
+>
+> 8. Preserve the demonstrated natural seed-42 chain: Tommy already holds
+>    TargetIsVulnerable(bellini-grocery) from Vincent's delegation briefing; Tommy asks Salvatore on 6
+>    April; Salvatore answers on 7 April; Tommy's trust toward Salvatore rises from 0.30; Tommy's 8
+>    April decision about answering Salvatore reads the changed trust through its existing report
+>    score components. Do not force a different winner. An unchanged winner with measurably changed
+>    trust-derived components is acceptable. If a winner changes naturally, record it and do not tune
+>    it away.
+>
+> 9. Keep the natural proof and causal counterfactual separate: the natural-run test must prove the
+>    real exchange, agreement record, trust movement, and later score read; the counterfactual must
+>    use two deliberately constructed equivalent staged states, applying the agreement consequence to
+>    only one before scoring the same candidate with the same deterministic inputs. Do not add a
+>    production switch, dependency-injection seam, or test-only "disable agreement" path. Do not stub
+>    out production receipt calls or manipulate the natural fixture to manufacture the comparison.
+>
+> 10. Require the complete proposed test set: news/agreement/repetition/reaffirmation/reversal/conflict
+>     state-machine cases; agreement/conflict mutual exclusivity; information-boundary test varying
+>     Candor and ActualBasis while preserving the asserted account; listener-only directionality; all
+>     three receipt paths; trust ceiling; natural-run and staged counterfactual proofs;
+>     controlled-versus-autonomous equivalence; deterministic rerun and save/load replay equivalence;
+>     discriminating, reverted mutation checks for missing emission, repetition farming, wrong
+>     direction, omitted receipt sites, and private-truth leakage.
+>
+> 11. Preserve all exclusions from the proposal: no new actions, generators, candidates, scenario
+>     fixtures, characters, organizations, player-facing surfaces, Godot features, negative trust,
+>     decay, obligation movement, grievance changes, coefficient tuning, queryable persistence,
+>     relevance tiering, rumors, mutation automation, or seed sweeps.
+
+Comparing this against the "Rulings taken at planning time" summary earlier in this archive finds no
+substantive discrepancy — the summary is accurate — but accurate is not the same claim as "preserved
+verbatim in the commit diff," and the archive should not have said the second thing when only the
+first was true. **Going forward, the surviving contract for this milestone is this correction's
+verbatim quotation above, not the commit diff.**
+
+**4. `Relations.RecordAccountAgreement`'s doc comment misstated why it ignores provenance.** It
+claimed "the epistemic difference between direct observation and testimony is already charged in
+`Cognition.Receive`'s confidence raise" — true for the conflict direction (`RecordAccountConflict`),
+where erosion genuinely is provenance-differentiated (0.15 vs 0.45, plus stance protection), but false
+for agreement: the confidence raise in `Cognition.Receive`'s fresh-agreement branch is a flat `0.15 ×
+asserted confidence` regardless of `SourceKind`. Nothing charges the distinction anywhere for this
+direction. Fixed: the doc comment now states plainly that milestone 016 applies one flat social rule
+regardless of provenance *because nobody has decided otherwise*, not because the distinction is priced
+elsewhere, and that `PriorSourceKind`/`PriorSourceId` are preserved specifically so a future,
+deliberate decision can weight on them. `docs/DESIGN_DECISIONS.md`'s new section (finding 1) states
+the same correction.
+
+**What this correction is not.** No simulation behaviour changed and no coefficient was tuned — both
+constants remain `0.35`; only `AccountAgreementTrustGain`'s storage mechanism (`const` →  mutable
+`static`) and one test's proof strategy changed, verified by mutation-check to actually discriminate.
+Full verification (build, all tests, `--verify` on all three moved variants, `--compare`, both
+required viewpoints, both Godot self-tests, the two-process restart proof) was re-run clean; every
+trace hash and chosen-action digest is unchanged from `66917c7`'s own table, which this correction did
+not need to re-derive since nothing that produces those hashes changed.
+
+**Recurring-failure list, walked.** *A test whose expected value is computed from the same live
+constant production reads*: the classic shape where a test's own arithmetic silently launders a
+production defect, found here because the two candidate constants happened to share a value —
+exactly the situation this project's own review culture warns is the hardest version of this failure
+to catch by inspection. *An archive claim about where evidence lives, unchecked against the actual
+diff*: the "visible in this commit's diff" claim was written from memory of having typed the rulings
+into `CURRENT_MILESTONE.md` earlier in the same session, not from checking what the committed diff
+actually contained — a distinction this project's standing practice ("Recording a review that did not
+happen") exists to catch when the gap is about *review*, and applies equally when the gap is about
+*provenance of a written record*. *A doc comment's justification reused from a sibling method without
+re-deriving whether it actually held*: `RecordAccountAgreement`'s comment inherited
+`RecordAccountConflict`'s "already charged elsewhere" reasoning by analogy, without checking that the
+agreement branch's confidence raise is actually provenance-differentiated the way the conflict
+branch's erosion is. It is not, and the mirror-image framing this whole milestone otherwise earns its
+keep by should have been checked at exactly this seam rather than assumed to carry over whole.
+
+**Status.** This correction is implemented, tested, and mutation-checked as described above. Milestone
+016 remains **not accepted** — Matt's confirmation of a named commit is what that requires. Neither
+this section nor the account above is rewritten to read as though it were correct from the start.

@@ -266,16 +266,38 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 016, trust can be earned, self-reviewed, not yet reviewed by Codex
+### Measured — milestone 016, trust can be earned, corrected once, not yet accepted
 
-**Self-implemented and self-verified; not yet reviewed by Codex.** Adds `AccountAgreement` and
-`Relations.RecordAccountAgreement` — the mirror image of milestone 006's `AccountConflict`/
-`RecordAccountConflict` — reusing `Cognition.Receive`'s existing fresh-agreement branch rather than a
-new state machine. Full account: `docs/milestones/016-trust-can-be-earned.md`, including all four
-mutation checks' exact results and the complete baseline-movement accounting.
+**Self-implemented; reviewed once by Codex, on implementation commit `66917c7`, and corrected in the
+commit that follows it.** Adds `AccountAgreement` and `Relations.RecordAccountAgreement` — the mirror
+image of milestone 006's `AccountConflict`/`RecordAccountConflict` — reusing `Cognition.Receive`'s
+existing fresh-agreement branch rather than a new state machine. Full account, including the original
+implementation and the appended correction: `docs/milestones/016-trust-can-be-earned.md`.
 
-- Build: 0 warnings, 0 errors across six projects (unchanged from milestone 015 — no new project).
-  Tests: **504 passed, 0 failed** (482 before this milestone; 22 new in `AccountAgreementTests.cs`).
+**Codex reviewed `66917c7` and returned four findings, none behavioural.** Corrected in the following
+commit: (1) the milestone's durable rule had no entry in `docs/DESIGN_DECISIONS.md` — added, alongside
+the existing milestone 006 and 008 relationship sections; (2) the dedicated-coefficient test computed
+its own expected value from the same live constant production read, so it passed under Codex's
+mutation (swapping in `ConflictTrustCost`, which equals `AccountAgreementTrustGain`'s value today) —
+fixed by changing `AccountAgreementTrustGain` from `const` to a plain mutable `static` field (a
+`const` is inlined at compile time and literally cannot be varied for a test to observe) and
+replacing the test with one that mutates the field's value and checks production tracks it,
+mutation-checked directly against Codex's exact mutation and confirmed to fail correctly; (3) the
+archive falsely claimed the eleven planning rulings were "visible in this commit's diff" — they were
+not, since the mid-implementation version of `CURRENT_MILESTONE.md` that held them in full was
+overwritten before anything was committed — corrected by reproducing the rulings verbatim (recovered
+from the authorizing conversation, not from git) in the archive's appended correction, which is now
+the surviving contract; (4) `Relations.RecordAccountAgreement`'s doc comment wrongly claimed
+provenance differences were "already charged" in `Cognition.Receive`'s confidence raise, copying
+`RecordAccountConflict`'s reasoning without checking it held — the agreement branch's raise is flat
+regardless of `SourceKind`, so nothing charges the distinction anywhere; corrected to state plainly
+that milestone 016 applies one flat rule because the weighting question is undecided, not because it
+is resolved elsewhere. Full account, including every mutation check's exact result: the archive's
+appended correction.
+
+- Build: 0 warnings, 0 errors across six projects (unchanged — no new project). Tests: **505 passed,
+  0 failed** (482 before this milestone; 23 in `AccountAgreementTests.cs` — one test replaced by two,
+  net +1, from the corrected coefficient proof).
 - **Three of five variants' trace hashes move, disclosed and accounted for exactly, not assumed
   stable**: `baseline` `FEE45FD886F18CA8` → `9AF57665067AEA11`; `disloyal-vincent` `45CCF5ADC6EC0302`
   → `9A6E0E518294532F`; `resentful-tommy` `F5BD93386DE04082` → `3C4483640153DA88`.
@@ -301,11 +323,16 @@ mutation checks' exact results and the complete baseline-movement accounting.
   (`PersonUsedViolence`) reads the changed trust through the existing, unmodified `AddLoyaltyParts`
   components of `ActionKind.ReportToSuperior`/`ReportCandor.Partial` in `Utility.cs`. The winner at
   that decision is unaffected in every variant where it fires.
-- **Four mutation checks, each confirmed to fail for the intended reason and reverted**: missing
-  emission (disabled `Runner.cs`'s block); repetition/reaffirmation farming (made the
-  no-reversal branch also emit agreement); wrong relationship direction (wrote to `listener.Id`
+- **Four mutation checks from the original review, each confirmed to fail for the intended reason and
+  reverted**: missing emission (disabled `Runner.cs`'s block); repetition/reaffirmation farming (made
+  the no-reversal branch also emit agreement); wrong relationship direction (wrote to `listener.Id`
   instead of `agreement.SpeakerId`); private-truth leakage (let `ReportedClaim.ActualBasis` move the
-  emitted confidence). Exact failure messages in the archive.
+  emitted confidence). Plus one more from the correction: Codex's exact coefficient-swap mutation
+  (`RecordAccountAgreement` reading `ConflictTrustCost`), which the corrected test now catches and the
+  original test did not. Exact failure messages in the archive.
+
+**Not accepted.** Matt's confirmation of a named commit is what that requires; neither the
+implementation nor the correction has it yet.
 
 ### Measured — milestone 015, the operation survives a restart, corrected twice, accepted
 

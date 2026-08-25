@@ -251,22 +251,56 @@ public sealed class AccountAgreementTests
         Assert.Equal(0.30, agreement.Strength, 9);
     }
 
+    /// <summary>
+    /// Ruling 1's proof, corrected after Codex's review of `66917c7`: the original version of this
+    /// test computed its expected value from <c>Relations.AccountAgreementTrustGain</c> and then
+    /// compared it against production's own result — which cannot discriminate a defect that reads
+    /// <c>ConflictTrustCost</c> instead, because both constants equal `0.35` today, and the test's
+    /// own expected-value formula would silently track whichever one production actually used. Every
+    /// existing test — including this one — passed under that exact mutation.
+    ///
+    /// The fix changes the *value* <see cref="Relations.AccountAgreementTrustGain"/> holds and checks
+    /// that <see cref="Relations.RecordAccountAgreement"/>'s output tracks the change. If production
+    /// read <see cref="Relations.ConflictTrustCost"/> instead — Codex's exact mutation — this field's
+    /// own value is irrelevant to the result and the assertion below fails, because the trust delta
+    /// would still reflect the untouched `0.35` rather than the mutated value. This only works
+    /// because <see cref="Relations.AccountAgreementTrustGain"/> is a plain mutable <c>static</c>
+    /// field rather than <c>const</c> — see its own doc comment for why. Restores the original value
+    /// in a <c>finally</c> block so no other test observes the mutation.
+    /// </summary>
     [Fact]
-    public void The_trust_gain_uses_the_dedicated_agreement_constant_not_the_conflict_one()
+    public void RecordAccountAgreement_reads_its_own_dedicated_field_not_conflicttrustcost()
     {
-        var listener = Character("salvatore");
-        Relations.Establish(listener, "tommy", trust: 0.30);
-        listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
+        double original = Relations.AccountAgreementTrustGain;
+        const double mutatedGain = 0.10;
+        Assert.NotEqual(mutatedGain, Relations.ConflictTrustCost, 9); // the two must differ, or this proves nothing
 
-        var agreement = Assert.NotNull(listener.Cognition.Receive(Affirm(0.9), "tommy", At.AddDays(1)).Agreement);
-        Relations.RecordAccountAgreement(listener, agreement);
+        try
+        {
+            Relations.AccountAgreementTrustGain = mutatedGain;
 
-        Assert.Equal(0.30 + Relations.AccountAgreementTrustGain * agreement.Strength,
-            listener.Social.Toward("tommy").Trust, 9);
+            var listener = Character("salvatore");
+            Relations.Establish(listener, "tommy", trust: 0.30);
+            listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
 
-        // Ruling 1: a separately named constant, not ConflictTrustCost reused. They are equal at
-        // 0.35 today, which is a provisional symmetric starting point and not evidence the two
-        // constants are actually the same value in code.
+            var agreement = Assert.NotNull(listener.Cognition.Receive(Affirm(0.9), "tommy", At.AddDays(1)).Agreement);
+            Relations.RecordAccountAgreement(listener, agreement);
+
+            double expectedUnderMutatedGain = Math.Clamp(0.30 + mutatedGain * agreement.Strength, 0, 1);
+            Assert.Equal(expectedUnderMutatedGain, listener.Social.Toward("tommy").Trust, 9);
+        }
+        finally
+        {
+            Relations.AccountAgreementTrustGain = original;
+        }
+    }
+
+    [Fact]
+    public void The_agreement_gain_and_the_conflict_cost_are_separate_constants_that_happen_to_agree_today()
+    {
+        // Ruling 1: a separately named constant, not ConflictTrustCost reused. Equal at 0.35 today —
+        // a provisional symmetric starting point — is checked here as a plain value fact; it is the
+        // test above, not this one, that proves production actually reads the right field.
         Assert.Equal(0.35, Relations.AccountAgreementTrustGain, 9);
         Assert.Equal(0.35, Relations.ConflictTrustCost, 9);
     }

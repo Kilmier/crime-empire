@@ -266,38 +266,50 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 016, trust can be earned, corrected once, not yet accepted
+### Measured — milestone 016, trust can be earned, corrected twice, not yet accepted
 
-**Self-implemented; reviewed once by Codex, on implementation commit `66917c7`, and corrected in the
-commit that follows it.** Adds `AccountAgreement` and `Relations.RecordAccountAgreement` — the mirror
-image of milestone 006's `AccountConflict`/`RecordAccountConflict` — reusing `Cognition.Receive`'s
-existing fresh-agreement branch rather than a new state machine. Full account, including the original
-implementation and the appended correction: `docs/milestones/016-trust-can-be-earned.md`.
+**Self-implemented; reviewed twice by Codex, on implementation commit `66917c7` and again on the
+first correction commit, `380a241`; corrected each time in the commit that follows.** Adds
+`AccountAgreement` and `Relations.RecordAccountAgreement` — the mirror image of milestone 006's
+`AccountConflict`/`RecordAccountConflict` — reusing `Cognition.Receive`'s existing fresh-agreement
+branch rather than a new state machine. Full account, including the original implementation and both
+appended corrections: `docs/milestones/016-trust-can-be-earned.md`.
 
-**Codex reviewed `66917c7` and returned four findings, none behavioural.** Corrected in the following
-commit: (1) the milestone's durable rule had no entry in `docs/DESIGN_DECISIONS.md` — added, alongside
-the existing milestone 006 and 008 relationship sections; (2) the dedicated-coefficient test computed
-its own expected value from the same live constant production read, so it passed under Codex's
-mutation (swapping in `ConflictTrustCost`, which equals `AccountAgreementTrustGain`'s value today) —
-fixed by changing `AccountAgreementTrustGain` from `const` to a plain mutable `static` field (a
-`const` is inlined at compile time and literally cannot be varied for a test to observe) and
-replacing the test with one that mutates the field's value and checks production tracks it,
-mutation-checked directly against Codex's exact mutation and confirmed to fail correctly; (3) the
-archive falsely claimed the eleven planning rulings were "visible in this commit's diff" — they were
-not, since the mid-implementation version of `CURRENT_MILESTONE.md` that held them in full was
-overwritten before anything was committed — corrected by reproducing the rulings verbatim (recovered
-from the authorizing conversation, not from git) in the archive's appended correction, which is now
-the surviving contract; (4) `Relations.RecordAccountAgreement`'s doc comment wrongly claimed
-provenance differences were "already charged" in `Cognition.Receive`'s confidence raise, copying
-`RecordAccountConflict`'s reasoning without checking it held — the agreement branch's raise is flat
-regardless of `SourceKind`, so nothing charges the distinction anywhere; corrected to state plainly
-that milestone 016 applies one flat rule because the weighting question is undecided, not because it
-is resolved elsewhere. Full account, including every mutation check's exact result: the archive's
-appended correction.
+**Codex reviewed `66917c7` and returned four findings, none behavioural.** Corrected in `380a241`:
+(1) the milestone's durable rule had no entry in `docs/DESIGN_DECISIONS.md` — added, alongside the
+existing milestone 006 and 008 relationship sections; (2) the dedicated-coefficient test computed its
+own expected value from the same live constant production read, so it passed under Codex's mutation
+(swapping in `ConflictTrustCost`, which equals `AccountAgreementTrustGain`'s value today) — fixed, in
+that commit, by changing `AccountAgreementTrustGain` from `const` to a plain mutable `static` field
+and mutating its runtime value in the test; (3) the archive falsely claimed the eleven planning
+rulings were "visible in this commit's diff" — they were not, since the mid-implementation version of
+`CURRENT_MILESTONE.md` that held them in full was overwritten before anything was committed —
+corrected by reproducing the rulings verbatim (recovered from the authorizing conversation, not from
+git) in the archive's first appended correction, which is now the surviving contract; (4)
+`Relations.RecordAccountAgreement`'s doc comment wrongly claimed provenance differences were "already
+charged" in `Cognition.Receive`'s confidence raise, copying `RecordAccountConflict`'s reasoning without
+checking it held — the agreement branch's raise is flat regardless of `SourceKind`, so nothing charges
+the distinction anywhere; corrected to state plainly that milestone 016 applies one flat rule because
+the weighting question is undecided, not because it is resolved elsewhere.
+
+**Codex reviewed `380a241` and found one new P1: finding 2's own fix introduced a new defect while
+closing the original one.** A plain mutable `public static double` is process-global mutable state
+with no persistence or replay story, reachable by any other test or code in the same process — exactly
+what this project's determinism guarantees exist to rule out. **Corrected in the commit that
+follows**: `AccountAgreementTrustGain` is `static readonly` again (immutable, but — unlike `const` — a
+genuine field with its own metadata token), and the test now proves which field
+`RecordAccountAgreement` reads structurally, by walking the method's own compiled IL for `ldsfld`
+instructions and resolving them to real `FieldInfo`s, with an opcode-to-operand-size table built from
+`System.Reflection.Emit.OpCodes`' own metadata rather than hand-transcribed. Mutation-checked directly
+against Codex's exact review mutation again; confirmed to fail (on an empty result set, since a
+`const` read produces no `ldsfld` at all) and reverted. Findings 1, 3, and 4 above are unaffected by
+this second correction. Full account, including every mutation check's exact result for both
+corrections: the archive's two appended corrections.
 
 - Build: 0 warnings, 0 errors across six projects (unchanged — no new project). Tests: **505 passed,
-  0 failed** (482 before this milestone; 23 in `AccountAgreementTests.cs` — one test replaced by two,
-  net +1, from the corrected coefficient proof).
+  0 failed** throughout both corrections (482 before this milestone; 23 in `AccountAgreementTests.cs`
+  — one test replaced by two, net +1, from the coefficient proof; the second correction changed that
+  proof's mechanism, not its count).
 - **Three of five variants' trace hashes move, disclosed and accounted for exactly, not assumed
   stable**: `baseline` `FEE45FD886F18CA8` → `9AF57665067AEA11`; `disloyal-vincent` `45CCF5ADC6EC0302`
   → `9A6E0E518294532F`; `resentful-tommy` `F5BD93386DE04082` → `3C4483640153DA88`.
@@ -327,12 +339,16 @@ appended correction.
   reverted**: missing emission (disabled `Runner.cs`'s block); repetition/reaffirmation farming (made
   the no-reversal branch also emit agreement); wrong relationship direction (wrote to `listener.Id`
   instead of `agreement.SpeakerId`); private-truth leakage (let `ReportedClaim.ActualBasis` move the
-  emitted confidence). Plus one more from the correction: Codex's exact coefficient-swap mutation
-  (`RecordAccountAgreement` reading `ConflictTrustCost`), which the corrected test now catches and the
-  original test did not. Exact failure messages in the archive.
+  emitted confidence). Plus one more from each correction, both re-running Codex's identical
+  coefficient-swap mutation (`RecordAccountAgreement` reading `ConflictTrustCost`): the first
+  correction's runtime-mutation test caught it by observing the trust delta track a wrong value; the
+  second correction's structural IL-walk test catches it by finding no `AccountAgreementTrustGain`
+  read at all, since the mutated line reads a `const` that is inlined rather than loaded via `ldsfld`.
+  Exact failure messages in the archive.
 
-**Not accepted.** Matt's confirmation of a named commit is what that requires; neither the
-implementation nor the correction has it yet.
+**Not accepted.** Matt's confirmation of a named commit is what that requires; none of the
+implementation or either correction has it yet, and this milestone still awaits a Codex pass that
+finds nothing further.
 
 ### Measured — milestone 015, the operation survives a restart, corrected twice, accepted
 

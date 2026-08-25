@@ -184,22 +184,23 @@ public static class Relations
     /// costs, and naming them separately means a later evidence-led pass can move one without
     /// moving the other. Neither value is tuned by the milestone that introduced this one.
     ///
-    /// <b>A plain mutable <c>static</c> field, not <c>const</c>, and that is deliberate.</b> A
-    /// <c>const</c> field is inlined as a literal at every call site at compile time, so two
-    /// <c>const</c> fields that happen to share a value — this one and
+    /// <b><c>static readonly</c>, not <c>const</c> — immutable at runtime, but with a genuine field
+    /// identity a test can inspect.</b> A <c>const</c> field is inlined as a literal at every call
+    /// site at compile time, so two <c>const</c> fields that happen to share a value — this one and
     /// <see cref="ConflictTrustCost"/>, both `0.35` today — compile to the identical IL and become
     /// indistinguishable afterwards: a defect that reads the wrong one of the two produces no
     /// observable difference at all until the two values diverge. That gap is exactly what let a
     /// review mutation (swapping this constant for <see cref="ConflictTrustCost"/> inside
-    /// <see cref="RecordAccountAgreement"/>) pass every existing test. A test needs to vary this
-    /// field's runtime value and observe whether <see cref="RecordAccountAgreement"/>'s output
-    /// tracks it, to prove which field the method actually reads — <c>static readonly</c> was tried
-    /// first and rejected: the CLR refuses <c>FieldInfo.SetValue</c> against an <c>initonly</c> static
-    /// field outside the type initializer, even via reflection. A plain mutable field is the smallest
-    /// change that makes the field genuinely test-observable; nothing outside
-    /// <c>AccountAgreementTests.cs</c> writes to it, and production code only ever reads it.
+    /// <see cref="RecordAccountAgreement"/>) pass every existing test. The fix is not to make the
+    /// value mutable at runtime — a plain mutable <c>static</c> field was tried and rejected, because
+    /// it is process-global state with no persistence or replay story of its own, reachable by any
+    /// other test or code running in the same process. `static readonly` is immutable exactly like
+    /// `const` from any caller's point of view, but unlike `const` it is a genuine static field with
+    /// its own metadata token, so a test can prove which field <see cref="RecordAccountAgreement"/>'s
+    /// compiled IL actually references — a structural fact fixed at compile time, not a runtime value
+    /// varied by a test. See <c>AccountAgreementTests.cs</c>.
     /// </summary>
-    public static double AccountAgreementTrustGain = 0.35;
+    public static readonly double AccountAgreementTrustGain = 0.35;
 
     // ---------------------------------------------------------------- the conflict consequence
     /// <summary>

@@ -10,21 +10,27 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 017 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 016 — Trust Can Be Earned — is complete, corrected once, not yet accepted.** Implemented
-2026-08-23, commit `66917c7`; reviewed by Codex the same day (four findings, none behavioural: a
-missing `DESIGN_DECISIONS.md` entry, a dedicated-coefficient test that did not actually discriminate
-between two equal-valued constants, an archive claim about where the planning rulings live that the
-commit's actual diff did not support, and a doc comment that misattributed why provenance is
-unweighted) and corrected in the commit that follows it. See
-`docs/milestones/016-trust-can-be-earned.md` for the full account, including the appended
-correction — a perceived account agreement raises the listener's trust toward the speaker, the mirror
-image of milestone 006's account-conflict consequence, reusing `Cognition.Receive`'s existing
-fresh-agreement branch. `docs/REVIEW_LEDGER.md`'s "Measured — milestone 016" section has the
-verification baselines, including the exact accounting of which trace hashes moved and why.
+**Milestone 016 — Trust Can Be Earned — is complete, corrected twice, still awaiting a Codex pass
+that finds nothing further and Matt's acceptance.** Implemented 2026-08-23, commit `66917c7`;
+reviewed by Codex the same day (four findings, none behavioural: a missing `DESIGN_DECISIONS.md`
+entry, a dedicated-coefficient test that did not actually discriminate between two equal-valued
+constants, an archive claim about where the planning rulings live that the commit's actual diff did
+not support, and a doc comment that misattributed why provenance is unweighted) and corrected in
+`380a241`. That correction's own fix to the coefficient-test finding introduced a new one — a plain
+mutable `public static` field is process-global state with no persistence or replay story — which
+Codex found on review and which is corrected a second time in the commit that follows `380a241`: the
+field is `static readonly` again, and the test now proves which field
+`Relations.RecordAccountAgreement` reads by walking its compiled IL directly rather than by varying
+a runtime value. See `docs/milestones/016-trust-can-be-earned.md` for the full account, including
+both appended corrections — a perceived account agreement raises the listener's trust toward the
+speaker, the mirror image of milestone 006's account-conflict consequence, reusing
+`Cognition.Receive`'s existing fresh-agreement branch. `docs/REVIEW_LEDGER.md`'s "Measured —
+milestone 016" section has the verification baselines, including the exact accounting of which trace
+hashes moved and why.
 
 Milestones 001–016 are implemented; 001–015 are accepted (015 as corrected twice by `bc79425`,
-accepted 2026-08-23). Milestone 016 has had one Codex review and one correction so far — Matt has not
-yet confirmed acceptance of any named commit for it.
+accepted 2026-08-23). Milestone 016 has had two Codex reviews and two corrections so far — Matt has
+not yet confirmed acceptance of any named commit for it.
 
 **Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
 meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".

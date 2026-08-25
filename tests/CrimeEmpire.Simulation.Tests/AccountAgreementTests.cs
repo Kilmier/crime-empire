@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Reflection.Emit;
 using CrimeEmpire.Persistence.Session;
 using CrimeSim.Decision;
 using CrimeSim.Domain;
@@ -252,54 +254,44 @@ public sealed class AccountAgreementTests
     }
 
     /// <summary>
-    /// Ruling 1's proof, corrected after Codex's review of `66917c7`: the original version of this
-    /// test computed its expected value from <c>Relations.AccountAgreementTrustGain</c> and then
-    /// compared it against production's own result — which cannot discriminate a defect that reads
-    /// <c>ConflictTrustCost</c> instead, because both constants equal `0.35` today, and the test's
-    /// own expected-value formula would silently track whichever one production actually used. Every
-    /// existing test — including this one — passed under that exact mutation.
+    /// Ruling 1's proof, corrected twice. First after Codex's review of `66917c7`: the original
+    /// version of this test computed its expected value from
+    /// <c>Relations.AccountAgreementTrustGain</c> and compared it against production's own result —
+    /// which cannot discriminate a defect that reads <c>ConflictTrustCost</c> instead, because both
+    /// constants equal `0.35` today, and the test's own expected-value formula silently tracked
+    /// whichever one production actually used. Every existing test, including that one, passed under
+    /// Codex's exact mutation. The first fix made <c>AccountAgreementTrustGain</c> a plain mutable
+    /// <c>static</c> field and varied its runtime value — which discriminated correctly, but Codex's
+    /// second review found the fix itself was the defect: a publicly mutable field is process-global
+    /// state with no persistence or replay story, reachable by any other test or code in the same
+    /// process, which is exactly the kind of state this project's determinism guarantees exist to
+    /// rule out.
     ///
-    /// The fix changes the *value* <see cref="Relations.AccountAgreementTrustGain"/> holds and checks
-    /// that <see cref="Relations.RecordAccountAgreement"/>'s output tracks the change. If production
-    /// read <see cref="Relations.ConflictTrustCost"/> instead — Codex's exact mutation — this field's
-    /// own value is irrelevant to the result and the assertion below fails, because the trust delta
-    /// would still reflect the untouched `0.35` rather than the mutated value. This only works
-    /// because <see cref="Relations.AccountAgreementTrustGain"/> is a plain mutable <c>static</c>
-    /// field rather than <c>const</c> — see its own doc comment for why. Restores the original value
-    /// in a <c>finally</c> block so no other test observes the mutation.
+    /// This version proves the same fact — which field <see cref="Relations.RecordAccountAgreement"/>
+    /// actually reads — structurally, from the method's own compiled IL, with
+    /// <see cref="Relations.AccountAgreementTrustGain"/> immutable again (<c>static readonly</c>).
+    /// <see cref="StaticFieldsReadBy"/> walks the method body's bytecode instruction by instruction —
+    /// built from <see cref="OpCodes"/>' own canonical operand-size metadata via reflection, rather
+    /// than a hand-transcribed opcode table that could itself be silently wrong — and resolves every
+    /// <c>ldsfld</c> it finds to the real <see cref="FieldInfo"/> being read. No runtime value is
+    /// varied, and nothing outside this one read-only reflective walk is touched.
     /// </summary>
     [Fact]
     public void RecordAccountAgreement_reads_its_own_dedicated_field_not_conflicttrustcost()
     {
-        double original = Relations.AccountAgreementTrustGain;
-        const double mutatedGain = 0.10;
-        Assert.NotEqual(mutatedGain, Relations.ConflictTrustCost, 9); // the two must differ, or this proves nothing
+        var method = typeof(Relations).GetMethod(nameof(Relations.RecordAccountAgreement), BindingFlags.Public | BindingFlags.Static)!;
 
-        try
-        {
-            Relations.AccountAgreementTrustGain = mutatedGain;
+        var staticFieldsRead = StaticFieldsReadBy(method).ToList();
 
-            var listener = Character("salvatore");
-            Relations.Establish(listener, "tommy", trust: 0.30);
-            listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
-
-            var agreement = Assert.NotNull(listener.Cognition.Receive(Affirm(0.9), "tommy", At.AddDays(1)).Agreement);
-            Relations.RecordAccountAgreement(listener, agreement);
-
-            double expectedUnderMutatedGain = Math.Clamp(0.30 + mutatedGain * agreement.Strength, 0, 1);
-            Assert.Equal(expectedUnderMutatedGain, listener.Social.Toward("tommy").Trust, 9);
-        }
-        finally
-        {
-            Relations.AccountAgreementTrustGain = original;
-        }
+        Assert.Contains(staticFieldsRead, f => f.Name == nameof(Relations.AccountAgreementTrustGain));
+        Assert.DoesNotContain(staticFieldsRead, f => f.Name == nameof(Relations.ConflictTrustCost));
     }
 
     [Fact]
-    public void The_agreement_gain_and_the_conflict_cost_are_separate_constants_that_happen_to_agree_today()
+    public void The_agreement_gain_and_the_conflict_cost_are_separate_fields_that_happen_to_agree_today()
     {
-        // Ruling 1: a separately named constant, not ConflictTrustCost reused. Equal at 0.35 today —
-        // a provisional symmetric starting point — is checked here as a plain value fact; it is the
+        // Ruling 1: a separately named field, not ConflictTrustCost reused. Equal at 0.35 today — a
+        // provisional symmetric starting point — is checked here as a plain value fact; it is the
         // test above, not this one, that proves production actually reads the right field.
         Assert.Equal(0.35, Relations.AccountAgreementTrustGain, 9);
         Assert.Equal(0.35, Relations.ConflictTrustCost, 9);
@@ -705,5 +697,89 @@ public sealed class AccountAgreementTests
         var ctx = Context(world, tommy);
         var rng = Rng.ForOccasion(world.Seed, "test|fixed");
         return Utility.Score(candidate, tommy.View, tommy.Psychology, ctx.Perceived, ctx.Agenda, rng).RelationshipNet();
+    }
+
+    // ---------------------------------------------------------------- minimal IL walk (ruling 1's proof)
+
+    /// <summary>
+    /// Every static field <paramref name="method"/>'s compiled IL reads via <c>ldsfld</c>, resolved
+    /// to the real <see cref="FieldInfo"/>. A minimal, linear bytecode walk — not a full decompiler —
+    /// built specifically to answer "which static fields does this one method read", which is all
+    /// <see cref="RecordAccountAgreement_reads_its_own_dedicated_field_not_conflicttrustcost"/> needs.
+    ///
+    /// Operand sizes come from <see cref="OpCodes"/>' own <c>OperandType</c> metadata, read via
+    /// reflection over every public static <see cref="OpCode"/> field the BCL declares — not a
+    /// hand-transcribed table, which could be wrong in exactly the way this test exists to rule out
+    /// for production code. <c>InlineSwitch</c> is the one variable-length operand in CIL and is
+    /// handled explicitly; every other operand shape has a fixed size.
+    /// </summary>
+    private static IEnumerable<FieldInfo> StaticFieldsReadBy(MethodInfo method)
+    {
+        var body = method.GetMethodBody() ?? throw new InvalidOperationException($"{method} has no method body");
+        byte[] il = body.GetILAsByteArray() ?? throw new InvalidOperationException($"{method} has no IL bytes");
+        var module = method.Module;
+        var opcodesByValue = OpCodesByValue();
+
+        int i = 0;
+        while (i < il.Length)
+        {
+            short value;
+            if (il[i] == 0xFE)
+            {
+                value = (short)(0xFE00 | il[i + 1]);
+                i += 2;
+            }
+            else
+            {
+                value = il[i];
+                i += 1;
+            }
+
+            if (!opcodesByValue.TryGetValue(value, out var opcode))
+                throw new InvalidOperationException(
+                    $"unrecognised IL opcode 0x{value:X} at offset {i} while scanning {method} — " +
+                    "this walker's opcode table (built from OpCodes' own metadata) does not cover it.");
+
+            if (opcode.OperandType == OperandType.InlineSwitch)
+            {
+                int caseCount = BitConverter.ToInt32(il, i);
+                i += 4 + 4 * caseCount;
+                continue;
+            }
+
+            int operandSize = opcode.OperandType switch
+            {
+                OperandType.InlineNone => 0,
+                OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => 1,
+                OperandType.InlineVar => 2,
+                OperandType.InlineBrTarget or OperandType.InlineField or OperandType.InlineI
+                    or OperandType.InlineMethod or OperandType.InlineSig or OperandType.InlineString
+                    or OperandType.InlineTok or OperandType.InlineType or OperandType.ShortInlineR => 4,
+                OperandType.InlineI8 or OperandType.InlineR => 8,
+                _ => throw new InvalidOperationException(
+                    $"unhandled operand type {opcode.OperandType} for {opcode.Name} while scanning {method}"),
+            };
+
+            if (opcode.Value == OpCodes.Ldsfld.Value || opcode.Value == OpCodes.Ldsflda.Value)
+            {
+                int token = BitConverter.ToInt32(il, i);
+                yield return module.ResolveField(token)
+                    ?? throw new InvalidOperationException($"token 0x{token:X} did not resolve to a field in {method}");
+            }
+
+            i += operandSize;
+        }
+    }
+
+    private static Dictionary<short, OpCode> OpCodesByValue()
+    {
+        var table = new Dictionary<short, OpCode>();
+        foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+        {
+            if (field.FieldType != typeof(OpCode)) continue;
+            var opcode = (OpCode)field.GetValue(null)!;
+            table[opcode.Value] = opcode;
+        }
+        return table;
     }
 }

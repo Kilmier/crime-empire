@@ -395,3 +395,75 @@ keep by should have been checked at exactly this seam rather than assumed to car
 **Status.** This correction is implemented, tested, and mutation-checked as described above. Milestone
 016 remains **not accepted** — Matt's confirmation of a named commit is what that requires. Neither
 this section nor the account above is rewritten to read as though it were correct from the start.
+
+---
+
+## Second correction from Codex's review of `380a241`, 2026-08-23
+
+Appended, not folded in. Both accounts above are preserved as originally written. This section
+supersedes only what it describes: the storage type of `Relations.AccountAgreementTrustGain` and the
+shape of the test proving `Relations.RecordAccountAgreement` reads it. Findings 1, 3, and 4 from the
+first correction stand unaffected.
+
+**Codex reviewed `380a241` and found one new P1: the first correction's fix to finding 2 introduced a
+new defect while closing the original one.** Changing `AccountAgreementTrustGain` from `const` to a
+plain mutable `public static double` made the discriminating test possible, but the field itself
+became process-global mutable state with no persistence or replay story of its own — reachable by any
+other test, or any other code, running in the same process. That is exactly the shape of state this
+project's determinism and replay guarantees exist to rule out, introduced in the course of fixing an
+unrelated test-rigor gap.
+
+**Fix.** `AccountAgreementTrustGain` is `public static readonly double` again — immutable from any
+caller's point of view, indistinguishable in behaviour from the original `const`, but still (unlike
+`const`) a genuine static field with its own metadata token rather than a value inlined at every call
+site. `RecordAccountAgreement_reads_its_own_dedicated_field_not_conflicttrustcost` no longer varies
+any runtime value. It instead reads `Relations.RecordAccountAgreement`'s own compiled IL directly: a
+new helper, `StaticFieldsReadBy`, walks the method body's bytecode instruction by instruction and
+resolves every `ldsfld` it finds to the real `FieldInfo` being read, then asserts that set contains
+`AccountAgreementTrustGain` and does not contain `ConflictTrustCost`. The walker's opcode-to-operand-
+size table is built from `System.Reflection.Emit.OpCodes`' own metadata via reflection over its public
+static `OpCode` fields, rather than hand-transcribed — a hand-typed table risks exactly the kind of
+silent, undetectable error a test meant to prove structural correctness cannot afford, so the table is
+read from the BCL's own canonical definitions instead of retyped.
+
+**Mutation-checked directly against Codex's exact review mutation**: temporarily changed
+`RecordAccountAgreement` to read `ConflictTrustCost`, rebuilt, and ran the focused test. It failed —
+`Assert.Contains() Failure: Filter not matched in collection, Collection: []` — because
+`ConflictTrustCost` is still `const` and a `const` read never produces a `ldsfld` at all (it is
+inlined as a literal `ldc.r8` instruction instead), so the mutated method reads no static field
+whatsoever from this walker's point of view. The test still fails for exactly the right reason: it
+asserts the presence of `AccountAgreementTrustGain` in what the method reads, and under the mutation
+that field is absent, which is precisely "production is not reading its own dedicated field" — the
+claim under test. Reverted before this commit; the full suite re-confirmed green.
+
+**What this correction is not.** No coefficient tuned — both `AccountAgreementTrustGain` and
+`ConflictTrustCost` remain `0.35`. No simulation behaviour changed: `AccountAgreementTrustGain` is
+read exactly once, in `RecordAccountAgreement`, and an immutable `static readonly` field is read
+identically to how a `const` field was read from every call site's perspective. Findings 1 (the
+`DESIGN_DECISIONS.md` entry), 3 (the archive's corrected provenance claim about the eleven rulings),
+and 4 (the corrected doc comment on `RecordAccountAgreement`) from the first correction are untouched.
+
+**Full verification re-run from a clean tree**: build 0 warnings/0 errors across six projects; 505/505
+tests (the coefficient test's identity changed, its count did not); `--verify` deterministic and
+byte-identical to `66917c7`'s own hashes on all three moved variants (`baseline` `9AF57665067AEA11`,
+`disloyal-vincent` `9A6E0E518294532F`, `resentful-tommy` `3C4483640153DA88`); `--compare` unchanged
+across all five; both required viewpoint runs exit 0; Godot `--selftest` and `--selftest-goldenpath`
+unchanged; the two-process restart proof unchanged on the isolated slot; production save slot hash
+confirmed unchanged before and after (`sha256:35937d3b...`).
+
+**Recurring-failure list, walked.** *A fix that closes one gap by opening an adjacent one*: the first
+correction's own fix — needed to make a discriminating test possible at all — introduced exactly the
+kind of process-global mutable state this project's whole determinism apparatus (seeded RNG,
+replay-based persistence, byte-identical trace verification) exists to prevent, in a single small
+static field that looked, in isolation, like an ordinary test-support seam. *Solving a problem by
+making the wrong thing mutable, when the actual need was inspectability*: the original goal was never
+"vary this value at runtime" — it was "prove which of two field names a compiled method references" —
+and `static readonly` combined with IL inspection meets that need without ever making the coefficient
+itself a moving target. The narrower fix was available from the start; it took a second review to find
+it because the first fix's test did pass, and a passing discriminating test reads as success even when
+the mechanism that made it discriminate is itself the problem.
+
+**Status.** This second correction is implemented, tested, and mutation-checked as described above.
+Milestone 016 remains **not accepted**, and now stands **corrected twice** — Matt's confirmation of a
+named commit is what acceptance requires. Neither this section nor either account above is rewritten
+to read as though it were correct from the start.

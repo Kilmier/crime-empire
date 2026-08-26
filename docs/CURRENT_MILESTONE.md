@@ -10,39 +10,31 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 019 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 018 — The Player Can See What Their Choice Did — corrected three times and awaiting
-re-review.** Codex reviewed the original implementation (`ae06f61`) and returned FAIL (two P1 defects,
-one P2 proof gap); Matt authorized a correction (`b9dfa49`) that fixed both. Codex reviewed that
-correction and returned FAIL again: the correction's own fix for pending-vs-declined was itself a
-private-decision leak (reading whether the asked character's own `DecisionRecord` existed, which the
-asker has no way to know), the action-kind audit called `PlayerOption.Describe` directly instead of
-exercising `PlayerView.Build`/`LastAction`, and `InformationRequest.WakeEventId` — genuine new
-persistent linkage state, contrary to the correction's "no new persistent state" claim — was missing
-from both replay comparators. Matt authorized a second correction (`f5246c0`) that fixed all three:
-request disposition became `Pending`/`Answered` — two values, not three — read entirely from the
-*asker's* own `Cognition.Testimony`; the action-kind audit was rewritten to drive each variant event by
-event and assert on a real `PlayerView.Build` snapshot; `WakeEventId` was covered by both replay
-comparators.
+**Milestone 018 — The Player Can See What Their Choice Did — is accepted and closed.** Codex reviewed
+the original implementation (`ae06f61`) and returned **FAIL** (two P1 defects, one P2 proof gap); the
+correction in `b9dfa49` fixed both. Codex reviewed that correction and returned **FAIL** again: the
+correction's own fix for pending-vs-declined was itself a private-decision leak (reading whether the
+asked character's own `DecisionRecord` existed, which the asker has no way to know), the action-kind
+audit called `PlayerOption.Describe` directly instead of exercising `PlayerView.Build`/`LastAction`, and
+`InformationRequest.WakeEventId` — genuine new persistent linkage state, contrary to the correction's
+"no new persistent state" claim — was missing from both replay comparators. The second correction in
+`f5246c0` fixed all three: request disposition became `Pending`/`Answered` — two values, not three —
+read entirely from the *asker's* own `Cognition.Testimony`; the action-kind audit was rewritten to drive
+each variant event by event and assert on a real `PlayerView.Build` snapshot; `WakeEventId` was covered
+by both replay comparators. Codex reviewed that correction and confirmed all three defects resolved,
+but flagged one P2 cleanup: `WakeEventId` had no production consumer left, and
+`RequestDisposition`/`PlayerRequest.Disposition` were redundant, since `PlayerRequest` objects are only
+ever built for requests that already fail the "answered" check. The third correction in `43379e0`
+removed all three: `InformationRequest.WakeEventId`, the `RequestDisposition` enum, and
+`PlayerRequest.Disposition` are gone; `Commit.cs`'s `SeekCorroboration` case reverted to its original
+request-before-schedule ordering; `AwaitingAnswers` now filters directly on the asker's own
+`Cognition.Testimony` with no disposition value at all. **Codex independently reviewed `43379e0` and
+returned PASS with no findings; Matt accepted `43379e0` on 2026-08-26 on the strength of that review and
+closed the milestone.** Full account, including the original implementation and all three appended
+corrections: `docs/milestones/018-the-player-can-see-what-their-choice-did.md`.
 
-Codex reviewed that correction and confirmed all three defects resolved, but flagged one P2 cleanup:
-`WakeEventId` had no production consumer left — written and replay-compared, never read, once
-resolution stopped consulting it — and `RequestDisposition`/`PlayerRequest.Disposition` were redundant,
-since `PlayerRequest` objects are only ever built for requests that already fail the "answered" check,
-so every exposed disposition was necessarily `Pending`. Matt authorized a third, bounded correction
-(current HEAD) that removed all three: `InformationRequest.WakeEventId`, the `RequestDisposition` enum,
-and `PlayerRequest.Disposition` are gone; `Commit.cs`'s `SeekCorroboration` case reverted to its
-original request-before-schedule ordering (the reorder existed only to capture `wake.Id`);
-`AwaitingAnswers` now filters directly on the asker's own `Cognition.Testimony` with no disposition
-value at all. No genuine production consumer for either abstraction was found during removal.
-
-Full account, including the original implementation and all three appended correction sections:
-`docs/milestones/018-the-player-can-see-what-their-choice-did.md`. 550 tests passing (552 prior minus 2
-tests that existed only to compare `WakeEventId`); all five variant trace hashes byte-identical to
-`REVIEW_LEDGER.md`'s recorded baselines across all four commits — this milestone changed no simulation
-behavior, only presentation. Stopping here for Codex re-review.
-
-Milestones 001–017 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
-the corrected acceptance record of 015 and 016 specifically.
+Milestones 001–018 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
+the corrected acceptance record of 015, 016, and 018 specifically.
 
 **Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
 meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".

@@ -266,6 +266,75 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 018, the player can see what their choice did, corrected three times, accepted
+
+**Self-implemented; reviewed by Codex on implementation commit `ae06f61`, returned FAIL with two P1
+findings and one P2 proof gap.** Projects a causal thread — immediate acknowledgement, unresolved
+status while pending, perspective-limited resolution once known — entirely from already-authoritative
+typed state (`World.Decisions`, `World.Requests`, `World.Businesses`,
+`World.AccountConflicts`/`AccountAgreements`), through four new `PlayerSnapshot` fields and a widened
+`PlayerOccasion.For`, no second event log or player-only action path. Full account, including the
+original implementation and all three appended corrections:
+`docs/milestones/018-the-player-can-see-what-their-choice-did.md`.
+
+**Correction 1 (`b9dfa49`) fixed all three findings from `ae06f61`'s review:** pending and declined
+requests had been indistinguishable; a forced tribute demand matched the demander alone rather than
+demander-and-business, so the same man's violence at an unrelated business misread as "already used
+force over this"; six required proof categories were missing. Tests: **543 passed, 0 failed** (523
+pre-existing + 20 new, `CausalFeedbackTests.cs`).
+
+**Codex reviewed `b9dfa49` and returned FAIL again: one P1 in the correction's own fix, two P2 gaps.**
+(1) the pending/declined fix read `World.Decisions` for the *asked* character to tell whether his own
+deliberation had resolved — itself a private-state leak, since the asker never receives any message
+establishing that the asked person decided anything at all; (2) the action-kind audit called
+`PlayerOption.Describe` directly on a post-hoc scan rather than exercising `PlayerView.Build`/
+`LastAction`; (3) `InformationRequest.WakeEventId`, genuine new persistent state added by the first
+correction, was missing from both independent replay comparators.
+
+**Correction 2 (`f5246c0`) fixed all three.** Request disposition became `Pending`/`Answered` — two
+values, not three — derived entirely from the asker's own `Cognition.Testimony`; a same-pass attempt to
+keep a third `Declined` value for a communicated denial was itself caught and reverted by a test, since
+the natural proof has Vincent give Salvatore a full, sincere account that happens to contradict him — an
+answer, not a refusal. The action-kind audit was rewritten to drive each variant event by event and
+assert on a real `PlayerView.Build` snapshot after every decision. Both replay comparators gained
+`WakeEventId`, each with a focused proof that differing linkage identities cannot compare equal. Tests:
+**552 passed, 0 failed** (548 prior + 4 new).
+
+**Codex reviewed `f5246c0` and confirmed all three defects resolved, the demand/business fix still
+valid, and full verification unchanged — but flagged one remaining P2:** `WakeEventId` had no
+production consumer left once resolution stopped reading it (written, replay-compared, never
+consumed), and `RequestDisposition`/`PlayerRequest.Disposition` were redundant, since `PlayerRequest`
+objects are only ever built for requests that already fail the "answered" check, so every exposed
+disposition was necessarily `Pending`.
+
+**Correction 3 (`43379e0`) removed both abstractions.** `InformationRequest.WakeEventId`, the
+`RequestDisposition` enum, and `PlayerRequest.Disposition` are gone; `Commit.cs`'s `SeekCorroboration`
+case reverted to its pre-milestone-018 request-before-schedule ordering (the reorder existed solely to
+capture `WakeEventId`); `AwaitingAnswers` now filters `World.Requests` directly against the asker's own
+`Cognition.Testimony`, with the corrected information boundary unchanged in substance — private silence
+and private refusal remain indistinguishable, neither is described as a communicated refusal, and a
+communicated answer in either direction removes a request from the list. A grep across `src/` and
+`tests/` found no genuine production consumer for either removed abstraction. Tests: **550 passed, 0
+failed** (552 prior minus two tests that existed only to prove `WakeEventId` made two otherwise-identical
+requests compare unequal).
+
+- Build: 0 warnings, 0 errors, across all three corrections.
+- `--verify` deterministic and byte-identical on all five variants throughout every correction:
+  `baseline` `9AF57665067AEA11`, `cautious-vincent` `86EC1ADA4A4E9179`, `watchful-boss`
+  `84AC3F65E4102EBA`, `disloyal-vincent` `9A6E0E518294532F`, `resentful-tommy` `3C4483640153DA88` — all
+  unmoved from milestone 017's accepted baseline; this milestone changed no simulation behavior, only
+  presentation. Both required viewpoint runs (`disloyal-vincent`/`salvatore`,
+  `baseline`/`vincent`) exit 0 at every correction.
+- Godot `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`, the two new
+  `--selftest-corroboration` and `--selftest-tribute`, and the two-process restart proof
+  (`--selftest-restart-save`/`--selftest-restart-load`) all exit 0 at every correction.
+
+**Codex independently reviewed correction commit `43379e0` and returned PASS with no P1 or P2
+findings.** Matt accepted `43379e0` on 2026-08-26 on the strength of that clean review, and closed the
+milestone. Milestone 018's accepted state is `43379e0` and nothing before it — `ae06f61`, `b9dfa49`, and
+`f5246c0` were never themselves accepted; each Codex FAIL is what produced the correction that follows
+it.
+
 ### Measured — milestone 017, direct action vs delegation, corrected once, accepted
 
 **Self-implemented; reviewed by Codex on implementation commit `9de2c75`, returned FAIL with four

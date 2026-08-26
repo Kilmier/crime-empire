@@ -7,21 +7,19 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 018 —
+**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 019 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 017 — Direct Action vs Delegation: Different Causal Footprints — is accepted and closed.**
-Codex reviewed implementation commit `9de2c75` and returned **FAIL**: four proof defects (a
-pause/fast-forward test that asserted only status and date; a save/load proof that stopped at the
-immediate `DelegatedToId` flag instead of a real consequence; an investigation-attribution test that
-fed itself a hand-typed claim instead of production output; a Godot fork-check that read
-session-internal state instead of the rendered interface), none of them findings about simulation
-behaviour — every trace hash and action digest was unaffected. All four were corrected in `0f56f1e`,
-with both explicitly-required mutation checks (findings 3 and 4) run, confirmed to fail for the
-intended reason, then reverted. **Codex independently reviewed `0f56f1e` and returned PASS with no
-findings; Matt accepted `0f56f1e` on 2026-08-25 on the strength of that review and closed the
-milestone.** Full account, including the original implementation and the appended correction:
-`docs/milestones/017-direct-action-vs-delegation.md`.
+**Milestone 018 — The Player Can See What Their Choice Did — is implemented and awaiting review.**
+Every new surface is a projection of already-authoritative typed state; no new persistent state was
+added in `Commit.cs`, `Pipeline.cs`, or `Strategies.cs`. Full account, including the two natural
+proofs (observed live before any test was pinned), the six mutation checks (each confirmed to fail for
+the intended reason, then reverted — including one where the first attempt at a mutation guard proved
+nothing until the test itself was strengthened), and complete verification output:
+`docs/milestones/018-the-player-can-see-what-their-choice-did.md`. 543 tests passing (523 pre-existing
++ 20 new); all five variant trace hashes byte-identical to `REVIEW_LEDGER.md`'s recorded baselines —
+this milestone changed no simulation behavior, only presentation. Stopping here for Codex review per
+the milestone's own closing instruction.
 
 Milestones 001–017 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
 the corrected acceptance record of 015 and 016 specifically.
@@ -32,16 +30,20 @@ meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self
 ## What is deferred, for whoever scopes the next milestone
 
 Not authorization to start any of it — see `ROADMAP.md`, which is where scope is proposed from, and
-`docs/milestones/017-direct-action-vs-delegation.md`'s "Deferred work" section for the full, current
-list carried from milestone 017's own authorizing text. In brief: choosing between multiple
-subordinates; recruitment, crew rosters, specialists, equipment, preparation, budget allocation;
-making Persuasion, Coercion, or crew size affect tribute success; resolving whether escalation
-capability belongs to the owner or the delegate; resource transfer from owner to delegate; territory,
-patrol, weekly planning; additional businesses or operations; a seventh character; employee-stat
-displays or new UI panels; the known pause-timing information leak; new organizations, careers, or
-alternate playable roles. Executor suitability/capability — whether delegation ever reflects who would
-actually do the job better — is now recorded in `ROADMAP.md`'s known technical debt, not already
-having been before milestone 017.
+`docs/milestones/018-the-player-can-see-what-their-choice-did.md`'s "Deferred" section for this
+milestone's own carried items (full GUI redesign, the five-column layout not yet rebalanced, the
+wrapped-date/toolbar debt, a `PlayerNarration` prose rewrite, "You control"/"You see through"
+unification, and the rest — recorded in `ROADMAP.md`'s "Known technical debt" as playtest-discovered
+presentation debt).
+
+Carried from milestone 017 and earlier, still unresolved: choosing between multiple subordinates;
+recruitment, crew rosters, specialists, equipment, preparation, budget allocation; making Persuasion,
+Coercion, or crew size affect tribute success; resolving whether escalation capability belongs to the
+owner or the delegate; resource transfer from owner to delegate; territory, patrol, weekly planning;
+additional businesses or operations; a seventh character; employee-stat displays or new UI panels; the
+known pause-timing information leak; new organizations, careers, or alternate playable roles. Executor
+suitability/capability — whether delegation ever reflects who would actually do the job better — is
+recorded in `ROADMAP.md`'s known technical debt.
 
 Carried from milestone 016 and earlier, still unresolved: **124 live-edge findings and 5
 apparently-dead lines** (`docs/COVERAGE_ACCOUNTING.md`); systematic mutation automation and

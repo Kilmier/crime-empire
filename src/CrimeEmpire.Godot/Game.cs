@@ -71,6 +71,24 @@ public partial class Game : Control
     private const string DirectActionFlag = "--selftest-directaction";
 
     /// <summary>
+    /// Command-line switch for milestone 018's first natural proof: Salvatore's own seed-42
+    /// <c>cautious-vincent</c> ask — "ask Vincent Russo for his own account of whether Bellini's
+    /// grocery is holding back what it owes" — played through real button presses. Proves the request
+    /// renders as an immediate, unresolved acknowledgement, and that Vincent's own naturally-occurring
+    /// answer (observed directly before this flag was written, never staged or tuned) resolves it and
+    /// attributes the account to him on the live screen.
+    /// </summary>
+    private const string CorroborationFlag = "--selftest-corroboration";
+
+    /// <summary>
+    /// Command-line switch for milestone 018's second natural proof: Marco's own seed-42
+    /// <c>baseline</c> first tribute demand, played through real button presses. Proves the decision
+    /// panel names the demander before Marco chooses, and that his response renders an immediate
+    /// acknowledgement plus his business's own known paying status.
+    /// </summary>
+    private const string TributeFlag = "--selftest-tribute";
+
+    /// <summary>
     /// Command-line switch for milestone 015's restart proof, process A: plays the golden path's
     /// first three choices (start, carry on, delegate to Tommy) through real buttons, saves to
     /// <see cref="SelfTestRestartSavePath"/> (never the production slot — see the type header), and
@@ -169,6 +187,18 @@ public partial class Game : Control
         if (DirectActionRequested())
         {
             RunDirectActionSelfTest();
+            return;
+        }
+
+        if (FlagRequested(CorroborationFlag))
+        {
+            RunCorroborationSelfTest();
+            return;
+        }
+
+        if (FlagRequested(TributeFlag))
+        {
+            RunTributeSelfTest();
             return;
         }
 
@@ -353,6 +383,7 @@ public partial class Game : Control
 
         columns.AddChild(Column("WHAT HE KNOWS", BuildKnowledge(snapshot)));
         columns.AddChild(Column("LATELY", BuildRecent(snapshot)));
+        columns.AddChild(Column("WHAT JUST HAPPENED", BuildCausalThread(snapshot)));
         columns.AddChild(Column("HOW HE TAKES THEM", BuildAttitudes(snapshot)));
         columns.AddChild(Column(
             session.ControlledCharacterId is null ? "NOBODY IS BEING CONTROLLED" : "A DECISION",
@@ -484,19 +515,68 @@ public partial class Game : Control
         if (snapshot.Attitudes.Count == 0)
         {
             yield return Plain($"{p.Subject_} {p.Verb("has", "have")} nothing much to say about anybody.");
+        }
+        else
+        {
+            foreach (var attitude in snapshot.Attitudes)
+            {
+                yield return Plain(attitude.PersonName);
+                yield return Faint($"    {attitude.Standing}");
+                if (attitude.Wariness is { } wariness)
+                    yield return Faint($"    {wariness}");
+                foreach (var grievance in attitude.Grievances)
+                    yield return Faint(
+                        $"    what {p.Subject} {p.Verb("holds", "hold")} against " +
+                        $"{attitude.PersonPronouns.Object}: \"{grievance}\"");
+            }
+        }
+
+        // Qualitative trust movement only — see PlayerRelationshipMovement's own doc comment for why
+        // fear, obligation and grievance are not shown here. Shown regardless of whether the person
+        // otherwise made the Attitudes list above, so a fresh movement is never silently absorbed.
+        if (snapshot.RecentTrustMovements.Count > 0)
+        {
+            yield return new HSeparator();
+            yield return Plain("RECENTLY");
+            foreach (var movement in snapshot.RecentTrustMovements)
+                yield return Faint(
+                    $"{movement.At.ToString("d MMM", CultureInfo.InvariantCulture)}  " +
+                    $"{PlayerNarration.Movement(movement.Warmed, p, movement.PersonName)}");
+        }
+    }
+
+    /// <summary>
+    /// The viewpoint character's own causal thread: what he last committed to, his own business's
+    /// status if he owns one, and what he is still waiting to hear back on. Milestone 018 — every
+    /// value here is a projection already computed onto <see cref="PlayerSnapshot"/>, never a second
+    /// record this file keeps of its own.
+    /// </summary>
+    private IEnumerable<Control> BuildCausalThread(PlayerSnapshot snapshot)
+    {
+        var p = snapshot.ViewpointPronouns;
+
+        yield return snapshot.LastAction is { } action
+            ? Plain($"{action.At.ToString("d MMM", CultureInfo.InvariantCulture)}  {p.Subject_} chose to {action.Description}")
+            : Plain($"{p.Subject_} {p.Verb("has", "have")} not committed to anything yet.");
+
+        if (snapshot.MyBusiness is { } business)
+            yield return Faint($"    {business.Name}: {(business.PayingTribute ? "currently paying" : "not currently paying")}");
+
+        yield return new HSeparator();
+        yield return Plain("AWAITING ANSWERS");
+
+        if (snapshot.AwaitingAnswers.Count == 0)
+        {
+            yield return Faint("Nothing outstanding.");
             yield break;
         }
 
-        foreach (var attitude in snapshot.Attitudes)
+        foreach (var request in snapshot.AwaitingAnswers)
         {
-            yield return Plain(attitude.PersonName);
-            yield return Faint($"    {attitude.Standing}");
-            if (attitude.Wariness is { } wariness)
-                yield return Faint($"    {wariness}");
-            foreach (var grievance in attitude.Grievances)
-                yield return Faint(
-                    $"    what {p.Subject} {p.Verb("holds", "hold")} against " +
-                    $"{attitude.PersonPronouns.Object}: \"{grievance}\"");
+            yield return Plain(
+                $"{request.AskedAt.ToString("d MMM", CultureInfo.InvariantCulture)}  asked {request.AskedName} " +
+                $"for {request.AskedPronouns.Possessive} own account of whether {request.Statement}");
+            yield return Faint("    no answer yet");
         }
     }
 
@@ -932,6 +1012,184 @@ public partial class Game : Control
             "CE-DIRECTACTION FAILED — proceeds=" + proceeds + " executedPersonally=" + executedPersonally +
             " noTommyExecution=" + noTommyExecution + " — the direct branch did not reach the expected " +
             "personally-executed consequence, so it proves nothing");
+        GetTree().Quit(1);
+    }
+
+    // ================================================================= corroboration (milestone 018)
+
+    private void RunCorroborationSelfTest()
+    {
+        try
+        {
+            CorroborationSelfTest();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-CORROBORATION FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    /// <summary>
+    /// Salvatore's own seed-42 <c>cautious-vincent</c> ask, played through real buttons.
+    ///
+    /// Reached via "Next event" alone, never a fast-forward control — pressing "Advance a day/week"
+    /// would carry an outstanding horizon across the ask itself and run the session straight past the
+    /// unresolved moment this proof exists to catch, exactly the reason <see cref="PressChoicesInOrder"/>
+    /// and <see cref="AdvanceToPause(PersistentSession)"/> already use "Next event" only.
+    ///
+    /// Vincent's answer is not staged: observed directly, before this method was written, to arrive
+    /// naturally within a few days through the ordinary report channel, and to contradict what
+    /// Salvatore already held from "the books" — so this proof also exercises a live disagreement
+    /// resolving with attribution, not merely a belief appearing.
+    /// </summary>
+    private void CorroborationSelfTest()
+    {
+        GD.Print("CE-CORROBORATION begin");
+
+        StartSession(seed: 42, variant: "cautious-vincent", controlled: "salvatore", viewpoint: "salvatore");
+        var session = _session!;
+
+        const string ask =
+            "ask Vincent Russo for his own account of whether Bellini's grocery is holding back what it owes";
+
+        AdvanceToPause(session);
+        if (!Press(ask))
+            throw new InvalidOperationException($"the natural run never offers \"{ask}\" to Salvatore");
+
+        var afterAsk = new StringBuilder();
+        Collect(this, afterAsk);
+        string afterAskText = afterAsk.ToString();
+
+        GD.Print("== CE-CORROBORATION-AFTER-ASK-BEGIN ==");
+        GD.Print(afterAskText);
+        GD.Print("== CE-CORROBORATION-AFTER-ASK-END ==");
+
+        bool acknowledged = afterAskText.Contains("chose to ask Vincent Russo", StringComparison.Ordinal);
+        bool unresolved =
+            afterAskText.Contains(
+                "asked Vincent Russo for his own account of whether Bellini's grocery is holding back what it owes",
+                StringComparison.Ordinal)
+            && afterAskText.Contains("no answer yet", StringComparison.Ordinal);
+
+        if (!acknowledged || !unresolved)
+        {
+            GD.PrintErr(
+                "CE-CORROBORATION FAILED — acknowledged=" + acknowledged + " unresolved=" + unresolved +
+                " — the request was not shown as an immediate, unresolved acknowledgement");
+            GetTree().Quit(1);
+            return;
+        }
+
+        // Advance one event at a time, exactly as a person clicking "Next event" would, until either
+        // the request resolves or nothing further can be pressed without answering a new decision —
+        // the natural run's own pace decides which, never a fixed number of days.
+        string finalText = afterAskText;
+        for (int guard = 0; guard < 100; guard++)
+        {
+            var current = new StringBuilder();
+            Collect(this, current);
+            finalText = current.ToString();
+            if (!finalText.Contains("no answer yet", StringComparison.Ordinal)) break;
+            if (!Press("Next event")) break;
+        }
+
+        GD.Print("== CE-CORROBORATION-FINAL-BEGIN ==");
+        GD.Print(finalText);
+        GD.Print("== CE-CORROBORATION-FINAL-END ==");
+
+        bool resolved = !finalText.Contains("no answer yet", StringComparison.Ordinal);
+        bool attributedToVincent =
+            finalText.Contains("Accounts differ on whether Bellini's grocery is holding back", StringComparison.Ordinal)
+            && finalText.Contains("Vincent Russo", StringComparison.Ordinal);
+
+        if (resolved && attributedToVincent)
+        {
+            GD.Print("CE-CORROBORATION ok");
+            GetTree().Quit();
+            return;
+        }
+
+        GD.PrintErr(
+            "CE-CORROBORATION FAILED — resolved=" + resolved + " attributedToVincent=" + attributedToVincent +
+            " — the natural run did not resolve and attribute Vincent's answer on the live screen");
+        GetTree().Quit(1);
+    }
+
+    // ================================================================= tribute demand (milestone 018)
+
+    private void RunTributeSelfTest()
+    {
+        try
+        {
+            TributeSelfTest();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-TRIBUTE FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    /// <summary>
+    /// Marco's own seed-42 <c>baseline</c> first tribute demand — Vincent's, before any escalation or
+    /// delegation, and before Marco holds any violence claim against anybody — played through real
+    /// buttons. Proves the decision panel names the demander before Marco chooses, and that refusing
+    /// renders an immediate acknowledgement plus the business's own known unpaid status, never a
+    /// number and never an invented future consequence.
+    /// </summary>
+    private void TributeSelfTest()
+    {
+        GD.Print("CE-TRIBUTE begin");
+
+        StartSession(seed: 42, variant: "baseline", controlled: "marco", viewpoint: "marco");
+        var session = _session!;
+
+        AdvanceToPause(session);
+
+        var beforeChoice = new StringBuilder();
+        Collect(this, beforeChoice);
+        string beforeChoiceText = beforeChoice.ToString();
+
+        GD.Print("== CE-TRIBUTE-BEFORE-BEGIN ==");
+        GD.Print(beforeChoiceText);
+        GD.Print("== CE-TRIBUTE-BEFORE-END ==");
+
+        bool namesTheDemander =
+            beforeChoiceText.Contains("Vincent Russo is demanding tribute from him", StringComparison.Ordinal);
+        if (!namesTheDemander)
+        {
+            GD.PrintErr("CE-TRIBUTE FAILED — the panel does not name the demander before Marco chooses");
+            GetTree().Quit(1);
+            return;
+        }
+
+        if (!Press("refuse Vincent Russo"))
+            throw new InvalidOperationException("could not press \"refuse Vincent Russo\"");
+
+        var afterChoice = new StringBuilder();
+        Collect(this, afterChoice);
+        string afterChoiceText = afterChoice.ToString();
+
+        GD.Print("== CE-TRIBUTE-AFTER-BEGIN ==");
+        GD.Print(afterChoiceText);
+        GD.Print("== CE-TRIBUTE-AFTER-END ==");
+
+        bool acknowledged = afterChoiceText.Contains("chose to refuse Vincent Russo", StringComparison.Ordinal);
+        bool businessStatusShown =
+            afterChoiceText.Contains("Bellini's grocery: not currently paying", StringComparison.Ordinal);
+        bool noInventedRetaliation = !afterChoiceText.Contains("harder", StringComparison.Ordinal);
+
+        if (acknowledged && businessStatusShown && noInventedRetaliation)
+        {
+            GD.Print("CE-TRIBUTE ok");
+            GetTree().Quit();
+            return;
+        }
+
+        GD.PrintErr(
+            "CE-TRIBUTE FAILED — acknowledged=" + acknowledged + " businessStatusShown=" + businessStatusShown +
+            " noInventedRetaliation=" + noInventedRetaliation);
         GetTree().Quit(1);
     }
 

@@ -677,15 +677,17 @@ public sealed class PlayerSessionTests
             EventKind.Incident, EventKind.PressureThreshold,
         };
 
+        var actor = BareActor();
+
         foreach (var kind in Enum.GetValues<EventKind>())
         {
-            string? occasion = PlayerOccasion.For(Wake(kind), Pronouns.He);
+            string? occasion = PlayerOccasion.For(Wake(kind), actor, id => id);
             if (admitted.Contains(kind)) Assert.False(string.IsNullOrEmpty(occasion), $"{kind} lost its occasion");
             else Assert.Null(occasion);
         }
 
-        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyBlocked), Pronouns.He));
-        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyComplete), Pronouns.He));
+        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyBlocked), actor, id => id));
+        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyComplete), actor, id => id));
     }
 
     /// <summary>
@@ -703,7 +705,7 @@ public sealed class PlayerSessionTests
     [InlineData("permission-sought", "somebody has asked him for room to move")]
     [InlineData(null, "he came back round to his own patch")]
     public void A_role_review_somebody_caused_says_which_act_it_was(string? note, string expected)
-        => Assert.Equal(expected, PlayerOccasion.For(Wake(EventKind.RoleReview, note), Pronouns.He));
+        => Assert.Equal(expected, PlayerOccasion.For(Wake(EventKind.RoleReview, note), BareActor(), id => id));
 
     /// <summary>
     /// The focus is derived from the character's own state, never passed through from the agenda's
@@ -1370,6 +1372,10 @@ public sealed class PlayerSessionTests
         Cause = "staged: his patch came up for review",
     };
 
+    /// <summary>A bare actor for exercising <see cref="PlayerOccasion.For"/> directly, divorced from
+    /// any session — a fresh throwaway world each call, never shared state between tests.</summary>
+    private static Character BareActor() => Cast.Build(Seed, "baseline").Get(Controlled);
+
     /// <summary>A bare event of one kind, for exercising the occasion vocabulary directly.</summary>
     private static ScheduledEvent Wake(EventKind kind, string? note = null) => new()
     {
@@ -1462,6 +1468,15 @@ public sealed class PlayerSessionTests
         }
 
         foreach (var p in s.Silent) yield return p.Name;
+
+        if (s.LastAction is { } action) yield return action.Description;
+        if (s.MyBusiness is { } business) yield return business.Name;
+        foreach (var r in s.AwaitingAnswers)
+        {
+            yield return r.AskedName;
+            yield return r.Statement;
+        }
+        foreach (var m in s.RecentTrustMovements) yield return m.PersonName;
     }
 
     private static string Flatten(PlayerSnapshot s)

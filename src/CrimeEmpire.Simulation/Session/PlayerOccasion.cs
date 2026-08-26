@@ -53,37 +53,65 @@ internal static class PlayerOccasion
     /// context there is: "somebody has just put a question to you" is precisely why you would answer
     /// it.
     ///
-    /// The phrases below name nobody. Whoever spoke is already named in the options — "give Tommy
-    /// Nardo his account of…" — so naming him twice buys nothing and widens the surface.
+    /// The phrases below name nobody, with one deliberate exception since milestone 018: a tribute
+    /// demand names the demander, because "who is asking me for money" is precisely the fact the
+    /// decision it wakes is about — unlike the RoleReview cases above, no option elsewhere on the
+    /// same panel already names him.
     /// </summary>
-    internal static string? For(ScheduledEvent trigger, Pronouns self) => trigger.Kind switch
+    internal static string? For(ScheduledEvent trigger, Character actor, Func<string, string> name)
     {
-        // He has just been briefed, through Cognition.Receive, by the man who issued it.
-        EventKind.AssignmentDelivered =>
-            $"{self.Subject} {self.Verb("has", "have")} just been handed something to do",
+        var self = actor.Pronouns;
 
-        // Somebody spoke to him, and the note says which act it was. Each is established for him by
-        // the act itself: he was the one asked, reported to, or petitioned.
-        EventKind.RoleReview => trigger.Payload.Note switch
+        return trigger.Kind switch
         {
-            "asked-to-account" => $"somebody has put a question to {self.Object}",
-            "reported-to" => $"somebody has reported to {self.Object}",
-            "permission-sought" => $"somebody has asked {self.Object} for room to move",
-            _ => $"{self.Subject} came back round to {self.Possessive} own patch",
-        },
+            // He has just been briefed, through Cognition.Receive, by the man who issued it.
+            EventKind.AssignmentDelivered =>
+                $"{self.Subject} {self.Verb("has", "have")} just been handed something to do",
 
-        // Runner.Observe schedules this only after the observer actually acquired something, so the
-        // event's own precondition establishes the phrase.
-        EventKind.Incident => $"something reached {self.Object}",
+            // Somebody spoke to him, and the note says which act it was. Each is established for him
+            // by the act itself: he was the one asked, reported to, or petitioned.
+            EventKind.RoleReview => trigger.Payload.Note switch
+            {
+                "asked-to-account" => $"somebody has put a question to {self.Object}",
+                "reported-to" => $"somebody has reported to {self.Object}",
+                "permission-sought" => $"somebody has asked {self.Object} for room to move",
+                _ => $"{self.Subject} came back round to {self.Possessive} own patch",
+            },
 
-        // His own pressure, crossed in his own head.
-        EventKind.PressureThreshold => "something had got hard to ignore",
+            // Runner.Observe schedules this only after the observer actually acquired something, so
+            // the event's own precondition establishes the phrase — except the tribute-demand note,
+            // which is established the same way: the owner learned BusinessRefusesTribute /
+            // met the demander in the very same commit that scheduled this (Strategies.cs), so naming
+            // the demander here asserts nothing he does not already hold.
+            EventKind.Incident => trigger.Payload.Note switch
+            {
+                "tribute-demanded" when trigger.Payload.TargetId is { } demanderId => Demand(actor, demanderId, name),
+                _ => $"something reached {self.Object}",
+            },
 
-        // StrategyComplete and StrategyBlocked, and anything added later. Silence is the default and
-        // must stay the default: adding a kind here is a claim that the character necessarily knows
-        // why he is thinking, and that claim has already been wrong once.
-        _ => null,
-    };
+            // His own pressure, crossed in his own head.
+            EventKind.PressureThreshold => "something had got hard to ignore",
+
+            // StrategyComplete and StrategyBlocked, and anything added later. Silence is the default
+            // and must stay the default: adding a kind here is a claim that the character necessarily
+            // knows why he is thinking, and that claim has already been wrong once.
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// A tribute demand, named to the extent the demanded actually experienced it.
+    ///
+    /// Force leaves the owner a held <c>PersonUsedViolence</c> claim naming the demander
+    /// (<c>Strategies.ResolveViolence</c>, <c>SourceKind.Witness</c>) and is named as such. Threaten
+    /// leaves nothing equivalent — only <c>Relations.Frighten</c>'s fear rise, which has no reader
+    /// here — so a threatened-but-not-yet-forced demand reads as a plain demand rather than asserting
+    /// a method the character has no structural record of experiencing.
+    /// </summary>
+    private static string Demand(Character actor, string demanderId, Func<string, string> name)
+        => actor.Cognition.OfKind(ClaimKind.PersonUsedViolence).Any(r => r.Claim.Subject == demanderId)
+            ? $"{name(demanderId)} has already used force over this"
+            : $"{name(demanderId)} is demanding tribute from {actor.Pronouns.Object}";
 
     /// <summary>
     /// What is on his mind — derived from his own state, never passed through from the agenda's
@@ -110,7 +138,7 @@ internal static class PlayerOccasion
     {
         // A wake we cannot describe is a wake we say nothing about. Otherwise the focus would narrate
         // the same delegated outcome the occasion was suppressed for.
-        if (For(trigger, actor.Pronouns) is null) return null;
+        if (For(trigger, actor, name) is null) return null;
 
         return agenda.Kind switch
         {

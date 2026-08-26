@@ -21,22 +21,29 @@ public sealed class Business
 }
 
 /// <summary>
-/// One perceived account conflict, as it reached one listener. Developer/test state: never
-/// consulted by any decision, and never rendered to the player.
+/// One perceived account conflict, as it reached one listener. Never consulted by any decision.
 ///
 /// Recorded so the milestone's run-wide properties can be asserted directly rather than argued for
 /// from the call sites' structure — the gap milestone 005's fifth finding was about. It also makes
 /// "does this fire naturally in the accepted scenario" a question a test can answer.
+///
+/// <b>Amended by milestone 018:</b> this record is no longer developer/test-only. It is now the one
+/// source <c>PlayerView.Build</c> reads to project qualitative trust movement, filtered to
+/// <c>ListenerId == </c> the viewpoint and reduced to who moved and which direction — never
+/// <see cref="AccountConflict.Strength"/> or anything else on <see cref="AccountConflict"/>. See
+/// <c>Session.PlayerRelationshipMovement</c>.
 /// </summary>
 public sealed record PerceivedConflict(string ListenerId, AccountConflict Conflict, DateTime At);
 
 /// <summary>
-/// One perceived account agreement, as it reached one listener. Developer/test state: never
-/// consulted by any decision, and never rendered to the player.
+/// One perceived account agreement, as it reached one listener. Never consulted by any decision.
 ///
 /// Milestone 016. Mirrors <see cref="PerceivedConflict"/> exactly, for the same reason: the run-wide
 /// property "trust rose because of a real, fresh, non-repeated corroboration, and only that" needs to
 /// be asserted directly against something rather than argued for from call-site structure.
+///
+/// <b>Amended by milestone 018:</b> the same narrow, filtered player-facing reading
+/// <see cref="PerceivedConflict"/> now has — see its doc comment.
 /// </summary>
 public sealed record PerceivedAgreement(string ListenerId, AccountAgreement Agreement, DateTime At);
 
@@ -107,15 +114,16 @@ public sealed class World
     public List<string> ObservationOccasionKeys { get; } = new();
 
     /// <summary>
-    /// Every perceived account conflict that reached anybody, in the order they occurred. Developer
-    /// and test state only — see <see cref="PerceivedConflict"/>.
+    /// Every perceived account conflict that reached anybody, in the order they occurred. Read by
+    /// <c>PlayerView.Build</c> since milestone 018, filtered to one listener at a time — see
+    /// <see cref="PerceivedConflict"/>.
     /// </summary>
     public List<PerceivedConflict> AccountConflicts { get; } = new();
 
     /// <summary>
-    /// Every perceived account agreement that reached anybody, in the order they occurred.
-    /// Developer and test state only — see <see cref="PerceivedAgreement"/>. Mirrors
-    /// <see cref="AccountConflicts"/>.
+    /// Every perceived account agreement that reached anybody, in the order they occurred. Read by
+    /// <c>PlayerView.Build</c> since milestone 018, filtered to one listener at a time — see
+    /// <see cref="PerceivedAgreement"/>. Mirrors <see cref="AccountConflicts"/>.
     /// </summary>
     public List<PerceivedAgreement> AccountAgreements { get; } = new();
 

@@ -81,6 +81,14 @@ public static class PlayerNarration
             : $"{self.Subject} {self.Verb("is", "are")} {(fear > 0.6 ? "frightened" : "wary")} of {other.Object}";
 
     /// <summary>
+    /// Trust moving toward somebody, in words. No number, exactly as <see cref="Standing"/> and
+    /// <see cref="Wariness"/> — the strength of the movement is hidden state, only its direction is
+    /// said. Added by milestone 018 for <c>PlayerRelationshipMovement</c>.
+    /// </summary>
+    public static string Movement(bool warmed, Pronouns self, string otherName)
+        => $"{self.Possessive} trust in {otherName} {(warmed ? "grew" : "cooled")}";
+
+    /// <summary>
     /// Qualitative confidence only. INFORMATION_AND_LEGIBILITY.md lists the vocabulary; the numeric
     /// confidence behind it is hidden state and stays hidden. A contradicted account says so
     /// instead, because how sure he was stopped being the interesting fact about it.

@@ -232,6 +232,14 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   before implementation and reset out of it by the archive-and-close commit, they survive only in the
   archive that reproduces them. Milestone 006 lost its set this way and milestone 007 nearly repeated
   it. Fixing it means changing `AGENTS.md`, which is Matt's call and has not been made.
+- **Playtest-discovered presentation debt, surfaced but explicitly deferred by milestone 018.** The
+  five-column layout (a fourth added for causal feedback, on top of the original four) has not been
+  redesigned or rebalanced now that it carries more; the vertically-wrapped date and oversized toolbar
+  controls remain; "he takes him as he finds him" and the rest of `PlayerNarration`'s prose have not
+  had a general rewrite; and "You control" / "You see through" remain two separate start-screen
+  fields rather than one normal-mode "Play as" selector. None of this was implemented — milestone 018
+  was explicitly scoped not to — but it was surfaced by actually building and playing the new columns,
+  so it is recorded here rather than silently dropped.
 
 ## Not yet implemented
 

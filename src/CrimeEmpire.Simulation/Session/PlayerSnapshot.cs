@@ -59,19 +59,97 @@ public sealed record PlayerAttitude(
 }
 
 /// <summary>
+/// The viewpoint character's own most recently committed action, as he could relate it — the same
+/// wording <see cref="PlayerOption"/> gave the option when it was offered to whoever chose it, never
+/// a fresh phrasing of the same thing.
+///
+/// Actor-neutral by construction, not by a second write path: <see cref="Decision.Pipeline.Resolve"/>
+/// appends a <see cref="Decision.DecisionRecord"/> to <see cref="World.Decisions"/> for every commit,
+/// a player's choice and an autonomous one alike, so this projects whichever one this character's own
+/// last entry happens to be. Everything else on that record — trigger, agenda, beliefs used,
+/// generated and rejected candidates, scores, the raw outcome string, reconsideration triggers,
+/// salience notes — is discarded by the projection and never reaches this type.
+/// </summary>
+public sealed record PlayerCommittedAction(DateTime At, string Description);
+
+/// <summary>
+/// The viewpoint character's own business, when he owns one. <see cref="PayingTribute"/> only — on
+/// the same footing as <see cref="PlayerSnapshot.Cash"/> (milestone 014 ruling 1): an owner always
+/// knows whether his own shop is currently paying, without needing a belief record to stand in for
+/// it. <see cref="Sim.Business.Resistance"/> is deliberately excluded: its own doc comment states it
+/// is "objective; characters only estimate it", so it must never cross as a fact he simply has.
+/// </summary>
+public sealed record PlayerBusinessStatus(string Id, string Name, bool PayingTribute);
+
+/// <summary>
+/// A question the viewpoint character himself put to somebody, not yet answered.
+///
+/// Added by milestone 018, and the one place <see cref="PlayerView.Build"/> reads
+/// <see cref="World.Requests"/> — filtered to requests this character himself asked, never anyone
+/// else's. Resolution, and therefore whether an instance exists here at all, is derived entirely from
+/// this character's own <see cref="Cognition.Testimony"/>: the asked person giving an account of
+/// exactly this claim at or after the moment it was asked. Nothing here reads
+/// <see cref="World.Reports"/> or <c>Report.AnsweringClaim</c> — a delivered answer already reaches
+/// <see cref="Cognition"/> through the ordinary report channel, and that is the only signal this
+/// reads. The answer itself is not rendered here: once resolved, it already appears in
+/// <see cref="PlayerSnapshot.Known"/>, <see cref="PlayerSnapshot.Recent"/> or
+/// <see cref="PlayerSnapshot.Disagreements"/> through the existing derivation, attributed the
+/// existing way.
+/// </summary>
+public sealed record PlayerRequest(
+    string AskedId,
+    string AskedName,
+    Pronouns AskedPronouns,
+    PlayerClaim About,
+    string Statement,
+    DateTime AskedAt);
+
+/// <summary>
+/// Qualitative movement in the viewpoint character's own outward trust toward somebody, from a fresh
+/// account conflict or agreement he personally received.
+///
+/// Added by milestone 018, and the one place <see cref="PlayerView.Build"/> reads
+/// <see cref="World.AccountConflicts"/> and <see cref="World.AccountAgreements"/> — filtered to
+/// <c>ListenerId == </c> this character, never anyone else's, so another character's own trust
+/// movement can never appear here. Projects only who moved and which direction; never a strength,
+/// a prior confidence, a prior source kind, or a claimed basis. Scoped to trust alone, because these
+/// two collections are the only relationship-mutating events with an existing audit trail of "this
+/// moved, this way, toward this person" — fear and grievance move through
+/// <see cref="Domain.Relations.Frighten"/> and <see cref="Domain.Relations.RaiseGrievance"/>, neither
+/// of which has an equivalent record, and this milestone adds no new persistent state to manufacture
+/// one.
+/// </summary>
+public sealed record PlayerRelationshipMovement(
+    string PersonId, string PersonName, Pronouns PersonPronouns, bool Warmed, DateTime At);
+
+/// <summary>
 /// Everything one character could tell you, at one moment, as immutable data.
 ///
-/// THE RULE THIS TYPE EXISTS TO ENFORCE, amended by milestone 014: every field below is either
-/// derived from the viewpoint character's own <see cref="Cognition"/> and <see cref="SocialState"/>,
-/// or copied out of some other private state that is legitimately his own to know without a belief
-/// record standing in for it — <see cref="Cash"/>, from his own <see cref="Domain.Capabilities"/>,
-/// is the one example today. Nothing here may be derived from <em>another</em> character's private
-/// state — his cash, his scores, his cognition — and nothing here carries a reference back to the
-/// object it was copied from: every field is a value, copied once, not a window onto something that
-/// can still change. <see cref="World"/> is consulted only to turn ids into display names, which are
-/// public knowledge, and to ask whether an id names a person at all. Nothing here reads
+/// THE RULE THIS TYPE EXISTS TO ENFORCE, amended by milestone 014 and again by milestone 018: every
+/// field below is either derived from the viewpoint character's own <see cref="Cognition"/> and
+/// <see cref="SocialState"/>, or copied out of some other private state that is legitimately his own
+/// to know without a belief record standing in for it — <see cref="Cash"/>, from his own
+/// <see cref="Domain.Capabilities"/>, was the first example; <see cref="MyBusiness"/> is the second.
+/// Nothing here may be derived from <em>another</em> character's private state — his cash, his
+/// scores, his cognition — and nothing here carries a reference back to the object it was copied
+/// from: every field is a value, copied once, not a window onto something that can still change.
+/// <see cref="World"/> is consulted only to turn ids into display names, which are public knowledge,
+/// and to ask whether an id names a person at all.
+///
+/// <b>Milestone 018 narrows, rather than repeals, the rule that nothing here reads
 /// <see cref="World.TruthLog"/>, <see cref="World.Decisions"/>, <see cref="World.Reports"/>,
-/// <see cref="World.Requests"/>, an organisational condition, or any utility score.
+/// <see cref="World.Requests"/>, an organisational condition, or any utility score.</b> Four fields
+/// now read four of those collections, each filtered to this viewpoint character alone and reduced to
+/// audited typed fields — never a raw record, a score, a candidate id, a report's candour or withheld
+/// list, or a relationship's strength/confidence: <see cref="LastAction"/> reads
+/// <see cref="World.Decisions"/> for `ActorId == this character` and keeps only `.Chosen.Candidate`
+/// and `.At`; <see cref="AwaitingAnswers"/> reads <see cref="World.Requests"/> for
+/// `AskerId == this character`; <see cref="RecentTrustMovements"/> reads
+/// <see cref="World.AccountConflicts"/>/<see cref="World.AccountAgreements"/> for
+/// `ListenerId == this character`. <see cref="World.TruthLog"/> and <see cref="World.Reports"/>
+/// themselves remain untouched by this type. See <see cref="PlayerCommittedAction"/>,
+/// <see cref="PlayerRequest"/> and <see cref="PlayerRelationshipMovement"/>'s own doc comments for the
+/// exact boundary each keeps.
 ///
 /// It is a snapshot rather than a live view on purpose. A UI holding a reference into the running
 /// world would be one property access away from the truth log; a record built once and handed over
@@ -99,7 +177,14 @@ public sealed record PlayerSnapshot(
     IReadOnlyList<PlayerDisagreement> Disagreements,
     IReadOnlyList<PlayerAttitude> Attitudes,
     IReadOnlyList<PlayerBelief> Unsettled,
-    IReadOnlyList<PlayerPerson> Silent)
+    IReadOnlyList<PlayerPerson> Silent,
+    /// <summary>What he just did, if his last committed action is still his most recent. Null only
+    /// when he has never yet committed to anything at all.</summary>
+    PlayerCommittedAction? LastAction,
+    /// <summary>His own business's paying status, or null when he owns none.</summary>
+    PlayerBusinessStatus? MyBusiness,
+    IReadOnlyList<PlayerRequest> AwaitingAnswers,
+    IReadOnlyList<PlayerRelationshipMovement> RecentTrustMovements)
 {
     public IReadOnlyList<PlayerBelief> Known { get; init; } = Frozen.List(Known);
     public IReadOnlyList<PlayerBelief> Recent { get; init; } = Frozen.List(Recent);
@@ -107,6 +192,8 @@ public sealed record PlayerSnapshot(
     public IReadOnlyList<PlayerAttitude> Attitudes { get; init; } = Frozen.List(Attitudes);
     public IReadOnlyList<PlayerBelief> Unsettled { get; init; } = Frozen.List(Unsettled);
     public IReadOnlyList<PlayerPerson> Silent { get; init; } = Frozen.List(Silent);
+    public IReadOnlyList<PlayerRequest> AwaitingAnswers { get; init; } = Frozen.List(AwaitingAnswers);
+    public IReadOnlyList<PlayerRelationshipMovement> RecentTrustMovements { get; init; } = Frozen.List(RecentTrustMovements);
 }
 
 /// <summary>
@@ -248,6 +335,62 @@ public static class PlayerView
             .Select(id => new PlayerPerson(id, Name(id)))
             .ToList();
 
+        // ---------------------------------------------------------------- what he just did
+        //
+        // The most recent entry world.Decisions holds for this character, reduced to exactly two
+        // audited fields — see PlayerCommittedAction's own doc comment. world.Decisions is written by
+        // Pipeline.Resolve for every commit regardless of who or what chose it, so this is
+        // actor-neutral by construction: nothing here branches on whether a person or the pipeline
+        // itself made the choice.
+        var lastDecision = world.Decisions
+            .Where(d => d.ActorId == who.Id)
+            .OrderByDescending(d => d.At)
+            .ThenByDescending(d => d.Id)
+            .FirstOrDefault();
+
+        // Chosen is null exactly when nothing was open to him; DecisionRecord.Outcome in that case is
+        // the developer-only literal "nothing was open to him" and must never be read here.
+        PlayerCommittedAction? lastAction = lastDecision?.Chosen is { Candidate: var chosenCandidate }
+            ? new PlayerCommittedAction(lastDecision.At, PlayerOption.Describe(chosenCandidate, Name, self, Theirs))
+            : null;
+
+        // ---------------------------------------------------------------- his own business
+        var ownedBusiness = world.Businesses.Values.FirstOrDefault(b => b.OwnerId == who.Id);
+        PlayerBusinessStatus? myBusiness = ownedBusiness is null
+            ? null
+            : new PlayerBusinessStatus(ownedBusiness.Id, ownedBusiness.Name, ownedBusiness.PayingTribute);
+
+        // ---------------------------------------------------------------- awaiting answers
+        //
+        // Resolved from this character's own testimony alone — see PlayerRequest's own doc comment
+        // for why World.Reports/Report.AnsweringClaim are never consulted here.
+        bool Answered(InformationRequest r) => who.Cognition.Testimony.Any(
+            t => t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At);
+
+        var awaitingAnswers = world.Requests
+            .Where(r => r.AskerId == who.Id && !Answered(r))
+            .OrderBy(r => r.At)
+            .ThenBy(r => r.Id)
+            .Select(r => new PlayerRequest(
+                r.AskedId, Name(r.AskedId), Theirs(r.AskedId),
+                PlayerClaim.Of(r.About), PlayerNarration.Describe(r.About, Name), r.At))
+            .ToList();
+
+        // ---------------------------------------------------------------- recent trust movement
+        //
+        // Trust only, own-listener-side only — see PlayerRelationshipMovement's own doc comment.
+        var trustMovements = world.AccountConflicts
+            .Where(c => c.ListenerId == who.Id && c.At >= asOf - RecentWindow)
+            .Select(c => new PlayerRelationshipMovement(
+                c.Conflict.SpeakerId, Name(c.Conflict.SpeakerId), Theirs(c.Conflict.SpeakerId), false, c.At))
+            .Concat(world.AccountAgreements
+                .Where(a => a.ListenerId == who.Id && a.At >= asOf - RecentWindow)
+                .Select(a => new PlayerRelationshipMovement(
+                    a.Agreement.SpeakerId, Name(a.Agreement.SpeakerId), Theirs(a.Agreement.SpeakerId), true, a.At)))
+            .OrderByDescending(m => m.At)
+            .ThenBy(m => m.PersonId, StringComparer.Ordinal)
+            .ToList();
+
         return new PlayerSnapshot(
             asOf,
             who.Id,
@@ -260,7 +403,11 @@ public static class PlayerView
             disagreements,
             attitudes,
             unsettled,
-            silent);
+            silent,
+            lastAction,
+            myBusiness,
+            awaitingAnswers,
+            trustMovements);
     }
 
     /// <summary>

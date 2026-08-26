@@ -368,6 +368,53 @@ settles nothing about presentation.
   somebody took to answer, which is the frame-rate dependence the determinism invariants forbid in a
   different hat.
 
+## Causal feedback — settled by milestone 018
+
+See `milestones/018-the-player-can-see-what-their-choice-did.md`. What is settled is that a causal
+thread — acknowledgement, unresolved status, perspective-limited resolution — is a projection of
+already-authoritative typed state, never a second record; the surfaces are provisional presentation,
+not settled.
+
+- **`PlayerSnapshot` reads four more `World` collections than milestone 014 left it reading, each
+  filtered to the viewpoint alone and reduced to audited fields.** `World.Decisions` for
+  `LastAction` (`ActorId == viewpoint`, only `.Chosen?.Candidate` rendered through the existing
+  `PlayerOption.Describe`, `.Outcome` and everything else on `DecisionRecord` untouched);
+  `World.Requests` for `AwaitingAnswers` (`AskerId == viewpoint`); `World.Businesses` for
+  `MyBusiness` (`OwnerId == viewpoint`, `PayingTribute` only — `Resistance` stays hidden, per its own
+  "objective; characters only estimate it"); `World.AccountConflicts`/`AccountAgreements` for
+  `RecentTrustMovements` (`ListenerId == viewpoint`). This narrows, rather than repeals, the rule
+  `PlayerSnapshot`'s own header states — see its "amended by milestone 018" paragraph — the same way
+  milestone 014 amended it once already for `Cash`.
+- **A request is resolved from the viewpoint's own `Cognition.Testimony` alone, never from
+  `World.Reports`/`Report.AnsweringClaim`.** Resolved iff the asked person has given testimony of
+  exactly the asked claim at or after the moment the question was asked
+  (`t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At`). Verified against
+  `Org/Reporting.cs`: an answer to a `SeekCorroboration` is a `ReportToSuperior` candidate
+  `Generators.FromRelationship`'s `"asked-to-account"` branch addresses back to the asker, so
+  `Reporting.Deliver` calls `Cognition.Receive` on the asker's own cognition, which appends to
+  `Testimony` unconditionally before any classification branch. Once resolved, the answer needs no
+  further plumbing — it already reaches `Known`/`Recent`/`Disagreements` through the pre-existing
+  `Cognition.Receive` → `PlayerView.Build` path, attributed the pre-existing way.
+- **Qualitative trust movement is scoped to `AccountConflict`/`AccountAgreement` alone, not to fear,
+  obligation, or grievance.** Those two are the only relationship-mutating events with an existing
+  audit trail of "this moved, this way, toward this person" (`PerceivedConflict`/`PerceivedAgreement`,
+  milestones 006/016). `Relations.Frighten` and `Relations.RaiseGrievance` have no equivalent, and
+  milestone 018 added none — building one would be new persistent state a projection milestone does
+  not need. `PerceivedConflict`/`PerceivedAgreement`'s own doc comments, previously "never rendered to
+  the player", are amended accordingly.
+- **A tribute demand's occasion names the demander, and states force only when the viewpoint holds a
+  genuine held `PersonUsedViolence` claim naming him.** `PlayerOccasion.For`'s signature widened from
+  `(ScheduledEvent, Pronouns)` to `(ScheduledEvent, Character, Func<string,string>)` to make this
+  possible; every other case in its closed vocabulary is unchanged. Threaten (`Relations.Frighten`)
+  leaves no claim at all, so a threatened-but-not-forced demand reads as a plain demand — proven as a
+  deliberate mutation-guard, not an oversight: staging `Relations.Frighten` without a claim and
+  asserting the occasion still reads "is demanding tribute" is one of the milestone's required tests.
+- **No new persistent state was added anywhere in `Commit.cs`, `Pipeline.cs`, or `Strategies.cs`.**
+  Every surface above is a read-time projection over collections that already existed and were already
+  written for other reasons — the actor-neutrality this gives `LastAction` (a player's choice and an
+  autonomous one write the identical `DecisionRecord` through the identical `Pipeline.Resolve`) is a
+  consequence of that, not a separate guarantee that had to be built.
+
 ## Exposure and concealment — settled by milestone 010
 
 See `milestones/010-a-denial-that-can-win.md`. What is settled is what a concealment acts on and what a

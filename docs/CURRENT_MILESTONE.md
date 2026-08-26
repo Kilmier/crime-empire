@@ -10,20 +10,20 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 018 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 017 — Direct Action vs Delegation: Different Causal Footprints — is corrected once and
-awaiting Codex verification and Matt's acceptance.** Codex reviewed implementation commit `9de2c75` and
-returned **FAIL**: four proof defects (a pause/fast-forward test that asserted only status and date; a
-save/load proof that stopped at the immediate `DelegatedToId` flag instead of a real consequence; an
-investigation-attribution test that fed itself a hand-typed claim instead of production output; a
-Godot fork-check that read session-internal state instead of the rendered interface), none of them
-findings about simulation behaviour — every trace hash and action digest was unaffected. All four are
-corrected, both explicitly-required mutation checks (findings 3 and 4) ran and were confirmed to fail
-for the intended reason, then reverted. Full account, including the original implementation and the
-appended correction: `docs/milestones/017-direct-action-vs-delegation.md`. Not yet accepted — per
-`REVIEW_LEDGER.md`'s standing rule, only Matt's confirmation of a named commit establishes that, and
-this milestone has not had one yet.
+**Milestone 017 — Direct Action vs Delegation: Different Causal Footprints — is accepted and closed.**
+Codex reviewed implementation commit `9de2c75` and returned **FAIL**: four proof defects (a
+pause/fast-forward test that asserted only status and date; a save/load proof that stopped at the
+immediate `DelegatedToId` flag instead of a real consequence; an investigation-attribution test that
+fed itself a hand-typed claim instead of production output; a Godot fork-check that read
+session-internal state instead of the rendered interface), none of them findings about simulation
+behaviour — every trace hash and action digest was unaffected. All four were corrected in `0f56f1e`,
+with both explicitly-required mutation checks (findings 3 and 4) run, confirmed to fail for the
+intended reason, then reverted. **Codex independently reviewed `0f56f1e` and returned PASS with no
+findings; Matt accepted `0f56f1e` on 2026-08-25 on the strength of that review and closed the
+milestone.** Full account, including the original implementation and the appended correction:
+`docs/milestones/017-direct-action-vs-delegation.md`.
 
-Milestones 001–016 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
+Milestones 001–017 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
 the corrected acceptance record of 015 and 016 specifically.
 
 **Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the

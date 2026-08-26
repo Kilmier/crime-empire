@@ -266,7 +266,7 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 017, direct action vs delegation, corrected once, awaiting verification
+### Measured — milestone 017, direct action vs delegation, corrected once, accepted
 
 **Self-implemented; reviewed by Codex on implementation commit `9de2c75`, returned FAIL with four
 findings.** Forks the existing seed-42 `SecureTribute` operation at the pause where Vincent may
@@ -317,8 +317,10 @@ mutation-checking practice.
   two-process restart proof (`--selftest-restart-save` / `--selftest-restart-load`, genuinely separate
   headless invocations) all exit 0.
 
-**Status: corrected once, not yet re-reviewed by Codex, not accepted.** Matt's confirmation of a named
-commit, after Codex's verification of the correction, is what acceptance requires.
+**Codex independently reviewed correction commit `0f56f1e` and returned PASS with no findings.** Matt
+accepted `0f56f1e` on 2026-08-25 on the strength of that clean review, and closed the milestone.
+Milestone 017's accepted state is `0f56f1e` and nothing before it — `9de2c75`, the original
+implementation, was never itself accepted; Codex's FAIL on that commit is what produced the correction.
 
 ### Measured — milestone 016, trust can be earned, corrected twice, accepted
 

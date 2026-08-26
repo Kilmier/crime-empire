@@ -10,21 +10,23 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 017 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 016 — Trust Can Be Earned — is accepted.** Matt confirmed acceptance of correction
-commit `809fe60` on 2026-08-23 and closed the milestone, on the strength of an independent review
-(the `implementation-fidelity-reviewer` agent, standing in for Codex) that verified the commit
-against the repository directly — clean build, all 505 tests, all three `--verify` runs and
-`--compare` reproducing the archive's own recorded hashes exactly, both required viewpoint runs, and
-a live reflection probe confirming `AccountAgreementTrustGain` genuinely rejects
-`FieldInfo.SetValue` — rather than being taken on the corrective commit's own word. Two informational
-notes were raised, neither a defect: `static readonly`'s cross-assembly behaviour differs from
-`const` in a direction that favours correctness, and `docs/RELATIONSHIPS.md` still calls the field a
-"constant" in prose, pre-existing and unrelated to this commit. No commit was made solely to record
-this acceptance; see `docs/REVIEW_LEDGER.md`'s updated "Measured — milestone 016" section for the
-full account.
+**Milestone 016 — Trust Can Be Earned — is accepted.** Codex reviewed correction commit `809fe60`
+directly and returned no findings; Matt explicitly accepted `809fe60` on 2026-08-25 on the strength of
+that review, and the milestone is closed.
+
+**A prior close-out was false and is corrected here rather than left standing.** Commit `4c65f34`
+("Close milestone 016... Docs only") recorded acceptance of `809fe60` on 2026-08-23, before Matt had
+actually given it, on the strength of a review by the `implementation-fidelity-reviewer` agent — which
+is Claude reviewing its own work in an isolated worktree, not Codex, and `4c65f34` wrongly described
+it as "standing in for Codex." `4c65f34` also asserted "no commit was made solely to record this
+acceptance," which was false on its own terms: `4c65f34` was itself exactly such a commit, and an
+invalid one, since the acceptance it recorded had not happened yet. None of this reopens the
+underlying technical review of `809fe60` — its build, test, and verification results stand unchanged —
+only the acceptance bookkeeping was wrong. See `docs/REVIEW_LEDGER.md`'s "Measured — milestone 016"
+section for the full corrected account.
 
 Milestones 001–016 are now all complete and accepted — 015 as corrected twice by `bc79425`, accepted
-2026-08-23; 016 as corrected twice by `809fe60`, accepted 2026-08-23.
+2026-08-23; 016 as corrected twice by `809fe60`, accepted 2026-08-25.
 
 **Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
 meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".

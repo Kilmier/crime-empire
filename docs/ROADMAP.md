@@ -240,6 +240,16 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   fields rather than one normal-mode "Play as" selector. None of this was implemented — milestone 018
   was explicitly scoped not to — but it was surfaced by actually building and playing the new columns,
   so it is recorded here rather than silently dropped.
+- **Controlling a character and immediately auto-resolving is not guaranteed to reproduce the same
+  choice a fully autonomous run of the identical character would make**, even at the character's very
+  first decision with a `DecisionCount` of zero. Found by milestone 018's correction while building an
+  actor-neutrality proof: `SimulationSession.Start(seed, "baseline", "tommy", "vincent")` reaching
+  Tommy's first pause and calling `ResolveAutomatically()` picks a self-protective partial report,
+  while the same seed's fully autonomous run (`controlledCharacterId: null`) has Tommy answer
+  candidly at what appears to be the identical decision (`ScenarioReachTests
+  .And_the_executor_gives_his_delegator_an_account_of_it`). Not investigated further — out of that
+  milestone's authorized scope — but worth root-causing before any future proof assumes "controlled
+  plus auto-resolve" and "fully autonomous" are interchangeable for the same character.
 
 ## Not yet implemented
 

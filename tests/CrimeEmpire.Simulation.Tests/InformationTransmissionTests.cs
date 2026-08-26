@@ -898,7 +898,7 @@ public sealed class InformationTransmissionTests
         var asked = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
         var different = new Claim(ClaimKind.PoliceInvestigating, "tommy");
 
-        var made = new[] { new InformationRequest(1, "salvatore", "tommy", asked, t0) };
+        var made = new[] { new InformationRequest(1, "salvatore", "tommy", asked, t0, WakeEventId: 0) };
 
         // Exercised through the generator's own rule, not a copy of it written in the test.
         Assert.False(Generators.CanAsk(made, "tommy", asked),

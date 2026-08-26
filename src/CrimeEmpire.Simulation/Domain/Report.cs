@@ -161,10 +161,39 @@ public readonly record struct SuppressedClaim(Claim Claim, PriorDisclosureState 
 /// to a pair of people meant that having once asked a man about a shakedown, you could never ask
 /// him about anything again for the rest of the simulation — one question closing the channel
 /// between two characters for good. What is spent is the question, not the relationship.
+///
+/// <see cref="WakeEventId"/>, added by milestone 018's correction, is the id of the
+/// <c>EventKind.RoleReview</c>/<c>"asked-to-account"</c> event this request itself scheduled — the
+/// same id a resulting <c>Decision.DecisionRecord.TriggerEventId</c> carries once the asked character actually
+/// deliberates on it. It exists to answer a question testimony alone cannot: whether the asked
+/// character has already had, and used up, his own chance to speak — silence is only "he declined"
+/// once that deliberation has actually resolved, and merely "not yet" before it has, regardless of
+/// how much calendar time has passed. Reading elapsed time instead would be silence inferred from a
+/// clock rather than from the man's own decision, which is exactly the shortcut this field exists to
+/// rule out.
 /// </summary>
-public sealed record InformationRequest(long Id, string AskerId, string AskedId, Claim About, DateTime At)
+public sealed record InformationRequest(long Id, string AskerId, string AskedId, Claim About, DateTime At, long WakeEventId)
 {
     public override string ToString() => $"{AskerId} asked {AskedId} about {About} ({At:yyyy-MM-dd})";
+}
+
+/// <summary>
+/// Whether an <see cref="InformationRequest"/> has been answered, has been declined (the asked
+/// character's own triggered deliberation resolved without asserting the claim to the asker), or is
+/// still pending (he has not yet had that deliberation at all).
+///
+/// Derived, never stored: a pure function of the asker's own <see cref="Cognition.Testimony"/> and
+/// whether a <c>Decision.DecisionRecord</c> exists whose <c>TriggerEventId</c> equals the request's own
+/// <see cref="InformationRequest.WakeEventId"/> — both already-authoritative, already-replayed state,
+/// so this needs no new write anywhere in <c>Commit</c>, <c>Pipeline</c>, or <c>Strategies</c> and is
+/// identical whether the asked character is controlled or autonomous, since both write
+/// <c>World.Decisions</c> through the identical <c>Pipeline.Resolve</c>.
+/// </summary>
+public enum RequestDisposition
+{
+    Pending,
+    Answered,
+    Declined,
 }
 
 /// <summary>

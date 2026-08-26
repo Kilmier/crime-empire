@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using CrimeEmpire.Persistence;
 using CrimeEmpire.Persistence.Session;
+using CrimeSim.Domain;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using Godot;
@@ -576,7 +577,12 @@ public partial class Game : Control
             yield return Plain(
                 $"{request.AskedAt.ToString("d MMM", CultureInfo.InvariantCulture)}  asked {request.AskedName} " +
                 $"for {request.AskedPronouns.Possessive} own account of whether {request.Statement}");
-            yield return Faint("    no answer yet");
+            // Pending: he has not yet had his own chance to answer. Declined: he has already had that
+            // chance — his own triggered deliberation resolved — and chose not to. Two different
+            // facts, correction per milestone 018's review; never merged into one "no answer yet".
+            yield return Faint(request.Disposition == RequestDisposition.Declined
+                ? "    he chose not to say"
+                : "    no answer yet");
         }
     }
 

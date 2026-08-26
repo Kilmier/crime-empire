@@ -85,7 +85,8 @@ internal static class PlayerOccasion
             // the demander here asserts nothing he does not already hold.
             EventKind.Incident => trigger.Payload.Note switch
             {
-                "tribute-demanded" when trigger.Payload.TargetId is { } demanderId => Demand(actor, demanderId, name),
+                "tribute-demanded" when trigger.Payload.TargetId is { } demanderId =>
+                    Demand(actor, demanderId, trigger.Payload.AboutClaim?.Subject, name),
                 _ => $"something reached {self.Object}",
             },
 
@@ -102,14 +103,21 @@ internal static class PlayerOccasion
     /// <summary>
     /// A tribute demand, named to the extent the demanded actually experienced it.
     ///
-    /// Force leaves the owner a held <c>PersonUsedViolence</c> claim naming the demander
-    /// (<c>Strategies.ResolveViolence</c>, <c>SourceKind.Witness</c>) and is named as such. Threaten
-    /// leaves nothing equivalent — only <c>Relations.Frighten</c>'s fear rise, which has no reader
-    /// here — so a threatened-but-not-yet-forced demand reads as a plain demand rather than asserting
-    /// a method the character has no structural record of experiencing.
+    /// Force leaves the owner a held <c>PersonUsedViolence(demander -&gt; business)</c> claim
+    /// (<c>Strategies.ResolveViolence</c>, <c>SourceKind.Witness</c>) and is named as such —
+    /// <b>only when both the demander and the business match this demand</b>, per milestone 018's
+    /// correction: the same man's violence at a different shop is a different fact and must not read
+    /// as "over this". <paramref name="businessId"/> is <see cref="EventPayload.AboutClaim"/>'s own
+    /// subject, carried by the same claim shape <c>Strategies.cs</c> already learns the owner's
+    /// resistance belief from, rather than a new payload field. Threaten leaves nothing equivalent —
+    /// only <c>Relations.Frighten</c>'s fear rise, which has no reader here — so a
+    /// threatened-but-not-yet-forced demand reads as a plain demand rather than asserting a method the
+    /// character has no structural record of experiencing.
     /// </summary>
-    private static string Demand(Character actor, string demanderId, Func<string, string> name)
-        => actor.Cognition.OfKind(ClaimKind.PersonUsedViolence).Any(r => r.Claim.Subject == demanderId)
+    private static string Demand(Character actor, string demanderId, string? businessId, Func<string, string> name)
+        => businessId is not null
+           && actor.Cognition.OfKind(ClaimKind.PersonUsedViolence)
+               .Any(r => r.Claim.Subject == demanderId && r.Claim.Object == businessId)
             ? $"{name(demanderId)} has already used force over this"
             : $"{name(demanderId)} is demanding tribute from {actor.Pronouns.Object}";
 

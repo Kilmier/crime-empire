@@ -10,16 +10,23 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 019 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 018 — The Player Can See What Their Choice Did — is implemented and awaiting review.**
-Every new surface is a projection of already-authoritative typed state; no new persistent state was
-added in `Commit.cs`, `Pipeline.cs`, or `Strategies.cs`. Full account, including the two natural
-proofs (observed live before any test was pinned), the six mutation checks (each confirmed to fail for
-the intended reason, then reverted — including one where the first attempt at a mutation guard proved
-nothing until the test itself was strengthened), and complete verification output:
-`docs/milestones/018-the-player-can-see-what-their-choice-did.md`. 543 tests passing (523 pre-existing
-+ 20 new); all five variant trace hashes byte-identical to `REVIEW_LEDGER.md`'s recorded baselines —
-this milestone changed no simulation behavior, only presentation. Stopping here for Codex review per
-the milestone's own closing instruction.
+**Milestone 018 — The Player Can See What Their Choice Did — corrected and awaiting re-review.**
+Codex reviewed the original implementation (`ae06f61`) and returned **FAIL**: two P1 defects (pending
+and declined requests were indistinguishable; a demander's violence at one business could read as
+"already used force" for a demand at a different one) and one P2 proof gap (six required proof
+categories missing, including an action-kind audit and pending/declined save-load coverage). Matt
+authorized a correction to milestone 018 only. Both defects are fixed — a new `RequestDisposition`
+(`Pending`/`Answered`/`Declined`) derived from `World.Decisions`/`Cognition.Testimony`, never from
+elapsed time; the tribute-demand occasion now matches both demander and business via
+`EventPayload.AboutClaim` — and all six proof categories are covered, still with no new persistent
+state anywhere in `Commit.cs`, `Pipeline.cs`, or `Strategies.cs`. Full account, including the original
+implementation and the appended correction section (what Codex found, what changed, and a genuine
+actor-neutrality-proof discovery recorded rather than chased down — controlling a character and
+auto-resolving is not always identical to that character running fully autonomously, even at their
+first decision): `docs/milestones/018-the-player-can-see-what-their-choice-did.md`. 548 tests passing
+(543 prior + 5 new); all five variant trace hashes byte-identical to `REVIEW_LEDGER.md`'s recorded
+baselines both before and after the correction — this milestone changed no simulation behavior, only
+presentation. Stopping here for Codex re-review.
 
 Milestones 001–017 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
 the corrected acceptance record of 015 and 016 specifically.

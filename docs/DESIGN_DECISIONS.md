@@ -385,16 +385,29 @@ not settled.
   `RecentTrustMovements` (`ListenerId == viewpoint`). This narrows, rather than repeals, the rule
   `PlayerSnapshot`'s own header states — see its "amended by milestone 018" paragraph — the same way
   milestone 014 amended it once already for `Cash`.
-- **A request is resolved from the viewpoint's own `Cognition.Testimony` alone, never from
-  `World.Reports`/`Report.AnsweringClaim`.** Resolved iff the asked person has given testimony of
-  exactly the asked claim at or after the moment the question was asked
-  (`t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At`). Verified against
-  `Org/Reporting.cs`: an answer to a `SeekCorroboration` is a `ReportToSuperior` candidate
-  `Generators.FromRelationship`'s `"asked-to-account"` branch addresses back to the asker, so
-  `Reporting.Deliver` calls `Cognition.Receive` on the asker's own cognition, which appends to
-  `Testimony` unconditionally before any classification branch. Once resolved, the answer needs no
-  further plumbing — it already reaches `Known`/`Recent`/`Disagreements` through the pre-existing
-  `Cognition.Receive` → `PlayerView.Build` path, attributed the pre-existing way.
+- **A request has three dispositions — `Pending`, `Answered`, `Declined` — and silence is read from
+  the asked character's own resolved decision, never from elapsed calendar time.** Corrected after
+  review of the milestone's first implementation, which resolved a request from testimony alone and
+  so could not tell "not yet" from "he decided against answering" — both read as permanently pending,
+  contradicting `InformationRequest`'s own settled rule that silence is itself an answer. `Answered` is
+  read from the viewpoint's own `Cognition.Testimony` alone, never from `World.Reports`/
+  `Report.AnsweringClaim`: an account from the asked person, of exactly the asked claim, at or after
+  the moment the question was asked (`t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At`).
+  `Declined` is read from `World.Decisions`: a `DecisionRecord` exists for the asked character whose
+  `TriggerEventId` equals `InformationRequest.WakeEventId` — the id of the very
+  `EventKind.RoleReview`/`"asked-to-account"` wake the request scheduled, carried on the request record
+  itself since the correction — and no matching testimony exists. Absent both, the request is
+  genuinely `Pending`. Verified against `Org/Reporting.cs`: an answer to a `SeekCorroboration` is a
+  `ReportToSuperior` candidate `Generators.FromRelationship`'s `"asked-to-account"` branch addresses
+  back to the asker, so `Reporting.Deliver` calls `Cognition.Receive` on the asker's own cognition,
+  appending to `Testimony` unconditionally before any classification branch — and a `Partial` report
+  that withholds precisely the asked claim, or any other candidate the asked character prefers instead
+  (`DoNothing` included), resolves his own triggered decision without asserting anything, which is
+  exactly what makes it `Declined` rather than `Pending`. Once `Answered`, the account needs no further
+  plumbing — it already reaches `Known`/`Recent`/`Disagreements` through the pre-existing
+  `Cognition.Receive` → `PlayerView.Build` path, attributed the pre-existing way. `Declined` requests
+  remain visible in `AwaitingAnswers` alongside `Pending` ones, distinguished by
+  `PlayerRequest.Disposition`; only `Answered` ones drop out of the list.
 - **Qualitative trust movement is scoped to `AccountConflict`/`AccountAgreement` alone, not to fear,
   obligation, or grievance.** Those two are the only relationship-mutating events with an existing
   audit trail of "this moved, this way, toward this person" (`PerceivedConflict`/`PerceivedAgreement`,
@@ -403,12 +416,18 @@ not settled.
   not need. `PerceivedConflict`/`PerceivedAgreement`'s own doc comments, previously "never rendered to
   the player", are amended accordingly.
 - **A tribute demand's occasion names the demander, and states force only when the viewpoint holds a
-  genuine held `PersonUsedViolence` claim naming him.** `PlayerOccasion.For`'s signature widened from
-  `(ScheduledEvent, Pronouns)` to `(ScheduledEvent, Character, Func<string,string>)` to make this
-  possible; every other case in its closed vocabulary is unchanged. Threaten (`Relations.Frighten`)
-  leaves no claim at all, so a threatened-but-not-forced demand reads as a plain demand — proven as a
-  deliberate mutation-guard, not an oversight: staging `Relations.Frighten` without a claim and
-  asserting the occasion still reads "is demanding tribute" is one of the milestone's required tests.
+  genuine held `PersonUsedViolence` claim naming both the demander and the business this demand is
+  about.** `PlayerOccasion.For`'s signature widened from `(ScheduledEvent, Pronouns)` to
+  `(ScheduledEvent, Character, Func<string,string>)` to make this possible; every other case in its
+  closed vocabulary is unchanged. **Corrected after review**: the first implementation matched on the
+  demander alone (`Claim.Subject`), so the same man's violence at a different business could read as
+  "already used force over this." The business is now carried through `EventPayload.AboutClaim`
+  (`Strategies.cs` sets it to `BusinessRefusesTribute(business)`, reusing the same claim shape the
+  owner's own resistance belief already uses, rather than a new payload field) and matched against
+  `PersonUsedViolence.Object`. Threaten (`Relations.Frighten`) leaves no claim at all, so a
+  threatened-but-not-forced demand reads as a plain demand — proven as a deliberate mutation-guard, not
+  an oversight: staging `Relations.Frighten` without a claim and asserting the occasion still reads "is
+  demanding tribute" is one of the milestone's required tests.
 - **No new persistent state was added anywhere in `Commit.cs`, `Pipeline.cs`, or `Strategies.cs`.**
   Every surface above is a read-time projection over collections that already existed and were already
   written for other reasons — the actor-neutrality this gives `LastAction` (a player's choice and an

@@ -191,9 +191,19 @@ public static class Strategies
                 Relations.Meet(world.Get(business.OwnerId), executor.Id);
                 world.Encounters.Add(new Encounter(business.OwnerId, executor.Id, world.Now));
 
+                // AboutClaim carries which business this demand concerns — milestone 018's
+                // correction. Reusing the same claim shape just learned above rather than inventing a
+                // new payload field: the player-facing occasion reader needs to tell "force used over
+                // *this* demand" from "force used against a different business by the same man", and
+                // TargetId alone (the demander) cannot distinguish the two.
                 world.Queue.Schedule(world.Now, EventKind.Incident, business.OwnerId,
                     $"{executor.Name} demanded payment",
-                    new EventPayload { TargetId = executor.Id, Note = "tribute-demanded" });
+                    new EventPayload
+                    {
+                        TargetId = executor.Id,
+                        Note = "tribute-demanded",
+                        AboutClaim = new Claim(ClaimKind.BusinessRefusesTribute, business.Id),
+                    });
 
                 ScheduleNextStep(world, s, $"{s.Label}: awaiting an answer");
                 return;
@@ -234,7 +244,12 @@ public static class Strategies
 
                     world.Queue.Schedule(world.Now.AddHours(6), EventKind.Incident, marco.Id,
                         $"after {executor.Name}, the demand was still on the table",
-                        new EventPayload { TargetId = executor.Id, Note = "tribute-demanded" });
+                        new EventPayload
+                        {
+                            TargetId = executor.Id,
+                            Note = "tribute-demanded",
+                            AboutClaim = new Claim(ClaimKind.BusinessRefusesTribute, business.Id),
+                        });
 
                     // Step back one, so the next step re-enters this check and finds out whether
                     // the pressure told.

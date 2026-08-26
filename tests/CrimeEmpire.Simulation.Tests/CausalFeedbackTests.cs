@@ -68,6 +68,10 @@ public sealed class CausalFeedbackTests
         Assert.Equal("Vincent Russo", request.AskedName);
         Assert.Equal("Bellini's grocery is holding back what it owes", request.Statement);
         Assert.Equal(session.Date, request.AskedAt);
+        // Genuinely Pending, not merely "not yet observed to be Declined" — Vincent has not yet had
+        // his own triggered deliberation on this at all, which is a different fact from "he had it
+        // and chose not to answer" (see the Declined tests below).
+        Assert.Equal(RequestDisposition.Pending, request.Disposition);
 
         // Silence remains silence at this exact moment: nothing has yet reached Salvatore attributing
         // an account to Vincent on this subject, even though the wake that will let Vincent answer is
@@ -201,6 +205,100 @@ public sealed class CausalFeedbackTests
             b.Disagreements.Select(d => d.Statement));
     }
 
+    // ================================================================= pending vs. declined (correction)
+
+    /// <summary>
+    /// The corrected disposition itself: Vincent's natural, unmodified delegation audit
+    /// (<c>ScenarioReachTests.The_delegator_puts_his_question_to_the_man_he_sent</c>) reaches Tommy's
+    /// own "asked-to-account" pause on 1987-04-04 — his very first pause when controlled, per direct
+    /// observation. "let it lie" is always offered there (`Generators.FromTrigger`'s floor candidate).
+    /// Choosing it, rather than any of the account-giving candidates, is Tommy's own decision to stay
+    /// silent — the same real pause a person would face, not a staged shortcut. From Vincent's own
+    /// viewpoint, the request must now read Declined, never Pending (he has had his answer — silence)
+    /// and never Answered (nothing was asserted to Vincent).
+    /// </summary>
+    [Fact]
+    public void Declining_to_answer_leaves_the_request_marked_declined_not_pending()
+    {
+        var session = SimulationSession.Start(Seed, Baseline, controlledCharacterId: "tommy", viewpointCharacterId: "vincent");
+        var pending = AdvanceToPause(session);
+        Assert.Equal("tommy", pending.ActorId);
+
+        session.Choose(pending.Options.Single(o => o.Description == "let it lie").Id);
+
+        var snapshot = session.Snapshot();
+        var request = Assert.Single(snapshot.AwaitingAnswers);
+        Assert.Equal("tommy", request.AskedId);
+        Assert.Equal(RequestDisposition.Declined, request.Disposition);
+    }
+
+    /// <summary>Save/load for the declined state, mirroring the pending case's own proof — the
+    /// disposition is re-derived from replayed `World.Decisions`/`World.Requests` on load, not
+    /// stored, so it must come back identically.</summary>
+    [Fact]
+    public void Save_load_preserves_a_declined_requests_disposition()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"ce-018-declined-{Guid.NewGuid():N}.db");
+        try
+        {
+            var original = PersistentSession.Start(Seed, Baseline, "tommy", "vincent");
+            for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
+                original.StepEvent();
+            Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
+            original.Choose(original.Pending!.Options.Single(o => o.Description == "let it lie").Id);
+
+            var beforeSave = original.Snapshot();
+            var declined = Assert.Single(beforeSave.AwaitingAnswers);
+            Assert.Equal(RequestDisposition.Declined, declined.Disposition);
+
+            original.Save(path);
+            var loaded = PersistentSession.Load(path);
+
+            var reloaded = Assert.Single(loaded.Snapshot().AwaitingAnswers);
+            Assert.Equal(RequestDisposition.Declined, reloaded.Disposition);
+            Assert.Equal(declined.AskedName, reloaded.AskedName);
+            Assert.Equal(declined.AskedAt, reloaded.AskedAt);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    /// <summary>
+    /// Player/autonomous parity for the disposition mechanism itself, not only for
+    /// <c>LastAction</c>. Reached, not staged: Tommy's own top-ranked preference at this exact pause
+    /// (confirmed by reading <c>PreparedDecision.Scored[0]</c> directly before resolving) is a
+    /// <em>Partial</em> report that withholds precisely the claim Vincent asked about — his own
+    /// self-protective instinct, and a second, genuinely distinct flavour of decline alongside the
+    /// "let it lie" case above: a real report is sent, but it deliberately omits the one thing that
+    /// was asked, which is indistinguishable from silence on that specific question. Both sides of
+    /// this comparison control Tommy — one resolves via <see cref="SimulationSession.ResolveAutomatically"/>,
+    /// the other via a person explicitly choosing the identical rendered option — so this isolates
+    /// exactly the variable the review asked about (did a person or the pipeline choose?) without
+    /// also crossing into whether Tommy was controlled at all, which is a separate variable this
+    /// fixture is not guaranteed to hold constant (see the milestone archive's correction section).
+    /// </summary>
+    [Fact]
+    public void Request_disposition_computation_is_identical_whether_declining_was_autonomous_or_player_chosen()
+    {
+        const string partialWithholding =
+            "tell Vincent Russo about whether Tommy Nardo put hands on Bellini's grocery, leaving out his own part";
+
+        var autoResolved = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        AdvanceToPause(autoResolved);
+        autoResolved.ResolveAutomatically();
+
+        var playerChosen = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        var pending = AdvanceToPause(playerChosen);
+        playerChosen.Choose(pending.Options.Single(o => o.Description == partialWithholding).Id);
+
+        var autoRequest = Assert.Single(autoResolved.Snapshot().AwaitingAnswers);
+        var playerRequest = Assert.Single(playerChosen.Snapshot().AwaitingAnswers);
+        Assert.Equal(RequestDisposition.Declined, autoRequest.Disposition);
+        Assert.Equal(RequestDisposition.Declined, playerRequest.Disposition);
+    }
+
     // ================================================================= proof B: Marco and the demand
 
     /// <summary>Before Marco chooses, the panel identifies the demander — the plain-demand phrasing,
@@ -275,10 +373,10 @@ public sealed class CausalFeedbackTests
     /// <summary>
     /// The force-already-used phrasing is real and reachable: after a refusal, an escalation to
     /// force, and a further refusal, the owner holds a genuine <c>PersonUsedViolence</c> claim naming
-    /// whoever is currently demanding, and the occasion says so. Threaten alone — proven by staging
-    /// <see cref="PlayerOccasion.For"/> directly against a world where only <c>Relations.Frighten</c>
-    /// has run — must not be asserted as a distinct fact, since nothing structural distinguishes it
-    /// from a plain demand.
+    /// whoever is currently demanding <em>against the business this demand names</em>, and the
+    /// occasion says so. Threaten alone — proven by staging <see cref="PlayerOccasion.For"/> directly
+    /// against a world where only <c>Relations.Frighten</c> has run — must not be asserted as a
+    /// distinct fact, since nothing structural distinguishes it from a plain demand.
     /// </summary>
     [Fact]
     public void A_demand_after_force_names_it_and_a_demand_after_only_a_threat_does_not()
@@ -291,11 +389,12 @@ public sealed class CausalFeedbackTests
         var violence = new Claim(ClaimKind.PersonUsedViolence, tommy.Id, Cast.Grocery, 999);
         marco.Cognition.Learn(violence, Stance.Knows, 1.0, SourceKind.Witness, marco.Id, world.Now);
 
+        var groceryClaim = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
         var forcedTrigger = new ScheduledEvent
         {
             Id = 1, Time = world.Now, Kind = EventKind.Incident, OwnerId = marco.Id,
             Cause = "staged: an authored cause that must never reach a player",
-            Payload = new EventPayload { Note = "tribute-demanded", TargetId = tommy.Id },
+            Payload = new EventPayload { Note = "tribute-demanded", TargetId = tommy.Id, AboutClaim = groceryClaim },
         };
         Assert.Equal(
             "Tommy Nardo has already used force over this",
@@ -310,11 +409,50 @@ public sealed class CausalFeedbackTests
         {
             Id = 2, Time = world.Now, Kind = EventKind.Incident, OwnerId = marco.Id,
             Cause = "staged: an authored cause that must never reach a player",
-            Payload = new EventPayload { Note = "tribute-demanded", TargetId = vincent.Id },
+            Payload = new EventPayload { Note = "tribute-demanded", TargetId = vincent.Id, AboutClaim = groceryClaim },
         };
         Assert.Equal(
             "Vincent Russo is demanding tribute from him",
             PlayerOccasion.For(threatenedTrigger, marco, id => world.Find(id)?.Name ?? id));
+    }
+
+    /// <summary>
+    /// Correction: the same demander's violence against a <em>different</em> business must not read
+    /// as "over this". Nunzio holds a genuine <c>PersonUsedViolence(tommy -&gt; bellini-grocery)</c>
+    /// claim — real force, just at a business that is not his own — while Tommy is currently demanding
+    /// tribute from Nunzio's own bakery, carried through <c>AboutClaim</c> exactly as production code
+    /// sets it. This isolates the business match specifically: the demander matches
+    /// (<c>Claim.Subject</c>) but the business does not (<c>Claim.Object</c>), so the phrasing must
+    /// stay a plain demand.
+    /// </summary>
+    [Fact]
+    public void The_same_demanders_violence_at_a_different_business_does_not_read_as_over_this()
+    {
+        var world = Cast.Build(Seed, Baseline);
+        var nunzio = world.Get("nunzio");
+        var tommy = world.Get("tommy");
+
+        // Tommy used force at the grocery — a real claim, just about the wrong business for this demand.
+        var violenceAtGrocery = new Claim(ClaimKind.PersonUsedViolence, tommy.Id, Cast.Grocery, 999);
+        nunzio.Cognition.Learn(violenceAtGrocery, Stance.Knows, 1.0, SourceKind.Witness, nunzio.Id, world.Now);
+
+        // The current demand is about the bakery, carried through AboutClaim exactly as production
+        // code sets it.
+        var bakeryTrigger = new ScheduledEvent
+        {
+            Id = 3, Time = world.Now, Kind = EventKind.Incident, OwnerId = nunzio.Id,
+            Cause = "staged: an authored cause that must never reach a player",
+            Payload = new EventPayload
+            {
+                TargetId = tommy.Id,
+                Note = "tribute-demanded",
+                AboutClaim = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Bakery),
+            },
+        };
+
+        Assert.Equal(
+            "Tommy Nardo is demanding tribute from him",
+            PlayerOccasion.For(bakeryTrigger, nunzio, id => world.Find(id)?.Name ?? id));
     }
 
     // ================================================================= relationship movement
@@ -361,6 +499,66 @@ public sealed class CausalFeedbackTests
         Assert.Empty(salvatoreSnapshot.RecentTrustMovements);
     }
 
+    // ================================================================= action-kind audit (correction)
+
+    /// <summary>
+    /// Every player-selectable <see cref="ActionKind"/> reachable through the existing six-character
+    /// scenarios, audited through the shared rendering <c>LastAction</c> itself calls
+    /// (<see cref="PlayerOption.Describe"/>) — never a hand-constructed candidate, so "reachable"
+    /// means what it says: every <see cref="DecisionRecord.Chosen"/> across all five variants' full
+    /// 90-day autonomous runs.
+    ///
+    /// <b>Reachable, confirmed by this test:</b> <c>StartStrategy</c>, <c>ContinueStrategy</c>,
+    /// <c>AlterStrategy</c>, <c>DelegateStrategy</c>, <c>ReportToSuperior</c>, <c>SeekApproval</c>,
+    /// <c>SeekCorroboration</c>, <c>Retaliate</c>, <c>Concede</c>, <c>Refuse</c>, <c>DoNothing</c> — 11
+    /// of 14. <b>Not reached by any variant at seed 42 across 90 days, recorded honestly rather than
+    /// forced:</b> <c>AbandonStrategy</c>, <c>PostponeStrategy</c>, <c>RequestHelp</c>. This matches
+    /// `ROADMAP.md`'s existing "apparently-dead lines" finding; manufacturing a path to force any of
+    /// the three would be exactly the kind of result this milestone forbids.
+    /// </summary>
+    [Fact]
+    public void Every_reachable_action_kind_renders_through_the_shared_last_action_projection()
+    {
+        var reachedKinds = new HashSet<ActionKind>();
+
+        foreach (var variant in Variants.All)
+        {
+            var session = SimulationSession.Start(Seed, variant, controlledCharacterId: null, viewpointCharacterId: Salvatore);
+            session.AdvanceTo(Cast.Start.AddDays(90));
+
+            foreach (var decision in session.World.Decisions)
+            {
+                if (decision.Chosen is not { Candidate: var candidate }) continue;
+                reachedKinds.Add(candidate.Kind);
+
+                var actor = session.World.Get(decision.ActorId);
+                string Name(string id) => session.World.Find(id)?.Name
+                    ?? session.World.Businesses.GetValueOrDefault(id)?.Name ?? id;
+                Pronouns PronounsOf(string id) => session.World.Find(id)?.Pronouns ?? Pronouns.He;
+
+                string description = PlayerOption.Describe(candidate, Name, actor.Pronouns, PronounsOf);
+                Assert.False(string.IsNullOrWhiteSpace(description),
+                    $"{candidate.Kind} (variant {variant}, {decision.At:yyyy-MM-dd}) rendered an empty description");
+            }
+        }
+
+        foreach (var expected in new[]
+        {
+            ActionKind.StartStrategy, ActionKind.ContinueStrategy, ActionKind.AlterStrategy,
+            ActionKind.DelegateStrategy, ActionKind.ReportToSuperior, ActionKind.SeekApproval,
+            ActionKind.SeekCorroboration, ActionKind.Retaliate, ActionKind.Concede,
+            ActionKind.Refuse, ActionKind.DoNothing,
+        })
+            Assert.Contains(expected, reachedKinds);
+
+        // Recorded, not asserted as a requirement to force: these three do not fire in any of the
+        // five variants across a full 90-day run at seed 42. If a future milestone makes one
+        // reachable, this assertion should move to the "expected" list above rather than being
+        // silently dropped.
+        foreach (var unreached in new[] { ActionKind.AbandonStrategy, ActionKind.PostponeStrategy, ActionKind.RequestHelp })
+            Assert.DoesNotContain(unreached, reachedKinds);
+    }
+
     // ================================================================= developer-truth exclusion
 
     /// <summary>
@@ -401,11 +599,13 @@ public sealed class CausalFeedbackTests
         salvatore.Cognition.Receive(
             ReportedClaim.Honest(about, Stance.Rejects, 0.8, SourceKind.Report), "vincent", world.Now);
 
-        // The request itself is made after that stale account.
-        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now.AddDays(1)));
+        // The request itself is made after that stale account. No decision exists yet with this
+        // wake id, so this must read Pending, not Declined.
+        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now.AddDays(1), WakeEventId: 999));
 
         var snapshot = PlayerView.Build(world, salvatore.Id, world.Now.AddDays(1));
-        Assert.Single(snapshot.AwaitingAnswers);
+        var request = Assert.Single(snapshot.AwaitingAnswers);
+        Assert.Equal(RequestDisposition.Pending, request.Disposition);
     }
 
     /// <summary>Mutation guard: an account from somebody other than the person actually asked must not
@@ -417,7 +617,7 @@ public sealed class CausalFeedbackTests
         var salvatore = world.Get(Salvatore);
         var about = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
 
-        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now));
+        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now, WakeEventId: 999));
 
         // Tommy, not Vincent, happens to volunteer a matching account afterward.
         salvatore.Cognition.Receive(
@@ -425,7 +625,8 @@ public sealed class CausalFeedbackTests
             "tommy", world.Now.AddDays(1));
 
         var snapshot = PlayerView.Build(world, salvatore.Id, world.Now.AddDays(1));
-        Assert.Single(snapshot.AwaitingAnswers);
+        var request = Assert.Single(snapshot.AwaitingAnswers);
+        Assert.Equal(RequestDisposition.Pending, request.Disposition);
     }
 
     /// <summary>Mutation guard: an account of a different claim from the right person must not resolve
@@ -438,14 +639,15 @@ public sealed class CausalFeedbackTests
         var about = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
         var somethingElse = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Bakery);
 
-        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now));
+        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now, WakeEventId: 999));
 
         salvatore.Cognition.Receive(
             ReportedClaim.Honest(somethingElse, Stance.Rejects, 0.8, SourceKind.Report),
             "vincent", world.Now.AddDays(1));
 
         var snapshot = PlayerView.Build(world, salvatore.Id, world.Now.AddDays(1));
-        Assert.Single(snapshot.AwaitingAnswers);
+        var request = Assert.Single(snapshot.AwaitingAnswers);
+        Assert.Equal(RequestDisposition.Pending, request.Disposition);
     }
 
     // ================================================================= helpers

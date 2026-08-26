@@ -82,16 +82,30 @@ public sealed record PlayerCommittedAction(DateTime At, string Description);
 public sealed record PlayerBusinessStatus(string Id, string Name, bool PayingTribute);
 
 /// <summary>
-/// A question the viewpoint character himself put to somebody, not yet answered.
+/// A question the viewpoint character himself put to somebody, still without a delivered answer —
+/// which covers two genuinely different states, both carried in <see cref="Disposition"/>:
+/// <see cref="RequestDisposition.Pending"/> (he has not yet had the chance to answer at all) and
+/// <see cref="RequestDisposition.Declined"/> (he has already had that chance, through his own
+/// triggered deliberation, and chose not to answer). <see cref="RequestDisposition.Answered"/> never
+/// appears here — an actually-delivered answer drops out of this list entirely; see below.
+///
+/// <b>Corrected by milestone 018's review.</b> The first implementation resolved a request from
+/// testimony alone, which could not distinguish "not yet" from "he decided against it" and would have
+/// called both "pending" forever — silence read as an open question rather than as the answer the
+/// canonical <see cref="InformationRequest"/> contract says it already is. <see cref="Disposition"/>
+/// is derived from <see cref="InformationRequest.WakeEventId"/> — whether a
+/// <c>Decision.DecisionRecord</c> already exists for the asked character with that
+/// <c>TriggerEventId</c> — never from elapsed calendar time, so a request cannot age into "declined"
+/// on its own; only the asked character's own resolved deliberation can make it so.
 ///
 /// Added by milestone 018, and the one place <see cref="PlayerView.Build"/> reads
 /// <see cref="World.Requests"/> — filtered to requests this character himself asked, never anyone
-/// else's. Resolution, and therefore whether an instance exists here at all, is derived entirely from
-/// this character's own <see cref="Cognition.Testimony"/>: the asked person giving an account of
-/// exactly this claim at or after the moment it was asked. Nothing here reads
-/// <see cref="World.Reports"/> or <c>Report.AnsweringClaim</c> — a delivered answer already reaches
-/// <see cref="Cognition"/> through the ordinary report channel, and that is the only signal this
-/// reads. The answer itself is not rendered here: once resolved, it already appears in
+/// else's. Nothing here reads <see cref="World.Reports"/> or <c>Report.AnsweringClaim</c> — an
+/// answer's delivery is read from this character's own <see cref="Cognition.Testimony"/>, the ordinary
+/// report channel's own effect on his cognition, and a decline is read from
+/// <see cref="World.Decisions"/>'s existing `ActorId`/`TriggerEventId` fields — both already
+/// authoritative, already replayed, and identical whether the asked character is controlled or
+/// autonomous. The answer itself is not rendered here: once delivered, it already appears in
 /// <see cref="PlayerSnapshot.Known"/>, <see cref="PlayerSnapshot.Recent"/> or
 /// <see cref="PlayerSnapshot.Disagreements"/> through the existing derivation, attributed the
 /// existing way.
@@ -102,7 +116,8 @@ public sealed record PlayerRequest(
     Pronouns AskedPronouns,
     PlayerClaim About,
     string Statement,
-    DateTime AskedAt);
+    DateTime AskedAt,
+    RequestDisposition Disposition);
 
 /// <summary>
 /// Qualitative movement in the viewpoint character's own outward trust toward somebody, from a fresh
@@ -144,7 +159,10 @@ public sealed record PlayerRelationshipMovement(
 /// list, or a relationship's strength/confidence: <see cref="LastAction"/> reads
 /// <see cref="World.Decisions"/> for `ActorId == this character` and keeps only `.Chosen.Candidate`
 /// and `.At`; <see cref="AwaitingAnswers"/> reads <see cref="World.Requests"/> for
-/// `AskerId == this character`; <see cref="RecentTrustMovements"/> reads
+/// `AskerId == this character`, and — since the review's correction — also reads
+/// <see cref="World.Decisions"/> a second way, for `ActorId == the asked person` matched on
+/// `TriggerEventId`, to tell a genuinely pending request from a declined one without ever reading
+/// elapsed calendar time; <see cref="RecentTrustMovements"/> reads
 /// <see cref="World.AccountConflicts"/>/<see cref="World.AccountAgreements"/> for
 /// `ListenerId == this character`. <see cref="World.TruthLog"/> and <see cref="World.Reports"/>
 /// themselves remain untouched by this type. See <see cref="PlayerCommittedAction"/>,
@@ -362,18 +380,35 @@ public static class PlayerView
 
         // ---------------------------------------------------------------- awaiting answers
         //
-        // Resolved from this character's own testimony alone — see PlayerRequest's own doc comment
-        // for why World.Reports/Report.AnsweringClaim are never consulted here.
-        bool Answered(InformationRequest r) => who.Cognition.Testimony.Any(
-            t => t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At);
+        // Corrected by milestone 018's review: an answer is read from this character's own testimony
+        // alone (never World.Reports/Report.AnsweringClaim — see PlayerRequest's own doc comment),
+        // but silence is read from whether the asked character's own triggered deliberation has
+        // already resolved -- World.Decisions, matched on the wake event SeekCorroboration itself
+        // scheduled (InformationRequest.WakeEventId) -- never from elapsed calendar time. A request
+        // with no matching decision yet is genuinely Pending, not merely "not yet observed to be
+        // Declined": nothing here can promote one into the other except the asked character actually
+        // deciding.
+        RequestDisposition DispositionOf(InformationRequest r)
+        {
+            bool answered = who.Cognition.Testimony.Any(
+                t => t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At);
+            if (answered) return RequestDisposition.Answered;
+
+            bool askedPersonHasDecided = world.Decisions.Any(
+                d => d.ActorId == r.AskedId && d.TriggerEventId == r.WakeEventId);
+            return askedPersonHasDecided ? RequestDisposition.Declined : RequestDisposition.Pending;
+        }
 
         var awaitingAnswers = world.Requests
-            .Where(r => r.AskerId == who.Id && !Answered(r))
-            .OrderBy(r => r.At)
-            .ThenBy(r => r.Id)
-            .Select(r => new PlayerRequest(
-                r.AskedId, Name(r.AskedId), Theirs(r.AskedId),
-                PlayerClaim.Of(r.About), PlayerNarration.Describe(r.About, Name), r.At))
+            .Where(r => r.AskerId == who.Id)
+            .Select(r => (Request: r, Disposition: DispositionOf(r)))
+            .Where(x => x.Disposition != RequestDisposition.Answered)
+            .OrderBy(x => x.Request.At)
+            .ThenBy(x => x.Request.Id)
+            .Select(x => new PlayerRequest(
+                x.Request.AskedId, Name(x.Request.AskedId), Theirs(x.Request.AskedId),
+                PlayerClaim.Of(x.Request.About), PlayerNarration.Describe(x.Request.About, Name),
+                x.Request.At, x.Disposition))
             .ToList();
 
         // ---------------------------------------------------------------- recent trust movement

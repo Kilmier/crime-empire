@@ -186,4 +186,128 @@ dropped.
 
 ## Commit
 
-See the commit this file is part of.
+Original implementation: `ae06f61`.
+
+## Correction (Codex review of `ae06f61`)
+
+Codex reviewed `ae06f61` and returned **FAIL**: two P1 implementation defects and one P2 proof gap.
+Matt authorized a correction to milestone 018 only — not a new milestone. This section records what
+was found, what was fixed, and the new proofs; the account above is left as it was written and not
+edited to look like it was always correct.
+
+### Finding 1 (P1) — pending and declined were the same state
+
+The original `Answered(InformationRequest)` check resolved a request from the asker's own testimony
+alone. A request the asked character had already decided to decline — chosen `DoNothing`, or a
+`Partial`/`False` report that withholds the very claim asked about, or anything else that does not
+assert the claim — read identically to one he had simply not gotten to yet: both stayed "pending"
+forever. This contradicts the canonical `InformationRequest` doc comment itself: "whether the other
+man chooses to say anything is his decision, and silence is itself an answer."
+
+**Fix.** `InformationRequest` gained a `WakeEventId` field — the id of the
+`EventKind.RoleReview`/`"asked-to-account"` event the request itself schedules, captured by reordering
+`Commit.Apply`'s `SeekCorroboration` case to schedule the wake before filing the request rather than
+after (`Decision/Commit.cs`). A new `Domain.RequestDisposition` enum (`Pending`, `Answered`,
+`Declined`) is derived, never stored: `Answered` from testimony exactly as before; `Declined` when a
+`DecisionRecord` already exists for the asked character with `TriggerEventId == WakeEventId` and no
+matching testimony; `Pending` otherwise. Both reads are of already-authoritative, already-replayed
+state (`World.Decisions`, `Cognition.Testimony`) — no new write anywhere in `Commit.cs`, `Pipeline.cs`,
+or `Strategies.cs`, and no reference anywhere to elapsed calendar time or to whether the asked
+character is controlled. `PlayerRequest` carries `Disposition`; `Answered` requests still drop out of
+`AwaitingAnswers` entirely (the account already reaches `Known`/`Recent`/`Disagreements` the existing
+way), but `Pending` and `Declined` both remain visible, distinguished in `Game.cs`'s rendering ("no
+answer yet" vs. "he chose not to say").
+
+### Finding 2 (P1) — force matched the demander, not the demand
+
+`PlayerOccasion.Demand`'s "already used force" check matched only `PersonUsedViolence.Subject ==
+demanderId`, ignoring `.Object` (the business the violence was against). The same demander's violence
+at an unrelated business — plausible in this fixture, since one executor can be sent against more than
+one shop — would have read as "already used force over this" for a demand it had nothing to do with.
+
+**Fix.** `Strategies.cs`'s two `"tribute-demanded"` `EventPayload` constructions now set `AboutClaim =
+new Claim(ClaimKind.BusinessRefusesTribute, business.Id)` — reusing the same claim shape the owner's
+own resistance belief is already learned from at that exact call site, per the review's instruction to
+carry the business identity through the existing typed payload rather than add a new field.
+`PlayerOccasion.Demand` now requires both `Claim.Subject == demanderId` and `Claim.Object ==
+businessId` before naming force.
+
+### Finding 3 (P2) — proof gaps
+
+Six categories of required proof were added or corrected, all in
+`tests/CrimeEmpire.Simulation.Tests/CausalFeedbackTests.cs` (5 new tests; total file count 20 → 25):
+
+- **Pending → declined.** `Declining_to_answer_leaves_the_request_marked_declined_not_pending` — not
+  staged: Vincent's natural, unmodified delegation audit
+  (`ScenarioReachTests.The_delegator_puts_his_question_to_the_man_he_sent`) reaches Tommy's own
+  "asked-to-account" pause on 1987-04-04, his very first pause when controlled. `"let it lie"` is
+  always offered there (`Generators.FromTrigger`'s floor candidate); choosing it is Tommy's own real
+  decision to stay silent at a real pause, not a shortcut.
+- **Save/load for pending and declined.** The existing pending→answered save/load test was kept
+  unchanged; `Save_load_preserves_a_declined_requests_disposition` adds the declined case through the
+  identical `PersistentSession` replay mechanism.
+- **Player/autonomous parity.** Reaching for this test found a genuinely useful fact rather than a
+  clean confirmation: Tommy's own top-ranked preference at his first controlled pause, read directly
+  off `PreparedDecision.Scored[0]` before resolving, is *not* the candid answer — it is a `Partial`
+  report that withholds precisely the claim asked, his own self-protective instinct. (This differs from
+  the fully-autonomous baseline's behavior at what appears to be the identical decision — a separate,
+  unexplained timing effect of pausing, recorded honestly in `docs/ROADMAP.md`'s known technical debt
+  rather than papered over or chased down, since root-causing it was outside this correction's
+  authorized scope.) `Request_disposition_computation_is_identical_whether_declining_was_autonomous_or_player_chosen`
+  therefore compares `ResolveAutomatically()` against an explicit `Choose()` of the identical rendered
+  option, both with Tommy controlled — isolating exactly the variable the review asked about (did a
+  person or the pipeline choose this specific resolution?) rather than conflating it with whether Tommy
+  was controlled at all.
+- **Cross-business violence must not read "over this".**
+  `The_same_demanders_violence_at_a_different_business_does_not_read_as_over_this` — Nunzio holds a
+  genuine `PersonUsedViolence(tommy -> bellini-grocery)` claim while Tommy demands tribute from
+  Nunzio's own bakery; the demander matches, the business does not, and the phrasing stays a plain
+  demand.
+- **Action-kind audit.** `Every_reachable_action_kind_renders_through_the_shared_last_action_projection`
+  walks every `DecisionRecord.Chosen` across all five variants' full 90-day autonomous runs and renders
+  each through `PlayerOption.Describe` — the identical function `LastAction` calls. Reachable at seed
+  42: `StartStrategy`, `ContinueStrategy`, `AlterStrategy`, `DelegateStrategy`, `ReportToSuperior`,
+  `SeekApproval`, `SeekCorroboration`, `Retaliate`, `Concede`, `Refuse`, `DoNothing` — 11 of 14.
+  **Not reached by any variant, recorded rather than forced:** `AbandonStrategy`, `PostponeStrategy`,
+  `RequestHelp` — matching `ROADMAP.md`'s existing "apparently-dead lines" finding.
+- **Mutation checks**, each confirmed to fail for the intended reason and then reverted: dropping the
+  `t.At >= r.At` guard, the sender filter, and claim-equality (all three carried over unchanged from
+  the original implementation, re-verified against the corrected code); rendering `DecisionRecord
+  .Outcome` when `Chosen` is null; reading `Relations.Frighten`'s effect as a "threatened" fact; and
+  exposing another character's trust movement. Also newly exercised for this correction: the existing
+  `A_demand_after_force_names_it_and_a_demand_after_only_a_threat_does_not` test now supplies
+  `AboutClaim` on its staged triggers, matching the corrected production shape — without it, the
+  business-scoping fix itself would have made that test fail to compile, which is its own form of
+  mutation coverage for the missing field.
+
+### Verification (post-correction)
+
+- `dotnet build CrimeEmpire.sln` — clean, 0 warnings, 0 errors.
+- `dotnet test CrimeEmpire.sln` — **548 passed, 0 failed** (543 prior + 5 new).
+- `dotnet run --project src/CrimeEmpire.Runner -- --verify --seed 42 --days 90` — deterministic,
+  `9AF57665067AEA11` on both runs, unchanged.
+- `dotnet run --project src/CrimeEmpire.Runner -- --compare --seed 42` — all five variant trace
+  hashes byte-identical to the pre-correction figures and to `REVIEW_LEDGER.md`'s recorded baselines:
+  `baseline` `9AF57665067AEA11`, `cautious-vincent` `86EC1ADA4A4E9179`, `watchful-boss`
+  `84AC3F65E4102EBA`, `disloyal-vincent` `9A6E0E518294532F`, `resentful-tommy` `3C4483640153DA88`. The
+  correction's `Commit.cs` reordering and `Strategies.cs` payload addition touch no candidate
+  generation, scoring, or RNG draw, and this confirms it rather than assumes it.
+- `--variant disloyal-vincent --viewpoint salvatore` and `--variant baseline --viewpoint vincent` —
+  both exit 0.
+- Godot self-tests, all headless: `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`,
+  `--selftest-restart-save`/`--selftest-restart-load` — unchanged and passing; `--selftest-corroboration`
+  and `--selftest-tribute` — both re-run against the corrected code, both still passing (the
+  corroboration proof's natural run is genuinely `Answered`, never touching the `Declined` branch; the
+  tribute proof's plain-demand phrasing is unaffected by the business-scoping fix, which only changes
+  the force-already-used branch).
+
+### Documentation updated in place
+
+`src/CrimeEmpire.Simulation/Session/PlayerSnapshot.cs` and `Domain/Report.cs`'s doc comments (mutable,
+corrected in place, not append-only — unlike this archive); `docs/DESIGN_DECISIONS.md`'s "Causal
+feedback" section, whose second and fourth bullets stated the pre-correction rules and are now rewritten
+to state the corrected ones; `docs/ROADMAP.md` gained the parity-timing finding above.
+
+### Correction commit
+
+See the commit this correction is part of.

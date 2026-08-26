@@ -885,14 +885,20 @@ public partial class Game : Control
         // Confirm the executable feature claim itself before doing anything else: this pause offers
         // direct continuation and delegation together, as real, simultaneously pressable buttons on
         // the live screen — not two decisions in sequence.
-        var forkOptions = session.Pending!.Options.Select(o => o.Description).ToList();
-        bool offersBoth =
-            forkOptions.Contains("carry on getting Bellini's grocery to pay")
-            && forkOptions.Contains("have Tommy Nardo take it on");
-        if (!offersBoth)
+        //
+        // Corrected per Codex's review of `9de2c75`: the original version read
+        // session.Pending.Options — the session's own internal state, not the rendered interface — so
+        // a UI defect that silently failed to render one of the two option buttons (while the session
+        // still legitimately offered both underneath) would never have been caught here. This now
+        // walks the actual live scene tree via FindButton, the same helper Press itself uses to find
+        // and click a button by its rendered text, so the check inspects exactly what a person looking
+        // at the screen would see.
+        bool carryOnRendered = FindButton(this, "carry on getting Bellini's grocery to pay") is not null;
+        bool delegateRendered = FindButton(this, "have Tommy Nardo take it on") is not null;
+        if (!carryOnRendered || !delegateRendered)
             throw new InvalidOperationException(
-                "the fork pause does not offer both continuation and delegation together — offered: " +
-                string.Join(" | ", forkOptions));
+                "the fork pause does not render both continuation and delegation as real buttons — " +
+                $"carry-on button present: {carryOnRendered}, delegate button present: {delegateRendered}");
 
         PressChoicesInOrder(session, DirectActionChoiceSequence.Skip(1).ToList(), "CE-DIRECTACTION");
 

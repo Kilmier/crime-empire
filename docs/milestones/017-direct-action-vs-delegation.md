@@ -257,3 +257,114 @@ unexplained pinned constant.
 One implementation-and-archive commit. Status is not established by this file —
 `docs/CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
 thing that counts as acceptance.
+
+---
+
+## Correction from Codex's review of `9de2c75`
+
+Appended, not folded in. The account above is preserved as originally written and is **superseded by
+this section** wherever it describes the four items below. Codex reviewed the implementation commit
+and returned **FAIL**, four proof defects, none of them a finding about the simulation behaviour
+itself — every trace hash and chosen-action digest named above was unaffected by this correction.
+
+**1 — the pause/fast-forward test proved nothing.** The original
+`Pausing_and_resuming_reaches_the_same_state_as_an_uninterrupted_run` asserted only
+`SessionStatus.Ready` and the ending date, which two completely different histories could both
+satisfy. Replaced with
+`Fast_forward_and_event_by_event_stepping_reach_equivalent_state_within_a_branch`: from the identical
+fork, making the identical fork choice, one session is advanced entirely through
+`SimulationSession.AdvanceTo` and the other through real single-event `StepEvent` calls for its own
+early activity, followed by one bounded `AdvanceTo(End)` sweep — the same "event by event, then fast
+forward" shape `PlayerSessionTests.Stepping_and_fast_forward_patterns_agree` already proves correct in
+general, reused rather than re-derived. A raw `while (Date < End) StepEvent()` loop was deliberately
+avoided: `StepEvent` is documented as unbounded (`Pump(DateTime.MaxValue, oneEventOnly: true)`), so
+such a loop can process one event past `End` that a horizon-bounded `AdvanceTo(End)` would never touch.
+A second, more basic defect was found and fixed while building this: `ReachFork` itself uses
+`AdvanceTo`, which leaves an outstanding fast-forward horizon active; the very next `Choose` call on
+the "stepped" session would silently resume that horizon and bulk-advance it exactly like the other
+branch, proving nothing about stepping patterns at all. The corrected test reaches the fork for the
+stepped branch entirely through raw `StepEvent` calls instead. Both branches resolve every pause after
+the fork choice with the same real, visible, deterministic "last offered option" policy
+`PlayerSessionTests.Settle` already established (added here as `Settle` and `StrategyFingerprint`),
+never the hidden-score `ResolveAutomatically`. Compares the final trace, the final Vincent-facing
+snapshot, and the operation's own replay/future-decision-relevant state (`StrategyInstance`'s owner,
+delegate, method, step index, and target; Vincent's cash; the business's paying state) — not merely
+status and date. Sanity-checked by temporarily forcing the stepped branch's fork choice to `CarryOn`
+regardless of the theory's `firstChoice`: the `DelegateToTommy` case failed on the trace-equality
+assertion exactly as expected; reverted before committing.
+
+**2 — the save/load proof stopped at the immediate `DelegatedToId` flag.** Real, but not the "real
+operation consequence" requirement 10 asks the save/load proof to reach, and it compared only the two
+loaded branches against each other rather than against an unsaved control. Corrected: each loaded
+branch (`goldenLoaded`, `declinedLoaded`) is now continued past the fork with the same "last offered
+option" policy (`SettleLastOption`, `PersistentSession`'s own equivalent of `Settle` — no
+`ResolveAutomatically` exists on that type) far enough to reach a real consequence, and compared
+(`AssertPersistentEquivalence`: trace, snapshot, `StrategyFingerprint`, cash) against an **equivalent
+unsaved control** — a fresh, never-saved session driven through the identical start-then-fork path and
+the identical fork choice. A `TruthLog.Count > 1` guard confirms real progress was made past the fork
+before the comparison is trusted. Sanity-checked by temporarily forcing `declinedControl`'s fork choice
+to `CarryOn` (mismatching `declinedLoaded`'s `DelegateToTommy`): the equivalence assertion failed on
+the trace-equality check exactly as expected; reverted before committing.
+
+**3 — the investigation-attribution test fed itself a hand-typed answer.**
+`An_investigation_names_the_true_executor_of_the_violence_not_the_owner` constructed a fresh
+`WitnessSawIncident` claim naming `executorId` directly and handed it to Kane, so a defect in
+`ResolveViolence`'s own `witnessClaim` attribution would never have been exercised — the test checked a
+value it typed itself, not production output. Corrected: the real `ObservationOpportunity` event
+`ResolveViolence` schedules for Kane through its own production `Offer`/`ScheduleObservation` path is
+now drained from the world queue (`Drain`, independently copied from `InvestigationTests.cs` per this
+project's practice), and the real `Claim` is read off that event's own payload — never retyped. Only
+`Runner.Observe`'s discoverability *roll* is bypassed (staged delivery straight into Kane's cognition,
+in the exact shape `Observe` itself writes); the claim's content, including its executor attribution,
+is entirely production output. An explicit assertion confirms the drain actually finds the opportunity
+before proceeding, so a future change that stopped Kane from being offered one would fail loudly rather
+than the test silently passing on an empty premise.
+
+**Mutation-checked exactly as required**: `Strategies.ResolveViolence`'s `witnessClaim` was changed
+from `new Claim(ClaimKind.WitnessSawIncident, business.Id, executor.Id, ev.Id)` to
+`new Claim(ClaimKind.WitnessSawIncident, business.Id, owner.Id, ev.Id)` — `violenceClaim`
+(`PersonUsedViolence`) untouched, so it remained correctly attributed to `executor.Id` throughout. The
+corrected test failed for the `Tommy` (delegated) case exactly as required (`Expected: "tommy"`,
+`Actual: "vincent"`); the `Vincent` (direct, owner == executor) case still passed, since the mutation
+is invisible when owner and executor are the same person. Reverted before committing;
+`git diff --stat` against `Strategies.cs` confirmed no residual change.
+
+**4 — the Godot fork-offering check read session-internal state, not the rendered interface.**
+`DirectActionSelfTest` checked `session.Pending.Options` directly — the session's own internal state —
+so a UI defect that silently failed to render one of the two fork buttons, while the session still
+legitimately offered both underneath, would never have been caught. Corrected: the check now calls
+`FindButton(this, "carry on getting Bellini's grocery to pay")` and
+`FindButton(this, "have Tommy Nardo take it on")` — the same helper `Press` itself uses to find and
+click a button by its rendered text — walking the actual live scene tree rather than the session.
+
+**Mutation-checked exactly as required**: `BuildDecisionPanel`'s option-rendering loop (`Game.cs`,
+around the `foreach (var option in pending.Options)` block) was temporarily given
+`if (option.Description == "have Tommy Nardo take it on") continue;`, omitting only that one button
+from the rendered UI while the session's own `Pending.Options` still contained it. Rebuilt and reran
+`--headless --path src/CrimeEmpire.Godot -- --selftest-directaction`: the corrected self-test failed
+(`carry-on button present: True, delegate button present: False`), exit code 1, exactly as required.
+Reverted before committing; rerun confirmed exit 0 again.
+
+**What this correction is not.** No coefficient, fixture, trait, or production-simulation behaviour
+change survives in the committed diff — the two mutations above (finding 3's claim-attribution change,
+finding 4's UI-omission change) were applied, confirmed to fail the corrected tests for the stated
+reason, and reverted before this commit. `git diff --stat` against `src/CrimeEmpire.Simulation/` and
+`src/CrimeEmpire.Godot/Game.cs`'s option-rendering loop confirms only the four corrections described
+above and no residual mutation.
+
+### Verification, re-run in full after the correction
+
+- Build: **0 warnings, 0 errors** across all projects.
+- Tests: **523 passed, 0 failed** — same total as before the correction (one theory replaced another
+  of equal size: 2 cases removed, 2 added).
+- `--verify` deterministic and byte-identical on `baseline` (`9AF57665067AEA11`), `disloyal-vincent`
+  (`9A6E0E518294532F`), `resentful-tommy` (`3C4483640153DA88`) — all unmoved. `--compare` shows 5
+  distinct traces, 5 distinct chosen-action sequences, all digests unmoved. Both required viewpoint
+  runs (`disloyal-vincent`/`salvatore`, `baseline`/`vincent`) exit 0.
+- Godot: `--selftest` (exit 0), `--selftest-goldenpath` (exit 0), the corrected `--selftest-directaction`
+  (exit 0), and the two-process restart proof — `--selftest-restart-save` / `--selftest-restart-load`,
+  each a genuinely separate headless invocation — both exit 0.
+
+**Status.** This corrective commit is implemented, tested, and both required mutation checks (findings
+3 and 4) ran and reverted as described above. It is **not accepted** — Matt's confirmation of this
+named commit, after Codex's verification, is what that requires.

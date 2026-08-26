@@ -266,6 +266,60 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 017, direct action vs delegation, corrected once, awaiting verification
+
+**Self-implemented; reviewed by Codex on implementation commit `9de2c75`, returned FAIL with four
+findings.** Forks the existing seed-42 `SecureTribute` operation at the pause where Vincent may
+continue personally or delegate to Tommy, proving executor identity determines evidence attribution,
+encounter/fear, first-hand knowledge, and investigation subject — through the owner/executor split
+already built by milestones 007–011, no new production mechanism. Full account, including the original
+implementation and the appended correction:
+`docs/milestones/017-direct-action-vs-delegation.md`.
+
+**Codex reviewed `9de2c75` and returned four findings, none behavioural — every trace hash and
+chosen-action digest was unaffected by the correction that follows.** (1) the pause/fast-forward test
+asserted only `SessionStatus.Ready` and the ending date, compatible with two different histories; (2)
+the save/load proof compared only the immediate `DelegatedToId` change against the other loaded branch,
+not a real consequence against an unsaved control; (3) the investigation-attribution test hand-typed
+the `WitnessSawIncident` claim it fed to Kane rather than reading the one `Strategies.ResolveViolence`
+actually produced, so a misattribution in production code would never have been exercised; (4) the
+Godot fork-offering check read `session.Pending.Options` — internal state — rather than the rendered
+interface, so a UI-only omission of a fork button would never have been caught.
+
+**Corrected in the commit that follows.** (1) replaced with a real fast-forward-vs-event-by-event
+equivalence test reusing `PlayerSessionTests`' own proven stepping-pattern idiom (`Settle`, the "last
+offered option" policy) and comparing trace, snapshot, and `StrategyInstance` fingerprint; (2) extended
+to continue each loaded branch to a real consequence and compare against a fresh, never-saved control
+session driven the identical way; (3) rewritten to drain the real `ObservationOpportunity` event
+`ResolveViolence` schedules for Kane and read its actual claim, bypassing only the discoverability
+*roll*, never the claim's content; (4) rewritten to call `FindButton` against the live scene tree, the
+same helper `Press` itself uses. Findings 3 and 4 each carried an explicit required mutation check,
+both run and confirmed to fail the corrected test for the stated reason, then reverted:
+- Finding 3: `ResolveViolence`'s `witnessClaim` changed to `owner.Id` (leaving `violenceClaim`
+  correctly attributed to `executor.Id`) — the corrected test failed for the delegated case exactly as
+  required (`Expected: "tommy"`, `Actual: "vincent"`).
+- Finding 4: the Godot option-rendering loop given a one-line `continue` omitting the delegate button
+  from the UI while the session still offered it internally — the corrected self-test failed
+  (`delegate button present: False`), exit code 1.
+
+Findings 1 and 2 were additionally self-checked by a temporary sanity mutation each (forcing a
+mismatched choice on one side of the comparison), confirmed to fail the corrected assertion, then
+reverted — not formally required by Codex's review but consistent with this project's own
+mutation-checking practice.
+
+- Build: 0 warnings, 0 errors, unchanged project count. Tests: **523 passed, 0 failed**, same total as
+  before the correction (one 2-case theory replaced another of equal size).
+- `--verify` deterministic and byte-identical on `baseline` (`9AF57665067AEA11`), `disloyal-vincent`
+  (`9A6E0E518294532F`), `resentful-tommy` (`3C4483640153DA88`) — all unmoved from milestone 016's
+  accepted baseline. `--compare` shows 5 distinct traces, 5 distinct chosen-action sequences, all
+  digests unmoved. Both required viewpoint runs exit 0.
+- Godot `--selftest`, `--selftest-goldenpath`, the corrected `--selftest-directaction`, and the
+  two-process restart proof (`--selftest-restart-save` / `--selftest-restart-load`, genuinely separate
+  headless invocations) all exit 0.
+
+**Status: corrected once, not yet re-reviewed by Codex, not accepted.** Matt's confirmation of a named
+commit, after Codex's verification of the correction, is what acceptance requires.
+
 ### Measured — milestone 016, trust can be earned, corrected twice, accepted
 
 **Self-implemented; reviewed twice by Codex, on implementation commit `66917c7` and again on the

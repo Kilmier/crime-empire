@@ -233,34 +233,90 @@ public sealed class DirectActionVsDelegationTests
     }
 
     /// <summary>
-    /// Pause/fast-forward equivalence per branch: an uninterrupted autonomous run and an interactively
-    /// paused-and-resumed run of the same branch reach the same history. Requirement 10 (first half).
+    /// Pause/fast-forward equivalence per branch (requirement 10, first half).
+    ///
+    /// <b>Corrected per Codex's review of `9de2c75`.</b> The original version only asserted
+    /// <see cref="SessionStatus.Ready"/> and the ending date, which is compatible with two
+    /// completely different histories reaching the same status and date. This drives two sessions
+    /// from the identical fork, making the identical fork choice, one advanced entirely through
+    /// <see cref="SimulationSession.AdvanceTo"/> (bulk fast-forward) and one advanced through real
+    /// single-event <see cref="SimulationSession.StepEvent"/> calls for its own early activity before
+    /// a single bounded <c>AdvanceTo(End)</c> sweep — the exact "event by event, then fast forward"
+    /// shape <c>PlayerSessionTests.Stepping_and_fast_forward_patterns_agree</c> already proves correct
+    /// in general, reused here rather than re-derived. A raw, unbounded loop of
+    /// <c>while (Date &lt; End) StepEvent()</c> was deliberately avoided: <c>StepEvent</c> is
+    /// documented as unbounded (<c>Pump(DateTime.MaxValue, oneEventOnly: true)</c>), so such a loop can
+    /// process one event past <c>End</c> that a horizon-bounded <c>AdvanceTo(End)</c> would never touch,
+    /// which would make the two patterns genuinely disagree for a reason having nothing to do with this
+    /// milestone's fork.
+    ///
+    /// Both runs resolve every pause after the fork choice with the same real, visible, deterministic
+    /// policy <c>PlayerSessionTests.Settle</c> already established — the last offered option — rather
+    /// than the hidden-score <see cref="SimulationSession.ResolveAutomatically"/>, so this is a genuine
+    /// player policy exercised twice under two stepping patterns, not the pipeline's own preference.
+    ///
+    /// Compares the final trace, the final Vincent-facing snapshot, and the operation's own
+    /// replay/future-decision-relevant state — <see cref="StrategyInstance"/>'s own identity fields,
+    /// Vincent's cash, and the business's paying state — not merely session status and date. Also keeps
+    /// the original version's "time cannot move mid-decision" check, folded in rather than dropped.
     /// </summary>
     [Theory]
     [InlineData(CarryOn)]
     [InlineData(DelegateToTommy)]
-    public void Pausing_and_resuming_reaches_the_same_state_as_an_uninterrupted_run(string firstChoice)
+    public void Fast_forward_and_event_by_event_stepping_reach_equivalent_state_within_a_branch(string firstChoice)
     {
-        var uninterrupted = SimulationSession.Start(Seed, Variant, controlledCharacterId: null, viewpointCharacterId: Vincent);
-        uninterrupted.AdvanceTo(End);
+        // ReachFork itself uses AdvanceTo, which is correct for the fast-forwarded branch: the
+        // resulting outstanding horizon (End) is exactly what "fast forward" means, and Choose already
+        // resumes it — a second explicit AdvanceTo(End) call here would be redundant, not additive.
+        var fastForwarded = SimulationSession.Start(Seed, Variant, Vincent);
+        ReachFork(fastForwarded, End);
+        ChooseByDescription(fastForwarded, firstChoice);
+        Settle(fastForwarded);
 
-        var interrupted = SimulationSession.Start(Seed, Variant, Vincent);
-        ReachFork(interrupted, End);
-        ChooseByDescription(interrupted, firstChoice);
-        while (interrupted.Status == SessionStatus.AwaitingChoice)
+        // The stepped branch must reach the fork by real single-event steps too, not via ReachFork's
+        // AdvanceTo — StepEvent clears any outstanding fast-forward on every call, but ReachFork's own
+        // AdvanceTo would otherwise leave one active, and the fork Choose below would silently resume
+        // it, fast-forwarding this "stepped" branch exactly like the other one and proving nothing.
+        var stepped = SimulationSession.Start(Seed, Variant, Vincent);
+        while (stepped.Status != SessionStatus.AwaitingChoice) stepped.StepEvent();
+        ChooseByDescription(stepped, StartPersuade);
+        while (stepped.Status != SessionStatus.AwaitingChoice) stepped.StepEvent();
+
+        ChooseByDescription(stepped, firstChoice);
+        for (int i = 0; i < 25; i++)
         {
-            Assert.Throws<InvalidOperationException>(() => interrupted.AdvanceDays(1));
-            interrupted.ResolveAutomatically();
+            if (stepped.Status == SessionStatus.AwaitingChoice)
+            {
+                Assert.Throws<InvalidOperationException>(() => stepped.AdvanceDays(1));
+                Settle(stepped);
+            }
+            else
+            {
+                stepped.StepEvent();
+            }
         }
-        if (interrupted.Status == SessionStatus.Ready && interrupted.Date < End) interrupted.AdvanceTo(End);
-        while (interrupted.Status == SessionStatus.AwaitingChoice) interrupted.ResolveAutomatically();
+        Settle(stepped); // the loop's own last iteration can itself land on a fresh pause
+        stepped.AdvanceTo(End);
+        Settle(stepped);
 
-        // The two are not expected to match the fully-autonomous run byte for byte whenever the
-        // player's one deliberate choice differs from the pipeline's own preference at that pause —
-        // only that pausing/resuming a branch does not itself change that branch's own outcome, which
-        // is checked by requiring interrupted to be internally consistent (reaches Ready, reaches End).
-        Assert.Equal(SessionStatus.Ready, interrupted.Status);
-        Assert.Equal(End, interrupted.Date);
+        Assert.Equal(SessionStatus.Ready, fastForwarded.Status);
+        Assert.Equal(SessionStatus.Ready, stepped.Status);
+
+        Assert.Equal(
+            TraceWriter.Render(fastForwarded.World, Variant, false),
+            TraceWriter.Render(stepped.World, Variant, false));
+        Assert.Equal(Flatten(fastForwarded.Snapshot()), Flatten(stepped.Snapshot()));
+
+        var ffStrategy = StrategyFingerprint(fastForwarded.World.Get(Vincent).Execution.Strategy);
+        var stStrategy = StrategyFingerprint(stepped.World.Get(Vincent).Execution.Strategy);
+        Assert.Equal(ffStrategy, stStrategy);
+
+        Assert.Equal(
+            fastForwarded.World.Get(Vincent).Capabilities.Cash,
+            stepped.World.Get(Vincent).Capabilities.Cash);
+        Assert.Equal(
+            fastForwarded.World.Businesses[Cast.Grocery].PayingTribute,
+            stepped.World.Businesses[Cast.Grocery].PayingTribute);
     }
 
     // ================================================================= Section B: staged boundary proof
@@ -383,6 +439,21 @@ public sealed class DirectActionVsDelegationTests
     /// already establishes for a delegated *investigation*, applied here to the executor of the
     /// underlying incident a separate investigation canvasses. Requirement: "who may become an
     /// investigation subject."
+    ///
+    /// <b>Corrected per Codex's review of `9de2c75`.</b> The original version hand-constructed a fresh
+    /// <c>WitnessSawIncident</c> claim naming <paramref name="executorId"/> directly and fed that to
+    /// Kane, so a mutation that mis-attributed <c>ResolveViolence</c>'s own <c>witnessClaim</c> would
+    /// never have been exercised — the test was checking a value this test itself typed, not what
+    /// production actually produced. This now drains the real
+    /// <see cref="EventKind.ObservationOpportunity"/> <c>ResolveViolence</c> scheduled for Kane through
+    /// its own production <c>Offer</c>/<c>ScheduleObservation</c> path (Kane's Investigation skill of
+    /// 0.70 clears the bystander-witness threshold, so she is genuinely offered one — confirmed by
+    /// asserting the drain actually finds it, not assumed), and reads the real <see cref="Claim"/> off
+    /// that event's own payload — never retyped. Only the discoverability *roll* inside
+    /// <c>Runner.Observe</c> is bypassed (staged delivery straight into Kane's cognition, in the exact
+    /// shape <c>Observe</c> itself would write: <c>Believes</c>, confidence 0.6, <c>Discovery</c>,
+    /// sourced to Kane, at the current time) — the claim's *content*, including its executor
+    /// attribution, is entirely production output.
     /// </summary>
     [Theory]
     [InlineData(Vincent)]
@@ -398,15 +469,23 @@ public sealed class DirectActionVsDelegationTests
         AdvanceTributeSteps(world, executor, s, steps: 3);
         var violenceEvent = world.TruthLog.Single(e => e.Kind == "violence");
 
-        // Kane already holds a witness lead naming the true executor — the same shape ResolveViolence
-        // itself produces for a bystander witness, staged directly rather than relying on the
-        // opportunity roll so this test isolates investigation attribution, not discovery odds.
-        kane.Cognition.Learn(
-            new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, executorId, violenceEvent.Id),
-            Stance.Believes, 0.6, SourceKind.Discovery, kane.Id, world.Now);
+        // The real claim ResolveViolence itself constructed, drained from the ObservationOpportunity
+        // it scheduled for Kane through the production Offer/ScheduleObservation path — never retyped.
+        var opportunity = Drain(world).SingleOrDefault(e =>
+            e.Kind == EventKind.ObservationOpportunity && e.OwnerId == kane.Id
+            && e.Payload.Claims.Any(c => c.Kind == ClaimKind.WitnessSawIncident && c.EventId == violenceEvent.Id));
+        Assert.True(opportunity is not null,
+            "ResolveViolence did not offer Kane an observation opportunity for this incident, so this " +
+            "test cannot prove anything about production evidence attribution");
+        var productionClaim = opportunity!.Payload.Claims.Single(c => c.Kind == ClaimKind.WitnessSawIncident);
+        Assert.Equal(executorId, productionClaim.Object);
+        Assert.Equal(violenceEvent.Id, productionClaim.EventId);
 
-        var caseInstance = OpenInvestigation(world, kane,
-            new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, executorId, violenceEvent.Id));
+        // Staged delivery, bypassing only Observe's discoverability roll — never the claim's own
+        // content — in the exact shape Observe itself writes.
+        kane.Cognition.Learn(productionClaim, Stance.Believes, 0.6, SourceKind.Discovery, kane.Id, world.Now);
+
+        var caseInstance = OpenInvestigation(world, kane, productionClaim);
         RunInvestigationToCompletion(world, kane, caseInstance);
 
         var suspicion = kane.Cognition.OfKind(ClaimKind.PersonUsedViolence)
@@ -424,11 +503,24 @@ public sealed class DirectActionVsDelegationTests
     /// <c>PersistenceTests.Counterfactual_valid_choices_from_the_same_save_diverge_naturally</c>
     /// already establishes for the start-vs-abandon fork, applied to the continue-vs-delegate fork.
     /// <see cref="CrimeEmpire.Persistence.Session.PersistentSession"/> exposes no autonomous-resolution
-    /// path (only <c>StepEvent</c>/<c>Choose</c>, matching what a real save file can replay), so this
-    /// proves the fork survives a save/load exactly at the point the milestone actually asks for —
-    /// the shared fork itself — rather than assuming an undiscovered full pinned sequence for a branch
-    /// this milestone did not pin one for. Requirement 10 (second half) and the in-scope "save/load
-    /// replay from the shared fork through both branches" item.
+    /// path (only <c>StepEvent</c>/<c>AdvanceDays</c>/<c>Choose</c>, matching what a real save file can
+    /// replay). Requirement 10 (second half) and the in-scope "save/load replay from the shared fork
+    /// through both branches" item.
+    ///
+    /// <b>Corrected per Codex's review of `9de2c75`.</b> The original version compared only the
+    /// immediate <c>DelegatedToId</c> change right after the fork choice — real, but not the "real
+    /// operation consequence" requirement 10 actually asks the save/load proof to reach. This now
+    /// continues each loaded branch with the same real, visible, deterministic "last offered option"
+    /// policy <c>PlayerSessionTests.Settle</c> established (reused here as
+    /// <see cref="SettleLastOption(CrimeEmpire.Persistence.Session.PersistentSession)"/>, since
+    /// <see cref="Settle(SimulationSession)"/> is typed to the other session kind) far enough to reach a
+    /// real consequence, and compares each loaded continuation against an <b>equivalent unsaved
+    /// control</b> — a fresh session driven from the identical starting seed through the identical
+    /// path and the identical fork choice, never touching disk — rather than only comparing the two
+    /// loaded branches against each other. Matching a loaded run against its own unsaved control is
+    /// what actually proves save/load fidelity; matching two branches that were both loaded proves only
+    /// that they still disagree with each other, which the in-memory Section A tests already establish
+    /// more directly.
     /// </summary>
     [Fact]
     public void Save_and_load_from_the_shared_fork_reproduces_both_branches()
@@ -442,22 +534,51 @@ public sealed class DirectActionVsDelegationTests
             AdvanceToNextPause(setup); // now at the fork: continue vs. delegate offered together
             setup.Save(path);
 
-            var golden = CrimeEmpire.Persistence.Session.PersistentSession.Load(path);
-            ChooseByDescription(golden, CarryOn);
+            var goldenLoaded = CrimeEmpire.Persistence.Session.PersistentSession.Load(path);
+            ChooseByDescription(goldenLoaded, CarryOn);
+            SettleLastOption(goldenLoaded);
 
-            var declined = CrimeEmpire.Persistence.Session.PersistentSession.Load(path);
-            ChooseByDescription(declined, DelegateToTommy);
+            var declinedLoaded = CrimeEmpire.Persistence.Session.PersistentSession.Load(path);
+            ChooseByDescription(declinedLoaded, DelegateToTommy);
+            SettleLastOption(declinedLoaded);
 
-            var goldenStrategy = golden.InnerSession.World.Get(Vincent).Execution.Strategy;
-            var declinedStrategy = declined.InnerSession.World.Get(Vincent).Execution.Strategy;
-            Assert.NotNull(goldenStrategy);
-            Assert.NotNull(declinedStrategy);
-            Assert.Null(goldenStrategy!.DelegatedToId);
-            Assert.Equal(Tommy, declinedStrategy!.DelegatedToId);
+            // Equivalent unsaved controls: the identical path, from a fresh session, never saved or
+            // loaded at all.
+            var goldenControl = CrimeEmpire.Persistence.Session.PersistentSession.Start(Seed, Variant, Vincent);
+            AdvanceToNextPause(goldenControl);
+            ChooseByDescription(goldenControl, StartPersuade);
+            AdvanceToNextPause(goldenControl);
+            ChooseByDescription(goldenControl, CarryOn);
+            SettleLastOption(goldenControl);
 
+            var declinedControl = CrimeEmpire.Persistence.Session.PersistentSession.Start(Seed, Variant, Vincent);
+            AdvanceToNextPause(declinedControl);
+            ChooseByDescription(declinedControl, StartPersuade);
+            AdvanceToNextPause(declinedControl);
+            ChooseByDescription(declinedControl, DelegateToTommy);
+            SettleLastOption(declinedControl);
+
+            // Each loaded branch, continued to a real consequence, matches its own unsaved control
+            // exactly: history, player-facing projection, and the operation's own
+            // replay/future-decision-relevant state.
+            AssertPersistentEquivalence(goldenLoaded, goldenControl);
+            AssertPersistentEquivalence(declinedLoaded, declinedControl);
+
+            // A real operation consequence was actually reached in both — not merely the immediate
+            // DelegatedToId flag — and the two branches still diverge from each other at it.
+            var goldenWorld = goldenLoaded.InnerSession.World;
+            var declinedWorld = declinedLoaded.InnerSession.World;
+            Assert.True(
+                goldenWorld.TruthLog.Count > 1 && declinedWorld.TruthLog.Count > 1,
+                "the settled continuation barely moved past the fork, so this proves nothing about a " +
+                "real consequence");
             Assert.NotEqual(
-                TraceWriter.Render(golden.InnerSession.World, Variant, false),
-                TraceWriter.Render(declined.InnerSession.World, Variant, false));
+                TraceWriter.Render(goldenWorld, Variant, false),
+                TraceWriter.Render(declinedWorld, Variant, false));
+
+            var goldenStrategy = goldenWorld.Get(Vincent).Execution.Strategy;
+            Assert.True(goldenStrategy is null || goldenStrategy.DelegatedToId is null);
+            Assert.Contains(Tommy, declinedWorld.Get(Vincent).Execution.DelegatedExecutorIds);
         }
         finally
         {
@@ -503,6 +624,26 @@ public sealed class DirectActionVsDelegationTests
             string.Join(" | ", pending.Options.Select(o => o.Description)));
         session.Choose(pending.Options[index].Id);
     }
+
+    /// <summary>
+    /// A real, visible, deterministic player policy — the last offered option — matching
+    /// <c>PlayerSessionTests.Settle</c> exactly rather than <see cref="SimulationSession.ResolveAutomatically"/>'s
+    /// hidden score, so a stepping-pattern comparison exercises the same kind of policy a person
+    /// actually uses.
+    /// </summary>
+    private static void Settle(SimulationSession session)
+    {
+        while (session.Status == SessionStatus.AwaitingChoice)
+            session.Choose(session.Pending!.Options[^1].Id);
+    }
+
+    /// <summary>The operation's own replay/future-decision-relevant identity — owner, delegate,
+    /// method, step, and target — collapsed to one comparable string, or "none" if it has
+    /// completed.</summary>
+    private static string StrategyFingerprint(StrategyInstance? s)
+        => s is null
+            ? "none"
+            : $"{s.OwnerId}|{s.DelegatedToId}|{s.Kind}|{s.Method}|{s.StepIndex}|{s.TargetId}";
 
     private static IEnumerable<string> Phrases(PlayerSnapshot s)
     {
@@ -632,6 +773,16 @@ public sealed class DirectActionVsDelegationTests
         }
     }
 
+    /// <summary>Everything still queued, taken off through the queue's own ordering — mirrors
+    /// <c>InvestigationTests.Drain</c> exactly, independently copied per this project's practice of not
+    /// sharing test helpers across milestone-specific files.</summary>
+    private static List<ScheduledEvent> Drain(World world)
+    {
+        var drained = new List<ScheduledEvent>();
+        while (world.Queue.Next(world.Now.AddYears(1)) is { } ev) drained.Add(ev);
+        return drained;
+    }
+
     private static StrategyInstance OpenInvestigation(World world, Character kane, Claim lead)
     {
         var ctx = Context(world, kane);
@@ -723,5 +874,39 @@ public sealed class DirectActionVsDelegationTests
             $"no offered option reads \"{description}\" on {session.Date:yyyy-MM-dd} — offered: " +
             string.Join(" | ", pending.Options.Select(o => o.Description)));
         session.Choose(pending.Options[index].Id);
+    }
+
+    /// <summary>
+    /// Continues far enough past the fork to reach a real operation consequence, using the same real,
+    /// visible, deterministic "last offered option" policy <see cref="Settle(SimulationSession)"/> uses
+    /// for <see cref="SimulationSession"/> — <see cref="CrimeEmpire.Persistence.Session.PersistentSession"/>
+    /// has no autonomous-resolution path, so this is the closest equivalent that still exercises only
+    /// the session's real public mutators (<c>AdvanceDays</c>/<c>Choose</c>), exactly as a save file
+    /// can actually replay. 90 days comfortably covers every consequence any accepted trace at this
+    /// seed reaches (collection lands by 1 April, a few weeks in).
+    /// </summary>
+    private static void SettleLastOption(CrimeEmpire.Persistence.Session.PersistentSession session)
+    {
+        session.AdvanceDays(90);
+        while (session.Status == SessionStatus.AwaitingChoice)
+            session.Choose(session.Pending!.Options[^1].Id);
+    }
+
+    /// <summary>Full equivalence between a loaded continuation and its unsaved control: history, the
+    /// Vincent-facing projection, and the operation's own replay/future-decision-relevant state.</summary>
+    private static void AssertPersistentEquivalence(
+        CrimeEmpire.Persistence.Session.PersistentSession loaded,
+        CrimeEmpire.Persistence.Session.PersistentSession control)
+    {
+        Assert.Equal(
+            TraceWriter.Render(loaded.InnerSession.World, Variant, false),
+            TraceWriter.Render(control.InnerSession.World, Variant, false));
+        Assert.Equal(Flatten(loaded.Snapshot()), Flatten(control.Snapshot()));
+        Assert.Equal(
+            StrategyFingerprint(loaded.InnerSession.World.Get(Vincent).Execution.Strategy),
+            StrategyFingerprint(control.InnerSession.World.Get(Vincent).Execution.Strategy));
+        Assert.Equal(
+            loaded.InnerSession.World.Get(Vincent).Capabilities.Cash,
+            control.InnerSession.World.Get(Vincent).Capabilities.Cash);
     }
 }

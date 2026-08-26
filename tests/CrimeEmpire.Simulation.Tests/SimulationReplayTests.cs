@@ -1,5 +1,4 @@
 using System.Globalization;
-using CrimeSim.Domain;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
 
@@ -34,29 +33,6 @@ public sealed class SimulationReplayTests
             Assert.True(snapshot.Contains(request.About.ToString(), StringComparison.Ordinal),
                 $"the replay snapshot does not mention {request.About}, so a run that asked a " +
                 "different question would compare equal");
-    }
-
-    /// <summary>
-    /// Milestone 018's second correction: <c>InformationRequest.WakeEventId</c> is replay-reconstructed
-    /// linkage state (which event a request itself scheduled) and previously did not appear in this
-    /// snapshot at all — two requests differing only in which wake they caused would have compared
-    /// equal, which is exactly the blindness this file's own request line exists to prevent for every
-    /// other field. Two otherwise-identical requests, differing only in <c>WakeEventId</c>, must
-    /// produce different snapshots.
-    /// </summary>
-    [Fact]
-    public void The_snapshot_distinguishes_requests_that_differ_only_by_their_wake_event_id()
-    {
-        var worldA = Cast.Build(seed: 42, variant: "baseline");
-        var worldB = Cast.Build(seed: 42, variant: "baseline");
-
-        var claim = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
-        worldA.Requests.Add(new InformationRequest(
-            worldA.NextRequestId(), "salvatore", "vincent", claim, worldA.Now, WakeEventId: 100));
-        worldB.Requests.Add(new InformationRequest(
-            worldB.NextRequestId(), "salvatore", "vincent", claim, worldB.Now, WakeEventId: 200));
-
-        Assert.NotEqual(Snapshot(worldA), Snapshot(worldB));
     }
 
     [Fact]
@@ -173,19 +149,12 @@ public sealed class SimulationReplayTests
         // requests would go on to make different decisions — state that steers behaviour has to be
         // in the canonical comparison, not only in the focused pause/resume test.
         //
-        // WakeEventId included since milestone 018's second correction: it is replay-reconstructed
-        // linkage state (which event this request itself scheduled) and Codex's review found it
-        // missing here, meaning a run whose requests scheduled a differently-ordered wake could
-        // compare equal to one that did not. See
-        // The_snapshot_distinguishes_requests_that_differ_only_by_their_wake_event_id for the focused
-        // proof.
-        //
-        // Note this line cannot be mutation-checked in the usual way: the snapshot is the comparator,
-        // so deleting a field from it makes the comparison blinder without making anything fail. The
-        // independent assurance is that asking is also recorded in the truth log, which the runner's
-        // --verify hash covers by a different route.
+        // Note this line cannot be mutation-checked: the snapshot is the comparator, so deleting a
+        // field from it makes the comparison blinder without making anything fail. The independent
+        // assurance is that asking is also recorded in the truth log, which the runner's --verify
+        // hash covers by a different route.
         lines.AddRange(world.Requests.Select(q =>
-            $"request|{q.Id}|{q.At:O}|{q.AskerId}|{q.AskedId}|{q.About}|{q.WakeEventId}"));
+            $"request|{q.Id}|{q.At:O}|{q.AskerId}|{q.AskedId}|{q.About}"));
 
         foreach (var business in world.Businesses.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
             lines.Add($"business|{business.Id}|{Number(business.MonthlyRevenue)}|" +

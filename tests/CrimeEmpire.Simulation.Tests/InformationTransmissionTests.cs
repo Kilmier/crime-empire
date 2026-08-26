@@ -898,7 +898,7 @@ public sealed class InformationTransmissionTests
         var asked = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 1);
         var different = new Claim(ClaimKind.PoliceInvestigating, "tommy");
 
-        var made = new[] { new InformationRequest(1, "salvatore", "tommy", asked, t0, WakeEventId: 0) };
+        var made = new[] { new InformationRequest(1, "salvatore", "tommy", asked, t0) };
 
         // Exercised through the generator's own rule, not a copy of it written in the test.
         Assert.False(Generators.CanAsk(made, "tommy", asked),
@@ -1038,28 +1038,6 @@ public sealed class InformationTransmissionTests
         Assert.Equal(Channel(straight), Channel(resumed));
     }
 
-    /// <summary>
-    /// Milestone 018's second correction, this file's own copy of the proof
-    /// <c>SimulationReplayTests.The_snapshot_distinguishes_requests_that_differ_only_by_their_wake_event_id</c>
-    /// makes against the other comparator — not shared, so the two cannot both be wrong about the
-    /// same assumption together. Two otherwise-identical requests, differing only in
-    /// <c>WakeEventId</c>, must not compare equal through this file's own channel comparator either.
-    /// </summary>
-    [Fact]
-    public void The_channel_distinguishes_requests_that_differ_only_by_their_wake_event_id()
-    {
-        var worldA = Cast.Build(seed: 42, variant: "baseline");
-        var worldB = Cast.Build(seed: 42, variant: "baseline");
-
-        var claim = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
-        worldA.Requests.Add(new InformationRequest(
-            worldA.NextRequestId(), "salvatore", "vincent", claim, worldA.Now, WakeEventId: 100));
-        worldB.Requests.Add(new InformationRequest(
-            worldB.NextRequestId(), "salvatore", "vincent", claim, worldB.Now, WakeEventId: 200));
-
-        Assert.NotEqual(Channel(worldA), Channel(worldB));
-    }
-
     /// <summary>The report channel's state, flattened for comparison.</summary>
     private static string Channel(World world)
     {
@@ -1071,12 +1049,9 @@ public sealed class InformationTransmissionTests
 
         // What was asked about, not only who was asked. The subject steers the reply, so a pause
         // that changed it would otherwise compare equal — which is exactly the blindness this
-        // comparison exists to prevent. WakeEventId included since milestone 018's second correction
-        // (Codex's review found it missing from both this and SimulationReplayTests.Snapshot) — it is
-        // replay-reconstructed linkage state, and two requests differing only in which wake they
-        // caused must not compare equal here either.
+        // comparison exists to prevent.
         lines = lines.Concat(world.Requests.Select(q =>
-            $"request|{q.Id}|{q.At:O}|{q.AskerId}|{q.AskedId}|{q.About}|{q.WakeEventId}"));
+            $"request|{q.Id}|{q.At:O}|{q.AskerId}|{q.AskedId}|{q.About}"));
 
         lines = lines.Concat(world.Characters.Values
             .OrderBy(c => c.Id, StringComparer.Ordinal)

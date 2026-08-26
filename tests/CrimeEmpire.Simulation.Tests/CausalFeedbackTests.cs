@@ -27,14 +27,19 @@ namespace CrimeEmpire.Simulation.Tests;
 ///    held <c>PersonUsedViolence</c> claim naming the (by-then-different) demander, proving the
 ///    "force already used" phrasing is reachable too.
 ///
-/// Corrected twice by Codex's review. The first correction added <c>RequestDisposition</c>
+/// Corrected three times by Codex's review. The first correction added <c>RequestDisposition</c>
 /// (Pending/Answered/Declined) so silence could be told apart from a genuine answer; its first
 /// implementation derived Declined from the asked character's own <c>World.Decisions</c>, which the
 /// second correction rejected as a private-state leak — the asker never receives any message
-/// establishing that the asked person decided anything. Disposition is now derived entirely from the
-/// asker's own <c>Cognition.Testimony</c>: Pending when nothing has arrived, Answered when the latest
-/// account affirms, Declined when it denies — see the "pending vs. declined" section below, in
-/// particular <see cref="Two_different_private_non_communicating_choices_are_indistinguishable_to_the_asker"/>.
+/// establishing that the asked person decided anything. The second correction instead derived
+/// disposition from the asker's own <c>Cognition.Testimony</c>, collapsing Declined into Pending since
+/// a denial is a communicated answer, not a third state — leaving a two-value enum where every request
+/// that ever reached the player was necessarily Pending. The third correction removed
+/// <c>RequestDisposition</c>/<c>PlayerRequest.Disposition</c> and <c>InformationRequest.WakeEventId</c>
+/// entirely, once nothing had a remaining reason to read either: whether a request belongs in
+/// <c>AwaitingAnswers</c> is now read directly from the asker's own <c>Cognition.Testimony</c>, with no
+/// disposition value at all — see the "pending vs. declined" section below, in particular
+/// <see cref="Two_different_private_non_communicating_choices_are_indistinguishable_to_the_asker"/>.
 /// </summary>
 public sealed class CausalFeedbackTests
 {
@@ -77,11 +82,6 @@ public sealed class CausalFeedbackTests
         Assert.Equal("Vincent Russo", request.AskedName);
         Assert.Equal("Bellini's grocery is holding back what it owes", request.Statement);
         Assert.Equal(session.Date, request.AskedAt);
-        // Genuinely Pending, not merely "not yet observed to be Declined" — Vincent has not yet had
-        // his own triggered deliberation on this at all, which is a different fact from "he had it
-        // and chose not to answer" (see the Declined tests below).
-        Assert.Equal(RequestDisposition.Pending, request.Disposition);
-
         // Silence remains silence at this exact moment: nothing has yet reached Salvatore attributing
         // an account to Vincent on this subject, even though the wake that will let Vincent answer is
         // already sitting in the event queue.
@@ -220,9 +220,9 @@ public sealed class CausalFeedbackTests
     /// The required mutation-checked proof of the private-decision-leak fix itself: two genuinely
     /// different private choices by the asked person — silence (<c>DoNothing</c>, "let it lie") and a
     /// <c>Partial</c> report that withholds precisely the claim asked — communicate <em>nothing</em>
-    /// to the asker either way, and must therefore be indistinguishable to him: both read
-    /// <see cref="RequestDisposition.Pending"/>, with byte-identical rendered content. Reached, not
-    /// staged: both are real options at Tommy's own natural first pause
+    /// to the asker either way, and must therefore be indistinguishable to him: both remain in
+    /// <c>AwaitingAnswers</c>, with byte-identical rendered content. Reached, not staged: both are real
+    /// options at Tommy's own natural first pause
     /// (<c>ScenarioReachTests.The_delegator_puts_his_question_to_the_man_he_sent</c>), 1987-04-04 when
     /// controlled, confirmed by direct observation. Mutation-checked in the milestone archive's
     /// correction section: reintroducing a read of the asked person's own <c>World.Decisions</c> (the
@@ -245,8 +245,6 @@ public sealed class CausalFeedbackTests
         var silentRequest = Assert.Single(silent.Snapshot().AwaitingAnswers);
         var partialRequest = Assert.Single(partial.Snapshot().AwaitingAnswers);
 
-        Assert.Equal(RequestDisposition.Pending, silentRequest.Disposition);
-        Assert.Equal(RequestDisposition.Pending, partialRequest.Disposition);
         Assert.Equal(silentRequest.Statement, partialRequest.Statement);
         Assert.Equal(silentRequest.AskedName, partialRequest.AskedName);
         Assert.Equal(silentRequest.AskedAt, partialRequest.AskedAt);
@@ -259,11 +257,11 @@ public sealed class CausalFeedbackTests
     /// (<c>Cognition.Receive</c>) rather than withholding or saying nothing — is legitimately
     /// distinguishable from the silent cases above, because it is observable rather than a projection
     /// of his private deliberation: Vincent really did receive testimony, he just does not believe
-    /// what it says. It is <see cref="RequestDisposition.Answered"/>, not a third "Declined" value —
-    /// the first draft of this test asserted Declined and failed against the natural proof scenario,
-    /// where an honest denial (Vincent's own account, which happens to contradict Salvatore) is
-    /// obviously an answer and not a refusal; see the milestone archive's correction section and
-    /// <see cref="RequestDisposition"/>'s own doc comment.
+    /// what it says. It removes the request from <c>AwaitingAnswers</c> like any other communicated
+    /// answer, not a distinct "Declined" outcome — an earlier draft of this test asserted a distinct
+    /// Declined disposition and failed against the natural proof scenario, where an honest denial
+    /// (Vincent's own account, which happens to contradict Salvatore) is obviously an answer and not a
+    /// refusal; see the milestone archive's correction section.
     /// </summary>
     [Fact]
     public void A_communicated_denial_is_answered_and_drops_out_like_any_other_answer()
@@ -313,15 +311,15 @@ public sealed class CausalFeedbackTests
     }
 
     /// <summary>
-    /// Save/load for the pending state produced by a private, uncommunicated choice specifically —
+    /// Save/load for the unresolved state produced by a private, uncommunicated choice specifically —
     /// distinct from the already-existing pending-then-answered save/load proof, since this is the
-    /// disposition the corrected derivation must reconstruct identically after replay without ever
+    /// state the corrected derivation must reconstruct identically after replay without ever
     /// re-reading the asked person's own decisions (which the reloaded session's replay obviously
     /// still contains, since nothing was deleted — the point is that nothing reads them for this
     /// purpose any more).
     /// </summary>
     [Fact]
-    public void Save_load_preserves_a_pending_requests_disposition_after_a_private_decline()
+    public void Save_load_preserves_an_unresolved_request_after_a_private_decline()
     {
         const string partialWithholding =
             "tell Vincent Russo about whether Tommy Nardo put hands on Bellini's grocery, leaving out his own part";
@@ -333,14 +331,12 @@ public sealed class CausalFeedbackTests
                 original.StepEvent();
             original.Choose(original.Pending!.Options.Single(o => o.Description == partialWithholding).Id);
 
-            var declined = Assert.Single(original.Snapshot().AwaitingAnswers);
-            Assert.Equal(RequestDisposition.Pending, declined.Disposition);
+            Assert.Single(original.Snapshot().AwaitingAnswers);
 
             original.Save(path);
             var loaded = PersistentSession.Load(path);
 
-            var reloaded = Assert.Single(loaded.Snapshot().AwaitingAnswers);
-            Assert.Equal(RequestDisposition.Pending, reloaded.Disposition);
+            Assert.Single(loaded.Snapshot().AwaitingAnswers);
         }
         finally
         {
@@ -349,7 +345,7 @@ public sealed class CausalFeedbackTests
     }
 
     /// <summary>
-    /// Player/autonomous parity for the disposition mechanism itself, not only for
+    /// Player/autonomous parity for whether a request remains outstanding, not only for
     /// <c>LastAction</c>. Reached, not staged: Tommy's own top-ranked preference at this exact pause
     /// (confirmed by reading <c>PreparedDecision.Scored[0]</c> directly before resolving) is the same
     /// <em>Partial</em> report used above — his own self-protective instinct. Both sides of this
@@ -361,7 +357,7 @@ public sealed class CausalFeedbackTests
     /// constant (see the milestone archive's correction section).
     /// </summary>
     [Fact]
-    public void Request_disposition_computation_is_identical_whether_the_asked_persons_choice_was_autonomous_or_player_chosen()
+    public void Request_outstanding_status_is_identical_whether_the_asked_persons_choice_was_autonomous_or_player_chosen()
     {
         const string partialWithholding =
             "tell Vincent Russo about whether Tommy Nardo put hands on Bellini's grocery, leaving out his own part";
@@ -374,10 +370,8 @@ public sealed class CausalFeedbackTests
         var pending = AdvanceToPause(playerChosen);
         playerChosen.Choose(pending.Options.Single(o => o.Description == partialWithholding).Id);
 
-        var autoRequest = Assert.Single(autoResolved.Snapshot().AwaitingAnswers);
-        var playerRequest = Assert.Single(playerChosen.Snapshot().AwaitingAnswers);
-        Assert.Equal(RequestDisposition.Pending, autoRequest.Disposition);
-        Assert.Equal(RequestDisposition.Pending, playerRequest.Disposition);
+        Assert.Single(autoResolved.Snapshot().AwaitingAnswers);
+        Assert.Single(playerChosen.Snapshot().AwaitingAnswers);
     }
 
     // ================================================================= proof B: Marco and the demand
@@ -712,13 +706,11 @@ public sealed class CausalFeedbackTests
         salvatore.Cognition.Receive(
             ReportedClaim.Honest(about, Stance.Rejects, 0.8, SourceKind.Report), "vincent", world.Now);
 
-        // The request itself is made after that stale account. No decision exists yet with this
-        // wake id, so this must read Pending, not Declined.
-        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now.AddDays(1), WakeEventId: 999));
+        // The request itself is made after that stale account, so it must remain outstanding.
+        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now.AddDays(1)));
 
         var snapshot = PlayerView.Build(world, salvatore.Id, world.Now.AddDays(1));
-        var request = Assert.Single(snapshot.AwaitingAnswers);
-        Assert.Equal(RequestDisposition.Pending, request.Disposition);
+        Assert.Single(snapshot.AwaitingAnswers);
     }
 
     /// <summary>Mutation guard: an account from somebody other than the person actually asked must not
@@ -730,7 +722,7 @@ public sealed class CausalFeedbackTests
         var salvatore = world.Get(Salvatore);
         var about = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
 
-        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now, WakeEventId: 999));
+        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now));
 
         // Tommy, not Vincent, happens to volunteer a matching account afterward.
         salvatore.Cognition.Receive(
@@ -738,8 +730,7 @@ public sealed class CausalFeedbackTests
             "tommy", world.Now.AddDays(1));
 
         var snapshot = PlayerView.Build(world, salvatore.Id, world.Now.AddDays(1));
-        var request = Assert.Single(snapshot.AwaitingAnswers);
-        Assert.Equal(RequestDisposition.Pending, request.Disposition);
+        Assert.Single(snapshot.AwaitingAnswers);
     }
 
     /// <summary>Mutation guard: an account of a different claim from the right person must not resolve
@@ -752,15 +743,14 @@ public sealed class CausalFeedbackTests
         var about = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
         var somethingElse = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Bakery);
 
-        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now, WakeEventId: 999));
+        world.Requests.Add(new InformationRequest(1, salvatore.Id, "vincent", about, world.Now));
 
         salvatore.Cognition.Receive(
             ReportedClaim.Honest(somethingElse, Stance.Rejects, 0.8, SourceKind.Report),
             "vincent", world.Now.AddDays(1));
 
         var snapshot = PlayerView.Build(world, salvatore.Id, world.Now.AddDays(1));
-        var request = Assert.Single(snapshot.AwaitingAnswers);
-        Assert.Equal(RequestDisposition.Pending, request.Disposition);
+        Assert.Single(snapshot.AwaitingAnswers);
     }
 
     // ================================================================= helpers

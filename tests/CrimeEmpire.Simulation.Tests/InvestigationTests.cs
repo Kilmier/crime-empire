@@ -274,7 +274,7 @@ public sealed class InvestigationTests
         Assert.Contains(Generators.GenerateAll(Context(world, kane, "tommy")), Alleges);
 
         // Through Generators.CanAsk, the production rule, rather than a copy of it here.
-        var alreadyAsked = new[] { new InformationRequest(1, kane.Id, "tommy", allegation, world.Now, WakeEventId: 0) };
+        var alreadyAsked = new[] { new InformationRequest(1, kane.Id, "tommy", allegation, world.Now) };
         Assert.False(Generators.CanAsk(alreadyAsked, "tommy", allegation));
         Assert.DoesNotContain(Generators.GenerateAll(Context(world, kane, alreadyAsked, "tommy")), Alleges);
 

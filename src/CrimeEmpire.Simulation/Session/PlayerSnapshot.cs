@@ -82,42 +82,34 @@ public sealed record PlayerCommittedAction(DateTime At, string Description);
 public sealed record PlayerBusinessStatus(string Id, string Name, bool PayingTribute);
 
 /// <summary>
-/// A question the viewpoint character himself put to somebody, still without a communicated response
-/// — <see cref="Disposition"/> is always <see cref="RequestDisposition.Pending"/> for an instance that
-/// exists here at all, since an <see cref="RequestDisposition.Answered"/> request drops out of this
-/// list entirely; see below. The field is kept on the record (rather than the list simply being "the
-/// pending ones") because it names the property this list is filtered on and gives a caller a single
-/// place to see the rule stated in code, not only in this comment.
+/// A question the viewpoint character himself put to somebody, still without a communicated
+/// response. Every instance that reaches this list is, definitionally, one nothing has answered yet —
+/// see <see cref="PlayerView.Build"/>'s own comment on <c>AwaitingAnswers</c> for exactly what
+/// "answered" means and where it is decided.
 ///
-/// <b>Corrected twice by milestone 018's review.</b> The first correction resolved a request from
-/// testimony alone, which could not distinguish "not yet" from "he decided against it" — both read as
-/// permanently pending. The fix it shipped read <see cref="World.Decisions"/> for the <em>asked</em>
-/// character to tell whether his own triggered deliberation had resolved, and Codex's second review
-/// correctly rejected that: the asker never received any message establishing that Tommy had decided
-/// anything at all, so showing "he chose not to say" exposed a private mental event nothing in the
-/// fiction communicated to him — the canonical information boundary this project holds everywhere
-/// else. A same-review attempt to split <see cref="RequestDisposition.Answered"/> into a third
-/// "Declined" value for a communicated account that denies the claim was also wrong, caught by a test
-/// within the same correction pass: the natural proof scenario has Vincent give Salvatore a full,
-/// sincere account that happens to contradict what Salvatore believed, and that is an answer, not a
-/// refusal — see <see cref="RequestDisposition"/>'s own doc comment for the full account.
-/// <see cref="Disposition"/> is now derived <em>entirely</em> from this character's own
-/// <see cref="Cognition.Testimony"/>: <see cref="RequestDisposition.Pending"/> when no testimony from
-/// the asked person about this claim exists at or after the moment it was asked,
-/// <see cref="RequestDisposition.Answered"/> when it does, regardless of which way it points. Two
-/// different private, uncommunicated choices — silence, or a report that withholds precisely this
-/// claim — produce <em>no</em> testimony either way and are structurally indistinguishable here,
-/// exactly as they must be: the asker has no way to tell them apart either.
-/// <see cref="InformationRequest.WakeEventId"/> is no longer read by this derivation at all — it
-/// remains on the request purely as replay-reconstructed linkage state (which event this request
-/// itself scheduled), not as a signal read back out.
+/// <b>Corrected three times by milestone 018's review.</b> The first correction resolved a request
+/// from testimony alone, which could not distinguish "not yet" from "he decided against it" — both
+/// read as permanently pending. The fix it shipped read <see cref="World.Decisions"/> for the
+/// <em>asked</em> character to tell whether his own triggered deliberation had resolved, and Codex's
+/// second review correctly rejected that: the asker never received any message establishing that
+/// Tommy had decided anything at all, so showing "he chose not to say" exposed a private mental event
+/// nothing in the fiction communicated to him — the canonical information boundary this project holds
+/// everywhere else. A same-review attempt to split a third "Declined" value out of a communicated
+/// account that denies the claim was also wrong: the natural proof scenario has Vincent give
+/// Salvatore a full, sincere account that happens to contradict what Salvatore believed, and that is
+/// an answer, not a refusal. Once the corrected derivation read only the asker's own
+/// <see cref="Cognition.Testimony"/>, the disposition type it had produced two values for had no
+/// remaining reason to exist — every instance actually reaching a caller was the same value, since an
+/// answered request drops out before construction — so the third correction removed both the type and
+/// this record's field for it, rather than carry a type whose only inhabited state is implicit in
+/// list membership.
 ///
 /// Added by milestone 018, and the one place <see cref="PlayerView.Build"/> reads
 /// <see cref="World.Requests"/> — filtered to requests this character himself asked, never anyone
 /// else's. Nothing here reads <see cref="World.Reports"/>, <c>Report.AnsweringClaim</c>, or
 /// <see cref="World.Decisions"/> for anybody but the viewpoint's own <see cref="LastAction"/> (a
-/// different field entirely) — every disposition here is read from this character's own
-/// <see cref="Cognition.Testimony"/>, the ordinary report channel's own effect on his cognition,
+/// different field entirely) — whether a request belongs here is read entirely from this character's
+/// own <see cref="Cognition.Testimony"/>, the ordinary report channel's own effect on his cognition,
 /// which is identical whether the asked character answered under player control or autonomously. The
 /// answer itself, whichever way it points, is not rendered here: once delivered, it already appears
 /// in <see cref="PlayerSnapshot.Known"/>, <see cref="PlayerSnapshot.Recent"/> or
@@ -130,8 +122,7 @@ public sealed record PlayerRequest(
     Pronouns AskedPronouns,
     PlayerClaim About,
     string Statement,
-    DateTime AskedAt,
-    RequestDisposition Disposition);
+    DateTime AskedAt);
 
 /// <summary>
 /// Qualitative movement in the viewpoint character's own outward trust toward somebody, from a fresh
@@ -396,35 +387,34 @@ public static class PlayerView
 
         // ---------------------------------------------------------------- awaiting answers
         //
-        // Corrected twice by milestone 018's review. The first correction read World.Decisions for
-        // the ASKED character to tell "not yet decided" from "decided and declined" — Codex's second
-        // review correctly rejected that: the asker never received any message establishing the asked
-        // person had decided anything at all, so it exposed a private mental event nothing in the
-        // fiction communicated to him. A same-pass attempt to split a communicated denial out as its
-        // own "Declined" value was also wrong: the natural proof has Vincent give Salvatore a full,
-        // sincere account that happens to contradict him, which is an answer, not a refusal — see
-        // RequestDisposition's own doc comment. Disposition is therefore just Answered/Pending, read
-        // entirely from this character's own Cognition.Testimony — never World.Decisions for anybody
-        // but the viewpoint himself (see LastAction above), never World.Reports/Report.AnsweringClaim,
-        // and never elapsed calendar time. Two different private, uncommunicated choices by the asked
-        // person — silence, or a report that withholds precisely this claim — both produce no
-        // testimony at all and are therefore structurally indistinguishable here: both read Pending,
-        // because that is genuinely all the asker can tell.
-        RequestDisposition DispositionOf(InformationRequest r)
-            => who.Cognition.Testimony.Any(t => t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At)
-                ? RequestDisposition.Answered
-                : RequestDisposition.Pending;
+        // Corrected three times by milestone 018's review. The first correction read World.Decisions
+        // for the ASKED character to tell "not yet decided" from "decided and declined" — Codex's
+        // second review correctly rejected that: the asker never received any message establishing
+        // the asked person had decided anything at all, so it exposed a private mental event nothing
+        // in the fiction communicated to him. A same-pass attempt to split a communicated denial out
+        // as its own "Declined" value was also wrong: the natural proof has Vincent give Salvatore a
+        // full, sincere account that happens to contradict him, which is an answer, not a refusal. The
+        // third correction removed the now-pointless two-value type entirely: every request that
+        // reaches AwaitingAnswers is, by construction, one nothing has answered.
+        //
+        // "Answered" is read entirely from this character's own Cognition.Testimony — never
+        // World.Decisions for anybody but the viewpoint himself (see LastAction above), never
+        // World.Reports/Report.AnsweringClaim, and never elapsed calendar time. Two different private,
+        // uncommunicated choices by the asked person — silence, or a report that withholds precisely
+        // this claim — both produce no testimony at all and are therefore structurally
+        // indistinguishable here: both leave the request in this list, because that is genuinely all
+        // the asker can tell. Neither may ever be described as a communicated refusal; only an actual
+        // account, in either direction, removes a request from this list.
+        bool Answered(InformationRequest r)
+            => who.Cognition.Testimony.Any(t => t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At);
 
         var awaitingAnswers = world.Requests
-            .Where(r => r.AskerId == who.Id)
-            .Select(r => (Request: r, Disposition: DispositionOf(r)))
-            .Where(x => x.Disposition != RequestDisposition.Answered)
-            .OrderBy(x => x.Request.At)
-            .ThenBy(x => x.Request.Id)
-            .Select(x => new PlayerRequest(
-                x.Request.AskedId, Name(x.Request.AskedId), Theirs(x.Request.AskedId),
-                PlayerClaim.Of(x.Request.About), PlayerNarration.Describe(x.Request.About, Name),
-                x.Request.At, x.Disposition))
+            .Where(r => r.AskerId == who.Id && !Answered(r))
+            .OrderBy(r => r.At)
+            .ThenBy(r => r.Id)
+            .Select(r => new PlayerRequest(
+                r.AskedId, Name(r.AskedId), Theirs(r.AskedId),
+                PlayerClaim.Of(r.About), PlayerNarration.Describe(r.About, Name), r.At))
             .ToList();
 
         // ---------------------------------------------------------------- recent trust movement

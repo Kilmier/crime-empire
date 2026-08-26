@@ -232,30 +232,14 @@ public static class Commit
             case ActionKind.SeekCorroboration:
             {
                 var other = world.Get(c.TargetId!);
+
+                // Filed before anything else, because the question is spent the moment it leaves
+                // his mouth. Waiting for a reply to record it would make an unanswered request
+                // indistinguishable from one never made. Scoped to what he asked about, so it
+                // spends that question rather than the channel.
                 var about = c.AboutClaim ?? default;
-
-                // Scheduled before the request is filed, deliberately, so the request itself can
-                // carry the wake's own id. He asks; the other man decides for himself what to say.
-                // Waking the other character is the whole point — a request that produced an answer
-                // directly would be truth synchronisation wearing a question mark.
-                var wake = world.Queue.Schedule(world.Now.AddDays(1), EventKind.RoleReview, other.Id,
-                    $"{actor.Name} asked him directly what happened",
-                    new EventPayload
-                    {
-                        TargetId = actor.Id,
-                        Note = "asked-to-account",
-                        AboutClaim = about,
-                    });
-
-                // Filed before anything else can run, because the question is spent the moment it
-                // leaves his mouth. Waiting for a reply to record it would make an unanswered request
-                // indistinguishable from one never made. Scoped to what he asked about, so it spends
-                // that question rather than the channel. Carries the wake's id (milestone 018's
-                // correction) so a later reader can tell "he has not yet had the chance to answer"
-                // from "his own deliberation on this resolved and he chose not to" — silence read from
-                // his own decision, never from elapsed calendar time.
                 world.Requests.Add(new InformationRequest(
-                    world.NextRequestId(), actor.Id, other.Id, about, world.Now, wake.Id));
+                    world.NextRequestId(), actor.Id, other.Id, about, world.Now));
 
                 // Asking is a thing that happened. It belongs in the developer log alongside every
                 // other occurrence, and putting it there also brings it under the runner's
@@ -272,6 +256,17 @@ public static class Commit
                 Relations.Meet(other, actor.Id);
                 world.Encounters.Add(new Encounter(other.Id, actor.Id, world.Now));
 
+                // He asks; the other man decides for himself what to say. Waking the other
+                // character is the whole point — a request that produced an answer directly would
+                // be truth synchronisation wearing a question mark.
+                world.Queue.Schedule(world.Now.AddDays(1), EventKind.RoleReview, other.Id,
+                    $"{actor.Name} asked him directly what happened",
+                    new EventPayload
+                    {
+                        TargetId = actor.Id,
+                        Note = "asked-to-account",
+                        AboutClaim = about,
+                    });
                 reconsideration.Add($"{other.Name} gives his account, or avoids giving one");
                 return $"went to {other.Name} for his own account";
             }

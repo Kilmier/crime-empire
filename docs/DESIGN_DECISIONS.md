@@ -385,36 +385,38 @@ not settled.
   `RecentTrustMovements` (`ListenerId == viewpoint`). This narrows, rather than repeals, the rule
   `PlayerSnapshot`'s own header states — see its "amended by milestone 018" paragraph — the same way
   milestone 014 amended it once already for `Cash`.
-- **A request has two dispositions — `Pending`, `Answered` — read entirely from the viewpoint's own
-  `Cognition.Testimony`, never from elapsed calendar time and never from `World.Decisions` for anybody
-  but the viewpoint himself.** Corrected twice after review. The first implementation resolved a
+- **A request stays in `AwaitingAnswers` until the viewpoint's own `Cognition.Testimony` shows an
+  actual account, never from elapsed calendar time and never from `World.Decisions` for anybody but
+  the viewpoint himself.** Corrected three times after review. The first implementation resolved a
   request from testimony alone and so could not tell "not yet" from "he decided against answering" —
   both read as permanently pending, contradicting `InformationRequest`'s own settled rule that silence
-  is itself an answer. The correction it shipped read `World.Decisions` for the *asked* character — a
-  `DecisionRecord` existing whose `TriggerEventId` equals `InformationRequest.WakeEventId` — to add a
-  third `Declined` value, and review rejected that: the asker never receives any message establishing
-  that the asked person decided anything at all, so surfacing that fact is a private-state leak
-  regardless of how little of the record is read. A same-pass attempt to salvage `Declined` as "a
+  is itself an answer. The second correction read `World.Decisions` for the *asked* character — a
+  `DecisionRecord` existing whose `TriggerEventId` equals a `WakeEventId` the request carried — to add
+  a third `Declined` value, and review rejected that: the asker never receives any message
+  establishing that the asked person decided anything at all, so surfacing that fact is a private-state
+  leak regardless of how little of the record is read. A same-pass attempt to salvage `Declined` as "a
   communicated account whose stance denies the claim" was also wrong, caught by a test within the same
   correction: the natural proof has Vincent give Salvatore a full, sincere account that happens to
   contradict him, and that is an answer, not a refusal. This simulation's report vocabulary has no
-  utterance distinct from "an account, possibly negative", so the settled model is two values.
-  `Answered` iff the asked person's own testimony, of exactly the asked claim, exists at or after the
-  moment it was asked (`t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At`), regardless
-  of which way it points; `Pending` otherwise. Verified against `Org/Reporting.cs`: an answer to a
-  `SeekCorroboration` is a `ReportToSuperior` candidate `Generators.FromRelationship`'s
-  `"asked-to-account"` branch addresses back to the asker, so `Reporting.Deliver` calls
-  `Cognition.Receive` on the asker's own cognition, appending to `Testimony` unconditionally before any
-  classification branch — while a `Partial` report that withholds precisely the asked claim, or any
-  other candidate the asked character prefers instead (`DoNothing` included), communicates nothing at
-  all and is therefore structurally indistinguishable from silence, exactly as the asker himself could
-  not tell them apart. Once `Answered`, the account needs no further plumbing — it already reaches
-  `Known`/`Recent`/`Disagreements` through the pre-existing `Cognition.Receive` → `PlayerView.Build`
-  path, attributed the pre-existing way, and drops out of `AwaitingAnswers` entirely.
-  `InformationRequest.WakeEventId` remains on the request as replay-reconstructed linkage state (which
-  event a request itself scheduled) — a genuine fact about the request's own effect on the world, and
-  now included in both replay comparators that missed it — but nothing in `PlayerView.Build` reads it
-  any more.
+  utterance distinct from "an account, possibly negative", so the second correction collapsed
+  `RequestDisposition` to two values, `Pending`/`Answered`, both derived from the asker's own
+  `Cognition.Testimony`. The third correction removed the `RequestDisposition` enum,
+  `PlayerRequest.Disposition`, and `InformationRequest.WakeEventId` entirely: once resolution stopped
+  reading `WakeEventId`, nothing else read it either (written, replay-compared, never consumed), and
+  since `PlayerRequest` objects are only ever constructed for requests that fail the "answered" check,
+  every exposed disposition was necessarily `Pending` — a field that could only ever hold one value.
+  `AwaitingAnswers` now filters directly: a request is included iff no testimony from the asked person,
+  of exactly the asked claim, exists at or after the moment it was asked
+  (`!who.Cognition.Testimony.Any(t => t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At)`).
+  Verified against `Org/Reporting.cs`: an answer to a `SeekCorroboration` is a `ReportToSuperior`
+  candidate `Generators.FromRelationship`'s `"asked-to-account"` branch addresses back to the asker, so
+  `Reporting.Deliver` calls `Cognition.Receive` on the asker's own cognition, appending to `Testimony`
+  unconditionally before any classification branch — while a `Partial` report that withholds precisely
+  the asked claim, or any other candidate the asked character prefers instead (`DoNothing` included),
+  communicates nothing at all and is therefore structurally indistinguishable from silence, exactly as
+  the asker himself could not tell them apart. Once answered, the account needs no further plumbing —
+  it already reaches `Known`/`Recent`/`Disagreements` through the pre-existing `Cognition.Receive` →
+  `PlayerView.Build` path, attributed the pre-existing way, and drops out of `AwaitingAnswers` entirely.
 - **Qualitative trust movement is scoped to `AccountConflict`/`AccountAgreement` alone, not to fear,
   obligation, or grievance.** Those two are the only relationship-mutating events with an existing
   audit trail of "this moved, this way, toward this person" (`PerceivedConflict`/`PerceivedAgreement`,

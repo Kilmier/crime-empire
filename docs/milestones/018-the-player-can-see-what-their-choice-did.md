@@ -440,3 +440,105 @@ corrected rules and the corrected, narrower claim; `docs/CURRENT_MILESTONE.md`.
 ### Second correction commit
 
 See the commit this correction is part of.
+
+## Third correction (Codex review of `f5246c0`)
+
+Codex reviewed `f5246c0` and confirmed all three defects from the second correction's review resolved:
+private, uncommunicated decisions are no longer exposed; the action-kind audit exercises
+`PlayerView.Build`/`LastAction`; replay comparison accounted for `WakeEventId`; the demand/business
+scoping fix from the first correction remained valid; full verification passed with unchanged
+simulation hashes. One P2 cleanup remained before acceptance. This section records what was found,
+what changed, and the re-run proofs; none of the three accounts above is edited.
+
+### Finding (P2) — `WakeEventId` and `RequestDisposition` had no remaining production consumer
+
+Once the second correction's `AwaitingAnswers` derivation stopped reading `World.Decisions` for the
+asked character and started reading the asker's own `Cognition.Testimony` directly,
+`InformationRequest.WakeEventId` had nothing left that read it: it was still constructed in
+`Commit.cs`'s `SeekCorroboration` case, still compared in both replay comparators, and still documented
+— but no simulation or player-view behavior consulted its value. `RequestDisposition` and
+`PlayerRequest.Disposition` had the same problem from the other direction: `PlayerRequest` objects are
+only ever constructed for requests that already fail the "has this been answered" check, so every
+`PlayerRequest.Disposition` ever produced was `Pending` by construction — a two-value enum whose second
+value could never appear at the one call site that read it.
+
+**Confirmed before removing either.** A grep across `src/` and `tests/` (excluding build output) for
+`WakeEventId` and for `RequestDisposition`/`.Disposition` turned up construction, comparator lines,
+tests, and documentation — no production read of either. `Game.cs` had zero references to either name.
+No genuine current production consumer was found for either abstraction, so per Matt's instruction this
+correction proceeded with full removal rather than stopping to report one.
+
+**Fix.**
+
+- `InformationRequest` reverted to `(long Id, string AskerId, string AskedId, Claim About, DateTime At)`
+  — `WakeEventId` removed. Its doc comment now explains the field's addition and removal in place,
+  pointing to `PlayerView.Build`'s own request-resolution comment for what actually decides whether a
+  request is outstanding.
+- `Commit.cs`'s `SeekCorroboration` case reverted to its exact pre-milestone-018 ordering: the request
+  is filed via `world.Requests.Add(...)` before `world.Queue.Schedule(...)` schedules the wake event —
+  undoing the first correction's reorder, which existed solely to capture `wake.Id` for the
+  now-removed field. Behavior is unchanged; only the order two independent writes happen in was
+  restored.
+- `RequestDisposition` removed entirely. `PlayerRequest` reverted to
+  `(string AskedId, string AskedName, Pronouns AskedPronouns, PlayerClaim About, string Statement, DateTime AskedAt)`
+  — `Disposition` removed.
+- `PlayerView.Build`'s `awaitingAnswers` derivation now filters `world.Requests` directly against a
+  local `Answered(InformationRequest r)` predicate —
+  `who.Cognition.Testimony.Any(t => t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At)`
+  — with no disposition value constructed or exposed anywhere. The corrected information boundary is
+  unchanged in substance: private silence and private refusal remain indistinguishable (both leave a
+  request in `AwaitingAnswers`, since neither produces testimony), neither is ever described as a
+  communicated refusal, and a communicated answer — in either direction — removes the request from
+  `AwaitingAnswers` by making `Answered` true.
+- Both replay comparators (`SimulationReplayTests.Snapshot`, `InformationTransmissionTests.Channel`)
+  reverted their `request|...` line to omit `WakeEventId`, and the two focused proofs the second
+  correction added for it
+  (`The_snapshot_distinguishes_requests_that_differ_only_by_their_wake_event_id`,
+  `The_channel_distinguishes_requests_that_differ_only_by_their_wake_event_id`) were removed along with
+  it — there is no field left for them to distinguish.
+- `CausalFeedbackTests.cs`: every `RequestDisposition.Pending`/`.Disposition` assertion was removed;
+  the properties they proved (unresolved immediately after asking, indistinguishability of the two
+  private non-answers, save/load preservation of the unresolved state, player/autonomous parity) are
+  now proven through `AwaitingAnswers` membership and content equality alone.
+  `Save_load_preserves_a_pending_requests_disposition_after_a_private_decline` was renamed
+  `Save_load_preserves_an_unresolved_request_after_a_private_decline`;
+  `Request_disposition_computation_is_identical_whether_the_asked_persons_choice_was_autonomous_or_player_chosen`
+  was renamed `Request_outstanding_status_is_identical_whether_the_asked_persons_choice_was_autonomous_or_player_chosen`.
+  The three `WakeEventId: 999`-carrying mutation guards
+  (`Testimony_from_before_the_request_was_made_does_not_resolve_it`,
+  `An_account_from_a_third_party_does_not_resolve_a_request_addressed_to_someone_else`,
+  `An_account_of_a_different_claim_does_not_resolve_the_request`) dropped the named argument and now
+  assert `Assert.Single(snapshot.AwaitingAnswers)` in place of a disposition check. The action-kind
+  audit (`Every_reachable_action_kind_renders_through_the_shared_last_action_projection`) and the two
+  demand/business scoping tests were left untouched, containing no reference to either removed
+  abstraction.
+
+### Verification (post-third-correction)
+
+- `dotnet build CrimeEmpire.sln` — clean, 0 warnings, 0 errors.
+- `dotnet test CrimeEmpire.sln` — **550 passed, 0 failed** (552 prior minus the two tests that existed
+  only to prove `WakeEventId` made two otherwise-identical requests compare unequal, now meaningless
+  since the field is gone).
+- `dotnet run --project src/CrimeEmpire.Runner -- --verify --seed 42 --days 90` — deterministic,
+  `9AF57665067AEA11` on both runs, unchanged.
+- `dotnet run --project src/CrimeEmpire.Runner -- --compare --seed 42` — all five variant trace hashes
+  byte-identical to every prior figure recorded in this archive and in `REVIEW_LEDGER.md`:
+  `baseline` `9AF57665067AEA11`, `cautious-vincent` `86EC1ADA4A4E9179`, `watchful-boss`
+  `84AC3F65E4102EBA`, `disloyal-vincent` `9A6E0E518294532F`, `resentful-tommy` `3C4483640153DA88`.
+- `--variant disloyal-vincent --viewpoint salvatore --seed 42 --days 90` and `--variant baseline
+  --viewpoint vincent --seed 42 --days 90` — both exit 0.
+- Godot self-tests, all headless: `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`,
+  `--selftest-corroboration`, `--selftest-tribute`, and the two-process restart proof
+  (`--selftest-restart-save` then `--selftest-restart-load` in a fresh process) — all pass.
+
+### Documentation updated in place (third correction)
+
+`src/CrimeEmpire.Simulation/Domain/Report.cs` and `Session/PlayerSnapshot.cs`'s doc comments (both
+rewritten in place to describe the `WakeEventId`/`RequestDisposition` history and removal, not merely
+their current shape); `docs/DESIGN_DECISIONS.md`'s "Causal feedback" section's request-disposition
+bullet, rewritten to describe the direct-testimony `AwaitingAnswers` filter with no disposition value;
+`docs/CURRENT_MILESTONE.md`.
+
+### Third correction commit
+
+See the commit this correction is part of.

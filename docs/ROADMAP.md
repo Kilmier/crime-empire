@@ -159,6 +159,16 @@ worth anything once it is shown" to **which readers are worth strengthening, and
 - **Obligation is read but never moves.** `Relations.Establish` is its only writer and that is
   scenario construction; it holds its seeded value for the whole of every run. Surfaced by writing
   `docs/RELATIONSHIPS.md`, not a defect introduced by it.
+- **Executor suitability/capability is not modelled.** `Generators.FromRelationship` delegates to the
+  single highest-trust subordinate available — currently always Tommy, since he is Vincent's only
+  organisational subordinate — and nothing about who would actually do the job *better* enters the
+  choice: Persuasion, Coercion, crew size, equipment, and preparation do not affect a tribute
+  operation's success, and whether escalation capability should belong to the owner or the executor is
+  unresolved. Milestone 017 proved that direct action and delegation are causally different — different
+  executor, different first-hand knowledge, different exposure — through the existing owner/executor
+  split; it deliberately did not build or claim any of this, and this entry exists because the
+  milestone's own authorization required recording it as deferred rather than silently leaving it
+  unrecorded. See `docs/milestones/017-direct-action-vs-delegation.md`.
 - ~~The test project redundantly declares `TargetFramework` despite the centralized build property in
   `Directory.Build.props`.~~ **Retired 2026-08-16 by milestone 009**, and not by deleting the line.
   `Directory.Build.props` no longer assigns a TFM at all — it publishes `CrimeEmpireHostTfm` and

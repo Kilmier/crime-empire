@@ -63,6 +63,14 @@ public partial class Game : Control
     private const string GoldenPathFlag = "--selftest-goldenpath";
 
     /// <summary>
+    /// Command-line switch for milestone 017's direct-action proof: the same seed-42
+    /// <c>SecureTribute</c> operation, played through real button presses that never delegate to
+    /// Tommy — Vincent presses "carry on" at the exact pause that also offers delegation, then
+    /// escalates personally, reaching a naturally divergent, personally-executed consequence.
+    /// </summary>
+    private const string DirectActionFlag = "--selftest-directaction";
+
+    /// <summary>
     /// Command-line switch for milestone 015's restart proof, process A: plays the golden path's
     /// first three choices (start, carry on, delegate to Tommy) through real buttons, saves to
     /// <see cref="SelfTestRestartSavePath"/> (never the production slot — see the type header), and
@@ -155,6 +163,12 @@ public partial class Game : Control
         if (GoldenPathRequested())
         {
             RunGoldenPathSelfTest();
+            return;
+        }
+
+        if (DirectActionRequested())
+        {
+            RunDirectActionSelfTest();
             return;
         }
 
@@ -787,6 +801,131 @@ public partial class Game : Control
         GD.PrintErr(
             "CE-GOLDENPATH FAILED — did not reach the accepted 1 April consequence with cash on hand " +
             "reading 6,840 on screen, so it proves nothing");
+        GetTree().Quit(1);
+    }
+
+    // ================================================================= direct action (milestone 017)
+
+    /// <summary>
+    /// Milestone 017: the same seed-42 Vincent <c>SecureTribute</c> operation
+    /// <see cref="GoldenPathSelfTest"/> plays, but never delegated — Vincent presses "carry on" at the
+    /// exact pause that also offers "have Tommy Nardo take it on" (the fork this milestone is about),
+    /// then continues personally through escalation. Independently pinned from a live run of the
+    /// interactive path, the same way <see cref="SevenChoiceSequence"/> itself was derived, not shared
+    /// with it or with the test project's copy of the same fork.
+    ///
+    /// Diverges from the accepted delegated trace naturally, through real button presses alone: Vincent
+    /// himself — not Tommy — puts hands on Bellini's grocery, conceals it himself, and answers for it
+    /// himself. Proceeds still land on Vincent regardless (cash still rises to 6,840) — ownership
+    /// determines proceeds, execution is what diverged, exactly the milestone's own distinction.
+    /// </summary>
+    private static readonly string[] DirectActionChoiceSequence =
+    {
+        "talk Bellini's grocery round",
+        "carry on getting Bellini's grocery to pay",
+        "change tack with Bellini's grocery — threats instead",
+        "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
+        "clean up after it before anyone else does",
+        "carry on covering it up",
+        "ask Salvatore Greco for room to move",
+        "give Salvatore Greco his account of whether Bellini's grocery is holding back what it owes",
+    };
+
+    private static bool DirectActionRequested()
+        => OS.GetCmdlineArgs().Contains(DirectActionFlag) || OS.GetCmdlineUserArgs().Contains(DirectActionFlag);
+
+    /// <summary>Presses "Next event" until a decision is waiting — the same discipline
+    /// <see cref="PressChoicesInOrder"/> uses internally, exposed here so a caller can inspect a
+    /// pause's real offered options before deciding what to press next.</summary>
+    private void AdvanceToPause(PersistentSession session)
+    {
+        for (int guard = 0; guard < 2000 && session.Status != SessionStatus.AwaitingChoice; guard++)
+        {
+            if (!Press("Next event")) throw new InvalidOperationException("no \"Next event\" control is available");
+        }
+        if (session.Status != SessionStatus.AwaitingChoice)
+            throw new InvalidOperationException("gave up waiting for a decision to appear");
+    }
+
+    private void RunDirectActionSelfTest()
+    {
+        try
+        {
+            DirectActionSelfTest();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-DIRECTACTION FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void DirectActionSelfTest()
+    {
+        GD.Print("CE-DIRECTACTION begin");
+
+        StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
+        var session = _session!;
+
+        var startScreen = new StringBuilder();
+        Collect(this, startScreen);
+        if (!startScreen.ToString().Contains("cash on hand 6,000", StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "the opening screen does not read \"cash on hand 6,000\" — this proof's own starting " +
+                "point is wrong, so a later change would prove nothing");
+
+        // Reach the first pause (the start decision) the same way PressChoicesInOrder does — "Next
+        // event" until something is waiting — then press the start, then reach the pause that follows
+        // it, which is the fork this milestone is about.
+        AdvanceToPause(session);
+        if (!Press(DirectActionChoiceSequence[0]))
+            throw new InvalidOperationException($"could not press \"{DirectActionChoiceSequence[0]}\"");
+        AdvanceToPause(session);
+
+        // Confirm the executable feature claim itself before doing anything else: this pause offers
+        // direct continuation and delegation together, as real, simultaneously pressable buttons on
+        // the live screen — not two decisions in sequence.
+        var forkOptions = session.Pending!.Options.Select(o => o.Description).ToList();
+        bool offersBoth =
+            forkOptions.Contains("carry on getting Bellini's grocery to pay")
+            && forkOptions.Contains("have Tommy Nardo take it on");
+        if (!offersBoth)
+            throw new InvalidOperationException(
+                "the fork pause does not offer both continuation and delegation together — offered: " +
+                string.Join(" | ", forkOptions));
+
+        PressChoicesInOrder(session, DirectActionChoiceSequence.Skip(1).ToList(), "CE-DIRECTACTION");
+
+        var screenText = new StringBuilder();
+        Collect(this, screenText);
+        string screen = screenText.ToString();
+
+        GD.Print("== CE-DIRECTACTION-SCREEN-BEGIN ==");
+        GD.Print(screen);
+        GD.Print("== CE-DIRECTACTION-SCREEN-END ==");
+
+        // Ownership determines proceeds regardless of who executed — unchanged from the accepted
+        // delegated trace's own consequence, checked as a required negative: this is not where the
+        // two branches diverge.
+        bool proceeds = screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
+
+        // Execution responsibility is exactly what diverged: Vincent himself put hands on the target
+        // and knows it as his own act ("he had a hand in it himself"), never Tommy — the opposite of
+        // the accepted delegated trace, where Tommy is the one named and Vincent only came across it.
+        bool executedPersonally = screen.Contains("Vincent Russo put hands on Bellini's grocery", StringComparison.Ordinal);
+        bool noTommyExecution = !screen.Contains("Tommy Nardo put hands on Bellini's grocery", StringComparison.Ordinal);
+
+        if (proceeds && executedPersonally && noTommyExecution)
+        {
+            GD.Print("CE-DIRECTACTION ok");
+            GetTree().Quit();
+            return;
+        }
+
+        GD.PrintErr(
+            "CE-DIRECTACTION FAILED — proceeds=" + proceeds + " executedPersonally=" + executedPersonally +
+            " noTommyExecution=" + noTommyExecution + " — the direct branch did not reach the expected " +
+            "personally-executed consequence, so it proves nothing");
         GetTree().Quit(1);
     }
 

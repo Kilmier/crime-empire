@@ -577,12 +577,13 @@ public partial class Game : Control
             yield return Plain(
                 $"{request.AskedAt.ToString("d MMM", CultureInfo.InvariantCulture)}  asked {request.AskedName} " +
                 $"for {request.AskedPronouns.Possessive} own account of whether {request.Statement}");
-            // Pending: he has not yet had his own chance to answer. Declined: he has already had that
-            // chance — his own triggered deliberation resolved — and chose not to. Two different
-            // facts, correction per milestone 018's review; never merged into one "no answer yet".
-            yield return Faint(request.Disposition == RequestDisposition.Declined
-                ? "    he chose not to say"
-                : "    no answer yet");
+            // Every entry here is Pending by construction (an Answered request already dropped out —
+            // see PlayerSnapshot.AwaitingAnswers). Nothing has reached him, whether the asked person
+            // has not yet decided or decided privately and said nothing — genuinely indistinguishable
+            // to him, per milestone 018's second correction, and must not be rendered as though they
+            // were different facts. A communicated answer, in either direction, is not shown here at
+            // all — it already appears via the existing Known/Recent/Disagreements surfaces.
+            yield return Faint("    no answer yet");
         }
     }
 

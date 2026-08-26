@@ -10,23 +10,33 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 019 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 018 — The Player Can See What Their Choice Did — corrected and awaiting re-review.**
-Codex reviewed the original implementation (`ae06f61`) and returned **FAIL**: two P1 defects (pending
-and declined requests were indistinguishable; a demander's violence at one business could read as
-"already used force" for a demand at a different one) and one P2 proof gap (six required proof
-categories missing, including an action-kind audit and pending/declined save-load coverage). Matt
-authorized a correction to milestone 018 only. Both defects are fixed — a new `RequestDisposition`
-(`Pending`/`Answered`/`Declined`) derived from `World.Decisions`/`Cognition.Testimony`, never from
-elapsed time; the tribute-demand occasion now matches both demander and business via
-`EventPayload.AboutClaim` — and all six proof categories are covered, still with no new persistent
-state anywhere in `Commit.cs`, `Pipeline.cs`, or `Strategies.cs`. Full account, including the original
-implementation and the appended correction section (what Codex found, what changed, and a genuine
-actor-neutrality-proof discovery recorded rather than chased down — controlling a character and
-auto-resolving is not always identical to that character running fully autonomously, even at their
-first decision): `docs/milestones/018-the-player-can-see-what-their-choice-did.md`. 548 tests passing
-(543 prior + 5 new); all five variant trace hashes byte-identical to `REVIEW_LEDGER.md`'s recorded
-baselines both before and after the correction — this milestone changed no simulation behavior, only
-presentation. Stopping here for Codex re-review.
+**Milestone 018 — The Player Can See What Their Choice Did — corrected twice and awaiting re-review.**
+Codex reviewed the original implementation (`ae06f61`) and returned FAIL (two P1 defects, one P2 proof
+gap); Matt authorized a correction (`b9dfa49`) that fixed both. Codex reviewed that correction and
+returned FAIL again: the correction's own fix for pending-vs-declined was itself a private-decision
+leak (reading whether the asked character's own `DecisionRecord` existed, which the asker has no way
+to know), the action-kind audit called `PlayerOption.Describe` directly instead of exercising
+`PlayerView.Build`/`LastAction`, and `InformationRequest.WakeEventId` — genuine new persistent
+linkage state, contrary to the correction's "no new persistent state" claim — was missing from both
+replay comparators. Matt authorized a second correction to milestone 018 only.
+
+All three are fixed. Request disposition is now `Pending`/`Answered` — two values, not three — read
+entirely from the *asker's* own `Cognition.Testimony`, never from `World.Decisions` for anybody else;
+a same-pass attempt to keep a third `Declined` value for "a communicated denial" was itself caught and
+reverted by a test, since the natural proof scenario has Vincent give Salvatore a full, sincere,
+informative account that happens to contradict him — an answer, not a refusal, and this simulation's
+report vocabulary has no utterance distinct from "an account, possibly negative." The action-kind
+audit now drives each variant event by event and asserts on a real `PlayerView.Build` snapshot's
+`LastAction` after every decision. `WakeEventId` is now covered by both request comparators, with a
+focused proof each that differing linkage identities cannot compare equal, and the "no new persistent
+state" claim is corrected everywhere to the accurate, narrower one: no separate response log was
+introduced.
+
+Full account, including the original implementation and both appended correction sections:
+`docs/milestones/018-the-player-can-see-what-their-choice-did.md`. 552 tests passing (548 prior + 4
+net new); all five variant trace hashes byte-identical to `REVIEW_LEDGER.md`'s recorded baselines
+across all three commits — this milestone changed no simulation behavior, only presentation. Stopping
+here for Codex re-review.
 
 Milestones 001–017 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
 the corrected acceptance record of 015 and 016 specifically.

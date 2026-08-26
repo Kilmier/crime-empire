@@ -162,15 +162,17 @@ public readonly record struct SuppressedClaim(Claim Claim, PriorDisclosureState 
 /// him about anything again for the rest of the simulation — one question closing the channel
 /// between two characters for good. What is spent is the question, not the relationship.
 ///
-/// <see cref="WakeEventId"/>, added by milestone 018's correction, is the id of the
+/// <see cref="WakeEventId"/>, added by milestone 018's first correction, is the id of the
 /// <c>EventKind.RoleReview</c>/<c>"asked-to-account"</c> event this request itself scheduled — the
-/// same id a resulting <c>Decision.DecisionRecord.TriggerEventId</c> carries once the asked character actually
-/// deliberates on it. It exists to answer a question testimony alone cannot: whether the asked
-/// character has already had, and used up, his own chance to speak — silence is only "he declined"
-/// once that deliberation has actually resolved, and merely "not yet" before it has, regardless of
-/// how much calendar time has passed. Reading elapsed time instead would be silence inferred from a
-/// clock rather than from the man's own decision, which is exactly the shortcut this field exists to
-/// rule out.
+/// same id a resulting <c>Decision.DecisionRecord.TriggerEventId</c> carries once the asked character
+/// actually deliberates on it. <b>Its original purpose — reading that <c>DecisionRecord</c>'s mere
+/// existence to tell "not yet decided" from "decided and declined" — was rejected by the review's
+/// second pass: the asker never receives any message establishing that the asked character has
+/// decided anything at all, so surfacing that fact at all is a private-state leak regardless of how
+/// little of the record is read.</b> The field is kept as replay-reconstructed linkage state — which
+/// event this request caused — because it is a genuine fact about the request's own effect on the
+/// world and correctly participates in replay/save-load fidelity, but nothing in
+/// <c>Session.PlayerView.Build</c> reads it any more; see <see cref="RequestDisposition"/>.
 /// </summary>
 public sealed record InformationRequest(long Id, string AskerId, string AskedId, Claim About, DateTime At, long WakeEventId)
 {
@@ -178,22 +180,38 @@ public sealed record InformationRequest(long Id, string AskerId, string AskedId,
 }
 
 /// <summary>
-/// Whether an <see cref="InformationRequest"/> has been answered, has been declined (the asked
-/// character's own triggered deliberation resolved without asserting the claim to the asker), or is
-/// still pending (he has not yet had that deliberation at all).
+/// Whether an <see cref="InformationRequest"/> has been answered — a communicated account has reached
+/// the asker, in either direction — or is still pending, meaning nothing has reached him at all.
 ///
-/// Derived, never stored: a pure function of the asker's own <see cref="Cognition.Testimony"/> and
-/// whether a <c>Decision.DecisionRecord</c> exists whose <c>TriggerEventId</c> equals the request's own
-/// <see cref="InformationRequest.WakeEventId"/> — both already-authoritative, already-replayed state,
-/// so this needs no new write anywhere in <c>Commit</c>, <c>Pipeline</c>, or <c>Strategies</c> and is
-/// identical whether the asked character is controlled or autonomous, since both write
-/// <c>World.Decisions</c> through the identical <c>Pipeline.Resolve</c>.
+/// <b>Deliberately two values, not three.</b> An early draft of this correction split a third
+/// <c>Declined</c> value out of a communicated account whose stance denies the claim, reasoning that a
+/// denial is a "refusal". A test caught the error immediately: the natural-run proof scenario has
+/// Vincent give Salvatore a full, sincere, informative account that happens to contradict what
+/// Salvatore already believed — a real answer, not a refusal to answer, and reading it as anything
+/// other than <see cref="Answered"/> would have mis-stated exactly the kind of account this project's
+/// information model exists to represent faithfully. This simulation's report vocabulary has no
+/// utterance distinct from "an account, possibly negative" — Candid and False both assert a stance,
+/// and only <em>which way</em> the stance points differs; nothing communicates "I decline to discuss
+/// this" as a thing in itself. If such a channel is ever added, that is where a third value would
+/// belong; grafting it onto ordinary negative answers was the mistake.
+///
+/// Derived, never stored, entirely from the asker's own <see cref="Cognition.Testimony"/> — whether
+/// the asked person's account of exactly this claim, at or after the moment it was asked, exists at
+/// all. <b>Never from <see cref="World.Decisions"/> for anybody but the viewpoint character himself</b>
+/// (that would be reading another character's private deliberation, which milestone 018's second
+/// correction removed after Codex's review found it) and never from elapsed calendar time. Two
+/// different private, uncommunicated choices by the asked person — silence, or a report that
+/// withholds precisely this claim — both produce no testimony at all and are therefore structurally
+/// indistinguishable: both read <see cref="Pending"/>, because that is genuinely all the asker can
+/// tell from where he stands. This needs no new write anywhere in <c>Commit</c>, <c>Pipeline</c>, or
+/// <c>Strategies</c>, and is identical whether the asked character answered under player control or
+/// autonomously, since both write <c>Cognition.Testimony</c> through the identical report-delivery
+/// path.
 /// </summary>
 public enum RequestDisposition
 {
     Pending,
     Answered,
-    Declined,
 }
 
 /// <summary>

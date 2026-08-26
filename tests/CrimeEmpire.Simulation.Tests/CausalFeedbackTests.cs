@@ -26,6 +26,15 @@ namespace CrimeEmpire.Simulation.Tests;
 ///    the "plain demand" phrasing. A later demand, after refusal and delegation, carries a genuine
 ///    held <c>PersonUsedViolence</c> claim naming the (by-then-different) demander, proving the
 ///    "force already used" phrasing is reachable too.
+///
+/// Corrected twice by Codex's review. The first correction added <c>RequestDisposition</c>
+/// (Pending/Answered/Declined) so silence could be told apart from a genuine answer; its first
+/// implementation derived Declined from the asked character's own <c>World.Decisions</c>, which the
+/// second correction rejected as a private-state leak — the asker never receives any message
+/// establishing that the asked person decided anything. Disposition is now derived entirely from the
+/// asker's own <c>Cognition.Testimony</c>: Pending when nothing has arrived, Answered when the latest
+/// account affirms, Declined when it denies — see the "pending vs. declined" section below, in
+/// particular <see cref="Two_different_private_non_communicating_choices_are_indistinguishable_to_the_asker"/>.
 /// </summary>
 public sealed class CausalFeedbackTests
 {
@@ -208,56 +217,130 @@ public sealed class CausalFeedbackTests
     // ================================================================= pending vs. declined (correction)
 
     /// <summary>
-    /// The corrected disposition itself: Vincent's natural, unmodified delegation audit
-    /// (<c>ScenarioReachTests.The_delegator_puts_his_question_to_the_man_he_sent</c>) reaches Tommy's
-    /// own "asked-to-account" pause on 1987-04-04 — his very first pause when controlled, per direct
-    /// observation. "let it lie" is always offered there (`Generators.FromTrigger`'s floor candidate).
-    /// Choosing it, rather than any of the account-giving candidates, is Tommy's own decision to stay
-    /// silent — the same real pause a person would face, not a staged shortcut. From Vincent's own
-    /// viewpoint, the request must now read Declined, never Pending (he has had his answer — silence)
-    /// and never Answered (nothing was asserted to Vincent).
+    /// The required mutation-checked proof of the private-decision-leak fix itself: two genuinely
+    /// different private choices by the asked person — silence (<c>DoNothing</c>, "let it lie") and a
+    /// <c>Partial</c> report that withholds precisely the claim asked — communicate <em>nothing</em>
+    /// to the asker either way, and must therefore be indistinguishable to him: both read
+    /// <see cref="RequestDisposition.Pending"/>, with byte-identical rendered content. Reached, not
+    /// staged: both are real options at Tommy's own natural first pause
+    /// (<c>ScenarioReachTests.The_delegator_puts_his_question_to_the_man_he_sent</c>), 1987-04-04 when
+    /// controlled, confirmed by direct observation. Mutation-checked in the milestone archive's
+    /// correction section: reintroducing a read of the asked person's own <c>World.Decisions</c> (the
+    /// defect this replaces) makes this test fail, because it would tell "he chose DoNothing" from
+    /// "he chose Partial" apart — a distinction that must not exist here.
     /// </summary>
     [Fact]
-    public void Declining_to_answer_leaves_the_request_marked_declined_not_pending()
+    public void Two_different_private_non_communicating_choices_are_indistinguishable_to_the_asker()
     {
-        var session = SimulationSession.Start(Seed, Baseline, controlledCharacterId: "tommy", viewpointCharacterId: "vincent");
-        var pending = AdvanceToPause(session);
-        Assert.Equal("tommy", pending.ActorId);
+        const string silence = "let it lie";
+        const string partialWithholding =
+            "tell Vincent Russo about whether Tommy Nardo put hands on Bellini's grocery, leaving out his own part";
 
-        session.Choose(pending.Options.Single(o => o.Description == "let it lie").Id);
+        var silent = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        silent.Choose(AdvanceToPause(silent).Options.Single(o => o.Description == silence).Id);
 
-        var snapshot = session.Snapshot();
-        var request = Assert.Single(snapshot.AwaitingAnswers);
-        Assert.Equal("tommy", request.AskedId);
-        Assert.Equal(RequestDisposition.Declined, request.Disposition);
+        var partial = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        partial.Choose(AdvanceToPause(partial).Options.Single(o => o.Description == partialWithholding).Id);
+
+        var silentRequest = Assert.Single(silent.Snapshot().AwaitingAnswers);
+        var partialRequest = Assert.Single(partial.Snapshot().AwaitingAnswers);
+
+        Assert.Equal(RequestDisposition.Pending, silentRequest.Disposition);
+        Assert.Equal(RequestDisposition.Pending, partialRequest.Disposition);
+        Assert.Equal(silentRequest.Statement, partialRequest.Statement);
+        Assert.Equal(silentRequest.AskedName, partialRequest.AskedName);
+        Assert.Equal(silentRequest.AskedAt, partialRequest.AskedAt);
     }
 
-    /// <summary>Save/load for the declined state, mirroring the pending case's own proof — the
-    /// disposition is re-derived from replayed `World.Decisions`/`World.Requests` on load, not
-    /// stored, so it must come back identically.</summary>
+    /// <summary>
+    /// The contrasting half the review asked for, and the finding that corrected this correction's
+    /// own first attempt: a genuinely <em>communicated</em> account — Tommy's own <c>False</c> report,
+    /// which actually asserts a denial to Vincent through the ordinary report channel
+    /// (<c>Cognition.Receive</c>) rather than withholding or saying nothing — is legitimately
+    /// distinguishable from the silent cases above, because it is observable rather than a projection
+    /// of his private deliberation: Vincent really did receive testimony, he just does not believe
+    /// what it says. It is <see cref="RequestDisposition.Answered"/>, not a third "Declined" value —
+    /// the first draft of this test asserted Declined and failed against the natural proof scenario,
+    /// where an honest denial (Vincent's own account, which happens to contradict Salvatore) is
+    /// obviously an answer and not a refusal; see the milestone archive's correction section and
+    /// <see cref="RequestDisposition"/>'s own doc comment.
+    /// </summary>
     [Fact]
-    public void Save_load_preserves_a_declined_requests_disposition()
+    public void A_communicated_denial_is_answered_and_drops_out_like_any_other_answer()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"ce-018-declined-{Guid.NewGuid():N}.db");
+        const string falseDenial = "tell Vincent Russo that it is not so, about whether Tommy Nardo put hands on Bellini's grocery";
+
+        var session = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        var pending = AdvanceToPause(session);
+        Assert.Equal("tommy", pending.ActorId);
+        session.Choose(pending.Options.Single(o => o.Description == falseDenial).Id);
+
+        var snapshot = session.Snapshot();
+        Assert.DoesNotContain(snapshot.AwaitingAnswers, r => r.AskedId == "tommy");
+        Assert.Contains(snapshot.Disagreements, d => d.Accounts.Any(a => a.SourceName == "Tommy Nardo"));
+    }
+
+    /// <summary>Save/load correctly resolves a communicated denial the same way a fresh session
+    /// does — dropped from <c>AwaitingAnswers</c>, visible via <c>Disagreements</c> — since nothing
+    /// about the disposition is stored; it is re-derived from replayed <c>Cognition.Testimony</c> on
+    /// load.</summary>
+    [Fact]
+    public void Save_load_correctly_resolves_a_communicated_denial()
+    {
+        const string falseDenial = "tell Vincent Russo that it is not so, about whether Tommy Nardo put hands on Bellini's grocery";
+        string path = Path.Combine(Path.GetTempPath(), $"ce-018-denial-{Guid.NewGuid():N}.db");
         try
         {
             var original = PersistentSession.Start(Seed, Baseline, "tommy", "vincent");
             for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
                 original.StepEvent();
             Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
-            original.Choose(original.Pending!.Options.Single(o => o.Description == "let it lie").Id);
+            original.Choose(original.Pending!.Options.Single(o => o.Description == falseDenial).Id);
 
-            var beforeSave = original.Snapshot();
-            var declined = Assert.Single(beforeSave.AwaitingAnswers);
-            Assert.Equal(RequestDisposition.Declined, declined.Disposition);
+            Assert.DoesNotContain(original.Snapshot().AwaitingAnswers, r => r.AskedId == "tommy");
+
+            original.Save(path);
+            var loaded = PersistentSession.Load(path);
+
+            var reloaded = loaded.Snapshot();
+            Assert.DoesNotContain(reloaded.AwaitingAnswers, r => r.AskedId == "tommy");
+            Assert.Contains(reloaded.Disagreements, d => d.Accounts.Any(a => a.SourceName == "Tommy Nardo"));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    /// <summary>
+    /// Save/load for the pending state produced by a private, uncommunicated choice specifically —
+    /// distinct from the already-existing pending-then-answered save/load proof, since this is the
+    /// disposition the corrected derivation must reconstruct identically after replay without ever
+    /// re-reading the asked person's own decisions (which the reloaded session's replay obviously
+    /// still contains, since nothing was deleted — the point is that nothing reads them for this
+    /// purpose any more).
+    /// </summary>
+    [Fact]
+    public void Save_load_preserves_a_pending_requests_disposition_after_a_private_decline()
+    {
+        const string partialWithholding =
+            "tell Vincent Russo about whether Tommy Nardo put hands on Bellini's grocery, leaving out his own part";
+        string path = Path.Combine(Path.GetTempPath(), $"ce-018-pending-{Guid.NewGuid():N}.db");
+        try
+        {
+            var original = PersistentSession.Start(Seed, Baseline, "tommy", "vincent");
+            for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
+                original.StepEvent();
+            original.Choose(original.Pending!.Options.Single(o => o.Description == partialWithholding).Id);
+
+            var declined = Assert.Single(original.Snapshot().AwaitingAnswers);
+            Assert.Equal(RequestDisposition.Pending, declined.Disposition);
 
             original.Save(path);
             var loaded = PersistentSession.Load(path);
 
             var reloaded = Assert.Single(loaded.Snapshot().AwaitingAnswers);
-            Assert.Equal(RequestDisposition.Declined, reloaded.Disposition);
-            Assert.Equal(declined.AskedName, reloaded.AskedName);
-            Assert.Equal(declined.AskedAt, reloaded.AskedAt);
+            Assert.Equal(RequestDisposition.Pending, reloaded.Disposition);
         }
         finally
         {
@@ -268,19 +351,17 @@ public sealed class CausalFeedbackTests
     /// <summary>
     /// Player/autonomous parity for the disposition mechanism itself, not only for
     /// <c>LastAction</c>. Reached, not staged: Tommy's own top-ranked preference at this exact pause
-    /// (confirmed by reading <c>PreparedDecision.Scored[0]</c> directly before resolving) is a
-    /// <em>Partial</em> report that withholds precisely the claim Vincent asked about — his own
-    /// self-protective instinct, and a second, genuinely distinct flavour of decline alongside the
-    /// "let it lie" case above: a real report is sent, but it deliberately omits the one thing that
-    /// was asked, which is indistinguishable from silence on that specific question. Both sides of
-    /// this comparison control Tommy — one resolves via <see cref="SimulationSession.ResolveAutomatically"/>,
-    /// the other via a person explicitly choosing the identical rendered option — so this isolates
-    /// exactly the variable the review asked about (did a person or the pipeline choose?) without
-    /// also crossing into whether Tommy was controlled at all, which is a separate variable this
-    /// fixture is not guaranteed to hold constant (see the milestone archive's correction section).
+    /// (confirmed by reading <c>PreparedDecision.Scored[0]</c> directly before resolving) is the same
+    /// <em>Partial</em> report used above — his own self-protective instinct. Both sides of this
+    /// comparison control Tommy — one resolves via
+    /// <see cref="SimulationSession.ResolveAutomatically"/>, the other via a person explicitly
+    /// choosing the identical rendered option — so this isolates exactly the variable the review
+    /// asked about (did a person or the pipeline choose?) without also crossing into whether Tommy
+    /// was controlled at all, which is a separate variable this fixture is not guaranteed to hold
+    /// constant (see the milestone archive's correction section).
     /// </summary>
     [Fact]
-    public void Request_disposition_computation_is_identical_whether_declining_was_autonomous_or_player_chosen()
+    public void Request_disposition_computation_is_identical_whether_the_asked_persons_choice_was_autonomous_or_player_chosen()
     {
         const string partialWithholding =
             "tell Vincent Russo about whether Tommy Nardo put hands on Bellini's grocery, leaving out his own part";
@@ -295,8 +376,8 @@ public sealed class CausalFeedbackTests
 
         var autoRequest = Assert.Single(autoResolved.Snapshot().AwaitingAnswers);
         var playerRequest = Assert.Single(playerChosen.Snapshot().AwaitingAnswers);
-        Assert.Equal(RequestDisposition.Declined, autoRequest.Disposition);
-        Assert.Equal(RequestDisposition.Declined, playerRequest.Disposition);
+        Assert.Equal(RequestDisposition.Pending, autoRequest.Disposition);
+        Assert.Equal(RequestDisposition.Pending, playerRequest.Disposition);
     }
 
     // ================================================================= proof B: Marco and the demand
@@ -503,10 +584,13 @@ public sealed class CausalFeedbackTests
 
     /// <summary>
     /// Every player-selectable <see cref="ActionKind"/> reachable through the existing six-character
-    /// scenarios, audited through the shared rendering <c>LastAction</c> itself calls
-    /// (<see cref="PlayerOption.Describe"/>) — never a hand-constructed candidate, so "reachable"
-    /// means what it says: every <see cref="DecisionRecord.Chosen"/> across all five variants' full
-    /// 90-day autonomous runs.
+    /// scenarios, audited by actually driving the natural variants event by event and, after each
+    /// newly-committed decision, building that actor's real <see cref="PlayerSnapshot"/> via
+    /// <see cref="PlayerView.Build"/> and reading <see cref="PlayerSnapshot.LastAction"/> off it —
+    /// never calling <see cref="PlayerOption.Describe"/> directly, so a regression in
+    /// <c>LastAction</c>'s own selection logic (picking the wrong decision, or leaking
+    /// <c>DecisionRecord.Outcome</c>) would be caught here, not only a regression in the renderer it
+    /// happens to call.
     ///
     /// <b>Reachable, confirmed by this test:</b> <c>StartStrategy</c>, <c>ContinueStrategy</c>,
     /// <c>AlterStrategy</c>, <c>DelegateStrategy</c>, <c>ReportToSuperior</c>, <c>SeekApproval</c>,
@@ -520,25 +604,54 @@ public sealed class CausalFeedbackTests
     public void Every_reachable_action_kind_renders_through_the_shared_last_action_projection()
     {
         var reachedKinds = new HashSet<ActionKind>();
+        DateTime end = Cast.Start.AddDays(90);
 
         foreach (var variant in Variants.All)
         {
             var session = SimulationSession.Start(Seed, variant, controlledCharacterId: null, viewpointCharacterId: Salvatore);
-            session.AdvanceTo(Cast.Start.AddDays(90));
+            var world = session.World;
+            int stall = 0;
 
-            foreach (var decision in session.World.Decisions)
+            for (int guard = 0; guard < 20000 && session.Date < end; guard++)
             {
-                if (decision.Chosen is not { Candidate: var candidate }) continue;
-                reachedKinds.Add(candidate.Kind);
+                int before = world.Decisions.Count;
+                DateTime dateBefore = session.Date;
 
-                var actor = session.World.Get(decision.ActorId);
-                string Name(string id) => session.World.Find(id)?.Name
-                    ?? session.World.Businesses.GetValueOrDefault(id)?.Name ?? id;
-                Pronouns PronounsOf(string id) => session.World.Find(id)?.Pronouns ?? Pronouns.He;
+                session.StepEvent();
 
-                string description = PlayerOption.Describe(candidate, Name, actor.Pronouns, PronounsOf);
-                Assert.False(string.IsNullOrWhiteSpace(description),
-                    $"{candidate.Kind} (variant {variant}, {decision.At:yyyy-MM-dd}) rendered an empty description");
+                if (world.Decisions.Count == before && session.Date == dateBefore)
+                {
+                    // No progress at all -- either the queue is genuinely exhausted before day 90
+                    // (fine, stop) or something is stuck (the guard bound above still catches that).
+                    if (++stall > 3) break;
+                    continue;
+                }
+                stall = 0;
+
+                for (int i = before; i < world.Decisions.Count; i++)
+                {
+                    var decision = world.Decisions[i];
+                    if (decision.Chosen is not { Candidate: var candidate }) continue;
+                    reachedKinds.Add(candidate.Kind);
+
+                    // The actor's real snapshot, built the identical way SimulationSession.Snapshot()
+                    // builds one -- not a hand-rolled call to the renderer LastAction happens to use.
+                    var snapshot = PlayerView.Build(world, decision.ActorId, decision.At);
+
+                    Assert.NotNull(snapshot.LastAction);
+                    Assert.Equal(decision.At, snapshot.LastAction!.At);
+                    Assert.False(string.IsNullOrWhiteSpace(snapshot.LastAction.Description),
+                        $"{candidate.Kind} (variant {variant}, {decision.At:yyyy-MM-dd}) rendered an empty description");
+
+                    // No developer-only outcome, raw identifier, or correlation data: DecisionRecord
+                    // .Outcome is never this text (that string is a distinct literal, "nothing was
+                    // open to him" or a Commit.Apply outcome sentence, never identical to an offered
+                    // option's own wording), and Claim.ToString()'s "#<EventId>" correlation suffix
+                    // never appears because PlayerOption.Describe never interpolates a raw Claim.
+                    Assert.NotEqual(decision.Outcome, snapshot.LastAction.Description);
+                    Assert.DoesNotContain('#', snapshot.LastAction.Description);
+                    Assert.DoesNotContain(candidate.Id, snapshot.LastAction.Description, StringComparison.Ordinal);
+                }
             }
         }
 

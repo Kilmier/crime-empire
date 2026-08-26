@@ -310,4 +310,133 @@ to state the corrected ones; `docs/ROADMAP.md` gained the parity-timing finding 
 
 ### Correction commit
 
+Correction (pending vs. declined, and demand-business scoping): `b9dfa49`.
+
+## Second correction (Codex review of `b9dfa49`)
+
+Codex reviewed `b9dfa49` and returned **FAIL** again: one P1 defect in the first correction itself,
+and two P2 gaps. The demand/business fix from the first correction was accepted as correctly
+implemented and is untouched here. This section records what was found, what changed, and the new
+proofs; neither the original account nor the first correction's account above is edited.
+
+### Finding 1 (P1) — the first correction's own fix was itself a private-decision leak
+
+`RequestDisposition.Declined`, as shipped in the first correction, was derived from
+`World.Decisions.Any(d => d.ActorId == r.AskedId && d.TriggerEventId == r.WakeEventId)` — whether a
+`DecisionRecord` existed for the *asked* character. Codex's review was direct: the asker never
+receives any message establishing that the asked person decided anything at all, so rendering "he
+chose not to say" exposed a private mental event nothing in the fiction communicated to him. This is
+the canonical information boundary this project holds everywhere else, violated in the one place a
+projection milestone was supposed to be safest — reading a field's mere *existence*, not its content,
+is still reading state nothing entitles the asker to.
+
+**Fix.** `DispositionOf` no longer reads `World.Decisions` for anybody but the viewpoint's own
+`LastAction`. Two different private, uncommunicated choices by the asked person — silence
+(`DoNothing`), or a `Partial` report that withholds precisely the asked claim — now both produce no
+testimony at all and are structurally indistinguishable: both read `Pending`.
+
+**A same-pass attempt to salvage a three-way split was also wrong, and a test caught it within this
+same correction.** The first draft of the fix split `Answered` into `Answered` (a communicated
+affirmation) and `Declined` (a communicated denial), reasoning that a denial is a "refusal" and
+therefore legitimately distinguishable from silence — genuinely communicated, so not a boundary
+violation. `A_delivered_answer_resolves_the_request_and_attributes_the_account_to_vincent` and
+`Save_load_preserves_an_unresolved_request_and_its_later_resolution` immediately failed: the natural
+proof scenario has Vincent give Salvatore a full, sincere, informative account that happens to
+contradict what Salvatore already believed from "the books" — a real answer, not a refusal. This
+simulation's report vocabulary has no utterance distinct from "an account, possibly negative": Candid
+and False both assert a stance to the recipient, differing only in which way the stance points, and
+nothing communicates "I decline to discuss this" as a thing in itself. `RequestDisposition` is
+therefore two values, not three — `Pending`/`Answered` — with direction (affirms or denies) left to the
+existing `Known`/`Recent`/`Disagreements` surfaces to render, exactly as they already did for every
+other belief. Recorded because the mistaken three-way split, and the test that caught it, are both
+worth keeping visible: the failure is exactly the kind of finding a mutation-check exists to produce,
+just discovered by an assertion against the natural scenario instead of a deliberately staged mutation.
+
+### Finding 2 (P2) — the action-kind audit didn't exercise the surface under review
+
+`Every_reachable_action_kind_renders_through_the_shared_last_action_projection` called
+`PlayerOption.Describe` directly on candidates pulled from a post-hoc scan of `world.Decisions` after
+a full 90-day run — proving the renderer works, never proving `PlayerView.Build`/
+`PlayerSnapshot.LastAction`'s own selection logic does.
+
+**Fix.** The test now drives each of the five variants event by event via `SimulationSession
+.StepEvent()`. After every step that adds one or more new `DecisionRecord`s, it calls
+`PlayerView.Build(world, decision.ActorId, decision.At)` — the actor's real snapshot, at the moment
+his decision was fresh — and asserts on `LastAction` directly: non-null, timestamped to the decision,
+non-empty, not equal to `DecisionRecord.Outcome` (the developer-only literal), and free of `#`
+(a `Claim.ToString()` correlation suffix) or the raw candidate id. Confirmed to actually exercise the
+selection logic by mutation: temporarily changing `LastAction`'s construction to render
+`lastDecision.Outcome` instead of the candidate's description made this test fail immediately, citing
+the leaked outcome text; reverted. The reachable/unreached `ActionKind` findings themselves are
+unchanged from the original correction (11 of 14 reachable; `AbandonStrategy`, `PostponeStrategy`,
+`RequestHelp` recorded as not reached, not forced).
+
+### Finding 3 (P2) — `WakeEventId` was invisible to both replay/request comparators
+
+`InformationRequest.WakeEventId`, added by the first correction, is genuine persistent,
+replay-reconstructed state — but neither of this project's two independent request comparators
+(`SimulationReplayTests.Snapshot`, `InformationTransmissionTests.Channel` — deliberately not shared
+between the two files, per this project's existing convention) included it in their `request|...`
+lines. Two requests differing only in which wake event they scheduled would have compared equal in
+both, meaning a regression that dropped or corrupted the field silently would have passed every
+existing determinism and replay-fidelity test. Separately, the correction's own account claimed "no
+new persistent state was added" — true of `RequestDisposition` (derived, never stored) but not of
+`WakeEventId` itself, a new field on an existing, replayed record.
+
+**Fix.** Both comparators now include `q.WakeEventId` in their request line. One focused proof per
+comparator — `SimulationReplayTests.The_snapshot_distinguishes_requests_that_differ_only_by_their_wake_event_id`
+and `InformationTransmissionTests.The_channel_distinguishes_requests_that_differ_only_by_their_wake_event_id`
+— construct two otherwise-identical requests differing only in `WakeEventId` and assert the two
+comparators' output differs. Both confirmed to fail against the pre-fix line (mutation-checked, then
+reverted). The "no new persistent state" claim is corrected everywhere it appeared in mutable prose
+(`docs/DESIGN_DECISIONS.md`, `docs/CURRENT_MILESTONE.md`, `PlayerSnapshot.cs`/`Report.cs`'s doc
+comments) to the accurate, narrower claim: no *separate response log* was introduced — `WakeEventId`
+is a field on an existing record, not a new collection or write path, and `RequestDisposition` itself
+remains genuinely derived.
+
+### Mutation checks — each confirmed to fail for the intended reason, then reverted
+
+1. Reintroduce a `World.Decisions`-based check into `DispositionOf` (updated for the two-value enum:
+   `communicated || askedPersonHasDecided` → `Answered`) →
+   `Two_different_private_non_communicating_choices_are_indistinguishable_to_the_asker` failed: both
+   requests wrongly resolved to `Answered` and vanished from `AwaitingAnswers` entirely.
+2. Drop `WakeEventId` from `SimulationReplayTests.Snapshot`'s request line →
+   `The_snapshot_distinguishes_requests_that_differ_only_by_their_wake_event_id` failed (strings
+   compared equal that must not).
+3. The identical drop from `InformationTransmissionTests.Channel` →
+   `The_channel_distinguishes_requests_that_differ_only_by_their_wake_event_id` failed the same way.
+4. Render `DecisionRecord.Outcome` in place of the candidate's rendered description in `LastAction`'s
+   construction → `Every_reachable_action_kind_renders_through_the_shared_last_action_projection`
+   failed, citing the leaked outcome text (`"began SecureTribute(..."` vs. the expected offered
+   wording).
+
+### Verification (post-second-correction)
+
+- `dotnet build CrimeEmpire.sln` — clean, 0 warnings, 0 errors.
+- `dotnet test CrimeEmpire.sln` — **552 passed, 0 failed** (548 prior + 4 new: the indistinguishability
+  proof, the pending-after-a-private-decline save/load proof, and one focused `WakeEventId` proof per
+  comparator; two tests were corrected in place rather than added, and two were renamed to match the
+  corrected semantics).
+- `dotnet run --project src/CrimeEmpire.Runner -- --verify --seed 42 --days 90` — deterministic,
+  `9AF57665067AEA11` on both runs, unchanged.
+- `dotnet run --project src/CrimeEmpire.Runner -- --compare --seed 42` — all five variant trace hashes
+  byte-identical to every prior figure recorded in this archive and in `REVIEW_LEDGER.md`.
+- `--variant disloyal-vincent --viewpoint salvatore` and `--variant baseline --viewpoint vincent` —
+  both exit 0.
+- Godot self-tests, all headless: `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`,
+  `--selftest-restart-save`/`--selftest-restart-load`, `--selftest-corroboration`,
+  `--selftest-tribute` — all unchanged and passing. The corroboration proof's natural run resolves
+  Vincent's account as `Answered` (it always did; the disposition it exercises was never `Declined`
+  under either the first or second correction's model), and the tribute proof is unaffected by any of
+  this finding's changes.
+
+### Documentation updated in place (second correction)
+
+`src/CrimeEmpire.Simulation/Session/PlayerSnapshot.cs`, `Domain/Report.cs`, and `CrimeEmpire.Godot
+/Game.cs`'s doc comments and rendering; `docs/DESIGN_DECISIONS.md`'s "Causal feedback" section's second
+bullet (request disposition) and its "no new persistent state" bullet, both rewritten to state the
+corrected rules and the corrected, narrower claim; `docs/CURRENT_MILESTONE.md`.
+
+### Second correction commit
+
 See the commit this correction is part of.

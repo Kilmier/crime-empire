@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using CrimeSim.Decision;
 using CrimeSim.Domain;
@@ -330,10 +331,10 @@ public sealed class ControlledAutonomousParityTests
     /// entry carries, the organisation's own state (conditions, priorities, policies, offices,
     /// assignments), <c>World.ObservationOccasionKeys</c>, and — not only <c>Queue.Count</c>, which a
     /// prior correction found insufficient to catch a driving-loop bug that overshot the horizon —
-    /// the full deterministic contents of every event still pending
-    /// (<see cref="EventQueue.PendingEvents"/>) plus which ones were cancelled and why. Not a hash —
-    /// kept as readable text so a mismatch's assertion message is diagnostic rather than two opaque
-    /// digests.
+    /// the full deterministic contents of every event still pending (read via <see cref="PendingEvents"/>,
+    /// test-only reflection rather than a production accessor — see that method's own comment) plus
+    /// which ones were cancelled and why. Not a hash — kept as readable text so a mismatch's
+    /// assertion message is diagnostic rather than two opaque digests.
     ///
     /// What the audit confirmed is deliberately absent because nothing in the simulation loop writes
     /// it after scenario construction: <c>Psychology</c> (only ever reassigned by
@@ -388,7 +389,7 @@ public sealed class ControlledAutonomousParityTests
         sb.Append("observation-occasions|").AppendJoin(',', world.ObservationOccasionKeys).Append('\n');
 
         sb.Append("queue-pending|")
-          .AppendJoin('|', world.Queue.PendingEvents.Select(e =>
+          .AppendJoin('|', PendingEvents(world.Queue).Select(e =>
               $"{e.Id}:{e.Time:O}:{e.Kind}:{e.OwnerId}:{e.Cause}:{e.Payload.TargetId}:" +
               $"{e.Payload.AssignmentId}:{e.Payload.RelatedEventId}:{e.Payload.Strategy}:" +
               $"{e.Payload.StepIndex}:{e.Payload.Note}:{string.Join(',', e.Payload.Claims)}:" +
@@ -439,5 +440,40 @@ public sealed class ControlledAutonomousParityTests
                 $"{a.Deadline:O}\n");
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Every event still pending in <paramref name="queue"/>, in (time, id) order — read without
+    /// dequeuing, so inspecting it changes nothing about how <c>EventQueue.Next</c> will later drain
+    /// it.
+    ///
+    /// <b>Test-only reflection, deliberately, and not a production accessor.</b> A prior version of
+    /// this correction added an <c>internal EventQueue.PendingEvents</c> property to
+    /// <c>src/CrimeEmpire.Simulation/Sim/EventQueue.cs</c> to reach the same state — read-only,
+    /// additive, and behaviourally inert, but still a change to production source under a milestone
+    /// whose explicit requirement was that production simulation code remain unchanged. Review
+    /// rejected that: a milestone's own archive is not the authority that gets to grant itself an
+    /// exception to its own guardrail, however narrow or well-reasoned. This reaches the same private
+    /// <c>PriorityQueue&lt;ScheduledEvent, (DateTime, long)&gt;</c> field
+    /// (<c>EventQueue</c>'s only backing store for pending events) via reflection instead, so
+    /// `src/CrimeEmpire.Simulation/` stays byte-identical to the pre-milestone baseline. Fragile in
+    /// the ordinary sense that any reflection-based test is — a rename of the private field breaks
+    /// this method, not silently — which is an acceptable trade for not touching the file it reaches
+    /// into.
+    /// </summary>
+    private static IReadOnlyList<ScheduledEvent> PendingEvents(EventQueue queue)
+    {
+        var field = typeof(EventQueue).GetField("_queue", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException(
+                "EventQueue no longer has a private '_queue' field; this reflection-based test " +
+                "helper needs updating to match its current backing store.");
+
+        var priorityQueue = (PriorityQueue<ScheduledEvent, (DateTime Time, long Seq)>)field.GetValue(queue)!;
+
+        return priorityQueue.UnorderedItems
+            .Select(item => item.Element)
+            .OrderBy(e => e.Time)
+            .ThenBy(e => e.Id)
+            .ToList();
     }
 }

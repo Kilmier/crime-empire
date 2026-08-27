@@ -19,29 +19,37 @@ milestone reframed as verification-only: the investigation was promoted into a p
 suite (`tests/CrimeEmpire.Simulation.Tests/ControlledAutonomousParityTests.cs`), and the record was
 corrected — `ROADMAP.md`'s entry retired in place and `docs/milestones/018-...md` gained an appended
 correction retracting its Finding 3 "candid vs. partial" claim without touching Findings 1 and 2.
-Two Codex review rounds followed. **Round 1**, reviewing `99db4de`, returned FAIL with three P2s:
-the fingerprint didn't cover enough persistent state, there was no true viewpoint-only isolation,
-and a doc comment on the focused Tommy test contradicted its own assertion (claimed a request
-"drops out of `AwaitingAnswers`" when it correctly stays outstanding). Correction `c9af6b6` closed
-all three — the comparator was rebuilt on `SimulationReplayTests.Snapshot` (the project's own
-comprehensive replay comparator), a fifth test isolates viewpoint alone, and the comment was fixed
-— and, required as proof for the first two, both additions were mutation-checked and reverted (which
-incidentally surfaced and fixed a real bug in the test harness's own driving loop, unrelated to
-production code). **Round 2**, reviewing `c9af6b6`, returned FAIL with two further P2s (production
-code and everything from round 1 confirmed fine): the fingerprint still omitted meaningful mutable
-state (`Capabilities.Cash`, `Execution.Intention`, `ObservationOccasionKeys`, queued-event contents),
-and neither addition had been mutation-checked. The second correction closed both — a full audit of
-`World`/`Character` added every remaining gap the audit found (`Motivations` in full, `Capabilities`
-in full, `Social.OrganizationId`, `Queue.Cancelled`), a mutation on `Capabilities.Cash` confirmed and
-reverted, and a clarification appended noting the round-1 archive account had mislabeled
-mutation-checking as a fourth finding rather than required proof for the first two, and had
-demoted round 1's actual third finding (the `AwaitingAnswers` comment) to an unlabeled paragraph.
-Reading queued-event contents required one narrow, deliberate exception to "no production code
-changed": `EventQueue` gained a new `internal`, read-only, additive-only accessor
-(`PendingEvents`) so the comparator can see it — no simulation *behaviour* changed, and the accepted
-trace hashes confirm it. All accepted trace hashes and chosen-action digests were confirmed
-unchanged across all three verification passes. Full account, including both corrections:
-`docs/milestones/019-controlled-autonomous-actor-parity-is-pinned.md`.
+
+Three Codex review rounds followed, and production simulation code (`src/CrimeEmpire.Simulation/`)
+is, as of the third correction, byte-identical to the pre-milestone baseline — the only thing that
+moved in either direction along the way was one narrow accessor added in round 2's correction and
+then removed again in round 3's, never anything simulation-behavioural. **Round 1**, reviewing
+`99db4de`, found three P2s: the fingerprint didn't cover enough persistent state, there was no true
+viewpoint-only isolation, and a doc comment on the focused Tommy test contradicted its own assertion
+(claimed a request "drops out of `AwaitingAnswers`" when it correctly stays outstanding). Correction
+`c9af6b6` closed all three, and — required as proof for the first two, not a finding of its own —
+mutation-checked both additions (which incidentally surfaced and fixed a real bug in the test
+harness's own driving loop, unrelated to production code). **Round 2**, reviewing `c9af6b6`, found
+two P2s: the fingerprint remained incomplete (`Capabilities.Cash`, `Execution.Intention`,
+`ObservationOccasionKeys`, queued-event contents named specifically, with more found by an explicit
+audit), and this archive's own account of round 1 was inaccurate. Correction `c335d7c` closed the
+completeness gap — a full `World`/`Character` audit, a `Capabilities.Cash` mutation check required
+as proof for that same finding — but reading queue contents that round added a new `internal`,
+read-only `EventQueue.PendingEvents` accessor to production code, and separately mislabeled
+mutation-checking as round 2's *second* finding rather than proof for its first, burying what the
+real second finding (the archive's own inaccuracy) actually was. **Round 3**, reviewing `c335d7c`,
+correctly rejected the new accessor — read-only and behaviourally inert is not an exception a
+milestone's own archive gets to grant itself against an explicit "production code unchanged"
+requirement — and caught the repeated mislabeling. This correction removes `PendingEvents` entirely
+(`git diff` against the pre-milestone baseline for `src/CrimeEmpire.Simulation/` is now empty) and
+reaches the identical queue state through test-only `System.Reflection` instead, verified once by a
+temporary sanity-check test (confirmed the reflection path reads real, non-empty, count-matching
+queue contents) then deleted rather than kept as a sixth permanent test. It also states plainly, for
+a reader who does not want to reconstruct it from three overlapping corrections, what each round's
+findings actually were and that mutation-checking was required proof work under the completeness
+finding in both rounds it appeared, never an independent finding in either. All accepted trace
+hashes and chosen-action digests were confirmed unchanged across all three verification passes. Full
+account, including all three corrections: `docs/milestones/019-controlled-autonomous-actor-parity-is-pinned.md`.
 
 **Milestone 018 — The Player Can See What Their Choice Did — is accepted and closed.** Codex reviewed
 the original implementation (`ae06f61`) and returned **FAIL** (two P1 defects, one P2 proof gap); the

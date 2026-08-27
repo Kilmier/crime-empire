@@ -441,3 +441,88 @@ No accepted trace hash or chosen-action digest changed. `git diff --stat` agains
 ### Second correction commit
 
 See the commit this correction is part of.
+
+### Correction (2026-08-27, third): the production accessor removed; a second review-history fix
+
+Codex reviewed the second correction and returned **FAIL** with two P2 process/scope findings —
+confirming, on the substance, that the expanded comparator, the `Capabilities.Cash` mutation check,
+the viewpoint-only test, the bounded `AdvanceTo(end)` driver, and the `AwaitingAnswers` comment were
+all correct.
+
+**Finding 1 (P2) — `EventQueue.PendingEvents` itself violated the milestone's own guardrail.** The
+second correction's justification — read-only, additive, behaviourally inert, mirroring
+`SimulationSession.World`'s existing internal-accessor pattern — was accurate on every point it
+argued, and beside the point: the milestone's explicit requirement was that production simulation
+code remain unchanged, full stop, and a change is a change regardless of how narrow or well-reasoned.
+Offered two ways to close it: remove the accessor and reach pending-queue state through test-only
+machinery instead, or stop and ask Matt for explicit authorization to keep it — and, pointedly, not
+to let this archive be the thing that grants itself that exception.
+
+**Fix.** Removed. `EventQueue.PendingEvents` is gone from
+`src/CrimeEmpire.Simulation/Sim/EventQueue.cs`; `git diff` against `b2d7779` for
+`src/CrimeEmpire.Simulation/` is now empty — byte-identical to the pre-milestone baseline, not merely
+behaviourally equivalent to it. `ControlledAutonomousParityTests.cs` gained a private
+`PendingEvents(EventQueue queue)` helper that reaches `EventQueue`'s private
+`_queue` field (`PriorityQueue<ScheduledEvent, (DateTime, long)>`, its only backing store for
+pending events) via `System.Reflection`, sorted by `(Time, Id)` exactly as the removed accessor was.
+Chosen over asking Matt: reflection achieves identical fingerprint coverage without touching
+production source at all, so there was no genuine tradeoff left to put in front of him — asking would
+have cost a round trip to approve something with no remaining downside to approve away. Verified this
+was not a silent no-op before treating it as done: a temporary sanity-check test (`Assert.Equal
+(world.Queue.Count, pending.Count)`, `Assert.True(pending.Count > 0)`) confirmed the reflection path
+reads real, non-empty, count-matching queue contents after a 90-day run, then was deleted — it was a
+one-time confirmation, not a permanent addition, since the five permanent tests already exercise the
+helper on every call to `ComprehensiveFingerprint`.
+
+**Finding 2 (P2) — this archive's account of the round-2 review was itself inaccurate**, the same
+class of error the "Clarification" section above exists to correct, recurring. Codex's review of
+correction commit `c9af6b6` found exactly two P2s: the comparator remained incomplete, and this
+archive had misreported round 1's findings. **Mutation-checking a newly covered field was required
+proof for the first of those two, not a second, independent finding.** The "Correction (2026-08-26,
+second)" section above numbers it as "Finding 2 (P2) — the new fields were not mutation-checked,"
+which repeats, one correction later, the identical mislabeling the Clarification section had just
+finished correcting for round 1: promoting required verification work to the status of an
+independently-flagged defect. What Codex's actual second P2 was — the archive misreporting round 1's
+findings — is exactly what the Clarification section above already addresses in substance; it was
+correct in content and simply never connected explicitly to being "the second P2 of round 2's
+review" rather than a self-initiated aside. That connection is made here instead of by editing the
+Clarification section, per this archive's append-only convention.
+
+To state plainly, for a reader who wants the two review rounds' actual findings without
+reconstructing them from three overlapping corrections: **round 1** (reviewing `99db4de`) found the
+fingerprint incomplete, no viewpoint-only isolation, and the contradictory `AwaitingAnswers` comment
+— three P2s, all real defects in what was submitted. **Round 2** (reviewing `c9af6b6`) found the
+fingerprint still incomplete and this archive's account of round 1 inaccurate — two P2s, one a
+continuation of the same completeness question, one about the record rather than the code. Mutation-
+checking was required proof work attached to the completeness finding in both rounds, not a finding
+of its own in either.
+
+### Tests after this correction
+
+`ControlledAutonomousParityTests.cs` still has 5 tests. This correction changed how
+`ComprehensiveFingerprint` reaches pending-queue contents (reflection instead of a production
+accessor); it added no new test method and changed no fingerprint field's content or format.
+
+### Verification (post-third-correction)
+
+- `dotnet build CrimeEmpire.sln` — clean, 0 warnings, 0 errors.
+- `dotnet test CrimeEmpire.sln` — **555 passed, 0 failed** (unchanged count).
+- `dotnet run --project src/CrimeEmpire.Runner -- --verify --seed 42 --days 90` — deterministic,
+  `9AF57665067AEA11` on both runs, **unchanged**.
+- `dotnet run --project src/CrimeEmpire.Runner -- --compare --seed 42` — all five variant trace
+  hashes **unchanged**: `baseline` `9AF57665067AEA11`, `cautious-vincent` `86EC1ADA4A4E9179`,
+  `watchful-boss` `84AC3F65E4102EBA`, `disloyal-vincent` `9A6E0E518294532F`, `resentful-tommy`
+  `3C4483640153DA88`.
+- `--variant disloyal-vincent --viewpoint salvatore --seed 42 --days 90` and `--variant baseline
+  --viewpoint vincent --seed 42 --days 90` — both exit 0.
+- Godot self-tests, all headless: `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`,
+  `--selftest-corroboration`, `--selftest-tribute` — all `ok`; two-process restart proof
+  (`--selftest-restart-save` then `--selftest-restart-load` in a genuinely separate process) — `ok`.
+
+No accepted trace hash or chosen-action digest changed. `git diff --stat b2d7779 --
+src/CrimeEmpire.Simulation/` is empty: production simulation code is byte-identical to the
+pre-milestone baseline, not merely behaviourally unchanged.
+
+### Third correction commit
+
+See the commit this correction is part of.

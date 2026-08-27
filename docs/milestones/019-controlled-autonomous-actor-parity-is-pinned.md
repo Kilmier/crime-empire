@@ -327,3 +327,117 @@ reverted before this verification pass.
 ### Correction commit
 
 See the commit this correction is part of.
+
+### Clarification (2026-08-26): correcting this correction's own account of the review
+
+The section above mislabels what Codex's review of `99db4de` actually found. Recorded here rather
+than edited into the text above, per the archive's own append-only convention. Codex's review of
+commit `99db4de` returned exactly **three** P2 findings:
+
+1. `ComprehensiveFingerprint` (then `WorldFingerprint`) did not cover enough persistent state.
+2. There was no true viewpoint-only parity check.
+3. The `Tommys_asked_to_account_decision_resolves_automatically_to_the_identical_partial_report`
+   XML comment contradicted its own test body — the "the same request dropping out of
+   `AwaitingAnswers`" line this archive's earlier section already describes fixing.
+
+**Mutation-checking findings 1 and 2 was not itself a fourth, separate finding.** It was the
+required proof that closing findings 1 and 2 actually worked — the same discipline every milestone
+in this project applies to a production fix, applied here to a test addition instead. The section
+above numbers it "Finding 3 (P2) — both additions needed mutation-checking" and demotes the actual
+finding 3 (the contradictory comment) to an unlabeled closing paragraph with no number at all. The
+substance of everything under both headings is accurate and remains correct; only the numbering and
+which item was independently flagged by Codex versus which was this milestone's own required
+verification step were wrong. This clarification exists so a future reader comparing this archive
+against Codex's own review transcript is not misled about which is which.
+
+### Correction (2026-08-26, second): two remaining P2 gaps closed
+
+Codex reviewed correction commit `c9af6b6` and returned **FAIL** with two further P2 gaps, confirming
+production code was still fine and safe to build on, and separately confirming the true viewpoint-only
+test, the corrected `AwaitingAnswers` comment, and the bounded `AdvanceTo(end)` driver from the first
+correction were all good.
+
+**Finding 1 (P2) — `ComprehensiveFingerprint` still omitted meaningful mutable state.** Named
+specifically: `Character.Capabilities.Cash`, `Execution.Intention`, `World.ObservationOccasionKeys`,
+and deterministic queued-event contents rather than only `Queue.Count`. Required: an audit of the
+remaining mutable `World` and `Character` state before claiming the comparator covers every
+replay-relevant collection, not only the four named examples.
+
+**The audit**, read against `Domain/Character.cs`, `Domain/Capabilities.cs`, `Domain/Motivations.cs`,
+`Domain/SocialState.cs`, `Domain/Psychology.cs`, `Sim/World.cs`, `Sim/ScheduledEvent.cs` and
+`Sim/EventQueue.cs`, and confirmed against every production write site with a grep for each field's
+assignment: beyond the four named gaps, `Motivations` was entirely absent from the comparator —
+`Ambition` (set once, at `Cast.cs`'s scenario construction, never reassigned during a run),
+`Responsibilities` (mutated by `Runner.DeliverAssignment` and `Strategies.cs`'s assignment
+completion), `Pressures` (mutated by nine call sites across `Commit.cs`, `Runner.cs` and
+`Strategies.cs` via `AddPressure`), and `ImmediateNeeds` (declared, never written by anything —
+included anyway, since an audit that silently trusts "currently unused" is the same mistake as the
+one being corrected). Also absent: `Capabilities.Crew` (never mutated at runtime, but part of the
+same type as `Cash`), `SocialState.OrganizationId` (set once at `Cast.cs` construction, never
+reassigned), and `world.Queue.Cancelled` (which events were invalidated and why — a fact about
+replay-relevant state distinct from which events remain pending). Confirmed by the same grep-every-
+write-site method to be genuinely static across a run, and included anyway rather than trusted
+silently: `Psychology` (only ever reassigned by `Variants.cs` before a run starts — never written by
+`Commit.cs`, `Pipeline.cs`, or `Strategies.cs`) and `Capabilities.Authority`/`Districts`.
+
+**Fix.** `ComprehensiveFingerprint` gained, per character: `Capabilities.Cash`/`Crew`/`Authority`/
+`Districts`; `Social.OrganizationId`; every `Motivations` field; `Execution.Intention`. And, at the
+world level: `ObservationOccasionKeys`; and the full deterministic contents of every event still
+pending, plus `Queue.Cancelled`.
+
+**Queue contents required one narrow production addition — the only one this milestone has made.**
+`EventQueue` wraps a `PriorityQueue<ScheduledEvent, (DateTime, long)>` privately and exposed nothing
+but `Count` before this correction; there was no way to read pending-event *contents* without one.
+Added `EventQueue.PendingEvents` — `internal`, read-only, returning every pending event sorted by
+`(Time, Id)` via the BCL `PriorityQueue.UnorderedItems` without dequeuing anything, so inspecting it
+changes nothing about how `Next` later drains the queue. This mirrors the exact pattern
+`SimulationSession.World` already uses — an `internal` accessor the type system admits to the test
+assembly and nothing else, added purely so a test can see state a production caller never needs and
+must never get, not a new capability any simulation code reads or could read. No simulation
+*behaviour* changed — `git diff --stat` against `b2d7779` for `src/CrimeEmpire.Simulation/` shows
+exactly one file, `Sim/EventQueue.cs`, 17 lines added and none removed (one property plus its doc
+comment), otherwise byte-identical, and the accepted trace hashes below confirm it. Every prior "no
+production code changed" claim in this archive is correct about behaviour and should now be read
+narrowly against this one, deliberate, additive, read-only exception.
+
+**Finding 2 (P2) — the new fields were not mutation-checked.** Required: perturb at least one newly
+added field on only one of the two compared paths, and confirm the parity test fails.
+
+**Fix.** `Auto_resolved_control_reproduces_fully_autonomous_history_for_every_variant_and_character`
+was temporarily edited to add `session.World.Get(charId).Capabilities.Cash += 1;` immediately after
+driving the controlled session, on the controlled side only. The test failed immediately
+(`variant 'baseline', controlling 'kane'...`), and the failure diff isolated to exactly the expected
+line — `capabilities|kane|0.0000|2|0|harbour` (autonomous) versus `capabilities|kane|1.0000|2|0|
+harbour` (controlled), nothing else differing. The line was then removed; `git diff` on
+`ControlledAutonomousParityTests.cs` shows only the intended, permanent additions.
+
+### Tests after this correction
+
+`ControlledAutonomousParityTests.cs` still has 5 tests — this correction widened
+`ComprehensiveFingerprint`'s coverage and added one production-side testability accessor
+(`EventQueue.PendingEvents`); it added no new test method.
+
+### Verification (post-second-correction)
+
+- `dotnet build CrimeEmpire.sln` — clean, 0 warnings, 0 errors.
+- `dotnet test CrimeEmpire.sln` — **555 passed, 0 failed** (unchanged count — no new test methods
+  this round).
+- `dotnet run --project src/CrimeEmpire.Runner -- --verify --seed 42 --days 90` — deterministic,
+  `9AF57665067AEA11` on both runs, **unchanged**.
+- `dotnet run --project src/CrimeEmpire.Runner -- --compare --seed 42` — all five variant trace
+  hashes **unchanged**: `baseline` `9AF57665067AEA11`, `cautious-vincent` `86EC1ADA4A4E9179`,
+  `watchful-boss` `84AC3F65E4102EBA`, `disloyal-vincent` `9A6E0E518294532F`, `resentful-tommy`
+  `3C4483640153DA88`.
+- `--variant disloyal-vincent --viewpoint salvatore --seed 42 --days 90` and `--variant baseline
+  --viewpoint vincent --seed 42 --days 90` — both exit 0.
+- Godot self-tests, all headless: `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`,
+  `--selftest-corroboration`, `--selftest-tribute` — all `ok`; two-process restart proof
+  (`--selftest-restart-save` then `--selftest-restart-load` in a genuinely separate process) — `ok`.
+
+No accepted trace hash or chosen-action digest changed. `git diff --stat` against `b2d7779` for
+`src/CrimeEmpire.Simulation/` shows only `Sim/EventQueue.cs`, and only the additive, read-only,
+`internal` accessor described above.
+
+### Second correction commit
+
+See the commit this correction is part of.

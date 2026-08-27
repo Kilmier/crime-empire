@@ -314,16 +314,33 @@ public sealed class ControlledAutonomousParityTests
     /// <see cref="SimulationReplayTests.Snapshot"/> — the project's existing comprehensive replay
     /// comparator, covering the truth log, decisions, reports, requests, businesses, and every
     /// character's tier/strategy/relationship/cognition/testimony state — rather than re-deriving a
-    /// second, narrower copy of the same comparison. Appended below are exactly the collections that
-    /// comparator does not cover, because it was written for replay determinism rather than this
-    /// milestone's parity question: each character's <c>Commitments</c> and the
-    /// <c>StrategyInstance</c> fields <c>Snapshot</c> omits (<c>DelegatedToId</c>, <c>Deadline</c>,
-    /// <c>AssignmentId</c>, <c>BreachedPolicyId</c>, <c>FailedAttempts</c>, <c>PressureApplied</c>),
-    /// each character's reconsideration state, milestone 018's causal-feedback state
+    /// second, narrower copy of the same comparison. Appended below is every remaining mutable
+    /// collection an explicit audit of <c>World</c> and <c>Character</c> found <c>Snapshot</c> does
+    /// not cover, because it was written for replay determinism rather than this milestone's parity
+    /// question: each character's <c>Capabilities.Cash</c>/<c>Crew</c> (mutated by
+    /// <c>Strategies.cs</c>'s tribute collection — the rest of <c>Capabilities</c> is fixed at
+    /// scenario construction and never written during a run), <c>Execution.Intention</c> and
+    /// <c>Commitments</c> and the <c>StrategyInstance</c> fields <c>Snapshot</c> omits
+    /// (<c>DelegatedToId</c>, <c>Deadline</c>, <c>AssignmentId</c>, <c>BreachedPolicyId</c>,
+    /// <c>FailedAttempts</c>, <c>PressureApplied</c>) and reconsideration state, every
+    /// <c>Motivations</c> field (<c>Ambition</c>, <c>Responsibilities</c>, <c>Pressures</c>,
+    /// <c>ImmediateNeeds</c> — none of which <c>Snapshot</c> reads at all),
+    /// <c>SocialState.OrganizationId</c>, milestone 018's causal-feedback state
     /// (<c>AccountConflicts</c>/<c>AccountAgreements</c>), <c>Encounters</c>, every trace a truth-log
-    /// entry carries, and the organisation's own state (conditions, priorities, policies, offices,
-    /// assignments). Not a hash — kept as readable text so a mismatch's assertion message is
-    /// diagnostic rather than two opaque digests.
+    /// entry carries, the organisation's own state (conditions, priorities, policies, offices,
+    /// assignments), <c>World.ObservationOccasionKeys</c>, and — not only <c>Queue.Count</c>, which a
+    /// prior correction found insufficient to catch a driving-loop bug that overshot the horizon —
+    /// the full deterministic contents of every event still pending
+    /// (<see cref="EventQueue.PendingEvents"/>) plus which ones were cancelled and why. Not a hash —
+    /// kept as readable text so a mismatch's assertion message is diagnostic rather than two opaque
+    /// digests.
+    ///
+    /// What the audit confirmed is deliberately absent because nothing in the simulation loop writes
+    /// it after scenario construction: <c>Psychology</c> (only ever reassigned by
+    /// <c>Variants.cs</c> before a run starts), <c>Capabilities.Authority</c>/<c>Districts</c>, and
+    /// <c>Motivations.Ambition</c> in practice (assignable, but the accepted cast only ever sets it
+    /// once, in <c>Cast.cs</c>) — included anyway below since they cost nothing to carry and the
+    /// point of an audit is not to trust that judgement silently.
     /// </summary>
     private static string ComprehensiveFingerprint(World world)
     {
@@ -332,6 +349,26 @@ public sealed class ControlledAutonomousParityTests
 
         foreach (var character in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
         {
+            sb.Append(
+                $"capabilities|{character.Id}|{character.Capabilities.Cash:0.0000}|" +
+                $"{character.Capabilities.Crew}|{character.Capabilities.Authority}|" +
+                $"{string.Join(',', character.Capabilities.Districts.OrderBy(d => d, StringComparer.Ordinal))}\n");
+
+            sb.Append($"organization|{character.Id}|{character.Social.OrganizationId}\n");
+
+            var m = character.Motivations;
+            sb.Append($"ambition|{character.Id}|{m.Ambition}\n");
+            sb.Append(
+                "responsibilities|" + character.Id + "|" +
+                string.Join(',', m.Responsibilities.Select(r => $"{r.Id}:{r.Description}:{r.Domain}")) + "\n");
+            sb.Append(
+                "pressures|" + character.Id + "|" +
+                string.Join(',', m.Pressures.OrderBy(kv => kv.Key)
+                    .Select(kv => $"{kv.Key}={kv.Value:0.0000}")) + "\n");
+            sb.Append("immediate-needs|" + character.Id + "|" + string.Join(',', m.ImmediateNeeds) + "\n");
+
+            sb.Append($"intention|{character.Id}|{character.Execution.Intention}\n");
+
             foreach (var c in character.Execution.Commitments)
                 sb.Append(
                     $"commitment|{character.Id}|{c.Id}|{c.Description}|{c.ToWhomId}|{c.Since:O}|" +
@@ -347,6 +384,20 @@ public sealed class ControlledAutonomousParityTests
                 $"{string.Join(',', character.Execution.ReconsiderationTriggers)}|" +
                 $"{character.Execution.NextReview:O}\n");
         }
+
+        sb.Append("observation-occasions|").AppendJoin(',', world.ObservationOccasionKeys).Append('\n');
+
+        sb.Append("queue-pending|")
+          .AppendJoin('|', world.Queue.PendingEvents.Select(e =>
+              $"{e.Id}:{e.Time:O}:{e.Kind}:{e.OwnerId}:{e.Cause}:{e.Payload.TargetId}:" +
+              $"{e.Payload.AssignmentId}:{e.Payload.RelatedEventId}:{e.Payload.Strategy}:" +
+              $"{e.Payload.StepIndex}:{e.Payload.Note}:{string.Join(',', e.Payload.Claims)}:" +
+              $"{e.Payload.Discoverability:0.0000}:{e.Payload.AboutClaim}:{e.Payload.StrategyOwnerId}:" +
+              $"{e.Payload.StrategySequence}:{e.Payload.AdvanceOrdinal}:{e.Payload.OccasionKey}"))
+          .Append('\n');
+        sb.Append("queue-cancelled|")
+          .AppendJoin('|', world.Queue.Cancelled.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}:{kv.Value}"))
+          .Append('\n');
 
         foreach (var pc in world.AccountConflicts)
             sb.Append(

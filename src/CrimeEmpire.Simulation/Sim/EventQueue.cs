@@ -18,6 +18,23 @@ public sealed class EventQueue
     /// <summary>Cancelled events and the reason, kept for the developer trace.</summary>
     public IReadOnlyDictionary<long, string> Cancelled => _cancelled;
 
+    /// <summary>
+    /// Every event still pending, in (time, sequence) order — read without dequeuing, so inspecting
+    /// it changes nothing about how <see cref="Next"/> will later drain it.
+    ///
+    /// Internal and read-only: it exists purely so a replay/parity comparator (test-only) can see
+    /// queued-event <em>contents</em> rather than only <see cref="Count"/>, mirroring the same
+    /// internal-accessor pattern <c>SimulationSession.World</c> already uses for the identical
+    /// reason — the type system admits the test assembly and nothing else. No simulation behaviour
+    /// reads this member or is affected by its existence.
+    /// </summary>
+    internal IReadOnlyList<ScheduledEvent> PendingEvents
+        => _queue.UnorderedItems
+            .Select(item => item.Element)
+            .OrderBy(e => e.Time)
+            .ThenBy(e => e.Id)
+            .ToList();
+
     public ScheduledEvent Schedule(
         DateTime time,
         EventKind kind,

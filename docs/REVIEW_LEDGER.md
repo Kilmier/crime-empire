@@ -266,6 +266,98 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 019, controlled/autonomous actor parity is pinned, corrected three times, accepted
+
+**Verification-only from the start.** Authorized to resolve a controlled-versus-autonomous decision
+anomaly milestone 018's archive and `ROADMAP.md` had recorded: at Tommy's natural first
+asked-to-account decision in the baseline seed-42 scenario, controlling him and immediately calling
+`SimulationSession.ResolveAutomatically()` was said to pick a self-protective partial report while
+the fully autonomous run answered candidly at the identical decision. Reproducing it end to end
+through the real pipeline found it did not hold — not at the exact cited decision, not across a
+bounded sweep of every variant and every character, not under a mismatched viewpoint, and not at
+either of milestone 018's own earlier commits. The "candid" half traced to
+`ScenarioReachTests.And_the_executor_gives_his_delegator_an_account_of_it`, which only asserts a
+report exists whose `AnsweringClaim` matches the question — true of a partial report withholding
+that exact claim as much as a candid one, since `Reporting.Compose` stamps `AnsweringClaim`
+regardless of `Candor`. Matt ruled the milestone reframed as verification-only rather than have a
+production change invented against a falsified premise: `ROADMAP.md`'s entry retired in place,
+`docs/milestones/018-...md` gained an appended correction retracting its Finding 3 without touching
+Findings 1–2, and the investigation promoted into a permanent regression suite,
+`ControlledAutonomousParityTests.cs`. Full account, including all three corrections:
+`docs/milestones/019-controlled-autonomous-actor-parity-is-pinned.md`.
+
+**Reviewed by Codex on implementation commit `99db4de`, returned FAIL with three P2s.** The parity
+comparator (`WorldFingerprint`) didn't cover enough persistent state; there was no true
+viewpoint-only isolation, only a sweep that varied viewpoint alongside the autonomous/controlled
+question; and a doc comment on the focused Tommy test contradicted its own assertion, claiming a
+request "drops out of `AwaitingAnswers`" when — a Partial report withholding precisely the asked
+claim being structurally indistinguishable from silence — it correctly stays outstanding.
+
+**Correction 1 (`c9af6b6`) closed all three.** The comparator was rebuilt on
+`SimulationReplayTests.Snapshot` (widened from `private` to `internal` and reused rather than
+re-derived); a fifth test isolates viewpoint alone, holding the controlled character fixed across
+two sessions differing only in `ViewpointCharacterId`; the comment was fixed. Required as proof for
+the first two, not a finding of its own: both additions were mutation-checked and reverted, which
+incidentally surfaced and fixed a real bug in the test harness's own driving loop (`StepEvent`'s
+unbounded horizon let it process one event past the 90-day cutoff on the controlled side only —
+fixed by driving through `AdvanceTo(end)` instead).
+
+**Reviewed by Codex on `c9af6b6`, returned FAIL with two further P2s.** The comparator remained
+incomplete — named specifically: `Capabilities.Cash`, `Execution.Intention`,
+`ObservationOccasionKeys`, and deterministic queued-event contents rather than only `Queue.Count` —
+and this archive's own account of round 1 was inaccurate, having mislabeled the required
+mutation-check proof as a fourth Codex finding and demoted the real third finding (the
+`AwaitingAnswers` comment) to an unlabeled paragraph.
+
+**Correction 2 (`c335d7c`) closed the completeness gap via an explicit audit** of every mutable
+`World`/`Character` collection against its production write sites, adding `Motivations` in full
+(`Ambition`, `Responsibilities`, `Pressures`, `ImmediateNeeds` — none previously covered),
+`Capabilities` in full, `Social.OrganizationId`, `Execution.Intention`, `ObservationOccasionKeys`,
+and full queue contents plus `Queue.Cancelled`; a `Capabilities.Cash` mutation check, required as
+proof for that same finding, confirmed and reverted. Reading queue contents this round added a new
+`internal`, read-only `EventQueue.PendingEvents` accessor to production code — and separately
+repeated the identical mislabeling the correction was meant to fix, numbering mutation-checking as
+round 2's second finding rather than proof for its first, burying what the real second finding (the
+archive's inaccuracy) actually was.
+
+**Reviewed by Codex on `c335d7c`, returned FAIL with two P2s, confirming everything else correct.**
+`EventQueue.PendingEvents` violated the milestone's explicit "production simulation code unchanged"
+requirement regardless of being read-only and behaviourally inert — a milestone's own archive does
+not get to grant itself that exception — and the archive had again mislabeled a review's findings.
+
+**Correction 3 (`8b5e70f`) removed the accessor entirely** — `git diff` against the pre-milestone
+baseline for `src/CrimeEmpire.Simulation/` is empty, byte-identical rather than merely
+behaviourally unchanged — and reached the same queue state through a test-only
+`System.Reflection` helper reading `EventQueue`'s private `_queue` field directly, verified once by
+a temporary sanity-check test then deleted rather than kept as a permanent sixth test. It also
+states plainly what each of the two review rounds' actual findings were, appended without rewriting
+either prior account.
+
+- Build: 0 warnings, 0 errors, across all four commits (implementation plus three corrections).
+- Tests: `99db4de` **554 passed, 0 failed** (550 milestone-018 baseline + 4 new); `c9af6b6` **555**
+  (554 + 1, the viewpoint-only test); `c335d7c` **555** (unchanged — comparator widened in place, no
+  new test method); `8b5e70f` **555** (unchanged — the queue accessor was swapped for reflection, no
+  new test method).
+- `--verify` deterministic and byte-identical across all four commits: `9AF57665067AEA11`, unmoved
+  from milestone 018's accepted baseline — this milestone changed no simulation behavior at any
+  point, verified rather than merely claimed.
+- `--compare` byte-identical across all four commits on every variant: `baseline` `9AF57665067AEA11`,
+  `cautious-vincent` `86EC1ADA4A4E9179`, `watchful-boss` `84AC3F65E4102EBA`, `disloyal-vincent`
+  `9A6E0E518294532F`, `resentful-tommy` `3C4483640153DA88`. Both required viewpoint runs
+  (`disloyal-vincent`/`salvatore`, `baseline`/`vincent`) exit 0 at every commit.
+- Godot `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`,
+  `--selftest-corroboration`, `--selftest-tribute`, and the two-process restart proof
+  (`--selftest-restart-save`/`--selftest-restart-load`) all exit 0 at every commit.
+
+**Codex independently reviewed correction commit `8b5e70f` and returned PASS with no P1 or P2
+findings.** Matt accepted `8b5e70f` on 2026-08-27 on the strength of that clean review, and closed
+the milestone. Milestone 019's accepted state is `8b5e70f` and nothing before it — `99db4de`,
+`c9af6b6`, and `c335d7c` were never themselves accepted; each Codex FAIL is what produced the
+correction that follows it. Production simulation code (`src/CrimeEmpire.Simulation/`) is
+byte-identical to its state before this milestone began (`b2d7779`) — this milestone found no
+defect and changed no simulation behavior; what it produced is a permanent regression suite and two
+corrected documentation records.
+
 ### Measured — milestone 018, the player can see what their choice did, corrected three times, accepted
 
 **Self-implemented; reviewed by Codex on implementation commit `ae06f61`, returned FAIL with two P1

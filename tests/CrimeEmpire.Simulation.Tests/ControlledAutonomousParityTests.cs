@@ -76,7 +76,9 @@ public sealed class ControlledAutonomousParityTests
     /// <see cref="SimulationSession.ResolveAutomatically"/> — the method the anomaly named —
     /// produces the identical chosen candidate, explicitly including <see cref="ReportCandor"/>, and
     /// the identical consequence: the same Partial report, withholding the same claim, reaching
-    /// Vincent, and the same request dropping out of <c>AwaitingAnswers</c>.
+    /// Vincent — and, since that report withholds precisely the claim Vincent asked about, it
+    /// asserts nothing his own cognition can register, so the request stays identically outstanding
+    /// in <c>AwaitingAnswers</c> on both paths rather than resolving.
     /// </summary>
     [Fact]
     public void Tommys_asked_to_account_decision_resolves_automatically_to_the_identical_partial_report()
@@ -199,12 +201,13 @@ public sealed class ControlledAutonomousParityTests
     /// regression. Every variant, every character individually controlled with every pause
     /// immediately auto-resolved, across the complete 90-day seed-42 horizon, compared against a
     /// fully autonomous run of the identical variant. The comparison is not limited to the
-    /// controlled character's own decisions: since nothing about being controlled should touch
-    /// anyone else either, the fingerprint below covers every actor's decisions, every report and
-    /// request, business tribute status, organisational conditions, and every pairwise relationship
-    /// — meaningful final world state, not only decision identity. The viewpoint is deliberately kept
-    /// different from the controlled character throughout, so every iteration also exercises the
-    /// separate invariant that viewpoint identity cannot influence simulation behaviour.
+    /// controlled character's own decisions or to option wording: <see cref="ComprehensiveFingerprint"/>
+    /// covers every replay-relevant collection <see cref="World"/> holds — meaningful final world
+    /// state, not only decision identity. The viewpoint is deliberately kept different from the
+    /// controlled character throughout, so every iteration also exercises the separate invariant
+    /// that viewpoint identity cannot influence simulation behaviour — though
+    /// <see cref="Only_the_viewpoint_differing_does_not_change_simulation_history"/> below is the
+    /// test that isolates that variable on its own, holding the controlled character fixed.
     /// </summary>
     [Fact]
     public void Auto_resolved_control_reproduces_fully_autonomous_history_for_every_variant_and_character()
@@ -215,27 +218,15 @@ public sealed class ControlledAutonomousParityTests
         {
             var autoWorld = Cast.Build(Seed, variant);
             Runner.Run(autoWorld, end);
-            string autoFingerprint = WorldFingerprint(autoWorld);
+            string autoFingerprint = ComprehensiveFingerprint(autoWorld);
 
             foreach (var charId in autoWorld.Characters.Keys.OrderBy(k => k, StringComparer.Ordinal))
             {
                 string viewpoint = charId == "salvatore" ? "vincent" : "salvatore";
                 var session = SimulationSession.Start(Seed, variant, charId, viewpoint);
-                var controlledWorld = session.World;
+                DriveFullyAutoResolved(session, end);
 
-                for (int guard = 0; guard < 20000 && session.Date < end; guard++)
-                {
-                    if (session.Status == SessionStatus.AwaitingChoice)
-                    {
-                        session.ResolveAutomatically();
-                        continue;
-                    }
-                    session.StepEvent();
-                }
-                if (session.Status == SessionStatus.AwaitingChoice)
-                    session.ResolveAutomatically();
-
-                string controlledFingerprint = WorldFingerprint(controlledWorld);
+                string controlledFingerprint = ComprehensiveFingerprint(session.World);
                 Assert.True(
                     autoFingerprint == controlledFingerprint,
                     $"variant '{variant}', controlling '{charId}' (viewpoint '{viewpoint}'): " +
@@ -245,54 +236,156 @@ public sealed class ControlledAutonomousParityTests
         }
     }
 
+    // ================================================================= viewpoint-only parity
+
     /// <summary>
-    /// A deterministic text fingerprint of meaningful world state: every actor's decision history
-    /// (via <see cref="DecisionRecord.ChosenActionSignature"/>), every report and request, business
-    /// tribute status, organisational conditions, and every pairwise relationship. Not a hash — kept
-    /// as readable text so a mismatch's assertion message is diagnostic rather than two opaque
-    /// digests.
+    /// A true viewpoint-only parity check, isolated from the autonomous-vs-controlled question the
+    /// sweep above answers. Both sessions here are controlled, and both auto-resolve every pause —
+    /// the only thing that differs between them is <see cref="SimulationSession.ViewpointCharacterId"/>.
+    /// <see cref="PlayerSnapshot"/> is allowed, and expected, to differ between them (that is the
+    /// entire point of a viewpoint); the underlying simulation <see cref="World"/> either session
+    /// drives must not — viewpoint is presentation-only per `DESIGN_DECISIONS.md`'s player-boundary
+    /// section, and this is what pins that as a behaviour rather than only an architectural
+    /// intention.
     /// </summary>
-    private static string WorldFingerprint(World world)
+    [Fact]
+    public void Only_the_viewpoint_differing_does_not_change_simulation_history()
     {
-        var sb = new StringBuilder();
+        DateTime end = Cast.Start.AddDays(90);
 
-        sb.Append("DECISIONS|")
-          .AppendJoin('|', world.Decisions.Select(d => d.ChosenActionSignature()))
-          .Append('\n');
-
-        sb.Append("REPORTS|")
-          .AppendJoin('|', world.Reports.OrderBy(r => r.Id).Select(r =>
-              $"{r.SenderId}->{r.RecipientId}:{r.Candor}:{r.AnsweringClaim}:" +
-              $"asserted=[{string.Join(',', r.Asserted.Select(a => a.Claim))}]:" +
-              $"withheld=[{string.Join(',', r.Withheld)}]"))
-          .Append('\n');
-
-        sb.Append("REQUESTS|")
-          .AppendJoin('|', world.Requests.OrderBy(r => r.Id).Select(r => $"{r.AskerId}->{r.AskedId}:{r.About}"))
-          .Append('\n');
-
-        sb.Append("BUSINESSES|")
-          .AppendJoin('|', world.Businesses.Values
-              .OrderBy(b => b.Id, StringComparer.Ordinal)
-              .Select(b => $"{b.Id}:paying={b.PayingTribute}"))
-          .Append('\n');
-
-        sb.Append("ORG|")
-          .AppendJoin('|', Enum.GetValues<OrgCondition>().Select(k => $"{k}={world.Org.Condition(k):0.0000}"))
-          .Append('\n');
-
-        var ids = world.Characters.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
-        foreach (var a in ids)
+        foreach (var variant in Variants.All)
         {
-            foreach (var b in ids)
+            var roster = Cast.Build(Seed, variant).Characters.Keys.OrderBy(k => k, StringComparer.Ordinal);
+
+            foreach (var controlledId in roster)
             {
-                if (a == b) continue;
-                var rel = world.Get(a).Social.Toward(b);
-                sb.Append(
-                    $"REL {a}->{b}: trust={rel.Trust:0.0000} fear={rel.Fear:0.0000} " +
-                    $"obligation={rel.Obligation:0.0000} grievances={rel.Grievances.Count}\n");
+                string viewpointA = controlledId;
+                string viewpointB = controlledId == "salvatore" ? "vincent" : "salvatore";
+
+                var sessionA = SimulationSession.Start(Seed, variant, controlledId, viewpointA);
+                DriveFullyAutoResolved(sessionA, end);
+
+                var sessionB = SimulationSession.Start(Seed, variant, controlledId, viewpointB);
+                DriveFullyAutoResolved(sessionB, end);
+
+                string fingerprintA = ComprehensiveFingerprint(sessionA.World);
+                string fingerprintB = ComprehensiveFingerprint(sessionB.World);
+                Assert.True(
+                    fingerprintA == fingerprintB,
+                    $"variant '{variant}', controlling '{controlledId}': viewpoint '{viewpointA}' " +
+                    $"vs. '{viewpointB}' produced different simulation histories, though only the " +
+                    "viewpoint differed between the two sessions.\n\n" +
+                    $"VIEWPOINT {viewpointA}:\n{fingerprintA}\n\nVIEWPOINT {viewpointB}:\n{fingerprintB}");
             }
         }
+    }
+
+    /// <summary>
+    /// Drives a controlled session to exactly <paramref name="end"/>, auto-resolving every pause it
+    /// reaches — the shared driving loop both the autonomous-vs-controlled sweep and the
+    /// viewpoint-only check use, so the two tests differ only in what they compare, not in how they
+    /// drive the session.
+    ///
+    /// Uses <see cref="SimulationSession.AdvanceTo"/>, not repeated <see cref="SimulationSession
+    /// .StepEvent"/>: <c>StepEvent</c> pumps with an unbounded horizon
+    /// (<see cref="DateTime.MaxValue"/>) by design — it is "handle whatever is next," not "handle
+    /// whatever is next before this date" — so a guard loop built on it can process an event
+    /// scheduled after <paramref name="end"/> before the loop's own <c>session.Date &lt; end</c>
+    /// check ever notices. <c>Runner.Run(world, end)</c>, which the fully autonomous reference run
+    /// uses, never crosses <paramref name="end"/> at all, because <c>Queue.Next(until)</c> bounds it.
+    /// The first version of this method used <c>StepEvent</c> and produced exactly that: an extra,
+    /// causally inert event processed past the 90-day horizon on the controlled side only, differing
+    /// from the autonomous reference in <c>World.Now</c> and queue depth alone — a test-harness
+    /// artefact <see cref="SimulationReplayTests.Snapshot"/>'s <c>now</c>/<c>queue</c> lines caught
+    /// immediately, with every other line already identical. <c>AdvanceTo</c> resumes correctly
+    /// through <see cref="SimulationSession.ResolveAutomatically"/> because resolving a pause calls
+    /// the session's own <c>Resume()</c> against the fast-forward horizon it already recorded — the
+    /// same mechanism a real caller fast-forwarding past a choice relies on.
+    /// </summary>
+    private static void DriveFullyAutoResolved(SimulationSession session, DateTime end)
+    {
+        session.AdvanceTo(end);
+        for (int guard = 0; guard < 20000 && session.Status == SessionStatus.AwaitingChoice; guard++)
+            session.ResolveAutomatically();
+    }
+
+    /// <summary>
+    /// A deterministic text fingerprint of meaningful, replay-relevant world state. Built on top of
+    /// <see cref="SimulationReplayTests.Snapshot"/> — the project's existing comprehensive replay
+    /// comparator, covering the truth log, decisions, reports, requests, businesses, and every
+    /// character's tier/strategy/relationship/cognition/testimony state — rather than re-deriving a
+    /// second, narrower copy of the same comparison. Appended below are exactly the collections that
+    /// comparator does not cover, because it was written for replay determinism rather than this
+    /// milestone's parity question: each character's <c>Commitments</c> and the
+    /// <c>StrategyInstance</c> fields <c>Snapshot</c> omits (<c>DelegatedToId</c>, <c>Deadline</c>,
+    /// <c>AssignmentId</c>, <c>BreachedPolicyId</c>, <c>FailedAttempts</c>, <c>PressureApplied</c>),
+    /// each character's reconsideration state, milestone 018's causal-feedback state
+    /// (<c>AccountConflicts</c>/<c>AccountAgreements</c>), <c>Encounters</c>, every trace a truth-log
+    /// entry carries, and the organisation's own state (conditions, priorities, policies, offices,
+    /// assignments). Not a hash — kept as readable text so a mismatch's assertion message is
+    /// diagnostic rather than two opaque digests.
+    /// </summary>
+    private static string ComprehensiveFingerprint(World world)
+    {
+        var sb = new StringBuilder();
+        sb.Append(SimulationReplayTests.Snapshot(world)).Append('\n');
+
+        foreach (var character in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
+        {
+            foreach (var c in character.Execution.Commitments)
+                sb.Append(
+                    $"commitment|{character.Id}|{c.Id}|{c.Description}|{c.ToWhomId}|{c.Since:O}|" +
+                    $"{c.Weight:0.0000}\n");
+
+            var s = character.Execution.Strategy;
+            sb.Append(
+                $"strategy-extra|{character.Id}|{s?.DelegatedToId}|{s?.Deadline:O}|{s?.AssignmentId}|" +
+                $"{s?.BreachedPolicyId}|{s?.FailedAttempts}|{s?.PressureApplied}\n");
+
+            sb.Append(
+                $"reconsideration|{character.Id}|" +
+                $"{string.Join(',', character.Execution.ReconsiderationTriggers)}|" +
+                $"{character.Execution.NextReview:O}\n");
+        }
+
+        foreach (var pc in world.AccountConflicts)
+            sb.Append(
+                $"conflict|{pc.ListenerId}|{pc.At:O}|{pc.Conflict.Claim}|{pc.Conflict.SpeakerId}|" +
+                $"{pc.Conflict.AssertedStance}|{pc.Conflict.AssertedConfidence:0.0000}|" +
+                $"{pc.Conflict.ClaimedBasis}|{pc.Conflict.PriorStance}|" +
+                $"{pc.Conflict.PriorConfidence:0.0000}|{pc.Conflict.PriorSourceKind}|" +
+                $"{pc.Conflict.PriorSourceId}\n");
+
+        foreach (var pa in world.AccountAgreements)
+            sb.Append(
+                $"agreement|{pa.ListenerId}|{pa.At:O}|{pa.Agreement.Claim}|{pa.Agreement.SpeakerId}|" +
+                $"{pa.Agreement.AssertedStance}|{pa.Agreement.AssertedConfidence:0.0000}|" +
+                $"{pa.Agreement.ClaimedBasis}|{pa.Agreement.PriorStance}|" +
+                $"{pa.Agreement.PriorConfidence:0.0000}|{pa.Agreement.PriorSourceKind}|" +
+                $"{pa.Agreement.PriorSourceId}\n");
+
+        foreach (var e in world.Encounters)
+            sb.Append($"encounter|{e.WhoId}|{e.MetId}|{e.At:O}\n");
+
+        foreach (var ev in world.TruthLog)
+            foreach (var t in ev.Traces)
+                sb.Append($"trace|{ev.Id}|{t.Kind}|{t.Description}|{t.DistrictId}|{t.Discoverability:0.0000}\n");
+
+        sb.Append($"org-boss|{world.Org.BossId}\n");
+        sb.Append("org-condition|")
+          .AppendJoin('|', Enum.GetValues<OrgCondition>().Select(k => $"{k}={world.Org.Condition(k):0.0000}"))
+          .Append('\n');
+        foreach (var p in world.Org.Priorities)
+            sb.Append($"org-priority|{p.Id}|{p.Description}|{p.Domain}|{p.Weight:0.0000}\n");
+        foreach (var p in world.Org.Policies)
+            sb.Append($"org-policy|{p.Id}|{p.Description}|{p.Kind}|{p.Domain}|{p.Strength:0.0000}\n");
+        foreach (var o in world.Org.Offices.OrderBy(o => o.Title, StringComparer.Ordinal))
+            sb.Append($"org-office|{o.Title}|{o.Domain}|{o.Authority}|{o.HolderId}\n");
+        foreach (var a in world.Org.Assignments.OrderBy(a => a.Id))
+            sb.Append(
+                $"org-assignment|{a.Id}|{a.Objective}|{a.IssuerId}|{a.RecipientId}|{a.Domain}|" +
+                $"{string.Join(',', a.Constraints)}|{string.Join(',', a.Disclosed)}|{a.IssuedAt:O}|" +
+                $"{a.Deadline:O}\n");
 
         return sb.ToString();
     }

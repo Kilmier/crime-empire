@@ -118,7 +118,14 @@ public sealed class SimulationReplayTests
         return world;
     }
 
-    private static string Snapshot(World world)
+    /// <summary>
+    /// Internal rather than private, deliberately: this is the comprehensive replay comparator —
+    /// truth log, decisions, reports, requests, businesses, and every character's tier/strategy/
+    /// relationship/cognition/testimony state — and milestone 019's controlled/autonomous parity
+    /// suite reuses it wholesale rather than re-deriving a second, narrower copy of the same
+    /// comparison. See <see cref="ControlledAutonomousParityTests"/>.
+    /// </summary>
+    internal static string Snapshot(World world)
     {
         static string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
 

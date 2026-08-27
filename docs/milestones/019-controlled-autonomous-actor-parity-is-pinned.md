@@ -203,3 +203,127 @@ the direct cause here.
 ## Commit
 
 See the commit this archive is part of.
+
+## Correction (2026-08-26): Codex review, three P2 gaps closed
+
+Codex reviewed commit `99db4de` and returned **FAIL** — production code was confirmed unchanged and
+safe to build on, but three proof/documentation gaps in the verification suite itself needed closing
+before acceptance. All three were structural rather than substantive: the underlying parity claim
+was not in doubt, but the tests and one comment did not yet demonstrate it as rigorously as the
+milestone required.
+
+### Finding 1 (P2) — the fingerprint did not cover enough persistent state
+
+`WorldFingerprint` covered decisions, reports, requests, business tribute status, organisational
+conditions, and pairwise relationships, but omitted cognition/testimony, full business state
+(`MonthlyRevenue`, `Resistance`, `Damaged`), execution commitments, several `StrategyInstance`
+fields, milestone 018's causal-feedback state (`AccountConflicts`/`AccountAgreements`),
+`Encounters`, truth-log `Trace`s, and most of `Organization`'s own state (priorities, policies,
+offices, assignments).
+
+**Fix.** `SimulationReplayTests.Snapshot` — the project's own comprehensive replay comparator,
+already covering the truth log, decisions, reports, requests, businesses, and every character's
+tier/strategy/relationship/cognition/testimony state — was widened from `private` to `internal` and
+reused wholesale rather than re-derived. `WorldFingerprint` was renamed `ComprehensiveFingerprint`
+and rebuilt on top of it, appending exactly what `Snapshot` does not cover: commitments, the
+`StrategyInstance` fields `Snapshot` omits, reconsideration state, `AccountConflicts`/
+`AccountAgreements`, `Encounters`, truth-log traces, and the organisation's conditions, priorities,
+policies, offices and assignments.
+
+**A genuine discovery in the course of this, not a mutation.** Rebuilding the fingerprint on
+`Snapshot` immediately surfaced a real failure — but in the test harness, not in production
+behaviour. `Snapshot`'s `now`/`queue` lines (state the original narrower `WorldFingerprint` never
+read) disagreed between the autonomous and controlled runs for `baseline`/`kane`: the controlled
+side had processed one extra event past the 90-day horizon. The cause was
+`DriveFullyAutoResolved`'s original implementation, which drove the session with repeated
+`SimulationSession.StepEvent()` calls — `StepEvent` pumps with an unbounded horizon
+(`DateTime.MaxValue`) by design, so a guard loop built on it can process an event scheduled after
+the intended `end` before the loop's own `session.Date < end` check ever notices, unlike
+`Runner.Run(world, end)` (the autonomous reference) or `SimulationSession.AdvanceTo(end)`, both of
+which are genuinely bounded by `Queue.Next(until)`. Every other line in the fingerprint — all 47
+decisions, every report, every request, every relationship, every belief — was already
+byte-identical; only the clock and queue depth differed. `DriveFullyAutoResolved` was rewritten to
+call `session.AdvanceTo(end)` once and then only `ResolveAutomatically()` on each pause (which
+resumes the recorded fast-forward through the session's own `Resume()`), matching how a real caller
+fast-forwards past a choice. With that fix, all five (then five, now six with the addition below)
+tests in the file pass. This was a defect in this milestone's own verification-only test code, not a
+new finding about production behaviour, and no production code changed because of it.
+
+### Finding 2 (P2) — no true viewpoint-only parity check
+
+The existing sweep varied viewpoint away from the controlled character on every iteration, but never
+in isolation: it could not distinguish "viewpoint never mattered" from "viewpoint's effect happened
+to be masked by the autonomous-vs-controlled comparison it was bundled into."
+
+**Fix.** Added `Only_the_viewpoint_differing_does_not_change_simulation_history`: for every variant
+and every controlled character, two fully controlled, fully auto-resolved sessions are driven to the
+identical 90-day horizon, identical in every respect except `ViewpointCharacterId`, and their
+`ComprehensiveFingerprint`s are compared directly — isolating viewpoint as the only variable, with
+the autonomous-vs-controlled sweep kept as a separate test answering a separate question.
+
+### Finding 3 (P2) — both additions needed mutation-checking
+
+**Fix, part A — a controlled-only difference in newly covered state.** Reapplied the original
+mutation (`SimulationSession.ResolveAutomatically` forced to `prepared.Available[^1].Id` instead of
+`null`) and re-ran the sweep. It failed immediately and, this time controlling `kane` specifically
+(whose own first decision — `investigate:bellini-grocery:11` — is itself forced to `DoNothing` by
+the mutation), cascaded through nearly every section of the fingerprint. Confirmed by direct
+inspection of the failure diff: beyond the decisions/reports/requests/relationships/testimony lines
+`SimulationReplayTests.Snapshot` already carried, the *newly added* sections also diverged and were
+reported — two `encounter|...` lines present only in the autonomous history
+(`encounter|tommy|kane|1987-04-08...`, `encounter|salvatore|vincent|1987-04-10...`), one
+`conflict|vincent|1987-05-11...` line, and two `agreement|vincent|1987-04-09...` lines, all absent
+from the controlled side because the cascading divergence meant Kane's investigation, and everything
+it would otherwise have caused Tommy and Vincent to encounter, contest or agree on, never happened.
+The mutation was then reverted; `git diff` on `SimulationSession.cs` is empty.
+
+**Fix, part B — a viewpoint-specific behaviour difference.** Since nothing in production code reads
+`ViewpointCharacterId` outside `Snapshot()`/`PlayerView.Build` — that is the entire property being
+pinned — proving the new viewpoint-only test has teeth required injecting exactly the leak it
+guards against: `SimulationSession.ResolveAutomatically` was temporarily edited to force the
+last-ordered candidate whenever `ViewpointCharacterId == "salvatore"` and more than one option was
+available, leaving every other viewpoint on the true preference. Running
+`Only_the_viewpoint_differing_does_not_change_simulation_history` failed immediately
+(`variant 'baseline', controlling 'kane': viewpoint 'kane' vs. 'salvatore' produced different
+simulation histories`), for the intended reason. The mutation was then reverted; `git diff` on
+`SimulationSession.cs` is again empty.
+
+### Finding — contradictory XML comment
+
+`Tommys_asked_to_account_decision_resolves_automatically_to_the_identical_partial_report`'s summary
+said the request "drop[s] out of `AwaitingAnswers`," contradicting the test body three lines below,
+which correctly asserts the request *stays* in `AwaitingAnswers` (a `Partial` report withholding
+precisely the asked claim asserts nothing Vincent's cognition can register, so it is structurally
+indistinguishable from silence — the actual, correct behaviour the test proves parity for). The
+comment was rewritten to match the assertion it sits above.
+
+### Tests after this correction
+
+`ControlledAutonomousParityTests.cs` now has 5 tests (was 4): the two Tommy-decision tests
+unchanged in substance (one comment fixed), the comparator guard unchanged, the autonomous-vs-
+controlled sweep now built on `ComprehensiveFingerprint`, and the new
+`Only_the_viewpoint_differing_does_not_change_simulation_history`.
+
+### Verification (post-correction)
+
+- `dotnet build CrimeEmpire.sln` — clean, 0 warnings, 0 errors.
+- `dotnet test CrimeEmpire.sln` — **555 passed, 0 failed** (554 prior + 1 new).
+- `dotnet run --project src/CrimeEmpire.Runner -- --verify --seed 42 --days 90` — deterministic,
+  `9AF57665067AEA11` on both runs, **unchanged**.
+- `dotnet run --project src/CrimeEmpire.Runner -- --compare --seed 42` — all five variant trace
+  hashes **unchanged**: `baseline` `9AF57665067AEA11`, `cautious-vincent` `86EC1ADA4A4E9179`,
+  `watchful-boss` `84AC3F65E4102EBA`, `disloyal-vincent` `9A6E0E518294532F`, `resentful-tommy`
+  `3C4483640153DA88`.
+- `--variant disloyal-vincent --viewpoint salvatore --seed 42 --days 90` and `--variant baseline
+  --viewpoint vincent --seed 42 --days 90` — both exit 0.
+- Godot self-tests, all headless: `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`,
+  `--selftest-corroboration`, `--selftest-tribute` — all `ok`; two-process restart proof
+  (`--selftest-restart-save` then `--selftest-restart-load` in a genuinely separate process) — `ok`.
+
+No accepted trace hash or chosen-action digest changed. Production code (`src/CrimeEmpire.Simulation/`)
+remains untouched by this milestone; both mutation-check edits to `SimulationSession.cs` were fully
+reverted before this verification pass.
+
+### Correction commit
+
+See the commit this correction is part of.

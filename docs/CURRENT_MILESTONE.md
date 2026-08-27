@@ -17,12 +17,18 @@ across a bounded sweep of every variant and every character, not under a viewpoi
 the controlled character, and not at either of milestone 018's own earlier commits. Matt ruled the
 milestone reframed as verification-only: production simulation code was left unchanged, the
 investigation was promoted into a permanent regression suite
-(`tests/CrimeEmpire.Simulation.Tests/ControlledAutonomousParityTests.cs`, 4 tests, including a
-comparator guard against the exact `AnsweringClaim`-only false assurance that produced the original
-error), mutation-checked and reverted, and the record was corrected — `ROADMAP.md`'s entry retired
-in place and `docs/milestones/018-...md` gained an appended correction retracting its Finding 3
-"candid vs. partial" claim without touching Findings 1 and 2. All accepted trace hashes and
-chosen-action digests were confirmed unchanged. Full account:
+(`tests/CrimeEmpire.Simulation.Tests/ControlledAutonomousParityTests.cs`), mutation-checked and
+reverted, and the record was corrected — `ROADMAP.md`'s entry retired in place and
+`docs/milestones/018-...md` gained an appended correction retracting its Finding 3 "candid vs.
+partial" claim without touching Findings 1 and 2. Codex reviewed commit `99db4de` and returned FAIL
+with three P2 proof/documentation gaps (production code confirmed fine): the fingerprint didn't
+cover enough persistent state, there was no true viewpoint-only isolation, and both additions needed
+mutation-checking. The correction closed all three — the comparator now reuses and extends
+`SimulationReplayTests.Snapshot` (the project's own comprehensive replay comparator), a fifth test
+isolates viewpoint alone, both new pieces were mutation-checked and reverted (the viewpoint mutation
+incidentally also surfaced and fixed a real bug in the test harness's own driving loop, unrelated to
+production code), and a contradictory doc comment was corrected. All accepted trace hashes and
+chosen-action digests were confirmed unchanged both times. Full account, including the correction:
 `docs/milestones/019-controlled-autonomous-actor-parity-is-pinned.md`.
 
 **Milestone 018 — The Player Can See What Their Choice Did — is accepted and closed.** Codex reviewed

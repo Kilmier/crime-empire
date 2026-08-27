@@ -157,6 +157,8 @@ public static class Pipeline
         string? domain = agenda.Domain ?? office?.Domain;
         string? superior = SuperiorOf(world, actor);
         var subordinates = SubordinatesOf(world, actor);
+        var subordinateCoercion = subordinates.ToDictionary(
+            id => id, id => world.Get(id).Capabilities[Skill.Coercion], StringComparer.Ordinal);
 
         var ctx = new GeneratorContext(
             actor.View,
@@ -171,6 +173,7 @@ public static class Pipeline
             subordinates,
             OrgMembersOf(world, actor),
             Acquaintance.KnownTo(world, actor),
+            subordinateCoercion,
             world.Reports.Where(r => r.SenderId == actor.Id).ToList(),
             world.Requests.Where(r => r.AskerId == actor.Id).ToList(),
             VisibleTargets(world, domain));

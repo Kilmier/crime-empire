@@ -317,14 +317,33 @@ public static class Strategies
     }
 
     /// <summary>
+    /// Tommy Nardo's Coercion — the only value <see cref="ResolveViolence"/>'s force outcome has
+    /// ever been exercised against in an accepted run (verified via <c>--compare</c> at seed 42:
+    /// violence fires in baseline/watchful-boss/disloyal-vincent/resentful-tommy, never
+    /// cautious-vincent, and Tommy is the delegate every time). The reduction formula below is
+    /// centered here so that wiring capability into force resolution changes nothing for any
+    /// accepted history and only diverges for a different executor — milestone 020's own flagged
+    /// judgment call, recorded in that milestone's archive rather than discovered later as a
+    /// defect. Frankly provisional, exactly like <see cref="BaseRisk"/>/<see cref="BaseEffect"/>/
+    /// <see cref="Exposure"/> above it in this file.
+    /// </summary>
+    private const double ForceReferenceCoercion = 0.55;
+
+    /// <summary>
     /// Force resolves the same way regardless of who ordered it, and leaves traces regardless of
     /// whether anyone is currently looking. Discovery is a separate question from occurrence.
+    ///
+    /// <b>Milestone 020</b>: the resistance drop now scales with the executor's own Coercion —
+    /// never the owner's, matching the same owner/executor split milestone 017 already resolved
+    /// for attribution below. See <see cref="ForceReferenceCoercion"/> for why 0.55 is the pivot.
     /// </summary>
     private static void ResolveViolence(
         World world, Character owner, Character executor, StrategyInstance s, Business business, Rng rng)
     {
         business.Damaged = true;
-        business.Resistance = Math.Max(0, business.Resistance - 0.3);
+        double coercion = executor.Capabilities[Skill.Coercion];
+        double reduction = Math.Clamp(0.3 + 0.4 * (coercion - ForceReferenceCoercion), 0.1, 0.5);
+        business.Resistance = Math.Max(0, business.Resistance - reduction);
 
         var ev = world.Record("violence", executor.Id, business.Id,
             $"{executor.Name} put hands on {business.Name}",

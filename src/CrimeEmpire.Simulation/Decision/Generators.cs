@@ -49,6 +49,13 @@ public sealed record GeneratorContext(
     // impossible, or unavailable candidates" — and a target is exactly the kind of thing that can be
     // unknown.
     IReadOnlyList<string> AcquaintedIds,
+    // Each subordinate's own Coercion skill, read directly the same way SubordinateIds itself is
+    // (an authority-scoped fact about the organisation, not a belief) — never through Perceived,
+    // and never through Acquaintance.KnownTo, matching the existing precedent that a boss already
+    // institutionally knows who reports to him. Used only to let FromRelationship attach a
+    // comparison to a DelegateStrategy candidate when there is genuinely more than one subordinate
+    // to compare; see Candidate.ExecutorCoercion.
+    IReadOnlyDictionary<string, double> SubordinateCoercion,
     // Reports this character has already sent. Needed so that "report in" stops being a live
     // option once he has said everything he has — otherwise a standing responsibility wakes him
     // on a timer and he volunteers the same account indefinitely.
@@ -374,23 +381,30 @@ public static class Generators
 
         if (s is not null && s.DelegatedToId is null && ctx.SubordinateIds.Count > 0)
         {
-            string sub = ctx.SubordinateIds
-                .OrderByDescending(id => ctx.Actor.Social.Toward(id).Trust)
-                .ThenBy(id => id, StringComparer.Ordinal)
-                .First();
+            // One candidate per subordinate, not the single highest-trust pick. With exactly one
+            // subordinate — every existing accepted variant — this loop produces exactly the one
+            // candidate it always did, same id, same fields. With more than one, each is offered
+            // on its own merits and scored by Utility like anything else: relationship state
+            // already reads generically per TargetId, and ExecutorCoercion is attached below only
+            // because there is genuinely more than one man to compare.
+            bool comparative = ctx.SubordinateIds.Count > 1;
 
-            yield return new Candidate(
-                $"delegate:{s.Kind}:{sub}",
-                ActionKind.DelegateStrategy,
-                nameof(FromRelationship),
-                $"have {sub} handle {s.Label}")
+            foreach (string sub in ctx.SubordinateIds.OrderBy(id => id, StringComparer.Ordinal))
             {
-                TargetId = sub,
-                Strategy = s.Kind,
-                Method = s.Kind == StrategyKind.SecureTribute ? s.Method : null,
-                Domain = s.Domain,
-                RequiredCrew = 1,
-            };
+                yield return new Candidate(
+                    $"delegate:{s.Kind}:{sub}",
+                    ActionKind.DelegateStrategy,
+                    nameof(FromRelationship),
+                    $"have {sub} handle {s.Label}")
+                {
+                    TargetId = sub,
+                    Strategy = s.Kind,
+                    Method = s.Kind == StrategyKind.SecureTribute ? s.Method : null,
+                    Domain = s.Domain,
+                    RequiredCrew = 1,
+                    ExecutorCoercion = comparative ? ctx.SubordinateCoercion.GetValueOrDefault(sub) : null,
+                };
+            }
         }
 
         // Being asked directly changes who he answers to for this one exchange. Without it a

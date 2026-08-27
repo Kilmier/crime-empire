@@ -103,6 +103,20 @@ public sealed record Candidate(
     public int RequiredAuthority { get; init; }
 
     /// <summary>
+    /// A <see cref="ActionKind.DelegateStrategy"/> candidate's own executor's Coercion skill —
+    /// set only when there is a genuine choice among two or more subordinates, and left null
+    /// otherwise.
+    ///
+    /// Null, not merely unread, when there is exactly one subordinate: "how does this man's
+    /// capability compare to the field" is meaningless with a field of one, and leaving it null
+    /// (rather than the value with nothing to compare it against) is what lets
+    /// <see cref="Utility"/> skip the comparison entirely rather than score a comparison that
+    /// never happened. That is also what keeps every existing accepted variant's score, trace and
+    /// hash untouched by this field's existence — none of them ever has more than one subordinate.
+    /// </summary>
+    public double? ExecutorCoercion { get; init; }
+
+    /// <summary>
     /// Set when this candidate would breach a policy. Only ever populated from policies the
     /// character actually knows about — an unknown policy cannot deter anyone.
     /// </summary>

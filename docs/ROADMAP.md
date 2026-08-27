@@ -159,16 +159,25 @@ worth anything once it is shown" to **which readers are worth strengthening, and
 - **Obligation is read but never moves.** `Relations.Establish` is its only writer and that is
   scenario construction; it holds its seeded value for the whole of every run. Surfaced by writing
   `docs/RELATIONSHIPS.md`, not a defect introduced by it.
-- **Executor suitability/capability is not modelled.** `Generators.FromRelationship` delegates to the
-  single highest-trust subordinate available — currently always Tommy, since he is Vincent's only
-  organisational subordinate — and nothing about who would actually do the job *better* enters the
-  choice: Persuasion, Coercion, crew size, equipment, and preparation do not affect a tribute
-  operation's success, and whether escalation capability should belong to the owner or the executor is
-  unresolved. Milestone 017 proved that direct action and delegation are causally different — different
-  executor, different first-hand knowledge, different exposure — through the existing owner/executor
-  split; it deliberately did not build or claim any of this, and this entry exists because the
-  milestone's own authorization required recording it as deferred rather than silently leaving it
-  unrecorded. See `docs/milestones/017-direct-action-vs-delegation.md`.
+- **Executor suitability/capability — narrowed by milestone 020, not retired.** Milestone 017 found
+  `Generators.FromRelationship` delegated to the single highest-trust subordinate available —
+  deterministically Tommy, Vincent's only organisational subordinate — with nothing about who would
+  do the job better entering the choice. Milestone 020 gave Vincent a second subordinate (the
+  `capable-angelo` variant: Angelo Conti, Coercion 0.80 against Tommy's 0.55, trusted at 0.35 against
+  Tommy's 0.70) so the choice is genuinely comparative: `FromRelationship` now yields one
+  `DelegateStrategy` candidate per subordinate, `Utility` scores each on relationship state (already
+  generic per `TargetId`) plus one new "executor capability" component reading `Candidate
+  .ExecutorCoercion`, and `Strategies.ResolveViolence`'s force outcome now scales by the actual
+  executor's Coercion rather than a flat constant — resolving "whether escalation capability belongs
+  to the owner or the executor" for that one mechanism specifically (the executor), not as a general
+  rule. See `docs/milestones/020-the-right-person-for-the-job.md`.
+
+  **What remains explicitly unmodelled, per that milestone's own exclusions**: Persuasion's effect on
+  tribute success; crew size, equipment, preparation; recruitment, roster, payroll, or resource
+  transfer from owner to delegate; personnel management generally; and escalation-capability
+  ownership as a rule beyond the one mechanism above. A third or later subordinate, a general
+  suitability model across strategy kinds, or capability affecting anything beyond force resolution
+  are all still open.
 - ~~The test project redundantly declares `TargetFramework` despite the centralized build property in
   `Directory.Build.props`.~~ **Retired 2026-08-16 by milestone 009**, and not by deleting the line.
   `Directory.Build.props` no longer assigns a TFM at all — it publishes `CrimeEmpireHostTfm` and
@@ -181,7 +190,11 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   resolves a demand through the owner's own decision and `Commit` finds a business by owner, so two
   shops need two owners. Codex found the breach and Matt accepted it as a bounded scenario-fixture
   exception on 2026-08-16, stating that it authorizes neither broader cast growth nor relaxed scope
-  discipline. A seventh character needs its own ruling first.
+  discipline. A seventh character needs its own ruling first. **Milestone 020 is that ruling for a
+  seventh**: Matt's own scope text ("one bounded scenario variant with exactly one additional
+  subordinate") authorized `angelo`, added only inside `Variants.Apply`'s `capable-angelo` case —
+  never in `Cast.Build` — so every other variant's cast is still exactly six. This authorizes neither
+  an eighth character nor general cast growth any more than `nunzio`'s exception did.
 - ~~**Candidate descriptions are developer-shaped, and the player now reads them.**~~ **Retired
   2026-08-16 by milestone 009's first correction, and the deferral was wrong.** The reasoning had been
   that a player-facing description vocabulary would be "a second implementation to drift against the

@@ -9,13 +9,20 @@ using CrimeSim.Sim;
 ///
 /// These exist to falsify the model rather than to demonstrate it. If all three produce the same
 /// history, the traits are decoration and the decision model is not doing the work it claims to.
-/// No variant changes a line of behaviour code — only trait values, a policy strength, and the
-/// social facts around Vincent.
+/// Almost every variant changes no line of behaviour code — only trait values, a policy strength,
+/// and the social facts around Vincent. <c>capable-angelo</c> is the one deliberate exception,
+/// the same kind milestone 007 needed for adding <c>nunzio</c> to <c>Cast.Build</c>: it adds a
+/// second organisational subordinate, authorized by Matt's own milestone-020 scope text (see
+/// <c>docs/CURRENT_MILESTONE.md</c>, "Ruling — the seventh character") and bounded to this one
+/// variant so every other variant's <see cref="World"/> is exactly what it always was.
 /// </summary>
 public static class Variants
 {
     public static readonly string[] All =
-        { "baseline", "cautious-vincent", "watchful-boss", "disloyal-vincent", "resentful-tommy" };
+    {
+        "baseline", "cautious-vincent", "watchful-boss", "disloyal-vincent", "resentful-tommy",
+        "capable-angelo",
+    };
 
     public static string Describe(string variant) => variant switch
     {
@@ -23,6 +30,7 @@ public static class Variants
         "watchful-boss" => "The rule is firmer and Vincent owes Salvatore more; his traits are untouched.",
         "disloyal-vincent" => "Vincent owes Salvatore nothing and resents him; his traits are untouched.",
         "resentful-tommy" => "Tommy owes Vincent nothing and resents him; Vincent still trusts Tommy.",
+        "capable-angelo" => "Vincent gains a second man, harder-hitting than Tommy but far less trusted; nothing else changes.",
         _ => "Vincent as written: aggressive, proud, short of money, carrying a grudge.",
     };
 
@@ -105,6 +113,59 @@ public static class Variants
                 Relations.RaiseGrievance(tommy,
                     new Grievance("vincent", "he sends me to do the things he will not be seen doing", 0.60, world.Now));
                 tommy.Motivations.AddPressure(PressureKind.Resentment, 0.30);
+                break;
+            }
+
+            case "capable-angelo":
+            {
+                // Milestone 020. A second organisational subordinate under Vincent, so
+                // Generators.FromRelationship's delegation choice is genuinely between two known
+                // people rather than a single default. Added here, not in Cast.Build, so every
+                // other variant's World is byte-for-byte what it always was.
+                var angelo = new Character
+                {
+                    Id = "angelo",
+                    Name = "Angelo Conti",
+                    RoleTitle = "soldier",
+                    Pronouns = Pronouns.He,
+                    Capabilities = new Capabilities(
+                        new Dictionary<Skill, double>
+                        {
+                            // Harder-hitting than both Tommy (0.55) and Vincent (0.75) — the
+                            // actual tension the variant exists to pose: the man Vincent trusts
+                            // less is the man better suited to the job.
+                            [Skill.Coercion] = 0.80, [Skill.Persuasion] = 0.20,
+                            [Skill.Discretion] = 0.25, [Skill.Investigation] = 0.10,
+                        },
+                        crew: 1, cash: 700, authority: 1, districts: new[] { Cast.Harbour }),
+                    Psychology = new Psychology(
+                        // Kept broadly parallel to Tommy's shape rather than a clone or a foil,
+                        // so the variant isolates trust and capability instead of adding a third
+                        // variable nobody asked to measure.
+                        new Dictionary<Trait, double>
+                        {
+                            [Trait.Aggressive] = 0.45, [Trait.Cautious] = 0.55,
+                            [Trait.Proud] = 0.30, [Trait.Suspicious] = 0.30,
+                        },
+                        new Dictionary<Drive, double>
+                        {
+                            [Drive.Belonging] = 0.70, [Drive.Security] = 0.55,
+                            [Drive.Wealth] = 0.45, [Drive.Status] = 0.35,
+                        }),
+                };
+                world.Characters[angelo.Id] = angelo;
+                angelo.Social.OrganizationId = Cast.OrgId;
+
+                // Deliberately below Vincent's trust in Tommy (0.70): the less-trusted,
+                // more-capable option, which is the whole point of the variant. Angelo's own
+                // relationship toward Vincent and Salvatore is set up the same shape Tommy's is,
+                // so he behaves like a real cast member once delegated to rather than a
+                // degenerate edge case. Salvatore's relationship toward Angelo is left
+                // unestablished — reads as zero, the same as Salvatore's toward Tommy, which is
+                // likewise never set from that side.
+                Relations.Establish(vincent, "angelo", trust: 0.35, obligation: 0.10);
+                Relations.Establish(angelo, "vincent", trust: 0.65, obligation: 0.55);
+                Relations.Establish(angelo, "salvatore", trust: 0.25, obligation: 0.30);
                 break;
             }
         }

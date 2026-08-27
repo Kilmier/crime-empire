@@ -377,6 +377,29 @@ public static class Utility
                 break;
         }
 
+        // --- executor capability (delegation only) ---------------------------------------------
+        //
+        // A separate consideration from "relationship effects" above, not folded into it: how good
+        // a candidate executor is at the job is not a fact about how he is regarded. Tagged None,
+        // deliberately — it reads no relationship state whatsoever, and folding a capability term
+        // into a component named "relationship effects" is the exact 36%-of-168 mislabelling
+        // milestone 008 found and RelationshipFacet exists to prevent.
+        //
+        // ExecutorCoercion is null whenever there is exactly one subordinate to delegate to — every
+        // existing accepted variant — so this block adds nothing to any of them; comparing one man's
+        // capability "to the field" is meaningless with a field of one. Centered on 0.5, the natural
+        // midpoint of the [0,1] skill range, rather than on any particular character's stat: since
+        // this term is only ever emitted for a genuinely comparative delegation, it has no accepted
+        // history to preserve and no reason to be centered anywhere else.
+        if (cand.Kind == ActionKind.DelegateStrategy && cand.ExecutorCoercion is { } execCoercion)
+        {
+            Add("executor capability", 1.0 * (execCoercion - 0.5),
+                execCoercion > 0.5
+                    ? $"{cand.TargetId} is better suited to lean on somebody than most"
+                    : $"{cand.TargetId} is not the man for rough work",
+                RelationshipFacet.None);
+        }
+
         // --- personality and value alignment -------------------------------------------------
         foreach (var (drive, weight) in DriveProfile(cand))
         {

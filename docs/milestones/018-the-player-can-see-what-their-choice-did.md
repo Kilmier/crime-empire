@@ -542,3 +542,41 @@ bullet, rewritten to describe the direct-testimony `AwaitingAnswers` filter with
 ### Third correction commit
 
 See the commit this correction is part of.
+
+## Correction (milestone 019, 2026-08-26): the "candid vs. partial" divergence was never verified
+
+Finding 3's proof-gap section above records, and `ROADMAP.md` repeated as carried-over technical
+debt: "Tommy's own top-ranked preference at his first controlled pause... is *not* the candid
+answer — it is a `Partial` report... This differs from the fully-autonomous baseline's behavior at
+what appears to be the identical decision." Milestone 019 was scoped specifically to root-cause and
+fix that divergence, and in the course of reproducing it end to end through the real pipeline, found
+that **the claim does not hold and never had a passing test behind it.**
+
+`ScenarioReachTests.And_the_executor_gives_his_delegator_an_account_of_it` — the test cited as the
+evidence for "the fully-autonomous baseline's behavior" — only asserts that a report exists from
+Tommy to Vincent whose `Report.AnsweringClaim` equals the question's claim. `Org.Reporting.Compose`
+sets `Report.AnsweringClaim` from `Candidate.AnsweringClaim` unconditionally, before the branch that
+decides `Candor`, so a `Partial` report that withholds precisely the asked claim still carries the
+matching `AnsweringClaim`. That test passes identically whether Tommy answers candidly or partially,
+and no other committed test at the time compared the two paths' `Candor`. The "candid" half of the
+finding was a manual trace-reading conclusion drawn during this milestone's own development, never
+pinned by a test, and it does not reproduce: milestone 019 compared
+`PreparedDecision.Scored`, the chosen candidate (including `Candor`), and the resulting report
+field-by-field between the fully autonomous run and `SimulationSession.Start(42, "baseline", "tommy",
+"vincent")` controlled-plus-`ResolveAutomatically()` at this exact decision, and found them
+byte-identical — both choose the same `Partial` report. A sweep across all five variants, all six
+characters individually controlled, the full 90-day seed-42 horizon, and a viewpoint deliberately
+different from the controlled character found no divergence anywhere, including when the sweep was
+re-run against this milestone's own original implementation (`ae06f61`) and first correction
+(`b9dfa49`).
+
+Nothing in Finding 1 or Finding 2 above is affected — both remain correctly diagnosed and fixed. Only
+the "player/autonomous parity" framing in the Finding 3 proof-gap bullet is retracted: it correctly
+proved that `ResolveAutomatically()` and an explicit `Choose()` of the identical option agree with
+each other (which is what `Request_disposition_computation_is_identical_whether_declining_was_
+autonomous_or_player_chosen` — since renamed — actually tests), but its prose claim about how that
+compares to a fully autonomous run was never itself tested and turned out to be wrong. See
+`docs/milestones/019-controlled-autonomous-actor-parity-is-pinned.md` for the full investigation and
+the permanent regression suite (`ControlledAutonomousParityTests`) that now pins this parity directly,
+including a comparator guard against the exact `AnsweringClaim`-only false assurance that produced
+the original error.

@@ -7,8 +7,23 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 019 —
+**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 020 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
+
+**Milestone 019 — Controlled/Autonomous Actor Parity Is Pinned — is complete pending Codex review.**
+Investigating the controlled-versus-autonomous decision anomaly milestone 018's archive and
+`ROADMAP.md` had recorded found it did not reproduce — not at the exact cited Tommy decision, not
+across a bounded sweep of every variant and every character, not under a viewpoint different from
+the controlled character, and not at either of milestone 018's own earlier commits. Matt ruled the
+milestone reframed as verification-only: production simulation code was left unchanged, the
+investigation was promoted into a permanent regression suite
+(`tests/CrimeEmpire.Simulation.Tests/ControlledAutonomousParityTests.cs`, 4 tests, including a
+comparator guard against the exact `AnsweringClaim`-only false assurance that produced the original
+error), mutation-checked and reverted, and the record was corrected — `ROADMAP.md`'s entry retired
+in place and `docs/milestones/018-...md` gained an appended correction retracting its Finding 3
+"candid vs. partial" claim without touching Findings 1 and 2. All accepted trace hashes and
+chosen-action digests were confirmed unchanged. Full account:
+`docs/milestones/019-controlled-autonomous-actor-parity-is-pinned.md`.
 
 **Milestone 018 — The Player Can See What Their Choice Did — is accepted and closed.** Codex reviewed
 the original implementation (`ae06f61`) and returned **FAIL** (two P1 defects, one P2 proof gap); the

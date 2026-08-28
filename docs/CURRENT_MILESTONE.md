@@ -35,7 +35,7 @@ gone. Three new tests in `ExecutorSuitabilityTests.cs` (9 → 12) proved the ass
 objective figure, drives scoring, and that a missing assessment neither falls back to the objective
 figure nor reads as zero.
 
-**Correction 2 (this session).** Codex reviewed `436f6c7` and returned **FAIL** again: one P1, two
+**Correction 2 (`34cd117`, committed).** Codex reviewed `436f6c7` and returned **FAIL** again: one P1, two
 P2s.
 
 - **P1.** `FromRelationship`'s delegation loop iterated `ctx.SubordinateIds` directly —

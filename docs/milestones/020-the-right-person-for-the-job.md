@@ -475,8 +475,8 @@ actually taken effect).
 
 ## Commit (correction 2)
 
-Committed as `PENDING-HASH` — recorded in a small follow-up documentation commit once known, per this
-project's practice of not self-referencing a commit's own hash from inside itself (the same reason
-`docs/milestones/019-...md`'s acceptance record was written in a separate commit rather than inside
-the correction it accepts). Status is not established by this file — `docs/CURRENT_MILESTONE.md` says
-what is active, and Matt's confirmation of a named commit is the only thing that counts as acceptance.
+Committed as `34cd117`, recorded here in a small follow-up documentation commit — a commit cannot
+state its own hash from inside itself, the same reason `docs/milestones/019-...md`'s acceptance record
+was written in a separate commit rather than inside the correction it accepts. Status is not
+established by this file — `docs/CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of
+a named commit is the only thing that counts as acceptance.

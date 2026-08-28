@@ -10,7 +10,7 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 021 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 020 — The Right Person for the Job — corrected once, awaiting Codex re-review.** Gave
+**Milestone 020 — The Right Person for the Job — corrected twice, awaiting Codex re-review.** Gave
 Vincent a second organisational subordinate (the `capable-angelo` variant: Angelo Conti, Coercion
 0.80, trusted at 0.35, against Tommy's 0.55/0.70) so `Generators.FromRelationship`'s delegation
 choice is genuinely comparative rather than a foregone pick of the single highest-trust subordinate.
@@ -20,57 +20,59 @@ choice among two or more subordinates and therefore never emitted for any existi
 calibrated at Tommy's own stat (0.55 — the only value that call has ever been exercised against in an
 accepted run) so no existing trace hash moved.
 
-Codex reviewed the original implementation (`f468e19`) and returned **FAIL** (one P1, no P2s): the
-delegation-scoring "executor capability" component read each subordinate's exact
-`Capabilities[Skill.Coercion]` straight off `World` — `Pipeline.SubordinatesOf` reading the roster to
-learn *who* Vincent's subordinates are is a settled, legitimate authority scan, but *how good* each
-one is at the job is a fact about that person, not the org chart, and nothing licensed reading it past
-the belief limit every other score component in `Decision/Utility.cs` already respects (that file's
-own header: scoring "receives a `PerceivedSituation` and never a `World`"). The tests pinned the
-omniscient read rather than disproving it.
+**Correction 1 (`436f6c7`, committed).** Codex reviewed the original implementation (`f468e19`) and
+returned **FAIL** (one P1, no P2s): the delegation-scoring "executor capability" component read each
+subordinate's exact `Capabilities[Skill.Coercion]` straight off `World` — `Pipeline.SubordinatesOf`
+reading the roster to learn *who* Vincent's subordinates are is a settled, legitimate authority scan,
+but *how good* each one is at the job is a fact about that person, not the org chart, and nothing
+licensed reading it past the belief limit every other score component in `Decision/Utility.cs`
+already respects. The correction added `Relations.AssessedCoercion`, an actor-held relationship
+dimension alongside `Trust`/`Obligation`/`Fear`, set at scenario construction to match the
+pre-correction figures exactly (Tommy 0.55, Angelo 0.80) so every accepted trace hash and the natural
+run's own preference stayed unmoved; `Generators.FromRelationship` reads it via
+`ctx.Actor.Social.Toward(sub).AssessedCoercion` instead of a `World`-sourced dictionary, which is
+gone. Three new tests in `ExecutorSuitabilityTests.cs` (9 → 12) proved the assessment, not the
+objective figure, drives scoring, and that a missing assessment neither falls back to the objective
+figure nor reads as zero.
 
-**Correction (uncommitted at time of writing, applied in the same session).** A new
-`Relations.AssessedCoercion` dimension on `IRelationship`, alongside `Trust`/`Obligation`/`Fear` —
-Vincent's own held belief about each subordinate's Coercion, distinct from that subordinate's actual
-`Capabilities[Skill.Coercion]`. Set at scenario construction to match the pre-correction figures
-exactly (Tommy 0.55 in `Cast.Build`, Angelo 0.80 in `Variants.Apply`), so every accepted trace hash,
-the `capable-angelo` hash, and the natural run's own preference are all unmoved — confirmed via
-`--verify`/`--compare` rather than assumed. `Generators.FromRelationship` now reads
-`ctx.Actor.Social.Toward(sub).AssessedCoercion` — the actor's own relationship record, the same
-non-creating channel `Utility.Loyalty` already reads — instead of a `GeneratorContext.SubordinateCoercion`
-dictionary `Pipeline.Prepare` used to build from `World`; that dictionary and field are gone entirely.
-`Strategies.ResolveViolence` is untouched: force resolution still reads the executor's real,
-objective Coercion, which the correction's scope explicitly kept on the World side of the line.
+**Correction 2 (this session).** Codex reviewed `436f6c7` and returned **FAIL** again: one P1, two
+P2s.
 
-Four new tests in `ExecutorSuitabilityTests.cs` prove the assessment, not the objective figure, is
-what scoring reads: changing only Angelo's hidden actual capability leaves the fork's candidates,
-totals and preference unchanged; changing only Vincent's assessment moves the "executor capability"
-component and flips which of the two delegate candidates he'd prefer between them; objective executor
-capability still (unchanged) drives the committed force outcome; and a missing assessment produces
-no "executor capability" term at all — `Candidate.ExecutorCoercion` is null, never a silent fallback
-to the objective figure and never a silent zero. A fifth, temporary mutation check reintroduced the
-flagged regression (scoped to Vincent only, to avoid disturbing an unrelated acquaintance-boundary
-test elsewhere that a naive reintroduction would have side-effected) and confirmed exactly the three
-new comparison tests fail, for the stated reason, before being reverted.
+- **P1.** `FromRelationship`'s delegation loop iterated `ctx.SubordinateIds` directly —
+  `Pipeline.SubordinatesOf`'s own authority scan, legitimate for identity but, per
+  `DESIGN_DECISIONS.md`'s settled "an office relationship is only an office relationship if it comes
+  from an office" ruling, not itself grounds to treat a subordinate as somebody the actor could name.
+  Fixed by filtering `SubordinateIds` through `ctx.AcquaintedIds` before generating any delegate
+  candidate, and computing the "genuine choice" `comparative` flag from the filtered (nameable) set
+  rather than the raw organisational count. A no-op for every accepted variant, since Cast.Build and
+  Variants.Apply already establish a relationship between Vincent and each real subordinate.
+- **P2.** Added the staged unknown-subordinate test (an organisationally-subordinate, wholly
+  unacquainted stranger is never offered as a delegate), its positive acquaintance control (a
+  genuinely acquainted subordinate still is, and the "genuine choice" gate reads the filtered set),
+  and a mutation check confirming both collapse together when the filter is removed.
+- **P2.** `AssessedCoercion` was missing from both of `SimulationReplayTests.cs`'s relationship
+  comparator fingerprints (`Snapshot` and `BehavioralSnapshot`), so a defect that corrupted it between
+  two otherwise-identical runs would have gone undetected. Added to both, formatted to distinguish
+  null (no assessment) from `0.0` (assessed at the floor); a new test perturbs nothing but this one
+  dimension and confirms both comparators catch it, independently verified per-comparator by
+  mutation.
 
-Full verification after the correction: build 0/0, tests 576/576 (573 + 3 new, all in
-`ExecutorSuitabilityTests.cs`, which now has 12);
+Full verification after correction 2: build 0/0, tests 578/578 (576 + 2 new — the acquaintance-
+boundary test in `ExecutorSuitabilityTests.cs` and the comparator test in `SimulationReplayTests.cs`);
 `--verify` baseline/`capable-angelo`/`disloyal-vincent`/`resentful-tommy` all deterministic and
 byte-identical to their previously accepted hashes; `--compare` at seed 42: all six configurations'
 trace hashes and chosen-action digests unmoved (`baseline 9AF57665067AEA11`, `cautious-vincent
 86EC1ADA4A4E9179`, `watchful-boss 84AC3F65E4102EBA`, `disloyal-vincent 9A6E0E518294532F`,
 `resentful-tommy 3C4483640153DA88`, `capable-angelo 2060465B4F31E6DD`/`CD9A30C1CD408F1D`); all three
-required viewpoint runs (`disloyal-vincent`/`salvatore`, `baseline`/`vincent`,
-`capable-angelo`/`salvatore`) exit 0. Godot headless self-tests — `--selftest`,
-`--selftest-goldenpath`, `--selftest-directaction`, `--selftest-corroboration`, `--selftest-tribute`
-— and the two-process restart proof (`--selftest-restart-save`/`--selftest-restart-load`) all ran
-this time (a Godot executable was found in this environment after all, at
-`Godot_v4.7.1-stable_mono_win64_console.exe` under the user profile — the original milestone's
-archive recorded none being available, which was an incomplete search rather than a genuine absence)
-and all passed, unchanged.
+required viewpoint runs exit 0; Godot headless self-tests (`--selftest`, `--selftest-goldenpath`,
+`--selftest-directaction`, `--selftest-corroboration`, `--selftest-tribute`) and the two-process
+restart proof (`--selftest-restart-save`/`--selftest-restart-load`) all pass, unchanged — a Godot
+executable was in fact found in this environment (`Godot_v4.7.1-stable_mono_win64_console.exe` under
+the user profile), so correction 1's "none was available" note reflected an incomplete search, not a
+genuine absence.
 
-Full account, including both flagged judgment calls from the original implementation and this
-correction in full: `docs/milestones/020-the-right-person-for-the-job.md`.
+Full account, including both flagged judgment calls from the original implementation and both
+corrections in full: `docs/milestones/020-the-right-person-for-the-job.md`.
 
 Milestones 001–019 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
 the corrected acceptance record of 015, 016, 018, and 019 specifically.

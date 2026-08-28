@@ -374,15 +374,32 @@ public static class Generators
 
         if (s is not null && s.DelegatedToId is null && ctx.SubordinateIds.Count > 0)
         {
-            // One candidate per subordinate, not the single highest-trust pick. With exactly one
-            // subordinate — every existing accepted variant — this loop produces exactly the one
+            // Correction 2 (Codex P1 on 436f6c7). SubordinateIds is Pipeline.SubordinatesOf's own
+            // authority scan — legitimate for identity ("who is my subordinate"), per
+            // DESIGN_DECISIONS.md's "office relationship" ruling, but NOT itself grounds to treat
+            // the man as somebody the actor could name. Acquaintance.KnownTo's own header says so
+            // directly: "a soldier holding no office is therefore not knowable this way, however
+            // senior he is." Every candidate's target must come from ctx.AcquaintedIds — the single
+            // derivation DESIGN_DECISIONS.md settled — and a delegation candidate is a candidate.
+            // Every existing accepted variant already establishes a relationship between Vincent and
+            // each of his subordinates at scenario construction (Cast.Build for Tommy,
+            // Variants.Apply for Angelo), which independently puts them in AcquaintedIds via
+            // SocialState.Others — so this filter is a no-op for every accepted trace hash, and only
+            // bites a subordinate nobody has ever actually put in front of the actor.
+            var acquainted = new HashSet<string>(ctx.AcquaintedIds, StringComparer.Ordinal);
+            var nameableSubordinates = ctx.SubordinateIds.Where(acquainted.Contains).ToList();
+
+            // One candidate per nameable subordinate, not the single highest-trust pick. With
+            // exactly one — every existing accepted variant — this loop produces exactly the one
             // candidate it always did, same id, same fields. With more than one, each is offered
             // on its own merits and scored by Utility like anything else: relationship state
             // already reads generically per TargetId, and ExecutorCoercion is attached below only
-            // because there is genuinely more than one man to compare.
-            bool comparative = ctx.SubordinateIds.Count > 1;
+            // because there is genuinely more than one nameable man to compare — comparative is
+            // computed from the filtered set, not the raw organisational count, so a boss with two
+            // subordinates on the roster but only one he could actually name gets no comparison.
+            bool comparative = nameableSubordinates.Count > 1;
 
-            foreach (string sub in ctx.SubordinateIds.OrderBy(id => id, StringComparer.Ordinal))
+            foreach (string sub in nameableSubordinates.OrderBy(id => id, StringComparer.Ordinal))
             {
                 yield return new Candidate(
                     $"delegate:{s.Kind}:{sub}",

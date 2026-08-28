@@ -127,6 +127,76 @@ public sealed class ExecutorSuitabilityTests
         Assert.DoesNotContain(prepared.Rejected, r => r.Candidate.Kind == ActionKind.DelegateStrategy);
     }
 
+    // ================================================================= acquaintance boundary (Correction 2)
+
+    /// <summary>
+    /// Codex P1 on `436f6c7`. <c>GeneratorContext.SubordinateIds</c> is <c>Pipeline.SubordinatesOf</c>'s
+    /// own authority scan — a legitimate organisational fact for identity ("who is my subordinate"),
+    /// per <c>DESIGN_DECISIONS.md</c>'s "an office relationship is only an office relationship if it
+    /// comes from an office" ruling — but not itself grounds to treat that man as somebody Vincent
+    /// could name. <c>Acquaintance.KnownTo</c>'s own header says so directly: "a soldier holding no
+    /// office is therefore not knowable this way, however senior he is." A subordinate present in
+    /// <c>SubordinateIds</c> but absent from <c>ctx.AcquaintedIds</c> — nobody has ever put him in
+    /// Vincent's head, and he holds no named office — must not be offered as a delegate.
+    ///
+    /// Staged directly against <see cref="Generators.GenerateAll"/> rather than through the full
+    /// pipeline: every scenario fixture this project ships already establishes a relationship
+    /// between Vincent and each of his real subordinates at construction (<c>Cast.Build</c> for
+    /// Tommy, <c>Variants.Apply</c> for Angelo), so there is no natural route to an
+    /// organisationally-subordinate, wholly-unacquainted stranger without hand-building the
+    /// <see cref="GeneratorContext"/> the way this test does.
+    ///
+    /// Three things are proven together, deliberately in one staged set rather than three:
+    ///
+    ///   - <b>Negative.</b> "aldo-stranger" is never offered, despite being in <c>SubordinateIds</c>.
+    ///   - <b>Positive acquaintance control.</b> Tommy, who genuinely is acquainted, is still offered
+    ///     — proving the filter is selective rather than a blanket suppression that would make the
+    ///     negative assertion vacuous (a filter that excluded everyone would also "pass" it).
+    ///   - <b>Comparative computed from the filtered set, not the raw count.</b> Raw
+    ///     <c>SubordinateIds.Count</c> here is 2 (Tommy plus the stranger), which the pre-correction
+    ///     gate would have read as a genuine two-way choice; with the stranger filtered out, only one
+    ///     nameable subordinate remains, so Tommy's own candidate carries no
+    ///     <see cref="Candidate.ExecutorCoercion"/> comparison at all — there is nothing to compare
+    ///     him against that Vincent could actually name.
+    ///
+    /// <b>Mutation check.</b> Reverting <c>FromRelationship</c>'s subordinate loop to iterate
+    /// <c>ctx.SubordinateIds</c> directly (this test's own pre-correction shape) was confirmed to make
+    /// this test fail on all three counts — the stranger appears, and Tommy's candidate wrongly
+    /// carries a two-way <c>ExecutorCoercion</c> comparison — then reverted.
+    /// </summary>
+    [Fact]
+    public void An_organisationally_subordinate_but_unacquainted_stranger_is_not_offered_as_a_delegate()
+    {
+        var world = Cast.Build(Seed, Baseline);
+        var vincent = world.Get(Vincent);
+        vincent.Execution.Strategy = new StrategyInstance
+        {
+            OwnerId = vincent.Id,
+            LocalSequence = vincent.StrategyCount++,
+            Kind = StrategyKind.SecureTribute,
+            Domain = Cast.Harbour,
+            TargetId = Cast.Grocery,
+            Method = CoercionMethod.Persuade,
+            StartedAt = world.Now,
+            Deadline = world.Now.AddDays(30),
+        };
+
+        var ctx = Context(
+            world, vincent,
+            subordinateIds: new[] { Tommy, "aldo-stranger" },
+            acquainted: new[] { Tommy });
+
+        var delegateCandidates = Generators.GenerateAll(ctx)
+            .Where(c => c.Kind == ActionKind.DelegateStrategy)
+            .ToList();
+
+        Assert.DoesNotContain(delegateCandidates, c => c.TargetId == "aldo-stranger");
+
+        var tommyCandidate = Assert.Single(delegateCandidates);
+        Assert.Equal(Tommy, tommyCandidate.TargetId);
+        Assert.Null(tommyCandidate.ExecutorCoercion);
+    }
+
     // ================================================================= scoring: capability present/absent
 
     /// <summary>
@@ -679,7 +749,8 @@ public sealed class ExecutorSuitabilityTests
         return drained;
     }
 
-    private static GeneratorContext Context(World world, Character actor, params string[] acquainted)
+    private static GeneratorContext Context(
+        World world, Character actor, IReadOnlyList<string>? subordinateIds = null, params string[] acquainted)
         => new(
             actor.View,
             Salience.Perceive(actor, world.Now),
@@ -697,7 +768,7 @@ public sealed class ExecutorSuitabilityTests
             MyAssignment: null,
             KnownPolicies: Array.Empty<Policy>(),
             SuperiorId: null,
-            SubordinateIds: Array.Empty<string>(),
+            SubordinateIds: subordinateIds ?? Array.Empty<string>(),
             OrgMemberIds: Array.Empty<string>(),
             AcquaintedIds: acquainted,
             ReportsSent: Array.Empty<Report>(),

@@ -358,6 +358,125 @@ milestone-specific test files and, more importantly, keeping any test-only param
 
 ## Commit (correction 1)
 
-One correction commit, containing this appended section. Status is not established by this file —
-`docs/CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
-thing that counts as acceptance.
+Committed as `436f6c7`. Status is not established by this file — `docs/CURRENT_MILESTONE.md` says what
+is active, and Matt's confirmation of a named commit is the only thing that counts as acceptance.
+
+## Correction 2 — a raw authority scan named a delegate candidate's target, and a new relationship dimension was missing from the replay comparators
+
+Codex reviewed `436f6c7` and returned **FAIL**: one P1, two P2s.
+
+### P1 — SubordinateIds is not itself Acquaintance
+
+**The finding.** `Generators.FromRelationship`'s delegation loop iterated `ctx.SubordinateIds`
+directly to decide who to offer as a delegate — unchanged by correction 1, which touched only what
+value each candidate carried, not which candidates were generated in the first place. `SubordinateIds`
+is `Pipeline.SubordinatesOf`'s own authority scan over `world.Characters`: a legitimate, settled route
+to knowing *who* reports to Vincent (`DESIGN_DECISIONS.md`'s "office relationship" ruling licenses
+exactly this for identity), but not itself grounds to treat that man as somebody Vincent could name.
+`Acquaintance.KnownTo`'s own header states the rule this violates directly: "a soldier holding no
+office is therefore not knowable this way, however senior he is." Every candidate's target must come
+from `ctx.AcquaintedIds` — the single derivation `DESIGN_DECISIONS.md` settled after two prior
+corrections (milestone 009's) got exactly this wrong in the same shape — and a `DelegateStrategy`
+candidate is a candidate like any other. Nine tests in `ExecutorSuitabilityTests.cs` exercised
+delegation candidates without ever varying `AcquaintedIds` independently of `SubordinateIds`, so all
+of them passed against the very gap being reported.
+
+**Why every accepted variant's hash survives this fix regardless.** Every scenario fixture this
+project ships establishes a relationship between Vincent and each of his real subordinates at
+construction — `Cast.Build` for Tommy, `Variants.Apply` for Angelo — which independently puts them in
+`AcquaintedIds` via `SocialState.Others`. `SubordinateIds ⊆ AcquaintedIds` already held for every
+accepted variant; nothing in the fixtures has ever exercised the gap the fix closes.
+
+**The correction.** `FromRelationship` now filters `ctx.SubordinateIds` through a
+`HashSet<string>` built from `ctx.AcquaintedIds` before generating any delegate candidate, and
+computes the `comparative` "genuine choice" flag from the filtered (nameable) set rather than the raw
+organisational count — a subordinate present in `SubordinateIds` but absent from `AcquaintedIds` is
+now excluded entirely, and a boss with two subordinates on the roster but only one he could actually
+name gets no executor-capability comparison at all, since there is nothing nameable to compare that
+one man against.
+
+**One new test**, `ExecutorSuitabilityTests.An_organisationally_subordinate_but_unacquainted_stranger_is_not_offered_as_a_delegate`,
+staged directly against `Generators.GenerateAll` (there is no natural route to an
+organisationally-subordinate, wholly-unacquainted stranger through any shipped scenario fixture,
+so the pipeline/`World` level cannot exercise this case — the `GeneratorContext` has to be hand-built).
+One staged set proves three things together:
+
+1. **Negative.** A hand-built "aldo-stranger", present in `SubordinateIds` but absent from
+   `AcquaintedIds`, is never offered as a delegate.
+2. **Positive acquaintance control.** Tommy, who genuinely is acquainted, is still offered in the same
+   candidate set — proving the filter is selective, not a blanket suppression that would make the
+   negative assertion vacuous (a filter that excluded everyone would also "pass" it).
+3. **Comparative computed from the filtered set, not the raw count.** Raw `SubordinateIds.Count` in
+   this staging is 2 (Tommy plus the stranger) — which the pre-correction gate would have read as a
+   genuine two-way choice — but with the stranger filtered out, only one nameable subordinate remains,
+   so Tommy's own candidate carries no `ExecutorCoercion` comparison at all.
+
+**Mutation check.** `FromRelationship`'s filtered subordinate list was temporarily reverted to
+`ctx.SubordinateIds.ToList()` (bypassing the acquaintance filter entirely, reproducing the
+pre-correction shape). The new test failed on its very first assertion — the stranger appeared in the
+delegate candidates — confirmed, then reverted; `git diff` against `Generators.cs` confirmed no
+residual change.
+
+### P2 — the replay comparators did not know AssessedCoercion existed
+
+**The finding.** `SimulationReplayTests.cs` carries two independent relationship fingerprints —
+`Snapshot` (the comprehensive comparator, reused wholesale by `ControlledAutonomousParityTests`) and
+`BehavioralSnapshot` (the narrower one used by the id-perturbation regression tests) — and neither
+printed `Relations.AssessedCoercion`, correction 1's own new relationship dimension. A defect that
+corrupted `AssessedCoercion` between two otherwise-identical runs — including a regression of exactly
+the P1 shape above, or a future one — would have passed both comparators undetected, the same
+completeness gap milestone 019's own correction cycle spent three rounds closing for a different
+field.
+
+**The correction.** Both `Snapshot` and `BehavioralSnapshot` now print
+`NullableNumber(rel.AssessedCoercion)` alongside `Trust`/`Fear`/`Obligation`, where
+`NullableNumber` renders `null` as the literal token `"none"` rather than collapsing it to the same
+text `0.0` would produce — preserving, inside the comparator itself, the same null-versus-zero
+distinction `Relations.IRelationship.AssessedCoercion`'s own contract requires of the production code
+it is checking.
+
+**One new test**, `SimulationReplayTests.The_comparators_capture_the_assessed_coercion_relationship_dimension`.
+Because "the snapshot is the comparator, so deleting a field from it makes the comparison blinder
+without making anything fail" (this file's own established exception, first stated for the Requests
+line), the field cannot be mutation-checked the usual way by reverting *production* code — there is no
+production behaviour here to revert, only the comparator's own completeness. The technique this file
+already uses for exactly that situation — assert on the comparator's actual content — is applied here
+instead: three otherwise-identical `World`s, perturbed on nothing but `Relations.AssessedCoercion`
+(a changed value; a null-versus-assessed-at-the-floor pair), must compare unequal under both
+`Snapshot` and `BehavioralSnapshot`.
+
+**Mutation check**, performed as this project's stated exception to the usual technique demands: the
+`NullableNumber(rel.AssessedCoercion)` term was removed from each comparator's relationship line in
+turn. Removing it from both at once failed the new test on its first `Snapshot` assertion; restoring
+`Snapshot`'s term alone while leaving `BehavioralSnapshot`'s removed moved the failure to the
+`BehavioralSnapshot` assertion specifically — confirming each comparator's own addition is
+independently load-bearing, not merely coincidentally passing because of the other. Both reverted;
+`dotnet build` returned to 0 warnings (the reverted state briefly produced two `CS8321` "unused local
+function" warnings for `NullableNumber`, itself a small confirming signal that the mutation had
+actually taken effect).
+
+### Verification
+
+- Build: 0 warnings, 0 errors.
+- Tests: **578 passed, 0 failed** (576 carried + 2 new: the acquaintance-boundary test in
+  `ExecutorSuitabilityTests.cs`, the comparator test in `SimulationReplayTests.cs`).
+- `--verify --seed 42 --days 90`: baseline `9AF57665067AEA11`, deterministic.
+- `--compare --seed 42`: all six configurations, six distinct traces, six distinct chosen-action
+  sequences, every hash and digest identical to every value recorded above and in correction 1 —
+  including `capable-angelo`'s own `2060465B4F31E6DD`/`CD9A30C1CD408F1D`.
+- `--verify --variant capable-angelo`, `--variant disloyal-vincent`, `--variant resentful-tommy`: all
+  deterministic, all matching their recorded hashes.
+- `--variant disloyal-vincent --viewpoint salvatore`, `--variant baseline --viewpoint vincent`, and
+  `--variant capable-angelo --viewpoint salvatore`: all exit 0.
+- Godot headless self-tests (`--selftest`, `--selftest-goldenpath`, `--selftest-directaction`,
+  `--selftest-corroboration`, `--selftest-tribute`) and the two-process restart proof
+  (`--selftest-restart-save` / `--selftest-restart-load`): all exit 0, all print their own `ok`
+  marker, all unchanged.
+
+## Commit (correction 2)
+
+Committed as `PENDING-HASH` — recorded in a small follow-up documentation commit once known, per this
+project's practice of not self-referencing a commit's own hash from inside itself (the same reason
+`docs/milestones/019-...md`'s acceptance record was written in a separate commit rather than inside
+the correction it accepts). Status is not established by this file — `docs/CURRENT_MILESTONE.md` says
+what is active, and Matt's confirmation of a named commit is the only thing that counts as acceptance.

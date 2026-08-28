@@ -229,3 +229,135 @@ selecting a coefficient that would have produced a different, perhaps more drama
 One implementation-and-archive commit. Status is not established by this file —
 `docs/CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
 thing that counts as acceptance.
+
+## Correction 1 — the executor-capability score read the objective world, not a held assessment
+
+Codex reviewed the implementation commit (`f468e19`) and returned **FAIL**: one P1, no P2s.
+
+**The finding.** `Pipeline.Prepare` built `GeneratorContext.SubordinateCoercion` by reading
+`world.Get(id).Capabilities[Skill.Coercion]` for every subordinate, straight off `World`, and
+`Generators.FromRelationship` copied that value onto each `DelegateStrategy` candidate's
+`ExecutorCoercion` for `Utility` to score. That is an omniscient read: `Decision/Utility.cs`'s own
+file header states the rule every other score component obeys — `Score` "receives a
+`PerceivedSituation` and never a `World`", so a character cannot score an option using a fact he does
+not hold. `Pipeline.SubordinatesOf` reading `world.Characters` to learn *who* reports to Vincent is a
+settled, legitimate exception — `DESIGN_DECISIONS.md`'s "an office relationship is only an office
+relationship if it comes from an office" ruling licenses exactly that authority scan for identity —
+but *how good* a named subordinate is at his job is a fact about that person, not the org chart, and
+nothing in that ruling or anywhere else extends the exception to a skill value. The nine tests this
+milestone added exercised the mechanism but never varied the objective figure independently of what
+scoring used, so all nine passed against the very violation being reported: they pinned the
+omniscient read rather than disproving it.
+
+**The correction.** Smallest change that separates the two questions Codex's finding distinguishes —
+*who* Vincent's subordinates are (still an authority scan, untouched) from *how good* one is at the
+job (now a held belief, not a `World` read) — without building any wider personnel-management system:
+
+- `Domain/Relations.cs`: a new `double? AssessedCoercion` dimension on `IRelationship`, alongside
+  `Trust`, `Obligation` and `Fear` — what the character holds toward another believes about that
+  person's Coercion, set only from scenario construction (nothing yet lets a character revise it from
+  observation, and this correction does not add such a mechanism). Null means no assessment formed,
+  which must not be confused with an assessment of zero. `Relations.Establish` gained an optional
+  `assessedCoercion` parameter; a new `Relations.SetAssessedCoercion` mutator changes only this
+  dimension, for tests that need to vary it independently of trust/obligation/fear.
+- `Scenario/Cast.cs` and `Scenario/Variants.cs`: Vincent's assessment of Tommy (0.55) and Angelo
+  (0.80) is set to match each subordinate's own actual `Capabilities[Skill.Coercion]` exactly — the
+  same figures the pre-correction code read directly — so every accepted trace hash and the natural
+  run's own preference are unmoved. This is a deliberate reproduction of the old numbers as a belief
+  Vincent happens to hold accurately, not a claim that beliefs and reality must match in general.
+- `Decision/Generators.cs`: `FromRelationship` now reads `ctx.Actor.Social.Toward(sub).AssessedCoercion`
+  — the actor's own relationship record, the exact non-creating channel `Utility.Loyalty` already
+  reads for trust/obligation/fear — instead of a dictionary sourced from `World`. The "genuine choice"
+  gating (only attached when there are two or more subordinates) is unchanged.
+- `Decision/Pipeline.cs`: the `subordinateCoercion` dictionary and the `world.Get(id).Capabilities[...]`
+  read that built it are gone. `GeneratorContext.SubordinateCoercion` is gone from the record entirely
+  — nine test files that constructed a `GeneratorContext` directly needed the now-removed parameter
+  dropped from their call sites, a mechanical follow-on rather than a second defect.
+- `Decision/Candidate.cs` and `Decision/Utility.cs`: doc-comment corrections only. `Utility`'s scoring
+  logic for the "executor capability" component is byte-for-byte unchanged — it already read
+  `cand.ExecutorCoercion`, which now carries an assessment instead of a `World` reading, and needed no
+  code change to do the right thing once its input was fixed at the source.
+- `Strategy/Strategies.cs`: **untouched.** `ResolveViolence` still reads the executor's actual,
+  objective `Capabilities[Skill.Coercion]` — Codex's finding and the correction's own scope both treat
+  *committed force resolution* as correctly reading `World` (it is not scoring an option, it is
+  computing what actually happened), so nothing here needed to change, and nothing did.
+
+**Three new tests**, `ExecutorSuitabilityTests.cs` (9 → 12), covering three of Codex's five list
+items; the fourth (requirement 3) was satisfied by the existing, unmodified staged force-resolution
+test, and the fifth (requirement 5) was run as a temporary mutation rather than a permanent test —
+both explained where they fall below:
+
+1. `Changing_only_angelos_hidden_actual_capability_leaves_scoring_unchanged` — two worlds sharing the
+   same Vincent-held assessment (0.80) but different actual `Capabilities[Skill.Coercion]` (0.80 vs.
+   0.15) produce identical `Available` candidate ids, an identical `ExecutorCoercion`/`Total` for
+   Angelo's delegate candidate, and an identical top preference.
+2. `Changing_only_vincents_assessment_of_angelo_changes_score_and_can_flip_preference` — two worlds
+   sharing Angelo's actual Coercion (0.80) but different assessments (0.80 vs. 0.15) move the
+   "executor capability" component and flip which of the two delegate candidates specifically outscores
+   the other (Angelo beats Tommy when trusted as capable; Tommy beats Angelo when Angelo is doubted).
+   Deliberately scoped to the delegate-versus-delegate comparison rather than `Scored[0]` overall: at
+   the very first fork "carry on what he just started" outscores either delegate regardless — the
+   archive's own 6.52-vs-6.38 Angelo/Tommy comparison above was measured at a later decision in the
+   full run, after the first attempt had already failed once, discovered only while writing this test.
+3. Requirement 3 ("objective executor capability still changes committed force consequences") needed
+   no new test: the original `Force_resolution_is_attributed_to_and_scaled_by_the_actual_executor`
+   theory already stages `ResolveViolence` directly from each executor's real `Capabilities`, entirely
+   outside the scoring path this correction changed, and still passes unmodified.
+4. `A_missing_assessment_is_neither_the_objective_capability_nor_zero` — a world where Vincent has
+   formed no assessment of Angelo (`assessedCoercion: null`) produces `Candidate.ExecutorCoercion ==
+   null` and no "executor capability" component at all for Angelo specifically, while Tommy's own
+   (present) assessment still scores normally — proving the missing case is neither a fallback to the
+   objective figure nor a silent floor of zero, and that it does not disable the comparative branch
+   entirely.
+5. Requirement 5 ("reintroducing the direct read fails the intended test") was run as a temporary
+   mutation rather than a permanent test, matching this project's established practice: `Pipeline.Prepare`
+   was edited to force each of Vincent's subordinates' `AssessedCoercion` to their actual objective
+   Capabilities value on every deliberation (scoped to `actor.Id == "vincent"` specifically — an
+   unscoped version also disturbed `PlayerSessionTests.An_authority_adjacent_stranger_holding_no_office_is_not_a_target`,
+   an unrelated acquaintance-boundary fixture, because the mutator used to force the value,
+   `Relations.SetAssessedCoercion`, creates a stored relationship as a side effect the same way
+   `Establish` does — exactly the kind of side effect the real corrected code avoids by using a
+   non-creating `Social.Toward` read instead). Full suite under the mutation: **3 failed, 573
+   passed** — precisely tests 1, 2 and 4 above, each failing for the stated reason (test 1: Angelo's
+   total moved with the hidden capability; test 2: `ExecutorCoercion` read back as the objective 0.80
+   instead of the assessed 0.15; test 4: `ExecutorCoercion` was no longer null). Reverted; `git diff
+   --stat` confirmed no residual change to `Pipeline.cs` afterward.
+
+**A `BuildAngeloWorld` test helper**, local to `ExecutorSuitabilityTests.cs`, parameterises Angelo's
+actual and assessed Coercion independently — the two figures the pre-correction code forced equal.
+It duplicates `Variants.Apply`'s `capable-angelo` construction rather than adding a test-only knob to
+production scenario code, matching this file's own established practice of not sharing helpers across
+milestone-specific test files and, more importantly, keeping any test-only parameterisation out of
+`Scenario/Variants.cs` entirely.
+
+**Verification.**
+
+- Build: 0 warnings, 0 errors.
+- Tests: **576 passed, 0 failed** (573 carried + 3 new, all three in `ExecutorSuitabilityTests.cs`,
+  which moves from 9 tests to 12; two of Codex's five requirements were satisfied by an existing test
+  and a temporary mutation rather than new permanent tests, so three new tests cover the remaining
+  three. The other eight test files that construct a `GeneratorContext` directly needed only their
+  now-removed `SubordinateCoercion` constructor argument dropped, no behavioural change).
+- `--verify --seed 42 --days 90`: baseline `9AF57665067AEA11`, deterministic.
+- `--compare --seed 42`: all six configurations, six distinct traces, six distinct chosen-action
+  sequences, every hash and digest identical to the pre-correction values recorded above — including
+  `capable-angelo`'s own `2060465B4F31E6DD`/`CD9A30C1CD408F1D`.
+- `--verify --variant capable-angelo`, `--variant disloyal-vincent`, `--variant resentful-tommy`: all
+  deterministic, all matching their recorded hashes.
+- `--variant disloyal-vincent --viewpoint salvatore`, `--variant baseline --viewpoint vincent`, and
+  `--variant capable-angelo --viewpoint salvatore`: all exit 0.
+- Godot headless self-tests (`--selftest`, `--selftest-goldenpath`, `--selftest-directaction`,
+  `--selftest-corroboration`, `--selftest-tribute`) and the two-process restart proof
+  (`--selftest-restart-save` / `--selftest-restart-load`, genuinely separate processes sharing the
+  restart self-test's own isolated save slot): all exit 0, all print their own `ok` marker, all
+  unchanged from before this correction. **A Godot executable was in fact available in this
+  environment** (`Godot_v4.7.1-stable_mono_win64_console.exe`, under the user profile) — the original
+  implementation's "no Godot executable was available" note above reflected an incomplete search at
+  the time, not a genuine absence, and is left standing rather than edited, per this project's
+  append-only rule for archived milestone text.
+
+## Commit (correction 1)
+
+One correction commit, containing this appended section. Status is not established by this file —
+`docs/CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
+thing that counts as acceptance.

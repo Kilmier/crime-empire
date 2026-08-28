@@ -708,7 +708,6 @@ public sealed class ScenarioReachTests
             Pipeline.SubordinatesOf(world, actor),
             Pipeline.OrgMembersOf(world, actor),
             Acquaintance.KnownTo(world, actor),
-            new Dictionary<string, double>(),
             sent,
             Array.Empty<InformationRequest>(),
             new[] { Cast.Grocery });

@@ -49,13 +49,6 @@ public sealed record GeneratorContext(
     // impossible, or unavailable candidates" — and a target is exactly the kind of thing that can be
     // unknown.
     IReadOnlyList<string> AcquaintedIds,
-    // Each subordinate's own Coercion skill, read directly the same way SubordinateIds itself is
-    // (an authority-scoped fact about the organisation, not a belief) — never through Perceived,
-    // and never through Acquaintance.KnownTo, matching the existing precedent that a boss already
-    // institutionally knows who reports to him. Used only to let FromRelationship attach a
-    // comparison to a DelegateStrategy candidate when there is genuinely more than one subordinate
-    // to compare; see Candidate.ExecutorCoercion.
-    IReadOnlyDictionary<string, double> SubordinateCoercion,
     // Reports this character has already sent. Needed so that "report in" stops being a live
     // option once he has said everything he has — otherwise a standing responsibility wakes him
     // on a timer and he volunteers the same account indefinitely.
@@ -402,7 +395,18 @@ public static class Generators
                     Method = s.Kind == StrategyKind.SecureTribute ? s.Method : null,
                     Domain = s.Domain,
                     RequiredCrew = 1,
-                    ExecutorCoercion = comparative ? ctx.SubordinateCoercion.GetValueOrDefault(sub) : null,
+                    // ctx.Actor's OWN held belief about this man's Coercion — Social.Toward(sub) is
+                    // the actor's own relationship record, exactly what Utility.Loyalty already
+                    // reads for trust/obligation/fear, never World. Milestone 020 originally read
+                    // world.Get(sub).Capabilities[Skill.Coercion] here, which is not something the
+                    // actor holds — it is the objective fact, reachable only because a generator can
+                    // see World and nothing stopped it from doing so. Codex found the violation: an
+                    // authority scan can tell a boss WHO reports to him without also telling him HOW
+                    // GOOD that man is at the job. Null when there is no genuine comparison to make,
+                    // and separately null whenever the actor has formed no assessment at all — see
+                    // IRelationship.AssessedCoercion for why neither case may fall back to the
+                    // objective capability or read as zero.
+                    ExecutorCoercion = comparative ? ctx.Actor.Social.Toward(sub).AssessedCoercion : null,
                 };
             }
         }

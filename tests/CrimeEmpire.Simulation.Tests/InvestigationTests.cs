@@ -647,7 +647,6 @@ public sealed class InvestigationTests
             SubordinateIds: Array.Empty<string>(),
             OrgMemberIds: Array.Empty<string>(),
             AcquaintedIds: acquainted,
-            SubordinateCoercion: new Dictionary<string, double>(),
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: requestsMade,
             VisibleTargets: Array.Empty<string>());

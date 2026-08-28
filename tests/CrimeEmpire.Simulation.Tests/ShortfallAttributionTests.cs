@@ -374,7 +374,6 @@ public sealed class ShortfallAttributionTests
             SubordinateIds: Array.Empty<string>(),
             OrgMemberIds: Array.Empty<string>(),
             AcquaintedIds: Array.Empty<string>(),
-            SubordinateCoercion: new Dictionary<string, double>(),
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
             VisibleTargets: world.BusinessesIn(Cast.Harbour).Select(b => b.Id).ToList());

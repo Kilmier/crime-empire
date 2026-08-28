@@ -568,7 +568,6 @@ public sealed class ExposureAndDenialTests
             SubordinateIds: Array.Empty<string>(),
             OrgMemberIds: Array.Empty<string>(),
             AcquaintedIds: Array.Empty<string>(),
-            SubordinateCoercion: new Dictionary<string, double>(),
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
             VisibleTargets: Array.Empty<string>());

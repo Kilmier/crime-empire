@@ -31,6 +31,27 @@ namespace CrimeEmpire.Simulation.Tests;
 ///      own Coercion (0.55) — the only value that call has ever been exercised against in an
 ///      accepted run — so no existing trace hash moves.
 ///
+/// <b>Correction (Codex P1, `f468e19`'s review).</b> <c>ExecutorCoercion</c> originally came from
+/// <c>GeneratorContext.SubordinateCoercion</c>, a dictionary <c>Pipeline.Prepare</c> built by
+/// reading <c>world.Get(id).Capabilities[Skill.Coercion]</c> straight off <see cref="Sim.World"/> —
+/// the objective figure, not anything Vincent holds. Codex found that violates the same rule every
+/// other score component in <c>Decision/Utility.cs</c> obeys (its own file header: "Note the
+/// signature of <c>Score</c>: it receives a <c>PerceivedSituation</c> and never a <c>World</c>"):
+/// <c>Pipeline.SubordinatesOf</c> reading the roster to learn *who* reports to Vincent is a
+/// legitimate authority scan (`DESIGN_DECISIONS.md`'s "office relationship" ruling), but *how good*
+/// that man is at the job is a fact about him, not the org chart, and nothing licensed reading it
+/// past the belief limit every other relationship dimension already respects. The fix: a new
+/// <see cref="Domain.Relations.AssessedCoercion"/> dimension on <see cref="Domain.IRelationship"/>,
+/// alongside <c>Trust</c>/<c>Obligation</c>/<c>Fear</c> — Vincent's own held belief about each
+/// subordinate's Coercion, set at scenario construction to match the pre-correction figures exactly
+/// (Tommy 0.55 in <c>Cast.Build</c>, Angelo 0.80 in <c>Variants.Apply</c>) so every accepted trace
+/// hash and the natural run's own preference are unmoved. <c>Generators.FromRelationship</c> now
+/// reads <c>ctx.Actor.Social.Toward(sub).AssessedCoercion</c> — the actor's own relationship record,
+/// exactly the channel <see cref="Utility.Loyalty"/> already reads — and <c>Pipeline.Prepare</c> no
+/// longer touches <c>Capabilities</c> for anyone but the actor himself. Four new tests below prove
+/// the assessment, not the objective figure, is what scoring reads, in both directions, and that a
+/// missing assessment neither falls back to <c>World</c> nor silently scores as zero.
+///
 /// <b>What is deliberately not re-proven here.</b> Controlling every character (including Angelo)
 /// with every pause auto-resolved, reproducing the fully autonomous history, and viewpoint identity
 /// never changing simulation history are already covered — for `capable-angelo` specifically, not
@@ -155,6 +176,130 @@ public sealed class ExecutorSuitabilityTests
         var tommyScored = prepared.Scored.Single(s => s.Candidate.Kind == ActionKind.DelegateStrategy);
         Assert.Null(tommyScored.Candidate.ExecutorCoercion);
         Assert.DoesNotContain(tommyScored.Components, c => c.Name == "executor capability");
+    }
+
+    // ================================================================= assessment vs. objective capability
+    //
+    // Codex's correction to `f468e19`. The four tests below independently vary Angelo's *actual*
+    // Capabilities[Skill.Coercion] and Vincent's *assessed* Coercion of him — two numbers that used
+    // to be forced equal because scoring read the first one directly. `BuildAngeloWorld` below
+    // constructs each combination directly, mirroring `Variants.Apply`'s "capable-angelo" case but
+    // parameterised on both figures, exactly the kind of test-local duplication this project already
+    // practises rather than adding a scenario-construction knob that exists only for tests.
+
+    /// <summary>
+    /// Moving Angelo's hidden, objective Coercion — the figure only <see cref="Strategies.ResolveViolence"/>
+    /// may read — changes nothing about what Vincent's fork offers, scores or prefers, because
+    /// scoring never reaches it. Same assessed value (0.80) in both worlds; only the actual
+    /// <see cref="Capabilities"/> differs (0.80 vs. 0.15).
+    /// </summary>
+    [Fact]
+    public void Changing_only_angelos_hidden_actual_capability_leaves_scoring_unchanged()
+    {
+        var reference = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: 0.80);
+        var hiddenChange = BuildAngeloWorld(actualCoercion: 0.15, assessedCoercion: 0.80);
+
+        var refPrepared = AdvanceToVincentsFork(reference);
+        var changedPrepared = AdvanceToVincentsFork(hiddenChange);
+
+        // Same candidates offered.
+        Assert.Equal(
+            refPrepared.Available.Select(c => c.Id).OrderBy(id => id, StringComparer.Ordinal),
+            changedPrepared.Available.Select(c => c.Id).OrderBy(id => id, StringComparer.Ordinal));
+
+        var refAngelo = refPrepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
+        var changedAngelo = changedPrepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
+
+        // Same ExecutorCoercion, same total score, same rank — none of it moved with the hidden
+        // actual capability, because nothing in the scoring path ever read it.
+        Assert.Equal(refAngelo.Candidate.ExecutorCoercion, changedAngelo.Candidate.ExecutorCoercion);
+        Assert.Equal(refAngelo.Total, changedAngelo.Total, precision: 9);
+        Assert.Equal(
+            refPrepared.Scored[0].Candidate.Id,
+            changedPrepared.Scored[0].Candidate.Id);
+
+        // The hidden change is real, not a no-op fixture bug: the two worlds' Angelos genuinely
+        // differ where ResolveViolence looks.
+        Assert.Equal(0.80, reference.Get(Angelo).Capabilities[Skill.Coercion]);
+        Assert.Equal(0.15, hiddenChange.Get(Angelo).Capabilities[Skill.Coercion]);
+    }
+
+    /// <summary>
+    /// Moving only Vincent's own assessment of Angelo — leaving Angelo's actual Coercion fixed at
+    /// 0.80 in both worlds — changes the "executor capability" component's value and flips which of
+    /// the two delegate candidates Vincent prefers <em>between the two of them</em>. This is the
+    /// positive half of the same claim: the assessment is a real scoring input, not a field nobody
+    /// reads.
+    ///
+    /// Scoped to the delegate-versus-delegate comparison rather than <c>Scored[0]</c> overall:
+    /// at this fork — Vincent's very first pause after starting the strategy himself — "carry on
+    /// what he just started" outscores either delegate candidate regardless of Angelo's assessment
+    /// (continuing costs nothing socially yet, per <c>Utility</c>'s "commitment value"; the archive's
+    /// own 6.52-vs-6.38 comparison was drawn from a later decision in the full run, after the direct
+    /// attempt had already failed once). That does not change what this test needs to show: whether
+    /// the assessment is what decides Angelo-versus-Tommy specifically.
+    /// </summary>
+    [Fact]
+    public void Changing_only_vincents_assessment_of_angelo_changes_score_and_can_flip_preference()
+    {
+        var trusting = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: 0.80);
+        var doubting = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: 0.15);
+
+        var trustingPrepared = AdvanceToVincentsFork(trusting);
+        var doubtingPrepared = AdvanceToVincentsFork(doubting);
+
+        var trustingAngelo = trustingPrepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
+        var trustingTommy = trustingPrepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Tommy);
+        var doubtingAngelo = doubtingPrepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
+        var doubtingTommy = doubtingPrepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Tommy);
+
+        Assert.Equal(0.80, trustingAngelo.Candidate.ExecutorCoercion);
+        Assert.Equal(0.15, doubtingAngelo.Candidate.ExecutorCoercion);
+
+        var trustingComponent = trustingAngelo.Components.Single(c => c.Name == "executor capability");
+        var doubtingComponent = doubtingAngelo.Components.Single(c => c.Name == "executor capability");
+        Assert.True(trustingComponent.Value > doubtingComponent.Value);
+
+        // Tommy's own score is untouched by Angelo's assessment moving (each candidate scores
+        // independently), so the whole swing lands on Angelo's total — enough, at seed 42, to flip
+        // which of the two men Vincent would rather send once Angelo's Coercion is in doubt.
+        Assert.Equal(trustingTommy.Total, doubtingTommy.Total, precision: 9);
+        Assert.True(trustingAngelo.Total > trustingTommy.Total,
+            "expected Angelo, assessed as capable, to outscore Tommy between the two delegate options");
+        Assert.True(doubtingAngelo.Total < doubtingTommy.Total,
+            "expected Angelo, assessed as unskilled, to score below Tommy between the two delegate options");
+    }
+
+    /// <summary>
+    /// A subordinate Vincent has never formed a Coercion assessment of gets no "executor capability"
+    /// term at all — <see cref="Candidate.ExecutorCoercion"/> is null, never the executor's real
+    /// 0.80 (a fallback to <c>World</c>) and never 0.0 (a silent floor). Angelo's actual Coercion is
+    /// deliberately far from both candidate fallback values (0.80 and 0.0) so either regression
+    /// would be caught by the first assertion alone; the remaining assertions close the rest.
+    /// </summary>
+    [Fact]
+    public void A_missing_assessment_is_neither_the_objective_capability_nor_zero()
+    {
+        var world = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: null);
+        var prepared = AdvanceToVincentsFork(world);
+
+        var angeloScored = prepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
+        Assert.Null(angeloScored.Candidate.ExecutorCoercion);
+        Assert.DoesNotContain(angeloScored.Components, c => c.Name == "executor capability");
+
+        // Tommy's own assessment is untouched by Angelo's missing one — his component is still
+        // present, so this is a targeted absence, not the comparative branch failing to fire at all.
+        var tommyScored = prepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Tommy);
+        Assert.NotNull(tommyScored.Candidate.ExecutorCoercion);
+        Assert.Contains(tommyScored.Components, c => c.Name == "executor capability");
     }
 
     // ================================================================= staged: attribution + capability-scaled resolution
@@ -413,6 +558,58 @@ public sealed class ExecutorSuitabilityTests
         throw new InvalidOperationException("guard exceeded before Vincent ever paused");
     }
 
+    /// <summary>
+    /// A world with Tommy and Angelo both present, letting Angelo's actual Coercion and Vincent's
+    /// assessment of it be varied independently — the two figures the pre-correction code forced
+    /// equal by reading one off the other.
+    ///
+    /// Deliberately test-local rather than a knob added to <c>Variants.Apply</c>: everything else
+    /// about Angelo is copied verbatim from the real <c>capable-angelo</c> case (psychology, crew,
+    /// districts, his own outgoing relationships), and calling this with <c>(0.80, 0.80)</c> — the
+    /// production variant's own figures — reproduces that variant's fork exactly, which is what
+    /// grounds the "reference" side of each comparison below in the real accepted behaviour rather
+    /// than an invented one.
+    /// </summary>
+    private static World BuildAngeloWorld(double actualCoercion, double? assessedCoercion)
+    {
+        var world = Cast.Build(Seed, Baseline);
+        var vincent = world.Get(Vincent);
+
+        var angelo = new Character
+        {
+            Id = Angelo,
+            Name = "Angelo Conti",
+            RoleTitle = "soldier",
+            Pronouns = Pronouns.He,
+            Capabilities = new Capabilities(
+                new Dictionary<Skill, double>
+                {
+                    [Skill.Coercion] = actualCoercion, [Skill.Persuasion] = 0.20,
+                    [Skill.Discretion] = 0.25, [Skill.Investigation] = 0.10,
+                },
+                crew: 1, cash: 700, authority: 1, districts: new[] { Cast.Harbour }),
+            Psychology = new Psychology(
+                new Dictionary<Trait, double>
+                {
+                    [Trait.Aggressive] = 0.45, [Trait.Cautious] = 0.55,
+                    [Trait.Proud] = 0.30, [Trait.Suspicious] = 0.30,
+                },
+                new Dictionary<Drive, double>
+                {
+                    [Drive.Belonging] = 0.70, [Drive.Security] = 0.55,
+                    [Drive.Wealth] = 0.45, [Drive.Status] = 0.35,
+                }),
+        };
+        world.Characters[angelo.Id] = angelo;
+        angelo.Social.OrganizationId = Cast.OrgId;
+
+        Relations.Establish(vincent, "angelo", trust: 0.35, obligation: 0.10, assessedCoercion: assessedCoercion);
+        Relations.Establish(angelo, "vincent", trust: 0.65, obligation: 0.55);
+        Relations.Establish(angelo, "salvatore", trust: 0.25, obligation: 0.30);
+
+        return world;
+    }
+
     // ================================================================= helpers — staged (Section B idiom)
 
     /// <summary>Independently copied from <c>DirectActionVsDelegationTests</c>, per this project's
@@ -503,7 +700,6 @@ public sealed class ExecutorSuitabilityTests
             SubordinateIds: Array.Empty<string>(),
             OrgMemberIds: Array.Empty<string>(),
             AcquaintedIds: acquainted,
-            SubordinateCoercion: new Dictionary<string, double>(),
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
             VisibleTargets: Array.Empty<string>());

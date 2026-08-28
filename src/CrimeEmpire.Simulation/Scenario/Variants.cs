@@ -163,7 +163,11 @@ public static class Variants
                 // degenerate edge case. Salvatore's relationship toward Angelo is left
                 // unestablished — reads as zero, the same as Salvatore's toward Tommy, which is
                 // likewise never set from that side.
-                Relations.Establish(vincent, "angelo", trust: 0.35, obligation: 0.10);
+                // assessedCoercion matches Angelo's own Capabilities[Skill.Coercion] (0.80) exactly,
+                // for the same reason Cast.Build's Tommy assessment matches his — reproducing the
+                // pre-correction figure as Vincent's own held belief rather than a second read of
+                // World is what keeps this variant's natural-run outcome and trace hash unmoved.
+                Relations.Establish(vincent, "angelo", trust: 0.35, obligation: 0.10, assessedCoercion: 0.80);
                 Relations.Establish(angelo, "vincent", trust: 0.65, obligation: 0.55);
                 Relations.Establish(angelo, "salvatore", trust: 0.25, obligation: 0.30);
                 break;

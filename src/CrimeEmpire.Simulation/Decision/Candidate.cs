@@ -103,9 +103,17 @@ public sealed record Candidate(
     public int RequiredAuthority { get; init; }
 
     /// <summary>
-    /// A <see cref="ActionKind.DelegateStrategy"/> candidate's own executor's Coercion skill —
-    /// set only when there is a genuine choice among two or more subordinates, and left null
-    /// otherwise.
+    /// What the <em>delegator</em> believes about this <see cref="ActionKind.DelegateStrategy"/>
+    /// candidate's own executor's Coercion — set only when there is a genuine choice among two or
+    /// more subordinates, and left null otherwise.
+    ///
+    /// <b>An assessment, not a reading.</b> This is <c>Generators.FromRelationship</c> copying the
+    /// delegator's own <c>Social.Toward(executorId).AssessedCoercion</c> onto the candidate — never
+    /// the executor's actual <c>Capabilities[Skill.Coercion]</c>, which the delegator has no
+    /// standing to consult while scoring an option. Milestone 020's original version did read the
+    /// objective figure straight off <c>World</c>; Codex found that violates the same rule every
+    /// other score component in <c>Decision/Utility.cs</c> obeys, and the correction is what this
+    /// field now carries instead. See <c>Domain.Relations.AssessedCoercion</c>.
     ///
     /// Null, not merely unread, when there is exactly one subordinate: "how does this man's
     /// capability compare to the field" is meaningless with a field of one, and leaving it null
@@ -113,6 +121,9 @@ public sealed record Candidate(
     /// <see cref="Utility"/> skip the comparison entirely rather than score a comparison that
     /// never happened. That is also what keeps every existing accepted variant's score, trace and
     /// hash untouched by this field's existence — none of them ever has more than one subordinate.
+    /// Also null whenever the delegator has formed no assessment at all, which must not be
+    /// confused with the first case: a real comparison with a genuine gap in what he knows about
+    /// one of the two men is not the same as there being nothing to compare.
     /// </summary>
     public double? ExecutorCoercion { get; init; }
 

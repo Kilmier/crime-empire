@@ -379,6 +379,39 @@ correction after it. If Codex becomes available again, `34cd117` is the oldest u
 this milestone and takes its turn first, ahead of anything built on top of it — and a rejection there
 is an ordinary outcome that everything later inherits.
 
+**Post-acceptance correction 3, 2026-09-04 — and it is the third-layer defect the caution above said
+was not ruled out.** Found the same day, by scoping milestone 021 rather than by a review: the
+"executor capability" component was tagged `RelationshipFacet.None` throughout, which was true of the
+original `World`-reading implementation and was silently invalidated by correction 1, whose whole
+purpose was to make that component read the actor's own relationship state instead. Genuine
+relationship state reporting that it reads none — milestone 008's "a label is not a derivation",
+arriving from the opposite direction. The developer relationship channel was therefore blind to it,
+and `TotalWithoutRelationships()` kept a term that a man with no relationships could not have,
+**reversing which candidate that counterfactual named** on the `capable-angelo` delegation fork;
+`--compare`'s "rel. chose" for that variant was computed from the mis-ranked comparison and moves from
+**1** to **2**. Three tests had pinned the wrong facet rather than catching it, the same pattern as the
+two Codex P1s. Full account: the milestone archive's "Correction 3".
+
+The correction is diagnostic-only — `ScoreComponent.Value`, every `Total`, and every chosen action are
+untouched, verified rather than asserted:
+
+- All five pre-existing variants: **trace hash and chosen-action digest both unmoved**, again.
+- `capable-angelo` chosen actions `CD9A30C1CD408F1D`: **unmoved** — identical choices.
+- **`capable-angelo` trace hash moves, and this row is where that is recorded:
+  `2060465B4F31E6DD` → `35BB0B8BE4219C6A`.** The rendered relationship channel is inside the hashed
+  text, so the one variant that has a capability component is the one variant whose trace moves. The
+  superseded figure stays written above rather than being edited out; it was correct for the state it
+  described.
+- Tests **579** (578 + 1); build 0/0; both mutation checks (facet reverted; `withoutRelationship`
+  dropped) confirmed independently load-bearing; all Godot self-tests and the two-process restart
+  proof exit 0.
+
+**This does not re-open milestone 020 or change what was accepted at `c25129a`** — it corrects the
+accepted state, in the ordinary way a defect found after acceptance is corrected, and it is
+unreviewed for the same reason everything since `34cd117` is. It does sharpen the caution above: two
+Codex rounds found a P1 each, and the first thing that looked hard at the result afterwards found a
+third. Nothing here should be read as the sequence having converged.
+
 ### Measured — milestone 019, controlled/autonomous actor parity is pinned, corrected three times, accepted
 
 **Verification-only from the start.** Authorized to resolve a controlled-versus-autonomous decision

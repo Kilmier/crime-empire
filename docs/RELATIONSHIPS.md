@@ -24,6 +24,24 @@ Four things, and they are all there is: **Trust**, **Fear**, **Obligation**, and
 **Grievances**. Directional in every case — `A → B` is a separate object from `B → A` and they move
 independently.
 
+> **Provisional fifth, added 2026-08-27 by milestone 020 and scheduled for removal.**
+> `AssessedCoercion` — what this character believes about the other's Coercion — is stored on
+> `IRelationship` and read by delegation scoring's "executor capability" component. It was added
+> without a ruling reopening the closure above, and this document did not record it until the
+> correction that added this note.
+>
+> **It does not satisfy the rule that admits a dimension, and the reason is instructive.** Trust,
+> Fear and Obligation have no truth value: there is no fact of the matter about how much Vincent
+> trusts Tommy beyond Vincent's own state. `AssessedCoercion` has a referent — Tommy's actual
+> `Capabilities[Skill.Coercion]` — so it can be *wrong*, which makes it a belief about the world
+> rather than an attitude toward a person, and beliefs about the world live in `Cognition` with
+> provenance and confidence. **Matt ruled on 2026-09-04 that it moves there**; milestone 021 is that
+> move, after which this note and the field go together. Until then it is documented here rather
+> than left undocumented, and the vocabulary above is four plus one acknowledged temporary.
+>
+> Its only writers are `Relations.Establish` and `Relations.SetAssessedCoercion`, both scenario
+> construction — nothing revises it at runtime, which is the other half of what milestone 021 is for.
+
 `Domain/Relations.cs` is the only code that can create or change any of it. This is enforced by the
 concrete type being a `private sealed class` nested inside `Relations`, so outside that class the
 type cannot be named, constructed, or cast to; everyone else holds a read-only `IRelationship`.

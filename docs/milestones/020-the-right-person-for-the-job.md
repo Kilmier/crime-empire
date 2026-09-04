@@ -480,3 +480,81 @@ state its own hash from inside itself, the same reason `docs/milestones/019-...m
 was written in a separate commit rather than inside the correction it accepts. Status is not
 established by this file — `docs/CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of
 a named commit is the only thing that counts as acceptance.
+
+## Correction 3 — the capability component read relationship state and reported that it read none
+
+**Found after acceptance, while scoping milestone 021**, not by a review. Milestone 020 was accepted
+and closed at `c25129a` on 2026-09-04; this correction lands on the accepted state and is recorded
+here rather than folded into the account above.
+
+**The defect.** `Utility`'s "executor capability" component was tagged `RelationshipFacet.None` from
+the day it was written, on the stated reasoning that it "reads no relationship state whatsoever."
+That was true of the original implementation — which read the executor's objective
+`Capabilities[Skill.Coercion]` off `World`, and was the P1 Codex rejected. **Correction 1 fixed the
+omniscient read by sourcing the figure from `actor.Social.Toward(sub).AssessedCoercion` — relationship
+state, stored on `IRelationship`, changed only by `Relations` — and did not revisit the facet.** The
+justification for the tag was silently invalidated by the fix that was supposed to improve it.
+
+This is the exact defect `RelationshipFacet` exists to prevent, arriving from the opposite direction.
+Milestone 008 found 61 of 168 components (36%) carrying the name "relationship effects" while reading
+no relationship state, and concluded *a label is not a derivation*. This is genuine relationship state
+declaring that it reads none.
+
+**Consequences, measured rather than argued.** `ScoreBreakdown.RelationshipComponents()` filters on
+`Reads != None`, so every developer diagnostic built on it was blind to the newest reader of
+relationship state:
+
+- The rendered relationship channel omitted the term entirely. On the `capable-angelo` delegation
+  fork it listed Trust `+0.1418`, Obligation `+0.0270` and Belonging `+0.0788` for Angelo, and no
+  capability line, against an actual `+0.30`.
+- `TotalWithoutRelationships()` — documented as "this candidate's score for a man holding no
+  relationship with anybody" — retained the whole term. A man with no relationship reads
+  `Relations.Absent`, whose `AssessedCoercion` is `null`, and scores no such component, so the
+  reported figure was wrong by `+0.30` on Angelo and `+0.05` on Tommy.
+- **And it was not merely off by a constant: it named the wrong winner.** Corrected, Angelo's
+  counterfactual falls from `6.3368` to `6.0368` and Tommy's from `6.0946` to `6.0446`, reversing the
+  order. `Program.cs` ranks by exactly this figure to produce `--compare`'s "rel. chose: N decision(s)
+  would have chosen differently without it", so that statistic was computed from a mis-ranked
+  comparison — `capable-angelo` reported **1** and now correctly reports **2**.
+
+**Three tests pinned it rather than catching it**, which is the third instance of that pattern in this
+milestone and the reason it is worth naming: `Both_delegation_candidates_carry_their_own_executors_coercion_and_score_differently_for_it`
+asserted `RelationshipFacet.None` on both candidates, freezing the defect in place, exactly as the
+milestone's original nine tests pinned the omniscient read and its correction-1 tests left the raw
+authority scan unexamined.
+
+**The correction.** A `RelationshipFacet.Capability` member, included in `Relational`; the component
+tagged with it and passing `withoutRelationship: 0`, the same as Trust and Obligation, because the
+whole term is owed to relationship state and vanishes without it. `RELATIONSHIPS.md` gained the note
+it should have had at milestone 020 — that a provisional fifth dimension exists, that it does not
+satisfy the rule admitting a dimension because unlike the other four it can be *wrong* about an
+objective fact, and that Matt ruled on 2026-09-04 that it moves into `Cognition`.
+
+**Behaviour-preserving, and the hash movement is the proof rather than a cost.** The facet and the
+counterfactual value feed diagnostics only; `ScoreComponent.Value` and therefore every `Total`,
+ranking and chosen action are untouched. Measured at `--compare`, seed 42:
+
+- All five pre-existing variants: **trace hash and chosen-action digest both unmoved.**
+- `capable-angelo` chosen actions: `CD9A30C1CD408F1D`, **unmoved** — the run makes the identical
+  choices.
+- `capable-angelo` trace: `2060465B4F31E6DD` → **`35BB0B8BE4219C6A`**, because the rendered channel is
+  inside the hashed text. The only variant with a capability component is the only variant whose
+  trace moves, which is what a diagnostic-only correction should look like.
+
+**Mutation checks**, both halves, each reverted after confirming:
+
+1. Facet returned to `None` → `RelationshipComponents()` no longer contains the term →
+   `The_capability_component_is_visible_to_the_relationship_channel` fails on its first assertion.
+2. Facet kept, `withoutRelationship: 0` dropped → `RelationshipFreeValue` reads `0.30` instead of `0`
+   → the same test fails on the counterfactual assertion instead. The two are independently
+   load-bearing; neither alone is the fix.
+
+**Verification.** Build 0 warnings / 0 errors; tests **579 passed, 0 failed** (578 + 1);
+`--verify` deterministic on `baseline` (`9AF57665067AEA11`, unmoved) and `capable-angelo`
+(`35BB0B8BE4219C6A`); all three viewpoint runs exit 0; Godot `--selftest`, `--selftest-goldenpath`,
+`--selftest-directaction`, `--selftest-corroboration`, `--selftest-tribute` and the two-process
+restart proof all exit 0.
+
+**What this does not do.** It does not make the assessment revisable, and it does not move it into
+`Cognition`. Both are milestone 021, authorized in scope by Matt on 2026-09-04 and not begun here.
+This correction makes the accepted state tell the truth about what it currently is.

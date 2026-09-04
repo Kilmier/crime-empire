@@ -206,6 +206,10 @@ public sealed class ExecutorSuitabilityTests
     /// falsifier of mutation check 2 (capability-free scoring): forcing
     /// <see cref="Candidate.ExecutorCoercion"/> to <c>null</c> for both would make the component
     /// absent from both breakdowns, and this fails.
+    ///
+    /// <b>The facet assertions below were wrong until the P1 correction and this test pinned them
+    /// that way</b>, which is the third time in this milestone that a test froze the defect instead
+    /// of disproving it. See <see cref="The_capability_component_is_visible_to_the_relationship_channel"/>.
     /// </summary>
     [Fact]
     public void Both_delegation_candidates_carry_their_own_executors_coercion_and_score_differently_for_it()
@@ -225,10 +229,66 @@ public sealed class ExecutorSuitabilityTests
         var angeloCapability = angeloScored.Components.Single(c => c.Name == "executor capability");
 
         // Centered on 0.5: Tommy (0.55) reads barely above it, Angelo (0.80) reads well above it —
-        // and the component is tagged None, never a relationship facet.
+        // and the component reports the relationship state it actually reads.
         Assert.True(angeloCapability.Value > tommyCapability.Value);
-        Assert.Equal(RelationshipFacet.None, tommyCapability.Reads);
-        Assert.Equal(RelationshipFacet.None, angeloCapability.Reads);
+        Assert.Equal(RelationshipFacet.Capability, tommyCapability.Reads);
+        Assert.Equal(RelationshipFacet.Capability, angeloCapability.Reads);
+    }
+
+    /// <summary>
+    /// The P1 correction to milestone 020's accepted state, proven against the thing that was
+    /// actually wrong rather than against the tag alone.
+    ///
+    /// Correction `436f6c7` stopped the "executor capability" component reading the executor's
+    /// objective <c>Capabilities[Skill.Coercion]</c> off <c>World</c> and sourced it from
+    /// <c>actor.Social.Toward(sub).AssessedCoercion</c> instead — relationship state — but left the
+    /// component tagged <see cref="RelationshipFacet.None"/>. Two consequences, both checked here:
+    /// the developer relationship channel could not see the newest reader of relationship state, and
+    /// <see cref="ScoreBreakdown.TotalWithoutRelationships"/> — documented as "the same score for a
+    /// man holding no relationship with anybody" — kept the whole term, though such a man reads
+    /// <c>Relations.Absent</c>, whose <c>AssessedCoercion</c> is null, and scores no such component.
+    ///
+    /// The second assertion is the one that matters and is deliberately not a re-statement of the
+    /// first: it compares the reported counterfactual against a score genuinely produced with no
+    /// assessment held, rather than against arithmetic this test performs itself.
+    /// </summary>
+    [Fact]
+    public void The_capability_component_is_visible_to_the_relationship_channel()
+    {
+        var world = Cast.Build(Seed, Variant);
+        var prepared = AdvanceToVincentsFork(world);
+
+        var angeloScored = prepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
+        var capability = angeloScored.Components.Single(c => c.Name == "executor capability");
+
+        // In the channel at all — RelationshipComponents() filters on Reads != None, so a component
+        // tagged None is invisible to every developer diagnostic built on it.
+        Assert.Contains(angeloScored.RelationshipComponents(), c => c.Name == "executor capability");
+
+        // And owed entirely to relationship state: without the relationship there is no assessment,
+        // so the whole term goes, exactly as it does for Trust and Obligation.
+        Assert.Equal(0.0, capability.RelationshipFreeValue, precision: 9);
+        Assert.Equal(capability.Value, capability.RelationshipShare, precision: 9);
+
+        // The counterfactual, checked against a real relationship-free score rather than against
+        // this test's own arithmetic. A world where Vincent has formed no assessment of Angelo
+        // produces no capability component at all; the difference between the two totals is exactly
+        // what TotalWithoutRelationships must already have accounted for.
+        var noAssessment = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: null);
+        var withoutPrepared = AdvanceToVincentsFork(noAssessment);
+        var withoutAngelo = withoutPrepared.Scored.Single(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
+
+        Assert.DoesNotContain(withoutAngelo.Components, c => c.Name == "executor capability");
+        Assert.Equal(
+            angeloScored.Total - capability.Value,
+            withoutAngelo.Total,
+            precision: 9);
+        Assert.Equal(
+            angeloScored.TotalWithoutRelationships(),
+            withoutAngelo.TotalWithoutRelationships(),
+            precision: 9);
     }
 
     /// <summary>

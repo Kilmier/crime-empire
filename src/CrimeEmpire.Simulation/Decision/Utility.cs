@@ -34,8 +34,26 @@ public enum RelationshipFacet
     Grievance = 8,
     Fear = 16,
 
+    /// <summary>
+    /// What the actor believes about another person's Coercion —
+    /// <see cref="CrimeSim.Domain.IRelationship.AssessedCoercion"/>, read by the "executor
+    /// capability" component on a delegation candidate.
+    ///
+    /// <b>PROVISIONAL, and expected to be removed rather than kept.</b> Milestone 020 added
+    /// `AssessedCoercion` as a relationship dimension and tagged the component that reads it
+    /// <see cref="None"/> — the mirror image of the defect this enum exists to prevent, since the
+    /// component genuinely does read relationship state and the developer channel could not see it.
+    /// This member makes the derivation truthful **for as long as the assessment lives on the
+    /// relationship**. Matt ruled on 2026-09-04 that capability belief belongs in
+    /// <c>Cognition</c> with provenance and confidence rather than on the relationship, because
+    /// unlike Trust, Fear and Obligation it can be *wrong* about an objective fact; when milestone
+    /// 021 moves it, this member and `AssessedCoercion` are deleted together and the component
+    /// legitimately returns to reading no relationship state at all.
+    /// </summary>
+    Capability = 32,
+
     /// <summary>The facets that are actually relationship state, for counterfactual purposes.</summary>
-    Relational = Trust | Obligation | Grievance | Fear,
+    Relational = Trust | Obligation | Grievance | Fear | Capability,
 }
 
 /// <summary>
@@ -380,10 +398,26 @@ public static class Utility
         // --- executor capability (delegation only) ---------------------------------------------
         //
         // A separate consideration from "relationship effects" above, not folded into it: how good
-        // a candidate executor is at the job is not a fact about how he is regarded. Tagged None,
-        // deliberately — it reads no relationship state whatsoever, and folding a capability term
-        // into a component named "relationship effects" is the exact 36%-of-168 mislabelling
-        // milestone 008 found and RelationshipFacet exists to prevent.
+        // a candidate executor is at the job is not a fact about how he is regarded. Kept a
+        // distinctly named component for that reason, which is unchanged.
+        //
+        // TAGGED Capability, NOT None — corrected after milestone 020's own corrections. It was
+        // tagged None on the reasoning that it "reads no relationship state whatsoever", and that
+        // was true of the milestone's first implementation, which read the executor's objective
+        // Capabilities[Skill.Coercion] off World. Correction 436f6c7 fixed that omniscient read by
+        // sourcing the figure from actor.Social.Toward(sub).AssessedCoercion — relationship state,
+        // stored on IRelationship and changed only by Relations — and did not revisit the facet.
+        // The result was the exact mirror of the defect RelationshipFacet exists to prevent: not a
+        // relationship label over a trait term (milestone 008's 61-of-168 finding), but genuine
+        // relationship state reporting itself as reading none. The developer channel could not see
+        // it, so RelationshipGross/Net omitted it and TotalWithoutRelationships — "the same score
+        // for a man holding no relationship with anybody" — kept the full term, though such a man
+        // reads Relations.Absent, whose AssessedCoercion is null, and would not score this
+        // component at all. On the capable-angelo delegation that error was +0.30 against a
+        // relationship net of +0.1688, and it reversed which candidate the counterfactual named.
+        //
+        // withoutRelationship: 0 for the same reason Trust and Obligation pass 0 — the whole term
+        // is owed to relationship state, and vanishes without it.
         //
         // ExecutorCoercion is null whenever there is exactly one subordinate to delegate to — every
         // existing accepted variant — so this block adds nothing to any of them; comparing one man's
@@ -397,7 +431,7 @@ public static class Utility
                 execCoercion > 0.5
                     ? $"{cand.TargetId} is better suited to lean on somebody than most"
                     : $"{cand.TargetId} is not the man for rough work",
-                RelationshipFacet.None);
+                RelationshipFacet.Capability, 0);
         }
 
         // --- personality and value alignment -------------------------------------------------

@@ -7,76 +7,169 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Confirm scope with Matt before starting anything — including milestone 021 —
-rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
+**Milestone 021 — Capability Is a Belief, Not a Stat — is scoped and awaiting authorization to
+begin.** Direction ruled by Matt on 2026-09-04; two rulings below are still open and implementation
+must not start until they are answered, because one of them decides the data model.
 
-**Milestone 020 — The Right Person for the Job — is accepted and closed at `c25129a`.** Vincent
-gained a second organisational subordinate in one bounded variant (`capable-angelo`: Angelo Conti,
-Coercion 0.80 against Tommy's 0.55, trusted at 0.35 against Tommy's 0.70), so
-`Generators.FromRelationship`'s delegation choice is genuinely comparative rather than a foregone pick
-of the single highest-trust subordinate: one `DelegateStrategy` candidate per subordinate, one new
-"executor capability" score component emitted only where there is a real choice, and
-`Strategies.ResolveViolence`'s force outcome scaled by the executor's own Coercion instead of a flat
-constant. All five pre-existing variants' trace hashes and chosen-action digests are byte-identical
-to milestone 019's accepted figures.
+**Nothing has been implemented for milestone 021.** No simulation behaviour has changed for it.
 
-**Two Codex rounds, two FAILs, both a P1, both the same class of defect in the same generator.**
-`f468e19` scored the executor-capability component from `world.Get(id).Capabilities[Skill.Coercion]`
-— the objective figure, which a character does not hold; correction `436f6c7` replaced it with
-`Relations.AssessedCoercion`, a new actor-held relationship dimension alongside `Trust`/`Obligation`/
-`Fear`, seeded to the same numbers so nothing accepted moved. Codex then found that the same generator
-was still choosing *who to offer* out of `ctx.SubordinateIds`, the raw authority scan, which
-`Acquaintance.KnownTo` and `DESIGN_DECISIONS.md` both forbid as a source of candidate targets;
-correction `34cd117` filters through `ctx.AcquaintedIds` and computes the comparative gate from the
-filtered set, and also closed two P2s (a staged unknown-subordinate proof, and `AssessedCoercion`
-missing from both `SimulationReplayTests` comparators). `c25129a` records `34cd117`'s own hash.
+### What milestone 020 left, and where it stands
 
-**Accepted without a Codex round on either correction-2 commit, because Codex ran out of usage.**
-Matt accepted and closed on 2026-09-04. This is a weaker basis than milestone 019's close and is
-recorded as such rather than smoothed over: `34cd117` is now the oldest unreviewed commit in the
-repository, both prior Codex rounds on this milestone found a P1, and the second P1 was invisible
-until the first was fixed. What stands behind the accepted state independently of the author's own
-reading is three mutation checks, 578 passing tests, and every hash confirmed unmoved by measurement.
-Full accounting, including what a future review should look at first:
-`docs/REVIEW_LEDGER.md` §"Measured — milestone 020". Full implementation account and both
-corrections: `docs/milestones/020-the-right-person-for-the-job.md`.
+**Milestone 020 — The Right Person for the Job — is accepted and closed at `c25129a`**, then
+corrected once more after acceptance by `8e6878e`. Full account:
+`docs/milestones/020-the-right-person-for-the-job.md`; review history and verification baselines:
+`docs/REVIEW_LEDGER.md` §"Measured — milestone 020".
 
-Milestones 001–020 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
-the corrected acceptance record of 015, 016, 018, 019, and 020 specifically.
+Its correction sequence is the reason this milestone exists, and is worth carrying forward as
+evidence rather than as history:
 
-**Codex is out of usage as of 2026-09-04**, so Claude implements and reviews its own work until that
-changes — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment", including
-the 2026-09-04 note at its head.
+| Round | Found by | Defect |
+|---|---|---|
+| `f468e19` | Codex, FAIL | Executor capability scored from `world.Get(id).Capabilities[Skill.Coercion]` — the objective figure, which the actor does not hold |
+| `436f6c7` | Codex, FAIL | Delegate candidates still drawn from `ctx.SubordinateIds`, the raw authority scan, not `AcquaintedIds` |
+| `8e6878e` | scoping this milestone | The component now read relationship state and still reported `RelationshipFacet.None`, blinding the developer channel and reversing which candidate the relationship counterfactual named |
 
-## What is deferred, for whoever scopes the next milestone
+Three rounds, three defects, all in one scoring path, and **each one was pinned by a passing test
+rather than caught by it.** `34cd117` and everything after it are unreviewed — Codex ran out of usage
+on 2026-09-04.
 
-Not authorization to start any of it — see `ROADMAP.md`, which is where scope is proposed from.
+### The problem this milestone addresses
 
-**Carried from milestone 020, per its own exclusions** (`ROADMAP.md`'s narrowed "Executor
-suitability/capability" entry): Persuasion's effect on tribute success; crew size, equipment,
-preparation; recruitment, roster, payroll, or resource transfer from owner to delegate; personnel
-management generally; escalation-capability ownership as a general rule beyond the one mechanism
-milestone 020 touched; a third or later subordinate; a general suitability model across strategy
-kinds; capability affecting anything beyond force resolution.
+`Relations.AssessedCoercion` is a **belief-shaped field with no belief mechanics**. It is written only
+by `Relations.Establish`/`SetAssessedCoercion` — scenario construction — and never revised, so a
+delegator's read of how good his man is at the job is fixed for the whole run no matter what that man
+then does in front of him.
 
-**New, surfaced by milestone 020's own corrections and not addressed by them:**
-`Relations.AssessedCoercion` is written only by scenario construction and never revised — a character
-cannot learn that the man he thought was useful is not, or the reverse. That is the same shape as the
-long-standing "obligation is read but never moves" debt, one dimension over, and it is what would make
-executor suitability a live belief rather than a fixed one. Nothing authorizes it.
+Worse, it is in the wrong place. Trust, Fear and Obligation have **no truth value**: there is no fact
+of the matter about how much Vincent trusts Tommy beyond Vincent's own state. `AssessedCoercion` has a
+referent — Tommy's actual `Capabilities[Skill.Coercion]` — so it can be **wrong**, which makes it a
+belief about the world rather than an attitude toward a person. `AGENTS.md` requires truth, knowledge,
+belief and evidence be kept distinct, and `Cognition` is where this project keeps things that can be
+wrong, with provenance, confidence and contestability. The relationship record has none of those.
 
-Carried from milestone 017 and earlier, still unresolved: the five-column layout and other
-playtest-discovered presentation debt (milestone 018); the wrapped-date/toolbar debt; a
-`PlayerNarration` prose rewrite; "You control"/"You see through" unification; territory, patrol,
-weekly planning; additional businesses or operations; an eighth character; employee-stat displays or
-new UI panels; the known pause-timing information leak; new organizations, careers, or alternate
-playable roles.
+## Rulings
 
-Carried from milestone 016 and earlier, still unresolved: **124 live-edge findings and 5
-apparently-dead lines** (`docs/COVERAGE_ACCOUNTING.md`); systematic mutation automation and
-seed-sweep promotion; a queryable decision-trace store; the allegation option naming the same person
-twice; the developer trace's uniform "he"; nobody holding a scored relationship with Kane; the tuning
-guesses; obligation read but never moved; slot management, autosave, cloud save, a save-browser UI,
-and cross-build save migrations. From `docs/OPEN_CONCERNS.md` #3, still open: decay and its rate,
-negative trust, whether respect/resentment are separate dimensions, whether provenance should weight
-the social consequence, and whether `GrievanceWeight` should be capped.
+### Settled
+
+1. **Capability belief moves into `Cognition`.** Matt, 2026-09-04, choosing option (b) over keeping it
+   as a relationship dimension. `AssessedCoercion` and `RelationshipFacet.Capability` are deleted
+   together when it lands, and the "executor capability" component legitimately returns to reading no
+   relationship state at all.
+2. **The relationship vocabulary is not reopened.** `RELATIONSHIPS.md` stays at four dimensions; the
+   provisional-fifth note added by `8e6878e` is removed by this milestone rather than promoted.
+3. **`Strategies.ResolveViolence` keeps reading the objective figure.** Committed force resolution
+   computes what actually happened; it is not scoring an option, and milestone 020 settled this.
+4. **Deliberate hash movement is expected and bounded.** Only `capable-angelo` has a capability
+   component, so only its trace hash — and, if the scoring shape changes, its chosen-action digest —
+   may move. **The other five variants must stay byte-identical on both**, and that is a hard
+   constraint, not an aspiration.
+
+### Open — implementation must not begin until these are answered
+
+5. **How is magnitude represented once capability is propositional?** This is the ruling that decides
+   the data model, and it exists because **confidence is not magnitude**. "I am 80% sure Tommy is up
+   to it" and "Tommy is 0.80 good at it" are different statements, and encoding the second as the
+   first collapses two distinctions into one number — this project's signature defect, and precisely
+   what `LoyaltyReading` was unbundled to avoid and what `RelationshipFacet` was built to detect.
+
+   - **(b1) One threshold claim.** `PersonIsCapable(subject, skill)`, stance plus confidence, no
+     magnitude. Smallest change. Risk: Angelo and Tommy become distinguishable only by how *sure*
+     Vincent is, which may make `capable-angelo`'s fork degenerate — an honest finding if it happens,
+     but a real risk to the milestone's own natural proof.
+   - **(b2) Claims carry a magnitude.** Extends `Claim`/`InformationRecord` for every claim kind to
+     serve one. **Recommend REJECT** — a whole-system change to serve a single reader.
+   - **(b3) Graded threshold claims (recommended).** More than one proposition at different bars —
+     "up to rough work" and "exceptional at it" — each with its own stance and confidence. Ordering is
+     recovered without conflating it with certainty, the vocabulary stays propositional, and revision
+     becomes expressive in the way that matters: a botched job can cost a man the higher belief while
+     leaving the lower one intact.
+
+6. **Is attribution error deliberate?** The natural revision trigger is the outcome of work the
+   delegator ordered — but tribute success turns on the mark's resistance, the method, Persuasion and
+   a roll, not on the executor's Coercion alone. A rule that revises the assessment from operation
+   outcome is **modelling an attribution error**. Recommended answer: **yes, deliberately** — a
+   delegator drawing a confident conclusion from confounded evidence is the interesting behaviour, and
+   the milestone should *prove the assessment can end up wrong* rather than converging on truth. This
+   needs stating as a ruling because it sits against `Inference`'s existing discipline that a boss
+   "infers a gap, not an answer."
+
+## Executable feature claim
+
+**Situation.** Vincent delegates the grocery job to the man he rates highest. That man does the work.
+Something about how it went reaches Vincent through a channel he actually has — the money arriving,
+the operation blocking, or the account he gets when he asks. His read of that man moves. A **later**
+delegation is scored against the revised read.
+
+**Information contract.** Vincent may not observe `Capabilities[Skill.Coercion]`, the resistance drop,
+or the executor's own cognition. He revises from what reached him and nothing else — and because the
+evidence is confounded, he may revise **wrongly**.
+
+**Persistent consequence.** A second delegation decision, later in the same run, scored on a different
+belief than the first — and that belief carries a source, so the trace can say where it came from.
+
+**Natural proof.** `capable-angelo` at seed 42 already produces a delegation, a force resolution, a
+blocked step and a second collection cycle. The raw material is present.
+
+**Acceptable non-result, stated in advance.** If no channel in the accepted fixture carries enough for
+a revision to fire naturally, the honest outcome is a staged proof plus a recorded finding that *the
+fixture cannot exercise it* — the same result milestones 010 and 011 produced. **That is not a licence
+to tune a coefficient, add a channel, or adjust the fixture until it fires.**
+
+## Scope
+
+**In scope.** The claim vocabulary addition for capability; seeding it in `Cast.Build`/`Variants.Apply`
+with a real source rather than a bare number; the scoring read moving from
+`Social.Toward(...).AssessedCoercion` to `Perceived`; a revision path from an existing channel;
+deleting `AssessedCoercion`, `Relations.SetAssessedCoercion` and `RelationshipFacet.Capability`;
+`RELATIONSHIPS.md` and `INFORMATION_AND_LEGIBILITY.md` reconciliation; both replay comparators
+updated for whatever new persistent state exists.
+
+**Out of scope.** Assessments of Persuasion, Discretion or Investigation — one skill proves the
+mechanism. Decay of an assessment over time (`RELATIONSHIPS.md`: decay returns when tiers supply a
+timescale). A third subordinate, crew, equipment, recruitment, roster, payroll, resource transfer.
+Player-facing display of the assessment. Any change to `ResolveViolence`. Any new organization,
+character, business or career.
+
+## Proof obligations
+
+- **Natural** — the revision fires in an unmodified `capable-angelo` run, or the non-result above is
+  recorded honestly.
+- **Staged** — the revision rule exercised directly for both directions, up and down.
+- **Negative control, omniscience** — changing only the executor's objective `Capabilities` leaves the
+  delegator's belief and every score untouched. (This exists today and must survive the move.)
+- **Negative control, wrong actor** — the belief moves for the delegator who received the information
+  and for nobody else.
+- **Provenance** — the revised belief names where it came from, and a belief acquired one way is
+  distinguishable from the same belief acquired another.
+- **Wrongness is representable** — a staged proof that the assessment can end up further from the
+  objective figure than it started. If the design cannot express that, ruling 6 was answered wrongly.
+- **Replay** — both `SimulationReplayTests` comparators cover the new state, mutation-checked per
+  comparator, exactly as `34cd117` did for `AssessedCoercion`.
+- **Hashes** — five variants byte-identical on trace and actions; `capable-angelo`'s movement
+  deliberate, measured and recorded.
+- **Mutation checks** — on every load-bearing distinction, including the tempting simplification of
+  reading the objective figure "just for seeding".
+
+## What is deferred, for whoever scopes the milestone after this one
+
+Not authorization to start any of it — see `ROADMAP.md`.
+
+Carried from milestone 020: Persuasion's effect on tribute success; crew size, equipment, preparation;
+recruitment, roster, payroll, resource transfer; personnel management generally;
+escalation-capability ownership as a general rule; a third or later subordinate; a general suitability
+model across strategy kinds; capability affecting anything beyond force resolution.
+
+Carried from milestone 017 and earlier: the five-column layout and other playtest-discovered
+presentation debt; the wrapped-date/toolbar debt; a `PlayerNarration` prose rewrite; "You control"/"You
+see through" unification; territory, patrol, weekly planning; additional businesses or operations; an
+eighth character; employee-stat displays or new UI panels; the known pause-timing information leak;
+new organizations, careers, or alternate playable roles.
+
+Carried from milestone 016 and earlier: **124 live-edge findings and 5 apparently-dead lines**
+(`docs/COVERAGE_ACCOUNTING.md`); systematic mutation automation and seed-sweep promotion; a queryable
+decision-trace store; the allegation option naming the same person twice; the developer trace's uniform
+"he"; nobody holding a scored relationship with Kane; the tuning guesses; obligation read but never
+moved; slot management, autosave, cloud save, a save-browser UI, and cross-build save migrations. From
+`docs/OPEN_CONCERNS.md` #3: decay and its rate, negative trust, whether respect/resentment are separate
+dimensions, whether provenance should weight the social consequence, and whether `GrievanceWeight`
+should be capped.

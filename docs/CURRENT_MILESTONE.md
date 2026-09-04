@@ -10,86 +10,60 @@ do not create a separate handoff document.
 **Nothing is active.** Confirm scope with Matt before starting anything — including milestone 021 —
 rather than inferring the next milestone from `ROADMAP.md` or from what was deferred below.
 
-**Milestone 020 — The Right Person for the Job — corrected twice, awaiting Codex re-review.** Gave
-Vincent a second organisational subordinate (the `capable-angelo` variant: Angelo Conti, Coercion
-0.80, trusted at 0.35, against Tommy's 0.55/0.70) so `Generators.FromRelationship`'s delegation
-choice is genuinely comparative rather than a foregone pick of the single highest-trust subordinate.
-`Utility` gained one new "executor capability" score component, present only when there is a real
-choice among two or more subordinates and therefore never emitted for any existing accepted variant;
-`Strategies.ResolveViolence` now scales its force outcome by the actual executor's Coercion,
-calibrated at Tommy's own stat (0.55 — the only value that call has ever been exercised against in an
-accepted run) so no existing trace hash moved.
+**Milestone 020 — The Right Person for the Job — is accepted and closed at `c25129a`.** Vincent
+gained a second organisational subordinate in one bounded variant (`capable-angelo`: Angelo Conti,
+Coercion 0.80 against Tommy's 0.55, trusted at 0.35 against Tommy's 0.70), so
+`Generators.FromRelationship`'s delegation choice is genuinely comparative rather than a foregone pick
+of the single highest-trust subordinate: one `DelegateStrategy` candidate per subordinate, one new
+"executor capability" score component emitted only where there is a real choice, and
+`Strategies.ResolveViolence`'s force outcome scaled by the executor's own Coercion instead of a flat
+constant. All five pre-existing variants' trace hashes and chosen-action digests are byte-identical
+to milestone 019's accepted figures.
 
-**Correction 1 (`436f6c7`, committed).** Codex reviewed the original implementation (`f468e19`) and
-returned **FAIL** (one P1, no P2s): the delegation-scoring "executor capability" component read each
-subordinate's exact `Capabilities[Skill.Coercion]` straight off `World` — `Pipeline.SubordinatesOf`
-reading the roster to learn *who* Vincent's subordinates are is a settled, legitimate authority scan,
-but *how good* each one is at the job is a fact about that person, not the org chart, and nothing
-licensed reading it past the belief limit every other score component in `Decision/Utility.cs`
-already respects. The correction added `Relations.AssessedCoercion`, an actor-held relationship
-dimension alongside `Trust`/`Obligation`/`Fear`, set at scenario construction to match the
-pre-correction figures exactly (Tommy 0.55, Angelo 0.80) so every accepted trace hash and the natural
-run's own preference stayed unmoved; `Generators.FromRelationship` reads it via
-`ctx.Actor.Social.Toward(sub).AssessedCoercion` instead of a `World`-sourced dictionary, which is
-gone. Three new tests in `ExecutorSuitabilityTests.cs` (9 → 12) proved the assessment, not the
-objective figure, drives scoring, and that a missing assessment neither falls back to the objective
-figure nor reads as zero.
+**Two Codex rounds, two FAILs, both a P1, both the same class of defect in the same generator.**
+`f468e19` scored the executor-capability component from `world.Get(id).Capabilities[Skill.Coercion]`
+— the objective figure, which a character does not hold; correction `436f6c7` replaced it with
+`Relations.AssessedCoercion`, a new actor-held relationship dimension alongside `Trust`/`Obligation`/
+`Fear`, seeded to the same numbers so nothing accepted moved. Codex then found that the same generator
+was still choosing *who to offer* out of `ctx.SubordinateIds`, the raw authority scan, which
+`Acquaintance.KnownTo` and `DESIGN_DECISIONS.md` both forbid as a source of candidate targets;
+correction `34cd117` filters through `ctx.AcquaintedIds` and computes the comparative gate from the
+filtered set, and also closed two P2s (a staged unknown-subordinate proof, and `AssessedCoercion`
+missing from both `SimulationReplayTests` comparators). `c25129a` records `34cd117`'s own hash.
 
-**Correction 2 (`34cd117`, committed).** Codex reviewed `436f6c7` and returned **FAIL** again: one P1, two
-P2s.
+**Accepted without a Codex round on either correction-2 commit, because Codex ran out of usage.**
+Matt accepted and closed on 2026-09-04. This is a weaker basis than milestone 019's close and is
+recorded as such rather than smoothed over: `34cd117` is now the oldest unreviewed commit in the
+repository, both prior Codex rounds on this milestone found a P1, and the second P1 was invisible
+until the first was fixed. What stands behind the accepted state independently of the author's own
+reading is three mutation checks, 578 passing tests, and every hash confirmed unmoved by measurement.
+Full accounting, including what a future review should look at first:
+`docs/REVIEW_LEDGER.md` §"Measured — milestone 020". Full implementation account and both
+corrections: `docs/milestones/020-the-right-person-for-the-job.md`.
 
-- **P1.** `FromRelationship`'s delegation loop iterated `ctx.SubordinateIds` directly —
-  `Pipeline.SubordinatesOf`'s own authority scan, legitimate for identity but, per
-  `DESIGN_DECISIONS.md`'s settled "an office relationship is only an office relationship if it comes
-  from an office" ruling, not itself grounds to treat a subordinate as somebody the actor could name.
-  Fixed by filtering `SubordinateIds` through `ctx.AcquaintedIds` before generating any delegate
-  candidate, and computing the "genuine choice" `comparative` flag from the filtered (nameable) set
-  rather than the raw organisational count. A no-op for every accepted variant, since Cast.Build and
-  Variants.Apply already establish a relationship between Vincent and each real subordinate.
-- **P2.** Added the staged unknown-subordinate test (an organisationally-subordinate, wholly
-  unacquainted stranger is never offered as a delegate), its positive acquaintance control (a
-  genuinely acquainted subordinate still is, and the "genuine choice" gate reads the filtered set),
-  and a mutation check confirming both collapse together when the filter is removed.
-- **P2.** `AssessedCoercion` was missing from both of `SimulationReplayTests.cs`'s relationship
-  comparator fingerprints (`Snapshot` and `BehavioralSnapshot`), so a defect that corrupted it between
-  two otherwise-identical runs would have gone undetected. Added to both, formatted to distinguish
-  null (no assessment) from `0.0` (assessed at the floor); a new test perturbs nothing but this one
-  dimension and confirms both comparators catch it, independently verified per-comparator by
-  mutation.
+Milestones 001–020 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
+the corrected acceptance record of 015, 016, 018, 019, and 020 specifically.
 
-Full verification after correction 2: build 0/0, tests 578/578 (576 + 2 new — the acquaintance-
-boundary test in `ExecutorSuitabilityTests.cs` and the comparator test in `SimulationReplayTests.cs`);
-`--verify` baseline/`capable-angelo`/`disloyal-vincent`/`resentful-tommy` all deterministic and
-byte-identical to their previously accepted hashes; `--compare` at seed 42: all six configurations'
-trace hashes and chosen-action digests unmoved (`baseline 9AF57665067AEA11`, `cautious-vincent
-86EC1ADA4A4E9179`, `watchful-boss 84AC3F65E4102EBA`, `disloyal-vincent 9A6E0E518294532F`,
-`resentful-tommy 3C4483640153DA88`, `capable-angelo 2060465B4F31E6DD`/`CD9A30C1CD408F1D`); all three
-required viewpoint runs exit 0; Godot headless self-tests (`--selftest`, `--selftest-goldenpath`,
-`--selftest-directaction`, `--selftest-corroboration`, `--selftest-tribute`) and the two-process
-restart proof (`--selftest-restart-save`/`--selftest-restart-load`) all pass, unchanged — a Godot
-executable was in fact found in this environment (`Godot_v4.7.1-stable_mono_win64_console.exe` under
-the user profile), so correction 1's "none was available" note reflected an incomplete search, not a
-genuine absence.
-
-Full account, including both flagged judgment calls from the original implementation and both
-corrections in full: `docs/milestones/020-the-right-person-for-the-job.md`.
-
-Milestones 001–019 are all complete and accepted; see their own archives and `REVIEW_LEDGER.md` for
-the corrected acceptance record of 015, 016, 018, and 019 specifically.
-
-**Codex is intermittent rather than withdrawn.** Claude implements and reviews its own work in the
-meantime — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment".
+**Codex is out of usage as of 2026-09-04**, so Claude implements and reviews its own work until that
+changes — see `REVIEW_LEDGER.md` §"From milestone 010 onward, review is self-assessment", including
+the 2026-09-04 note at its head.
 
 ## What is deferred, for whoever scopes the next milestone
 
 Not authorization to start any of it — see `ROADMAP.md`, which is where scope is proposed from.
 
-Carried from milestone 020, per its own exclusions (`ROADMAP.md`'s narrowed "Executor
+**Carried from milestone 020, per its own exclusions** (`ROADMAP.md`'s narrowed "Executor
 suitability/capability" entry): Persuasion's effect on tribute success; crew size, equipment,
 preparation; recruitment, roster, payroll, or resource transfer from owner to delegate; personnel
 management generally; escalation-capability ownership as a general rule beyond the one mechanism
 milestone 020 touched; a third or later subordinate; a general suitability model across strategy
 kinds; capability affecting anything beyond force resolution.
+
+**New, surfaced by milestone 020's own corrections and not addressed by them:**
+`Relations.AssessedCoercion` is written only by scenario construction and never revised — a character
+cannot learn that the man he thought was useful is not, or the reverse. That is the same shape as the
+long-standing "obligation is read but never moves" debt, one dimension over, and it is what would make
+executor suitability a live belief rather than a fixed one. Nothing authorizes it.
 
 Carried from milestone 017 and earlier, still unresolved: the five-column layout and other
 playtest-discovered presentation debt (milestone 018); the wrapped-date/toolbar debt; a

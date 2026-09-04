@@ -53,6 +53,15 @@ first is cheap and reversible and the second is not. A commit cleared-to-build-o
 rejects is an ordinary outcome, not a contradiction — and everything built on top of it inherits the
 rejection.
 
+**Updated 2026-09-04: Codex ran out of usage mid-milestone.** Milestone 020 got two Codex rounds —
+both FAIL, both a P1 — and then none on the correction that answered the second, which Matt accepted
+and closed on the author's own work. This is the "adversary that arrives long after the work" state
+below, in its sharpest form yet: not a milestone that went unreviewed, but a *correction chain cut off
+partway*, where the two data points available say the adversary was finding something every time. The
+consequence for the next milestone is not a rule change; it is that **`34cd117` is the oldest
+unreviewed commit in the repository and everything built after it inherits whatever a review of it
+would find.** See the milestone 020 baseline section for the full accounting.
+
 **Updated 2026-08-18: Codex is intermittent rather than withdrawn.** Matt intends a Codex round on
 `6a8a765` — milestone 011 — at a later date. So the standing arrangement is not "no adversary" but
 **an adversary that arrives long after the work**, which is a different problem and a worse one to
@@ -265,6 +274,110 @@ Run from the repository root; the commands are in `AGENTS.md` §Verification.
 Hashes are regression evidence for a snapshot, not permanent game-design requirements. A deliberate
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
+
+### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
+
+**What it built.** A second organisational subordinate for Vincent, in one bounded variant
+(`capable-angelo`: Angelo Conti, Coercion 0.80 against Tommy's 0.55, trusted at 0.35 against Tommy's
+0.70), so `Generators.FromRelationship`'s delegation choice is genuinely comparative rather than a
+foregone pick of the single highest-trust subordinate. One `DelegateStrategy` candidate per
+subordinate; one new "executor capability" `Utility` component, emitted only where there is a real
+choice and therefore never for any pre-existing variant; and `Strategies.ResolveViolence`'s force
+outcome scaled by the executor's own Coercion rather than a flat constant, calibrated at Tommy's 0.55
+— the only value that call has ever been exercised against in an accepted run — so no accepted hash
+moved. Full account, both flagged judgment calls, and both corrections:
+`docs/milestones/020-the-right-person-for-the-job.md`.
+
+**Reviewed by Codex on implementation commit `f468e19`, returned FAIL with one P1.** The
+"executor capability" component read each subordinate's exact `Capabilities[Skill.Coercion]` straight
+off `World`, via a `GeneratorContext.SubordinateCoercion` dictionary `Pipeline.Prepare` built from the
+roster. `Pipeline.SubordinatesOf` reading that roster to learn *who* reports to Vincent is the settled,
+legitimate authority scan; *how good* that man is at the job is a fact about the person, not the
+org chart, and scoring it from `World` violates the rule `Decision/Utility.cs`'s own header states —
+`Score` "receives a `PerceivedSituation` and never a `World`". The nine tests shipped with the
+milestone pinned the omniscient read rather than disproving it.
+
+**Correction 1 (`436f6c7`) closed it** with a new `Relations.AssessedCoercion` dimension on
+`IRelationship`, alongside `Trust`/`Obligation`/`Fear` — the delegator's own held belief about a
+subordinate's Coercion, seeded at scenario construction to the pre-correction figures exactly (Tommy
+0.55 in `Cast.Build`, Angelo 0.80 in `Variants.Apply`) so every accepted hash and the natural run's
+own preference stayed unmoved. `FromRelationship` reads it through `ctx.Actor.Social.Toward(sub)`,
+the same non-creating channel `Utility.Loyalty` already uses; the `World`-sourced dictionary and its
+`GeneratorContext` field are gone. `Strategies.ResolveViolence` was deliberately untouched — committed
+force resolution reads the executor's real, objective Coercion, which is not scoring an option.
+Three new tests (`ExecutorSuitabilityTests.cs`, 9 → 12) prove the assessment drives scoring in both
+directions and that a missing assessment neither falls back to the objective figure nor reads as zero.
+
+**Reviewed by Codex on `436f6c7`, returned FAIL again: one P1 and two P2s.** The P1 was the same
+class of defect one layer out, and correction 1 had not touched it: `FromRelationship`'s loop still
+iterated `ctx.SubordinateIds` — the raw authority scan — to decide *who to offer* as a delegate.
+`Acquaintance.KnownTo`'s own header forbids exactly that ("a soldier holding no office is therefore
+not knowable this way, however senior he is"), and `DESIGN_DECISIONS.md` settled `KnownTo` as the
+single derivation for any candidate's target after milestone 009 got the same thing wrong twice.
+P2s: no staged proof for an organisationally-subordinate but unacquainted man; and
+`Relations.AssessedCoercion` — correction 1's own new persistent relationship state — was missing
+from **both** of `SimulationReplayTests.cs`'s comparators, so a run that corrupted it would have
+compared equal.
+
+**Correction 2 (`34cd117`) closed all three.** `SubordinateIds` is now filtered through
+`ctx.AcquaintedIds` before any delegate candidate is generated, and the "genuine choice"
+`comparative` flag is computed from the filtered set rather than the raw organisational count — a
+no-op for every accepted variant, since `Cast.Build` and `Variants.Apply` already establish a
+relationship with each real subordinate, which puts them in `AcquaintedIds` via `SocialState.Others`
+independently of rank. One staged test proves the negative (an unacquainted subordinate is never
+offered), its positive acquaintance control (an acquainted one still is), and that the comparative
+gate reads the filtered set. `AssessedCoercion` was added to both `Snapshot` and `BehavioralSnapshot`,
+formatted to keep `null` (no assessment) distinct from `0.0` (assessed at the floor), with a test that
+perturbs nothing else — mutation-checked per comparator, each confirmed independently load-bearing.
+`c25129a` is a documentation-only follow-up recording `34cd117`'s own hash, which a commit cannot
+state from inside itself.
+
+- Build: 0 warnings, 0 errors at every commit.
+- Tests: `f468e19` **573** (564 milestone-019 baseline + 9 new, `ExecutorSuitabilityTests.cs`);
+  `436f6c7` **576** (+3); `34cd117` **578** (+2: the acquaintance-boundary test and the comparator
+  test); `c25129a` **578** (docs only).
+- `--verify` deterministic at every commit. `baseline` `9AF57665067AEA11` — unmoved from milestone
+  019's accepted baseline, and from 018's before it. `capable-angelo` `2060465B4F31E6DD`.
+- `--compare` at seed 42: **6 configurations · 6 distinct traces · 6 distinct chosen-action
+  sequences.** `baseline` `9AF57665067AEA11`/`7716CDDE3D0CA3A6`, `cautious-vincent`
+  `86EC1ADA4A4E9179`/`7506045DDEB2DE14`, `watchful-boss` `84AC3F65E4102EBA`/`955921AA69ABA44C`,
+  `disloyal-vincent` `9A6E0E518294532F`/`BECCA9ED2E4E7137`, `resentful-tommy`
+  `3C4483640153DA88`/`B9B6D3BBE6A69200`, `capable-angelo` `2060465B4F31E6DD`/`CD9A30C1CD408F1D`. **The
+  five pre-existing variants are byte-identical to milestone 019's accepted figures at every one of
+  this milestone's four commits** — the new variant is additive and both corrections were
+  behaviour-preserving, verified rather than argued.
+- Viewpoint runs `disloyal-vincent`/`salvatore`, `baseline`/`vincent`, and the new
+  `capable-angelo`/`salvatore`: all exit 0.
+- Godot `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`, `--selftest-corroboration`,
+  `--selftest-tribute`, and the two-process restart proof
+  (`--selftest-restart-save`/`--selftest-restart-load`): all exit 0, all unchanged. **A correction to
+  the record:** `f468e19`'s archive stated no Godot executable was available in this environment. That
+  was an incomplete search, not a genuine absence — the executable was found under the user profile
+  during correction 1, and every Godot check has been run at `436f6c7`, `34cd117` and `c25129a`. The
+  archive's original note is left standing, per the append-only rule, and corrected in place here.
+
+**Matt accepted `c25129a` on 2026-09-04 and closed milestone 020 — without a Codex round on either
+correction-2 commit, because Codex ran out of usage.** That is a materially weaker basis than
+milestone 019's close, and recording the difference is the point rather than a formality:
+
+- **Both Codex rounds this milestone did get returned a P1, and each P1 was an information-boundary
+  violation in the same generator.** The base rate for "a Codex round on this milestone finds
+  something the author did not" is two out of two. `34cd117` has had zero such rounds.
+- The second P1 sat *underneath* the first and was invisible until the first was fixed — correction 1
+  changed what value a delegate candidate carried and never asked whether that candidate should have
+  been generated at all. Nothing establishes that correction 2 has no third layer beneath it; what is
+  established is that the author looked and did not find one, which this file's own rules call weak
+  evidence.
+- What stands behind `34cd117` independently of anyone's reading: three mutation checks that each
+  reverted a specific fix and watched the intended test fail for the stated reason before being
+  reverted; 578 passing tests; and every accepted hash and digest confirmed unmoved by direct
+  measurement rather than by argument.
+
+**Milestone 020's accepted state is `c25129a` and nothing before it.** `f468e19` and `436f6c7` were
+each reviewed and each rejected; neither was ever accepted, and each FAIL is what produced the
+correction after it. If Codex becomes available again, `34cd117` is the oldest unreviewed commit of
+this milestone and takes its turn first, ahead of anything built on top of it — and a rejection there
+is an ordinary outcome that everything later inherits.
 
 ### Measured — milestone 019, controlled/autonomous actor parity is pinned, corrected three times, accepted
 

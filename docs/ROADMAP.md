@@ -172,12 +172,29 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   to the owner or the executor" for that one mechanism specifically (the executor), not as a general
   rule. See `docs/milestones/020-the-right-person-for-the-job.md`.
 
+  **Two Codex rounds rejected the first two attempts at it, and what they settled is load-bearing for
+  anyone scoping further work here.** The scored capability is **a held assessment, not a reading**:
+  `Relations.AssessedCoercion`, a relationship dimension alongside `Trust`/`Obligation`/`Fear`, seeded
+  at scenario construction. Scoring may not consult `Capabilities[Skill.Coercion]` — only *committed
+  force resolution* reads the objective figure, because that is computing what happened rather than
+  weighing an option. And **delegate candidates are drawn from `ctx.AcquaintedIds`, not
+  `SubordinateIds`**: the authority scan establishes who reports to you, never that you could name
+  him. Both are instances of rules `DESIGN_DECISIONS.md` had already settled, re-broken here and
+  re-fixed; a future milestone in this area should expect the same two traps.
+
   **What remains explicitly unmodelled, per that milestone's own exclusions**: Persuasion's effect on
   tribute success; crew size, equipment, preparation; recruitment, roster, payroll, or resource
   transfer from owner to delegate; personnel management generally; and escalation-capability
   ownership as a rule beyond the one mechanism above. A third or later subordinate, a general
   suitability model across strategy kinds, or capability affecting anything beyond force resolution
   are all still open.
+- **An assessment of somebody's capability is written once and never revised.** Surfaced by milestone
+  020's first correction, which created `Relations.AssessedCoercion` and deliberately gave it no
+  runtime writer: `Relations.Establish`/`SetAssessedCoercion` are scenario construction, so a
+  delegator's read of how good his man is at the job is fixed for the whole run no matter what that
+  man then does in front of him. This is the same shape as "obligation is read but never moves", one
+  dimension over, and it is the difference between executor suitability being a belief and being a
+  stat. Nothing in milestone 020 authorized a learning path, and none is designed.
 - ~~The test project redundantly declares `TargetFramework` despite the centralized build property in
   `Directory.Build.props`.~~ **Retired 2026-08-16 by milestone 009**, and not by deleting the line.
   `Directory.Build.props` no longer assigns a TFM at all — it publishes `CrimeEmpireHostTfm` and

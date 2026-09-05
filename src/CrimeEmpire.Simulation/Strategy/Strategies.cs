@@ -283,6 +283,10 @@ public static class Strategies
                     owner.Cognition.Learn(collected, Stance.Rejects, 0.9,
                         SourceKind.Discovery, owner.Id, world.Now);
 
+                // And the same arrival tells him something — or he takes it to — about the man he
+                // sent. Milestone 021: confounded evidence, acted on anyway. See Suitability.
+                Suitability.RecordDelegatedOutcome(owner, executor.Id, succeeded: true, world.Now);
+
                 CloseAssignment(world, owner, s);
                 Complete(world, owner, s, "the money started arriving");
                 return;
@@ -302,6 +306,10 @@ public static class Strategies
         world.Record("tribute-refused", business.OwnerId, executor.Id,
             $"{business.Name} still would not pay ({s.Method.ToString().ToLowerInvariant()}, attempt {s.FailedAttempts})");
         owner.Motivations.AddPressure(PressureKind.RevenueShortfall, 0.2);
+
+        // A job that came back empty costs the man he sent some of his standing as a useful pair of
+        // hands — whether or not it was his doing. Milestone 021; see Suitability.
+        Suitability.RecordDelegatedOutcome(owner, executor.Id, succeeded: false, world.Now);
         world.Queue.Schedule(world.Now, EventKind.StrategyBlocked, owner.Id,
             $"{business.Name} held out against {s.Method.ToString().ToLowerInvariant()}",
             new EventPayload { TargetId = business.Id, Strategy = s.Kind });

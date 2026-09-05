@@ -163,13 +163,43 @@ public static class Variants
                 // degenerate edge case. Salvatore's relationship toward Angelo is left
                 // unestablished — reads as zero, the same as Salvatore's toward Tommy, which is
                 // likewise never set from that side.
-                // assessedCoercion matches Angelo's own Capabilities[Skill.Coercion] (0.80) exactly,
-                // for the same reason Cast.Build's Tommy assessment matches his — reproducing the
-                // pre-correction figure as Vincent's own held belief rather than a second read of
-                // World is what keeps this variant's natural-run outcome and trace hash unmoved.
-                Relations.Establish(vincent, "angelo", trust: 0.35, obligation: 0.10, assessedCoercion: 0.80);
+                Relations.Establish(vincent, "angelo", trust: 0.35, obligation: 0.10);
                 Relations.Establish(angelo, "vincent", trust: 0.65, obligation: 0.55);
                 Relations.Establish(angelo, "salvatore", trust: 0.25, obligation: 0.30);
+
+                // What Vincent believes about what each man is good for. Milestone 021: this used to
+                // be a single number on the relationship (AssessedCoercion), which could be wrong
+                // about an objective fact while carrying no source, no confidence and no way to be
+                // revised. It is now ordinary belief, in Cognition, on the CapabilityBar ladder.
+                //
+                // SourceKind.Inference with Vincent as his own source, deliberately and not as
+                // decoration: a capo's read of his own soldiers is something he worked out from what
+                // he has seen, and — load-bearing — Cognition.Revise admits only records that pass
+                // SourceKind.IsOwnReading() and name their holder, so seeding it any other way would
+                // make it permanently unrevisable and quietly defeat this milestone's whole point.
+                //
+                // Angelo clears both bars; Tommy clears the low one and Vincent has formed no view
+                // on the high one. Note what is *not* seeded: nobody is given a Doubts or Rejects on
+                // a bar. Vincent having concluded Tommy is positively *not* a hard man would be an
+                // opinion the fixture invented for him; "he has never had cause to think about it"
+                // is the honest starting state, and the negative branch of the scoring is exercised
+                // by a staged test rather than baked into the natural run.
+                //
+                // SEEDED ONLY IN THIS VARIANT, INCLUDING TOMMY'S. Ruling 4 requires the other five
+                // variants stay byte-identical, and a belief added to Vincent's cognition appears in
+                // the trace's "what he knew" and moves their hashes for no behavioural gain — none
+                // of them has a second subordinate, so nothing there ever reads a capability belief.
+                // It is a fixture asymmetry and is recorded as one: if capability beliefs ever come
+                // to matter with a single subordinate, this is the first thing that has to change.
+                vincent.Cognition.Learn(
+                    CapabilityBar.About("tommy", CapabilityBar.RoughWork),
+                    Stance.Believes, 0.75, SourceKind.Inference, "vincent", world.Now);
+                vincent.Cognition.Learn(
+                    CapabilityBar.About("angelo", CapabilityBar.RoughWork),
+                    Stance.Believes, 0.80, SourceKind.Inference, "vincent", world.Now);
+                vincent.Cognition.Learn(
+                    CapabilityBar.About("angelo", CapabilityBar.HardMan),
+                    Stance.Believes, 0.70, SourceKind.Inference, "vincent", world.Now);
                 break;
             }
         }

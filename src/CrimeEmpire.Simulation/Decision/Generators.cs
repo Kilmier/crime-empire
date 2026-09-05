@@ -412,18 +412,11 @@ public static class Generators
                     Method = s.Kind == StrategyKind.SecureTribute ? s.Method : null,
                     Domain = s.Domain,
                     RequiredCrew = 1,
-                    // ctx.Actor's OWN held belief about this man's Coercion — Social.Toward(sub) is
-                    // the actor's own relationship record, exactly what Utility.Loyalty already
-                    // reads for trust/obligation/fear, never World. Milestone 020 originally read
-                    // world.Get(sub).Capabilities[Skill.Coercion] here, which is not something the
-                    // actor holds — it is the objective fact, reachable only because a generator can
-                    // see World and nothing stopped it from doing so. Codex found the violation: an
-                    // authority scan can tell a boss WHO reports to him without also telling him HOW
-                    // GOOD that man is at the job. Null when there is no genuine comparison to make,
-                    // and separately null whenever the actor has formed no assessment at all — see
-                    // IRelationship.AssessedCoercion for why neither case may fall back to the
-                    // objective capability or read as zero.
-                    ExecutorCoercion = comparative ? ctx.Actor.Social.Toward(sub).AssessedCoercion : null,
+                    // Only whether there is a comparison to make. What this man is believed capable
+                    // of is Utility's to read out of the actor's own beliefs (milestone 021); no
+                    // capability figure crosses from here, because a generator can see World and
+                    // the scorer deliberately cannot.
+                    ComparingExecutors = comparative,
                 };
             }
         }

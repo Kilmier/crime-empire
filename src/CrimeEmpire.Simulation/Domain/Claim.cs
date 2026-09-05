@@ -44,6 +44,52 @@ public enum ClaimKind
     /// refusing, without being told what: the subject names where to look, never what to find.
     /// </summary>
     UnattributedShortfall,
+
+    /// <summary>
+    /// Subject (a person) clears the bar named in Object — see <see cref="CapabilityBar"/>.
+    ///
+    /// <b>Milestone 021, and the shape is the ruling.</b> How good somebody is at a job is a fact
+    /// about the world that a character can be *wrong* about, unlike trust or fear, which have no
+    /// truth value. It therefore belongs here, with a source and a confidence, rather than as a
+    /// number on the relationship — which is where milestone 020 first put it, and why that had to
+    /// be undone.
+    ///
+    /// <b>Graded rather than scalar, deliberately.</b> Magnitude is carried by *which* bars a
+    /// character holds; <see cref="InformationRecord.Confidence"/> carries how sure he is of each.
+    /// Collapsing the two — encoding "he is very good" as "I am very sure he is good" — is the
+    /// distinction-losing move this project keeps having to undo, and the ruling forbids it. A man
+    /// firmly believed to clear the low bar and firmly believed to fail the high one is a sharper
+    /// statement than any single number, and it is one the ladder can make.
+    /// </summary>
+    PersonIsCapable,
+}
+
+/// <summary>
+/// The bars a <see cref="ClaimKind.PersonIsCapable"/> claim can be about, lowest first.
+///
+/// Named constants rather than loose strings so no call site invents a bar, following the precedent
+/// <see cref="ClaimKind.PolicyIssued"/> sets by naming a policy id in a claim's Object.
+///
+/// <b>Two, and about force only.</b> Milestone 021 proves the mechanism on one skill; assessments of
+/// Persuasion, Discretion or Investigation are explicitly out of its scope. The ladder is ordered —
+/// clearing <see cref="HardMan"/> implies clearing <see cref="RoughWork"/> — but that implication is
+/// deliberately *not* enforced on write: a character is allowed to hold an incoherent pair, because
+/// he is allowed to be wrong and nothing in the model gets to tidy his beliefs up behind his back.
+/// </summary>
+public static class CapabilityBar
+{
+    /// <summary>He is up to leaning on somebody at all.</summary>
+    public const string RoughWork = "rough-work";
+
+    /// <summary>He is exceptional at it — the bar above <see cref="RoughWork"/>.</summary>
+    public const string HardMan = "hard-man";
+
+    /// <summary>The ladder, lowest bar first. Ordering is data, not a convention at each reader.</summary>
+    public static readonly IReadOnlyList<string> Ladder = new[] { RoughWork, HardMan };
+
+    /// <summary>The claim that <paramref name="personId"/> clears <paramref name="bar"/>.</summary>
+    public static Claim About(string personId, string bar)
+        => new(ClaimKind.PersonIsCapable, personId, bar);
 }
 
 /// <summary>A proposition a character can hold, communicate, or be wrong about.</summary>

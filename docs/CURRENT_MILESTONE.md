@@ -7,11 +7,21 @@ do not create a separate handoff document.
 
 ## Status
 
-**Milestone 021 — Capability Is a Belief, Not a Stat — is scoped and awaiting authorization to
-begin.** Direction ruled by Matt on 2026-09-04; two rulings below are still open and implementation
-must not start until they are answered, because one of them decides the data model.
+**Milestone 021 — Capability Is a Belief, Not a Stat — is implemented and tested, awaiting Matt's
+acceptance.** Direction and all rulings settled by Matt on 2026-09-04; implemented the same day.
+`Relations.AssessedCoercion` is gone, along with `RelationshipFacet.Capability` and
+`Candidate.ExecutorCoercion`; capability is `ClaimKind.PersonIsCapable` on a graded `CapabilityBar`
+ladder in `Cognition`, scored from `perceived`, and revised at runtime by the outcome of delegated
+work (`Domain/Suitability.cs`). Build 0/0, **588 tests**, five accepted variants byte-identical on
+trace *and* actions, `capable-angelo` moved as ruling 4 authorized, all Godot self-tests and the
+two-process restart proof green. Four mutation checks. Full account, including two discoveries that
+were not designed — capability beliefs travelling through the report channels, and a testimony-
+acquired one being permanently unrevisable — in
+`docs/milestones/021-capability-is-a-belief-not-a-stat.md`.
 
-**Nothing has been implemented for milestone 021.** No simulation behaviour has changed for it.
+**It is unreviewed, and that matters here more than usual.** Codex ran out of usage mid-milestone-020;
+everything from `34cd117` onward has had no adversary. Milestone 020 returned a P1 on both Codex
+rounds it did get, plus a third defect found while scoping this one.
 
 ### What milestone 020 left, and where it stands
 
@@ -64,34 +74,41 @@ wrong, with provenance, confidence and contestability. The relationship record h
    may move. **The other five variants must stay byte-identical on both**, and that is a hard
    constraint, not an aspiration.
 
-### Open — implementation must not begin until these are answered
+5. **Magnitude is carried by which propositions are held — graded threshold claims, option (b3).**
+   Matt, 2026-09-04. The ruling exists because **certainty is not magnitude**: "I am sure Tommy is up
+   to it" and "Tommy is very good at it" are different statements, and encoding the second as the
+   first collapses two distinctions into one number — this project's signature defect, what
+   `LoyaltyReading` was unbundled to avoid, and what `RelationshipFacet` was built to detect.
 
-5. **How is magnitude represented once capability is propositional?** This is the ruling that decides
-   the data model, and it exists because **confidence is not magnitude**. "I am 80% sure Tommy is up
-   to it" and "Tommy is 0.80 good at it" are different statements, and encoding the second as the
-   first collapses two distinctions into one number — this project's signature defect, and precisely
-   what `LoyaltyReading` was unbundled to avoid and what `RelationshipFacet` was built to detect.
+   So a capability belief is **more than one proposition at different bars** — up to rough work,
+   exceptional at it — each an ordinary `InformationRecord` with its own stance and confidence.
+   Angelo is not "0.80 capable"; he is a man Vincent believes is up to rough work *and* exceptional at
+   it. Tommy may be firmly believed capable and firmly believed *not* exceptional, which is a sharper
+   statement than any single scalar. Rejected alternatives: one threshold claim only (magnitude
+   vanishes, and Angelo and Tommy would differ solely in how sure Vincent is — degenerate for this
+   milestone's own fork), and extending `Claim`/`InformationRecord` with a magnitude field (a
+   whole-system change to serve one reader).
 
-   - **(b1) One threshold claim.** `PersonIsCapable(subject, skill)`, stance plus confidence, no
-     magnitude. Smallest change. Risk: Angelo and Tommy become distinguishable only by how *sure*
-     Vincent is, which may make `capable-angelo`'s fork degenerate — an honest finding if it happens,
-     but a real risk to the milestone's own natural proof.
-   - **(b2) Claims carry a magnitude.** Extends `Claim`/`InformationRecord` for every claim kind to
-     serve one. **Recommend REJECT** — a whole-system change to serve a single reader.
-   - **(b3) Graded threshold claims (recommended).** More than one proposition at different bars —
-     "up to rough work" and "exceptional at it" — each with its own stance and confidence. Ordering is
-     recovered without conflating it with certainty, the vocabulary stays propositional, and revision
-     becomes expressive in the way that matters: a botched job can cost a man the higher belief while
-     leaving the lower one intact.
+   **Three things are being kept distinct, and the ruling is that all three stay distinct:**
 
-6. **Is attribution error deliberate?** The natural revision trigger is the outcome of work the
-   delegator ordered — but tribute success turns on the mark's resistance, the method, Persuasion and
-   a roll, not on the executor's Coercion alone. A rule that revises the assessment from operation
-   outcome is **modelling an attribution error**. Recommended answer: **yes, deliberately** — a
-   delegator drawing a confident conclusion from confounded evidence is the interesting behaviour, and
-   the milestone should *prove the assessment can end up wrong* rather than converging on truth. This
-   needs stating as a ruling because it sits against `Inference`'s existing discipline that a boss
-   "infers a gap, not an answer."
+   | | What it is | Where it lives |
+   |---|---|---|
+   | Skill | how good the man actually is | `Capabilities[Skill.Coercion]`, in `World`, never read by scoring |
+   | Certainty | how sure the delegator is of what he believes | `InformationRecord.Confidence`, per proposition |
+   | Self-confidence | how confident the *executor* is in his own ability | **does not exist, and is not being added** — see below |
+
+6. **Revising an assessment from confounded evidence is a deliberate attribution error.** Matt,
+   2026-09-04. Tribute success turns on the mark's resistance, the method, Persuasion and a roll, not
+   on the executor's Coercion alone, so a delegator who revises his read of the man from how the job
+   went is drawing a conclusion the evidence does not support. That is the interesting behaviour and
+   is modelled on purpose. It follows that **the milestone must prove the assessment can end up
+   further from the truth than it started**, not merely that it moves.
+
+7. **The executor's own confidence in doing the job is out of scope and is not being added.** Raised
+   by Matt on 2026-09-04 while settling ruling 5. It is a fourth concept, distinct from all three
+   above, and no decision reads it — the same rule that closed the trait vocabulary in milestone 001
+   and removed `Affection` in milestone 006 excludes it until one does. Recorded in `ROADMAP.md`
+   rather than built.
 
 ## Executable feature claim
 

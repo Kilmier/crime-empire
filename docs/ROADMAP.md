@@ -192,9 +192,32 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   020's first correction, which created `Relations.AssessedCoercion` and deliberately gave it no
   runtime writer: `Relations.Establish`/`SetAssessedCoercion` are scenario construction, so a
   delegator's read of how good his man is at the job is fixed for the whole run no matter what that
-  man then does in front of him. This is the same shape as "obligation is read but never moves", one
-  dimension over, and it is the difference between executor suitability being a belief and being a
-  stat. Nothing in milestone 020 authorized a learning path, and none is designed.
+  man then does in front of him. **Retired 2026-09-04 by milestone 021**, which moved capability
+  belief out of the relationship record into `Cognition` as `ClaimKind.PersonIsCapable` on a graded
+  `CapabilityBar` ladder, and gave it a revision path: the outcome of delegated work moves the
+  delegator's confidence in what he already believes about the man he sent. See
+  `docs/milestones/021-*.md`.
+- **A capability belief acquired by testimony can never be revised.** Surfaced by milestone 021 and
+  deliberately not fixed by it. Putting capability into the ordinary claim vocabulary means capability
+  claims travel through the report and corroboration channels like any other — which is the
+  actor-neutral behaviour the architecture asks for, and produces legible exchanges (a boss sounds a
+  man out about whether he is up to the work). But `Cognition.Revise` admits only records that pass
+  `SourceKind.IsOwnReading()` and name their holder, so a view formed on somebody else's word is
+  frozen for the rest of the run: Salvatore, told by Vincent that Angelo is up to rough work, can
+  never move off it. Arguably correct — a man who has never worked with somebody has no grounds of
+  his own to update — but it is the same "belief with no mechanism to revise it" shape milestone 021
+  was created to remove, one character over, and it is recorded rather than assumed benign. Relaxing
+  the `IsOwnReading` guard is **not** the fix: that guard is milestone 011's, and loosening it is how
+  the `Provenance` bundle `Provenance.cs` exists to prevent comes back.
+- **A character has no confidence in his own ability.** Raised by Matt on 2026-09-04 while settling
+  milestone 021's rulings, and deliberately excluded from it. Three things are already kept distinct —
+  how skilled a man actually is (`Capabilities`), how sure somebody *else* is of what they believe
+  about that (`InformationRecord.Confidence`), and, from milestone 021, what they believe at all. A
+  man's own read of whether he is up to a job is a fourth thing: it would sit on `Psychology`
+  alongside the traits, and it is not admissible until a decision reads it — the same rule that closed
+  the trait vocabulary in milestone 001 and removed `Affection` in milestone 006. The obvious future
+  reader is an executor weighing whether to accept or shirk work he has been handed, which nothing
+  currently models.
 - ~~The test project redundantly declares `TargetFramework` despite the centralized build property in
   `Directory.Build.props`.~~ **Retired 2026-08-16 by milestone 009**, and not by deleting the line.
   `Directory.Build.props` no longer assigns a TFM at all — it publishes `CrimeEmpireHostTfm` and

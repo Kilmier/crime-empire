@@ -58,48 +58,47 @@ public sealed class SimulationReplayTests
     }
 
     /// <summary>
-    /// Milestone 020 correction 2 (Codex P2 on `436f6c7`). Neither comparator can be
-    /// mutation-checked the usual way — deleting the field from the comparator makes the comparison
-    /// blinder without making anything fail, per <see cref="The_snapshot_names_the_subject_of_every_request"/>'s
-    /// own established exception. This is that same technique applied to
-    /// <see cref="Domain.Relations.AssessedCoercion"/>: two otherwise-identical worlds, perturbed on
-    /// nothing but this one relationship dimension, must compare unequal under both
-    /// <see cref="Snapshot"/> and <see cref="BehavioralSnapshot"/> — and, separately, a world where
-    /// the dimension has never been assessed (null) must compare unequal against one where it has
-    /// been assessed at the numeric floor of the skill range (0.0), which is the same null-versus-zero
-    /// distinction <c>ExecutorSuitabilityTests.A_missing_assessment_is_neither_the_objective_capability_nor_zero</c>
-    /// proves on the production scoring side. If either comparator's new field were reverted, both
-    /// assertions below would fail — confirmed directly: reverting the two lines in
-    /// <see cref="Snapshot"/> and <see cref="BehavioralSnapshot"/> that print
-    /// <c>NullableNumber(rel.AssessedCoercion)</c> makes this test fail on all three assertion pairs,
-    /// and was reverted after confirming it.
+    /// Milestone 021: a capability belief is replay-compared, and both comparators see a *revision*
+    /// of one — the state this milestone's whole point is that the simulation now moves at runtime.
+    ///
+    /// <b>This replaces milestone 020's `AssessedCoercion` version of the same test, and the reason
+    /// it needed no new comparator field is the argument for the move.</b> That correction had to add
+    /// a bespoke line to both fingerprints, because the assessment was a novel scalar on the
+    /// relationship record. As an ordinary `PersonIsCapable` belief in `Cognition` it is covered by
+    /// the `knowledge|` lines both comparators already emit — kind, subject, object, stance,
+    /// confidence, source and reconsideration stamp — so revision is replay-visible for free rather
+    /// than by remembering to extend a comparator. A field that needs the comparator taught about it
+    /// is a field in the wrong place.
+    ///
+    /// Perturbs confidence rather than stance because `Cognition.Revise` moves confidence and is the
+    /// mechanism the runtime path uses; a test that perturbed something the production path cannot
+    /// produce would prove the comparator sees an impossible state.
     /// </summary>
     [Fact]
-    public void The_comparators_capture_the_assessed_coercion_relationship_dimension()
+    public void The_comparators_capture_a_revised_capability_belief()
     {
-        var unperturbed = Cast.Build(seed: 42, variant: "baseline");
-        var perturbedValue = Cast.Build(seed: 42, variant: "baseline");
-        var perturbedNull = Cast.Build(seed: 42, variant: "baseline");
+        var unperturbed = Cast.Build(seed: 42, variant: "capable-angelo");
+        var perturbed = Cast.Build(seed: 42, variant: "capable-angelo");
 
-        // Freshly built, unperturbed worlds compare equal — the control every mutation below is
-        // measured against.
-        Assert.Equal(Snapshot(unperturbed), Snapshot(perturbedValue));
-        Assert.Equal(BehavioralSnapshot(unperturbed), BehavioralSnapshot(perturbedValue));
+        // Freshly built, unperturbed worlds compare equal — the control the mutation is measured
+        // against.
+        Assert.Equal(Snapshot(unperturbed), Snapshot(perturbed));
+        Assert.Equal(BehavioralSnapshot(unperturbed), BehavioralSnapshot(perturbed));
 
-        // Perturb nothing but Vincent's assessment of Tommy's Coercion — from Cast.Build's own 0.55
-        // to a different held value. Nothing else about either world moves.
-        Relations.SetAssessedCoercion(perturbedValue.Get("vincent"), "tommy", 0.10);
+        // Perturb nothing but how sure Vincent is that Angelo is a hard man, through the same
+        // production call the runtime revision path uses. Its return value is asserted so that a
+        // Revise silently refused — wrong provenance, wrong holder — cannot pass as a perturbation.
+        var revised = perturbed.Get("vincent").Cognition.Revise(
+            CapabilityBar.About("angelo", CapabilityBar.HardMan),
+            confidence: 0.20,
+            holderId: "vincent",
+            at: Cast.Start.AddDays(1));
 
-        Assert.NotEqual(Snapshot(unperturbed), Snapshot(perturbedValue));
-        Assert.NotEqual(BehavioralSnapshot(unperturbed), BehavioralSnapshot(perturbedValue));
+        Assert.NotNull(revised);
+        Assert.Equal(0.20, revised!.Confidence, precision: 9);
 
-        // And separately: null (no assessment formed) against 0.0 (assessed at the floor) — the
-        // distinction a collapsed "value ?? 0" formatting would erase.
-        Relations.SetAssessedCoercion(perturbedNull.Get("vincent"), "tommy", null);
-        Relations.SetAssessedCoercion(perturbedValue.Get("vincent"), "tommy", 0.0);
-
-        Assert.NotEqual(Snapshot(perturbedNull), Snapshot(perturbedValue));
-        Assert.NotEqual(BehavioralSnapshot(perturbedNull), BehavioralSnapshot(perturbedValue));
+        Assert.NotEqual(Snapshot(unperturbed), Snapshot(perturbed));
+        Assert.NotEqual(BehavioralSnapshot(unperturbed), BehavioralSnapshot(perturbed));
     }
 
     /// <summary>
@@ -174,12 +173,6 @@ public sealed class SimulationReplayTests
     internal static string Snapshot(World world)
     {
         static string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
-        // Milestone 020 correction 2 (Codex P2). AssessedCoercion is nullable — no assessment formed
-        // is a real, distinct state from an assessment of zero (Relations.IRelationship.AssessedCoercion),
-        // and collapsing null and 0.0 to the same printed token here would make the comparator blind
-        // to exactly the "missing assessment silently becomes zero" regression the correction's own
-        // production tests exist to rule out.
-        static string NullableNumber(double? value) => value is { } v ? Number(v) : "none";
 
         var lines = new List<string>
         {
@@ -255,7 +248,7 @@ public sealed class SimulationReplayTests
             // implementation detail the determinism rules forbid depending on.
             foreach (var rel in character.Social.All)
                 lines.Add($"relationship|{character.Id}|{rel.OtherId}|{Number(rel.Trust)}|" +
-                          $"{Number(rel.Fear)}|{Number(rel.Obligation)}|{NullableNumber(rel.AssessedCoercion)}|" +
+                          $"{Number(rel.Fear)}|{Number(rel.Obligation)}|" +
                           string.Join(",", rel.Grievances.Select(g =>
                               $"{g.Description}:{Number(g.Severity)}:{g.At:O}")));
 
@@ -288,12 +281,6 @@ public sealed class SimulationReplayTests
     private static string BehavioralSnapshot(World world)
     {
         static string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
-        // Milestone 020 correction 2 (Codex P2). AssessedCoercion is nullable — no assessment formed
-        // is a real, distinct state from an assessment of zero (Relations.IRelationship.AssessedCoercion),
-        // and collapsing null and 0.0 to the same printed token here would make the comparator blind
-        // to exactly the "missing assessment silently becomes zero" regression the correction's own
-        // production tests exist to rule out.
-        static string NullableNumber(double? value) => value is { } v ? Number(v) : "none";
 
         var lines = new List<string>();
 
@@ -321,7 +308,7 @@ public sealed class SimulationReplayTests
             // one keeps to what a perturbation could not legitimately move.
             foreach (var rel in character.Social.All)
                 lines.Add($"relationship|{character.Id}|{rel.OtherId}|{Number(rel.Trust)}|" +
-                          $"{Number(rel.Fear)}|{Number(rel.Obligation)}|{NullableNumber(rel.AssessedCoercion)}|" +
+                          $"{Number(rel.Fear)}|{Number(rel.Obligation)}|" +
                           string.Join(",", rel.Grievances.Select(g => Number(g.Severity))));
 
             lines.AddRange(character.Cognition.Records.Select(r =>

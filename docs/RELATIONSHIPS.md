@@ -24,23 +24,22 @@ Four things, and they are all there is: **Trust**, **Fear**, **Obligation**, and
 **Grievances**. Directional in every case — `A → B` is a separate object from `B → A` and they move
 independently.
 
-> **Provisional fifth, added 2026-08-27 by milestone 020 and scheduled for removal.**
-> `AssessedCoercion` — what this character believes about the other's Coercion — is stored on
-> `IRelationship` and read by delegation scoring's "executor capability" component. It was added
-> without a ruling reopening the closure above, and this document did not record it until the
-> correction that added this note.
+> **A fifth was added and removed, and the rule that removed it is the useful part.** Milestone 020
+> put `AssessedCoercion` here — what a delegator believed about a subordinate's Coercion — and
+> milestone 021 took it out again on Matt's ruling of 2026-09-04, moving it to
+> `ClaimKind.PersonIsCapable` in `Cognition`.
 >
-> **It does not satisfy the rule that admits a dimension, and the reason is instructive.** Trust,
-> Fear and Obligation have no truth value: there is no fact of the matter about how much Vincent
-> trusts Tommy beyond Vincent's own state. `AssessedCoercion` has a referent — Tommy's actual
-> `Capabilities[Skill.Coercion]` — so it can be *wrong*, which makes it a belief about the world
-> rather than an attitude toward a person, and beliefs about the world live in `Cognition` with
-> provenance and confidence. **Matt ruled on 2026-09-04 that it moves there**; milestone 021 is that
-> move, after which this note and the field go together. Until then it is documented here rather
-> than left undocumented, and the vocabulary above is four plus one acknowledged temporary.
+> **The test it failed is one this document can now state.** Every dimension above is an *attitude*,
+> with no truth value: there is no fact of the matter about how much Vincent trusts Tommy beyond
+> Vincent's own state, so "is his trust correct?" is not a question. An assessment of somebody's
+> skill has a referent — that man's actual `Capabilities[Skill.Coercion]` — so it can be **wrong**,
+> and a thing a character can be wrong about belongs where wrongness is modelled: `Cognition`, with a
+> source, a confidence, and the ability to be contested and revised. A bare number here carried none
+> of those, and could not have.
 >
-> Its only writers are `Relations.Establish` and `Relations.SetAssessedCoercion`, both scenario
-> construction — nothing revises it at runtime, which is the other half of what milestone 021 is for.
+> So the admitting rule has a second clause now, and it is worth keeping: a dimension must name a
+> behavioural purpose and a decision that reads it, **and it must be the kind of thing its holder
+> cannot simply be mistaken about.**
 
 `Domain/Relations.cs` is the only code that can create or change any of it. This is enforced by the
 concrete type being a `private sealed class` nested inside `Relations`, so outside that class the

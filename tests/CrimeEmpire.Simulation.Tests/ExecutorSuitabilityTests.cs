@@ -155,14 +155,14 @@ public sealed class ExecutorSuitabilityTests
     ///   - <b>Comparative computed from the filtered set, not the raw count.</b> Raw
     ///     <c>SubordinateIds.Count</c> here is 2 (Tommy plus the stranger), which the pre-correction
     ///     gate would have read as a genuine two-way choice; with the stranger filtered out, only one
-    ///     nameable subordinate remains, so Tommy's own candidate carries no
-    ///     <see cref="Candidate.ExecutorCoercion"/> comparison at all — there is nothing to compare
-    ///     him against that Vincent could actually name.
+    ///     nameable subordinate remains, so Tommy's own candidate is not
+    ///     <see cref="Candidate.ComparingExecutors"/> at all — there is nothing to compare him
+    ///     against that Vincent could actually name.
     ///
     /// <b>Mutation check.</b> Reverting <c>FromRelationship</c>'s subordinate loop to iterate
     /// <c>ctx.SubordinateIds</c> directly (this test's own pre-correction shape) was confirmed to make
-    /// this test fail on all three counts — the stranger appears, and Tommy's candidate wrongly
-    /// carries a two-way <c>ExecutorCoercion</c> comparison — then reverted.
+    /// this test fail on all three counts — the stranger appears, and Tommy's candidate is wrongly
+    /// marked as a two-way comparison — then reverted.
     /// </summary>
     [Fact]
     public void An_organisationally_subordinate_but_unacquainted_stranger_is_not_offered_as_a_delegate()
@@ -194,25 +194,24 @@ public sealed class ExecutorSuitabilityTests
 
         var tommyCandidate = Assert.Single(delegateCandidates);
         Assert.Equal(Tommy, tommyCandidate.TargetId);
-        Assert.Null(tommyCandidate.ExecutorCoercion);
+        Assert.False(tommyCandidate.ComparingExecutors);
     }
 
     // ================================================================= scoring: capability present/absent
 
     /// <summary>
-    /// Both delegate candidates carry their own executor's Coercion, and <see cref="Utility"/>
-    /// scores them differently for it — a real, separately-named "executor capability" component,
-    /// never folded into "relationship effects" (milestone 008's facet-tagging discipline). Direct
-    /// falsifier of mutation check 2 (capability-free scoring): forcing
-    /// <see cref="Candidate.ExecutorCoercion"/> to <c>null</c> for both would make the component
-    /// absent from both breakdowns, and this fails.
+    /// The ladder does what a scalar could not: **magnitude is which bars Vincent holds, and it is
+    /// separately visible from how sure he is of each.**
     ///
-    /// <b>The facet assertions below were wrong until the P1 correction and this test pinned them
-    /// that way</b>, which is the third time in this milestone that a test froze the defect instead
-    /// of disproving it. See <see cref="The_capability_component_is_visible_to_the_relationship_channel"/>.
+    /// In the natural `capable-angelo` fixture Vincent believes Angelo clears both bars and believes
+    /// Tommy clears only the low one — he has formed no view on whether Tommy is exceptional. So
+    /// Angelo's breakdown carries *two* capability components and Tommy's carries one, which is the
+    /// graded structure milestone 021's ruling 5 chose over a single number, asserted rather than
+    /// argued. Each is tagged <see cref="RelationshipFacet.None"/> and truthfully so this time: the
+    /// term now reads beliefs out of `perceived` and no relationship state at all.
     /// </summary>
     [Fact]
-    public void Both_delegation_candidates_carry_their_own_executors_coercion_and_score_differently_for_it()
+    public void Capability_is_scored_as_the_bars_he_holds_not_as_one_number()
     {
         var world = Cast.Build(Seed, Variant);
         var prepared = AdvanceToVincentsFork(world);
@@ -222,79 +221,136 @@ public sealed class ExecutorSuitabilityTests
         var angeloScored = prepared.Scored.Single(
             s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
 
-        Assert.Equal(0.55, tommyScored.Candidate.ExecutorCoercion);
-        Assert.Equal(0.80, angeloScored.Candidate.ExecutorCoercion);
+        Assert.True(tommyScored.Candidate.ComparingExecutors);
+        Assert.True(angeloScored.Candidate.ComparingExecutors);
 
-        var tommyCapability = tommyScored.Components.Single(c => c.Name == "executor capability");
-        var angeloCapability = angeloScored.Components.Single(c => c.Name == "executor capability");
+        var tommyBars = tommyScored.Components.Where(c => c.Name == "executor capability").ToList();
+        var angeloBars = angeloScored.Components.Where(c => c.Name == "executor capability").ToList();
 
-        // Centered on 0.5: Tommy (0.55) reads barely above it, Angelo (0.80) reads well above it —
-        // and the component reports the relationship state it actually reads.
-        Assert.True(angeloCapability.Value > tommyCapability.Value);
-        Assert.Equal(RelationshipFacet.Capability, tommyCapability.Reads);
-        Assert.Equal(RelationshipFacet.Capability, angeloCapability.Reads);
+        // One bar for Tommy, two for Angelo — the ladder, not a scalar.
+        Assert.Single(tommyBars);
+        Assert.Equal(2, angeloBars.Count);
+
+        // The high bar is the one that distinguishes them, and it is worth more than the low one.
+        var hardMan = angeloBars.Single(c => c.Explanation.Contains("hard man", StringComparison.Ordinal));
+        Assert.True(hardMan.Value > tommyBars[0].Value);
+
+        // Summed, Angelo is the better bet on capability alone.
+        Assert.True(angeloBars.Sum(c => c.Value) > tommyBars.Sum(c => c.Value));
+
+        // Reads no relationship state — the tag milestone 020 used, now for the stated reason.
+        foreach (var bar in tommyBars.Concat(angeloBars))
+            Assert.Equal(RelationshipFacet.None, bar.Reads);
+    }
+
+    /// <summary>
+    /// Certainty and magnitude move independently, which is the whole substance of ruling 5.
+    ///
+    /// Two worlds where Vincent holds *exactly the same bars* about Angelo — both of them — and
+    /// differs only in how sure he is of the high one. The high bar's component moves; the low bar's
+    /// does not; and no bar appears or disappears. A design that had encoded "how good" as "how sure"
+    /// could not produce this result, because there would be nothing left to vary independently.
+    /// </summary>
+    [Fact]
+    public void How_sure_he_is_moves_separately_from_which_bars_he_holds()
+    {
+        var certain = BuildAngeloWorld(actualCoercion: 0.80, believedHardMan: 0.90);
+        var unsure = BuildAngeloWorld(actualCoercion: 0.80, believedHardMan: 0.20);
+
+        var certainBars = CapabilityBarsFor(AdvanceToVincentsFork(certain), Angelo);
+        var unsureBars = CapabilityBarsFor(AdvanceToVincentsFork(unsure), Angelo);
+
+        // Same bars held in both — the ladder is identical, only the certainty differs.
+        Assert.Equal(2, certainBars.Count);
+        Assert.Equal(2, unsureBars.Count);
+
+        var certainHigh = certainBars.Single(c => c.Explanation.Contains("hard man", StringComparison.Ordinal));
+        var unsureHigh = unsureBars.Single(c => c.Explanation.Contains("hard man", StringComparison.Ordinal));
+        var certainLow = certainBars.Single(c => c.Explanation.Contains("up to leaning", StringComparison.Ordinal));
+        var unsureLow = unsureBars.Single(c => c.Explanation.Contains("up to leaning", StringComparison.Ordinal));
+
+        Assert.True(certainHigh.Value > unsureHigh.Value);
+        Assert.Equal(certainLow.Value, unsureLow.Value, precision: 9);
+    }
+
+    /// <summary>
+    /// Holding a bar, doubting it, and having no view on it are three different states, and the
+    /// middle one is not the same as the third.
+    ///
+    /// A man Vincent has concluded is *not* a hard man scores worse than one he has never thought
+    /// about, because a held negative position is information and an absent one is not. This is the
+    /// branch the natural fixture deliberately does not seed — Vincent having decided Tommy is no
+    /// hard man would be an opinion invented for him — so it is proven here instead.
+    /// </summary>
+    [Fact]
+    public void A_rejected_bar_scores_worse_than_a_bar_he_has_no_view_on()
+    {
+        var rejected = BuildAngeloWorld(
+            actualCoercion: 0.80, believedHardMan: 0.80, hardManRejected: true);
+        var noView = BuildAngeloWorld(actualCoercion: 0.80, believedHardMan: null);
+
+        var rejectedBars = CapabilityBarsFor(AdvanceToVincentsFork(rejected), Angelo);
+        var noViewBars = CapabilityBarsFor(AdvanceToVincentsFork(noView), Angelo);
+
+        // No view on the high bar means no component for it at all — not a zero-valued one.
+        Assert.Single(noViewBars);
+        Assert.DoesNotContain(noViewBars, c => c.Explanation.Contains("hard man", StringComparison.Ordinal));
+
+        // A rejected high bar is present and negative.
+        var rejectedHigh = rejectedBars.Single(
+            c => c.Explanation.Contains("no more than adequate", StringComparison.Ordinal));
+        Assert.True(rejectedHigh.Value < 0);
+
+        // And therefore the man he has written off is a worse bet than the man he has not weighed.
+        Assert.True(rejectedBars.Sum(c => c.Value) < noViewBars.Sum(c => c.Value));
     }
 
     /// <summary>
     /// The P1 correction to milestone 020's accepted state, proven against the thing that was
     /// actually wrong rather than against the tag alone.
     ///
-    /// Correction `436f6c7` stopped the "executor capability" component reading the executor's
-    /// objective <c>Capabilities[Skill.Coercion]</c> off <c>World</c> and sourced it from
-    /// <c>actor.Social.Toward(sub).AssessedCoercion</c> instead — relationship state — but left the
-    /// component tagged <see cref="RelationshipFacet.None"/>. Two consequences, both checked here:
-    /// the developer relationship channel could not see the newest reader of relationship state, and
-    /// <see cref="ScoreBreakdown.TotalWithoutRelationships"/> — documented as "the same score for a
-    /// man holding no relationship with anybody" — kept the whole term, though such a man reads
-    /// <c>Relations.Absent</c>, whose <c>AssessedCoercion</c> is null, and scores no such component.
+    /// Milestone 020's correction 3 had to add a `Capability` facet, because the component then read
+    /// a figure stored on the relationship record and was lying about it. Moving the belief into
+    /// `Cognition` makes the *original* tag correct: capability is no longer relationship state, so
+    /// the component belongs outside the relationship channel and a man with no relationships still
+    /// holds his beliefs about who is any good.
     ///
-    /// The second assertion is the one that matters and is deliberately not a re-statement of the
-    /// first: it compares the reported counterfactual against a score genuinely produced with no
-    /// assessment held, rather than against arithmetic this test performs itself.
+    /// The last assertion is the one that matters and is deliberately not this test's own arithmetic:
+    /// it compares the reported counterfactual against a score genuinely produced by a Vincent
+    /// stripped of every relationship, and requires the capability term to have survived that.
     /// </summary>
     [Fact]
-    public void The_capability_component_is_visible_to_the_relationship_channel()
+    public void Capability_is_outside_the_relationship_channel_and_survives_the_counterfactual()
     {
         var world = Cast.Build(Seed, Variant);
         var prepared = AdvanceToVincentsFork(world);
 
         var angeloScored = prepared.Scored.Single(
             s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
-        var capability = angeloScored.Components.Single(c => c.Name == "executor capability");
+        var bars = angeloScored.Components.Where(c => c.Name == "executor capability").ToList();
+        Assert.NotEmpty(bars);
 
-        // In the channel at all — RelationshipComponents() filters on Reads != None, so a component
-        // tagged None is invisible to every developer diagnostic built on it.
-        Assert.Contains(angeloScored.RelationshipComponents(), c => c.Name == "executor capability");
+        // Not in the relationship channel, and contributing nothing to its gross or net.
+        Assert.DoesNotContain(angeloScored.RelationshipComponents(), c => c.Name == "executor capability");
+        foreach (var bar in bars)
+        {
+            Assert.Equal(bar.Value, bar.RelationshipFreeValue, precision: 9);
+            Assert.Equal(0.0, bar.RelationshipShare, precision: 9);
+        }
 
-        // And owed entirely to relationship state: without the relationship there is no assessment,
-        // so the whole term goes, exactly as it does for Trust and Obligation.
-        Assert.Equal(0.0, capability.RelationshipFreeValue, precision: 9);
-        Assert.Equal(capability.Value, capability.RelationshipShare, precision: 9);
-
-        // The counterfactual, checked against a real relationship-free score rather than against
-        // this test's own arithmetic. A world where Vincent has formed no assessment of Angelo
-        // produces no capability component at all; the difference between the two totals is exactly
-        // what TotalWithoutRelationships must already have accounted for.
-        var noAssessment = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: null);
-        var withoutPrepared = AdvanceToVincentsFork(noAssessment);
-        var withoutAngelo = withoutPrepared.Scored.Single(
-            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
-
-        Assert.DoesNotContain(withoutAngelo.Components, c => c.Name == "executor capability");
+        // And therefore the whole capability contribution survives the relationship counterfactual:
+        // what Vincent believes Angelo is good for does not depend on his standing toward him.
         Assert.Equal(
-            angeloScored.Total - capability.Value,
-            withoutAngelo.Total,
-            precision: 9);
-        Assert.Equal(
+            angeloScored.Total - angeloScored.RelationshipNet(),
             angeloScored.TotalWithoutRelationships(),
-            withoutAngelo.TotalWithoutRelationships(),
             precision: 9);
+        Assert.Contains(bars.Sum(c => c.Value), new[] { bars.Sum(c => c.RelationshipFreeValue) });
     }
 
     /// <summary>
     /// The regression that guarantees every existing accepted variant's hash cannot move: with
-    /// exactly one subordinate, <see cref="Candidate.ExecutorCoercion"/> is <c>null</c> and the
-    /// "executor capability" component is never emitted at all — not emitted-at-zero, genuinely
+    /// exactly one subordinate the candidate is not <see cref="Candidate.ComparingExecutors"/> and
+    /// the "executor capability" component is never emitted at all — not emitted-at-zero, genuinely
     /// absent, so <c>Utility.Add</c>'s near-zero guard never even has to fire.
     /// </summary>
     [Fact]
@@ -304,30 +360,29 @@ public sealed class ExecutorSuitabilityTests
         var prepared = AdvanceToVincentsFork(world, Baseline);
 
         var tommyScored = prepared.Scored.Single(s => s.Candidate.Kind == ActionKind.DelegateStrategy);
-        Assert.Null(tommyScored.Candidate.ExecutorCoercion);
+        Assert.False(tommyScored.Candidate.ComparingExecutors);
         Assert.DoesNotContain(tommyScored.Components, c => c.Name == "executor capability");
     }
 
-    // ================================================================= assessment vs. objective capability
+    // ================================================================= belief vs. objective capability
     //
-    // Codex's correction to `f468e19`. The four tests below independently vary Angelo's *actual*
-    // Capabilities[Skill.Coercion] and Vincent's *assessed* Coercion of him — two numbers that used
-    // to be forced equal because scoring read the first one directly. `BuildAngeloWorld` below
-    // constructs each combination directly, mirroring `Variants.Apply`'s "capable-angelo" case but
-    // parameterised on both figures, exactly the kind of test-local duplication this project already
-    // practises rather than adding a scenario-construction knob that exists only for tests.
+    // The negative controls that keep the omniscient read out. These independently vary Angelo's
+    // *actual* Capabilities[Skill.Coercion] and what Vincent *believes* about him — two things
+    // milestone 020 forced equal by scoring the first directly. `BuildAngeloWorld` below constructs
+    // each combination, mirroring `Variants.Apply`'s "capable-angelo" case but parameterised, which
+    // is the test-local duplication this project prefers to a scenario knob that exists for tests.
 
     /// <summary>
     /// Moving Angelo's hidden, objective Coercion — the figure only <see cref="Strategies.ResolveViolence"/>
     /// may read — changes nothing about what Vincent's fork offers, scores or prefers, because
-    /// scoring never reaches it. Same assessed value (0.80) in both worlds; only the actual
-    /// <see cref="Capabilities"/> differs (0.80 vs. 0.15).
+    /// scoring never reaches it. Vincent believes exactly the same things in both worlds; only the
+    /// actual <see cref="Capabilities"/> differs (0.80 vs. 0.15).
     /// </summary>
     [Fact]
     public void Changing_only_angelos_hidden_actual_capability_leaves_scoring_unchanged()
     {
-        var reference = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: 0.80);
-        var hiddenChange = BuildAngeloWorld(actualCoercion: 0.15, assessedCoercion: 0.80);
+        var reference = BuildAngeloWorld(actualCoercion: 0.80);
+        var hiddenChange = BuildAngeloWorld(actualCoercion: 0.15);
 
         var refPrepared = AdvanceToVincentsFork(reference);
         var changedPrepared = AdvanceToVincentsFork(hiddenChange);
@@ -342,9 +397,11 @@ public sealed class ExecutorSuitabilityTests
         var changedAngelo = changedPrepared.Scored.Single(
             s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
 
-        // Same ExecutorCoercion, same total score, same rank — none of it moved with the hidden
-        // actual capability, because nothing in the scoring path ever read it.
-        Assert.Equal(refAngelo.Candidate.ExecutorCoercion, changedAngelo.Candidate.ExecutorCoercion);
+        // Same capability components, same total score, same rank — none of it moved with the
+        // hidden actual capability, because nothing in the scoring path ever read it.
+        Assert.Equal(
+            CapabilityBarsFor(refPrepared, Angelo).Select(c => c.Value),
+            CapabilityBarsFor(changedPrepared, Angelo).Select(c => c.Value));
         Assert.Equal(refAngelo.Total, changedAngelo.Total, precision: 9);
         Assert.Equal(
             refPrepared.Scored[0].Candidate.Id,
@@ -357,11 +414,10 @@ public sealed class ExecutorSuitabilityTests
     }
 
     /// <summary>
-    /// Moving only Vincent's own assessment of Angelo — leaving Angelo's actual Coercion fixed at
-    /// 0.80 in both worlds — changes the "executor capability" component's value and flips which of
-    /// the two delegate candidates Vincent prefers <em>between the two of them</em>. This is the
-    /// positive half of the same claim: the assessment is a real scoring input, not a field nobody
-    /// reads.
+    /// Moving only what Vincent believes about Angelo — leaving Angelo's actual Coercion fixed at
+    /// 0.80 in both worlds — changes the capability contribution and flips which of the two delegate
+    /// candidates Vincent prefers <em>between the two of them</em>. This is the positive half of the
+    /// same claim: the belief is a real scoring input, not state nobody reads.
     ///
     /// Scoped to the delegate-versus-delegate comparison rather than <c>Scored[0]</c> overall:
     /// at this fork — Vincent's very first pause after starting the strategy himself — "carry on
@@ -374,8 +430,11 @@ public sealed class ExecutorSuitabilityTests
     [Fact]
     public void Changing_only_vincents_assessment_of_angelo_changes_score_and_can_flip_preference()
     {
-        var trusting = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: 0.80);
-        var doubting = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: 0.15);
+        // Same objective man in both. In one Vincent rates him a hard man; in the other he has
+        // concluded the opposite, which is a held position rather than an absence of one.
+        var trusting = BuildAngeloWorld(actualCoercion: 0.80, believedHardMan: 0.70);
+        var doubting = BuildAngeloWorld(
+            actualCoercion: 0.80, believedHardMan: 0.70, hardManRejected: true);
 
         var trustingPrepared = AdvanceToVincentsFork(trusting);
         var doubtingPrepared = AdvanceToVincentsFork(doubting);
@@ -389,47 +448,227 @@ public sealed class ExecutorSuitabilityTests
         var doubtingTommy = doubtingPrepared.Scored.Single(
             s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Tommy);
 
-        Assert.Equal(0.80, trustingAngelo.Candidate.ExecutorCoercion);
-        Assert.Equal(0.15, doubtingAngelo.Candidate.ExecutorCoercion);
+        double trustingCapability = CapabilityBarsFor(trustingPrepared, Angelo).Sum(c => c.Value);
+        double doubtingCapability = CapabilityBarsFor(doubtingPrepared, Angelo).Sum(c => c.Value);
+        Assert.True(trustingCapability > doubtingCapability);
 
-        var trustingComponent = trustingAngelo.Components.Single(c => c.Name == "executor capability");
-        var doubtingComponent = doubtingAngelo.Components.Single(c => c.Name == "executor capability");
-        Assert.True(trustingComponent.Value > doubtingComponent.Value);
-
-        // Tommy's own score is untouched by Angelo's assessment moving (each candidate scores
+        // Tommy's own score is untouched by Vincent's view of Angelo moving (each candidate scores
         // independently), so the whole swing lands on Angelo's total — enough, at seed 42, to flip
-        // which of the two men Vincent would rather send once Angelo's Coercion is in doubt.
+        // which of the two men Vincent would rather send once Angelo is written off as no hard man.
         Assert.Equal(trustingTommy.Total, doubtingTommy.Total, precision: 9);
         Assert.True(trustingAngelo.Total > trustingTommy.Total,
-            "expected Angelo, assessed as capable, to outscore Tommy between the two delegate options");
+            "expected Angelo, believed a hard man, to outscore Tommy between the two delegate options");
         Assert.True(doubtingAngelo.Total < doubtingTommy.Total,
-            "expected Angelo, assessed as unskilled, to score below Tommy between the two delegate options");
+            "expected Angelo, written off as no hard man, to score below Tommy between the two options");
     }
 
     /// <summary>
-    /// A subordinate Vincent has never formed a Coercion assessment of gets no "executor capability"
-    /// term at all — <see cref="Candidate.ExecutorCoercion"/> is null, never the executor's real
-    /// 0.80 (a fallback to <c>World</c>) and never 0.0 (a silent floor). Angelo's actual Coercion is
-    /// deliberately far from both candidate fallback values (0.80 and 0.0) so either regression
-    /// would be caught by the first assertion alone; the remaining assertions close the rest.
+    /// A subordinate Vincent has formed no view of at all gets no "executor capability" term —
+    /// never the executor's real 0.80 (a fallback to <c>World</c>) and never a zero-valued component
+    /// standing in for an opinion he does not have. Angelo's actual Coercion is deliberately far from
+    /// both, so either regression is caught here.
+    ///
+    /// The milestone-020 version of this test guarded a nullable scalar. The belief model makes the
+    /// same guarantee structurally: <c>perceived.Position</c> returns null for a claim he holds no
+    /// position on, and the loop simply emits nothing.
     /// </summary>
     [Fact]
-    public void A_missing_assessment_is_neither_the_objective_capability_nor_zero()
+    public void A_man_he_has_no_view_of_gets_no_capability_term_at_all()
     {
-        var world = BuildAngeloWorld(actualCoercion: 0.80, assessedCoercion: null);
+        var world = BuildAngeloWorld(
+            actualCoercion: 0.80, believedRoughWork: null, believedHardMan: null);
         var prepared = AdvanceToVincentsFork(world);
 
-        var angeloScored = prepared.Scored.Single(
-            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo);
-        Assert.Null(angeloScored.Candidate.ExecutorCoercion);
-        Assert.DoesNotContain(angeloScored.Components, c => c.Name == "executor capability");
+        Assert.Empty(CapabilityBarsFor(prepared, Angelo));
 
-        // Tommy's own assessment is untouched by Angelo's missing one — his component is still
-        // present, so this is a targeted absence, not the comparative branch failing to fire at all.
-        var tommyScored = prepared.Scored.Single(
-            s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Tommy);
-        Assert.NotNull(tommyScored.Candidate.ExecutorCoercion);
-        Assert.Contains(tommyScored.Components, c => c.Name == "executor capability");
+        // Tommy's own belief is untouched by Angelo's absence — his term is still there, so this is
+        // a targeted absence, not the comparative branch failing to fire at all.
+        Assert.NotEmpty(CapabilityBarsFor(prepared, Tommy));
+    }
+
+    // ================================================================= revision: the belief moves at runtime
+    //
+    // Milestone 021's own deliverable. Everything above proves capability is *read* as a belief;
+    // these prove it is a belief in the sense that matters — one the world can move.
+
+    /// <summary>
+    /// The natural proof, and the milestone's headline claim: in an unmodified `capable-angelo` run,
+    /// what Vincent believes about the man he sent is not what he believed at the start.
+    ///
+    /// Asserts on the reconsideration stamp as well as the confidence, because the two say different
+    /// things: the stamp is what `Cognition.Revise` sets and is therefore evidence the production
+    /// revision path ran, while a changed confidence alone could in principle come from anywhere.
+    /// </summary>
+    [Fact]
+    public void The_delegators_read_of_his_man_moves_during_a_natural_run()
+    {
+        var world = Cast.Build(Seed, Variant);
+        Runner.Run(world, End);
+
+        var vincent = world.Get(Vincent);
+        var hardMan = vincent.Cognition.Records.Single(
+            r => r.Claim.Equals(CapabilityBar.About(Angelo, CapabilityBar.HardMan)));
+
+        Assert.NotEqual(0.70, hardMan.Confidence);
+        Assert.True(hardMan.ReconsideredAt > hardMan.AcquiredAt,
+            "the belief was never reconsidered, so nothing in the run revised it");
+    }
+
+    /// <summary>
+    /// Both directions of the rule, staged directly against it so the arithmetic is visible.
+    /// Success makes him surer of what he holds; failure makes him less sure. The rule is exercised
+    /// through its own public entry point rather than through a full run, following this project's
+    /// practice of keeping a rule testable without staging a whole world around it.
+    /// </summary>
+    [Theory]
+    [InlineData(true, 0.90)]
+    [InlineData(false, 0.70)]
+    public void A_delegated_outcome_moves_confidence_in_the_direction_of_the_outcome(
+        bool succeeded, double expected)
+    {
+        var world = Cast.Build(Seed, Variant);
+        var vincent = world.Get(Vincent);
+        var claim = CapabilityBar.About(Angelo, CapabilityBar.RoughWork);
+
+        Assert.Equal(0.80, vincent.Cognition.Records.Single(r => r.Claim.Equals(claim)).Confidence);
+
+        Suitability.RecordDelegatedOutcome(vincent, Angelo, succeeded, world.Now.AddDays(1));
+
+        Assert.Equal(
+            expected,
+            vincent.Cognition.Records.Single(r => r.Claim.Equals(claim)).Confidence,
+            precision: 9);
+    }
+
+    /// <summary>
+    /// Direction is relative to what he already believes, not to the outcome alone.
+    ///
+    /// A boss who has written a man off as no hard man becomes *less* sure of that when the job
+    /// comes off. Read the other way — "success always raises confidence" — he would grow steadily
+    /// more certain of his poor opinion every time the man succeeded, which is a counter rather than
+    /// a belief. This is the case that distinguishes the two readings.
+    /// </summary>
+    [Fact]
+    public void Success_erodes_a_position_he_holds_against_the_man()
+    {
+        var world = BuildAngeloWorld(
+            actualCoercion: 0.80, believedHardMan: 0.80, hardManRejected: true);
+        var vincent = world.Get(Vincent);
+        var claim = CapabilityBar.About(Angelo, CapabilityBar.HardMan);
+
+        var before = vincent.Cognition.Records.Single(r => r.Claim.Equals(claim));
+        Assert.False(before.IsHeld);
+        Assert.Equal(0.80, before.Confidence);
+
+        Suitability.RecordDelegatedOutcome(vincent, Angelo, succeeded: true, world.Now.AddDays(1));
+
+        var after = vincent.Cognition.Records.Single(r => r.Claim.Equals(claim));
+        Assert.Equal(0.70, after.Confidence, precision: 9);
+        Assert.False(after.IsHeld);
+    }
+
+    /// <summary>
+    /// Ruling 6's own proof obligation: the assessment must be able to end up <em>further</em> from
+    /// the truth than it started, or the attribution error is not being modelled at all.
+    ///
+    /// Angelo is objectively poor at rough work (0.15) and Vincent already over-rates him. The job
+    /// succeeds — for reasons that have nothing to do with Angelo's Coercion, which is the whole
+    /// point of calling this confounded — and Vincent comes away *more* confident in a belief that
+    /// was already wrong. A design in which evidence could only ever improve an assessment would
+    /// fail this test, and would not be modelling belief.
+    /// </summary>
+    [Fact]
+    public void A_confounded_success_can_make_a_wrong_belief_more_wrong()
+    {
+        var world = BuildAngeloWorld(actualCoercion: 0.15, believedHardMan: 0.60);
+        var vincent = world.Get(Vincent);
+        var claim = CapabilityBar.About(Angelo, CapabilityBar.HardMan);
+
+        // He is wrong about the man: believed a hard man, objectively feeble.
+        Assert.True(vincent.Cognition.Records.Single(r => r.Claim.Equals(claim)).IsHeld);
+        Assert.Equal(0.15, world.Get(Angelo).Capabilities[Skill.Coercion]);
+
+        Suitability.RecordDelegatedOutcome(vincent, Angelo, succeeded: true, world.Now.AddDays(1));
+
+        Assert.Equal(
+            0.70,
+            vincent.Cognition.Records.Single(r => r.Claim.Equals(claim)).Confidence,
+            precision: 9);
+    }
+
+    /// <summary>
+    /// The negative controls, together because they are one rule seen from three sides: the outcome
+    /// moves the belief of the man who sent him, about the man he sent, and nothing else.
+    /// </summary>
+    [Fact]
+    public void An_outcome_moves_only_the_delegators_own_view_of_that_one_man()
+    {
+        var world = BuildAngeloWorld(actualCoercion: 0.80);
+        var vincent = world.Get(Vincent);
+        var salvatore = world.Get("salvatore");
+
+        // A bystander who happens to hold the same belief, acquired the same way.
+        salvatore.Cognition.Learn(
+            CapabilityBar.About(Angelo, CapabilityBar.RoughWork),
+            Stance.Believes, 0.80, SourceKind.Inference, "salvatore", world.Now);
+
+        Suitability.RecordDelegatedOutcome(vincent, Angelo, succeeded: true, world.Now.AddDays(1));
+
+        // The other man in the comparison is untouched — this was not a job about Tommy.
+        Assert.Equal(
+            0.75,
+            vincent.Cognition.Records
+                .Single(r => r.Claim.Equals(CapabilityBar.About(Tommy, CapabilityBar.RoughWork)))
+                .Confidence,
+            precision: 9);
+
+        // And the bystander's identical belief is untouched — nobody told him how it went.
+        Assert.Equal(
+            0.80,
+            salvatore.Cognition.Records
+                .Single(r => r.Claim.Equals(CapabilityBar.About(Angelo, CapabilityBar.RoughWork)))
+                .Confidence,
+            precision: 9);
+
+        // A man who did the work himself forms no opinion of himself this way.
+        int before = vincent.Cognition.Records.Count;
+        Suitability.RecordDelegatedOutcome(vincent, Vincent, succeeded: true, world.Now.AddDays(2));
+        Assert.Equal(before, vincent.Cognition.Records.Count);
+    }
+
+    /// <summary>
+    /// An outcome revises an opinion; it never invents one, and it cannot revise one he was told.
+    ///
+    /// The second half records a real consequence of putting capability in the ordinary claim
+    /// vocabulary: capability beliefs travel through the report and corroboration channels like any
+    /// other claim, and <see cref="Cognition.Revise"/> admits only a holder's own reading — so a view
+    /// acquired second-hand is, for now, permanently frozen. Recorded in `ROADMAP.md` as debt rather
+    /// than papered over here.
+    /// </summary>
+    [Fact]
+    public void An_outcome_neither_invents_a_view_nor_revises_one_he_was_told()
+    {
+        var world = BuildAngeloWorld(actualCoercion: 0.80, believedHardMan: null);
+        var vincent = world.Get(Vincent);
+        var told = world.Get("salvatore");
+
+        // Salvatore holds the same belief, but on Vincent's word rather than his own reading.
+        var claim = CapabilityBar.About(Angelo, CapabilityBar.RoughWork);
+        told.Cognition.Learn(claim, Stance.Believes, 0.80, SourceKind.Report, Vincent, world.Now);
+
+        Suitability.RecordDelegatedOutcome(vincent, Angelo, succeeded: true, world.Now.AddDays(1));
+        Suitability.RecordDelegatedOutcome(told, Angelo, succeeded: true, world.Now.AddDays(1));
+
+        // No view on the high bar before, and none invented by a job going well.
+        Assert.DoesNotContain(
+            vincent.Cognition.Records,
+            r => r.Claim.Equals(CapabilityBar.About(Angelo, CapabilityBar.HardMan)));
+
+        // And the second-hand belief is refused by Revise's own provenance guard.
+        Assert.Equal(
+            0.80,
+            told.Cognition.Records.Single(r => r.Claim.Equals(claim)).Confidence,
+            precision: 9);
     }
 
     // ================================================================= staged: attribution + capability-scaled resolution
@@ -598,9 +837,15 @@ public sealed class ExecutorSuitabilityTests
         var pending = ReachFork(session, End);
 
         string text = string.Join('\n', pending.Options.Select(o => o.Description));
-        Assert.DoesNotContain("better suited", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("hard man", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("up to leaning", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("no more than adequate", text, StringComparison.Ordinal);
         Assert.DoesNotContain("not the man for rough work", text, StringComparison.Ordinal);
         Assert.DoesNotContain("executor capability", text, StringComparison.Ordinal);
+        // Nor the belief vocabulary itself — a player must not read the claim kind or its bars.
+        Assert.DoesNotContain("PersonIsCapable", text, StringComparison.Ordinal);
+        Assert.DoesNotContain(CapabilityBar.RoughWork, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(CapabilityBar.HardMan, text, StringComparison.Ordinal);
         foreach (var figure in new[] { "0.8", "0.55", "0.35", "0.65", "0.7", "0.75" })
             Assert.DoesNotContain(figure, text, StringComparison.Ordinal);
 
@@ -611,6 +856,18 @@ public sealed class ExecutorSuitabilityTests
         Assert.Contains(DelegateToTommy, text);
         Assert.Contains(DelegateToAngelo, text);
     }
+
+    /// <summary>
+    /// Every "executor capability" component on one man's delegate candidate — the ladder as scored,
+    /// which is a list now rather than a single value, because magnitude is which bars are held.
+    /// </summary>
+    private static List<ScoreComponent> CapabilityBarsFor(PreparedDecision prepared, string executorId)
+        => prepared.Scored
+            .Single(s => s.Candidate.Kind == ActionKind.DelegateStrategy
+                         && s.Candidate.TargetId == executorId)
+            .Components
+            .Where(c => c.Name == "executor capability")
+            .ToList();
 
     // ================================================================= helpers — natural/session level
 
@@ -700,7 +957,11 @@ public sealed class ExecutorSuitabilityTests
     /// grounds the "reference" side of each comparison below in the real accepted behaviour rather
     /// than an invented one.
     /// </summary>
-    private static World BuildAngeloWorld(double actualCoercion, double? assessedCoercion)
+    private static World BuildAngeloWorld(
+        double actualCoercion,
+        double? believedRoughWork = 0.80,
+        double? believedHardMan = 0.70,
+        bool hardManRejected = false)
     {
         var world = Cast.Build(Seed, Baseline);
         var vincent = world.Get(Vincent);
@@ -733,9 +994,29 @@ public sealed class ExecutorSuitabilityTests
         world.Characters[angelo.Id] = angelo;
         angelo.Social.OrganizationId = Cast.OrgId;
 
-        Relations.Establish(vincent, "angelo", trust: 0.35, obligation: 0.10, assessedCoercion: assessedCoercion);
+        Relations.Establish(vincent, "angelo", trust: 0.35, obligation: 0.10);
         Relations.Establish(angelo, "vincent", trust: 0.65, obligation: 0.55);
         Relations.Establish(angelo, "salvatore", trust: 0.25, obligation: 0.30);
+
+        // Tommy's own seeded belief, matching Variants.Apply's, so the comparison between the two
+        // men is the same one the production variant poses.
+        vincent.Cognition.Learn(
+            CapabilityBar.About(Tommy, CapabilityBar.RoughWork),
+            Stance.Believes, 0.75, SourceKind.Inference, Vincent, world.Now);
+
+        // Angelo's, parameterised. Null on either bar means Vincent has formed no view of him at
+        // that bar at all — which must stay distinguishable from having concluded he fails it, and
+        // is why `hardManRejected` is a separate argument rather than a negative confidence.
+        if (believedRoughWork is { } roughWork)
+            vincent.Cognition.Learn(
+                CapabilityBar.About(Angelo, CapabilityBar.RoughWork),
+                Stance.Believes, roughWork, SourceKind.Inference, Vincent, world.Now);
+
+        if (believedHardMan is { } hardMan)
+            vincent.Cognition.Learn(
+                CapabilityBar.About(Angelo, CapabilityBar.HardMan),
+                hardManRejected ? Stance.Rejects : Stance.Believes,
+                hardMan, SourceKind.Inference, Vincent, world.Now);
 
         return world;
     }

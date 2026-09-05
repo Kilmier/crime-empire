@@ -209,13 +209,7 @@ public static class Cast
         // rather than two. A separate seeding path that could set dimensions directly would be the
         // obvious place for ad-hoc mutation to creep back in unnoticed.
         Relations.Establish(vincent, "salvatore", trust: 0.45, obligation: 0.35);
-        // assessedCoercion matches Tommy's own Capabilities[Skill.Coercion] (0.55) exactly, because
-        // this is the same figure the pre-correction code read straight off World — reproducing it
-        // as Vincent's own held assessment keeps every accepted trace hash unmoved rather than
-        // asserting the fix is behaviour-preserving from the shape of the diff alone. See
-        // docs/DESIGN_DECISIONS.md and Relations.IRelationship.AssessedCoercion for why this must
-        // come from the actor's own belief and not from a second read of Capabilities.
-        Relations.Establish(vincent, "tommy", trust: 0.70, assessedCoercion: 0.55);
+        Relations.Establish(vincent, "tommy", trust: 0.70);
 
         Relations.Establish(tommy, "vincent", trust: 0.80, obligation: 0.70);
         Relations.Establish(tommy, "salvatore", trust: 0.30, obligation: 0.40);

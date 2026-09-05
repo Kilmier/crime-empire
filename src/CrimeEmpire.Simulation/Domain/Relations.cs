@@ -25,32 +25,15 @@ public interface IRelationship
     /// <summary>Sense of owing this person — favours, patronage, formal subordination.</summary>
     double Obligation { get; }
 
-    /// <summary>
-    /// What this character believes about that person's own Coercion — never what
-    /// <c>Capabilities[Skill.Coercion]</c> actually reads. Null means he has formed no assessment,
-    /// which is a real and distinct state from having assessed him as unskilled: a missing
-    /// assessment must not silently read as zero, and it must not be filled in by consulting the
-    /// person's own objective capability, because a subject's skill at something is a fact about
-    /// them, not an institutional fact the way org membership is.
-    ///
-    /// <b>Milestone 020's correction.</b> The delegation-scoring "executor capability" component
-    /// originally read <c>world.Get(subordinateId).Capabilities[Skill.Coercion]</c> straight off
-    /// <see cref="Sim.World"/> — an omniscient read Codex found violates the rule every other score
-    /// component in <c>Decision/Utility.cs</c> obeys: scoring works from what the actor holds, never
-    /// from the objective world. <c>Pipeline.SubordinatesOf</c> reading the roster to learn *who*
-    /// reports to you is a legitimate authority scan, settled in <c>DESIGN_DECISIONS.md</c>'s
-    /// "office relationship" ruling — but *how good* that man is at the job is a fact about him, not
-    /// about the organisation chart, and nothing licenses reading it past the same belief limit
-    /// every other relationship dimension already respects.
-    ///
-    /// This field belongs on the relationship, alongside <see cref="Trust"/> and
-    /// <see cref="Obligation"/>, for the same reason those do: it is one side's subjective read of
-    /// the other, directional, and never proven against a truth log. It is set only from scenario
-    /// construction today — no mechanism yet lets a character revise it from observation, and this
-    /// correction does not add one; that is a wider capability-learning system this milestone was
-    /// explicitly scoped not to build.
-    /// </summary>
-    double? AssessedCoercion { get; }
+    // MILESTONE 021 REMOVED AssessedCoercion FROM HERE, and the reason is the rule this interface
+    // is governed by rather than a preference. Milestone 020 added it as a fifth dimension: what the
+    // character believed about another's Coercion. Every dimension above is an *attitude*, with no
+    // truth value — there is no fact of the matter about how much Vincent trusts Tommy beyond
+    // Vincent's own state. An assessment of somebody's skill has a referent, Tommy's actual
+    // Capabilities[Skill.Coercion], so it can be *wrong*; and things a character can be wrong about
+    // live in Cognition, with a source, a confidence and the ability to be contested and revised,
+    // none of which a bare number here can carry. It is now ClaimKind.PersonIsCapable. See
+    // docs/RELATIONSHIPS.md, "The vocabulary", which is back to four.
 
     /// <summary>What this character holds against that one, in the order it accumulated.</summary>
     IReadOnlyList<Grievance> Grievances { get; }
@@ -116,7 +99,6 @@ public static class Relations
         public double Trust { get; set; }
         public double Fear { get; set; }
         public double Obligation { get; set; }
-        public double? AssessedCoercion { get; set; }
 
         /// <summary>
         /// Wrapped rather than handed out directly. <c>IReadOnlyList&lt;T&gt;</c> is an interface,
@@ -142,8 +124,7 @@ public static class Relations
 
         public override string ToString()
             => $"→{OtherId} trust {Trust:0.00} fear {Fear:0.00} obligation {Obligation:0.00}"
-               + (_grievances.Count == 0 ? "" : $" grievance {GrievanceWeight:0.00}")
-               + (AssessedCoercion is { } ac ? $" assessed-coercion {ac:0.00}" : "");
+               + (_grievances.Count == 0 ? "" : $" grievance {GrievanceWeight:0.00}");
     }
 
     /// <summary>
@@ -355,32 +336,12 @@ public static class Relations
     /// mutation to reappear without anybody noticing.
     /// </summary>
     public static void Establish(
-        Character subject, string towardId, double trust = 0, double obligation = 0, double fear = 0,
-        double? assessedCoercion = null)
+        Character subject, string towardId, double trust = 0, double obligation = 0, double fear = 0)
     {
         var rel = Writable(subject.Social.Ensure(towardId));
         rel.Trust = Clamp(trust);
         rel.Obligation = Clamp(obligation);
         rel.Fear = Clamp(fear);
-        rel.AssessedCoercion = assessedCoercion is { } ac ? Clamp(ac) : null;
-    }
-
-    /// <summary>
-    /// Changes only what this character believes about that person's Coercion, leaving trust, fear,
-    /// obligation and grievances untouched.
-    ///
-    /// Kept separate from <see cref="Establish"/> rather than folded into it, because
-    /// <see cref="Establish"/> overwrites every other dimension on each call — reusing it to move
-    /// this one alone would reset the rest to their defaults. Scenario construction only, exactly
-    /// like <see cref="Establish"/>: nothing in the simulation loop revises an assessment from
-    /// observation yet, so every caller of this today is a test proving the assessment, not the
-    /// world capability, is what scoring reads. Null clears the assessment back to "none formed",
-    /// distinct from assessing him at the floor of the skill range.
-    /// </summary>
-    public static void SetAssessedCoercion(Character subject, string towardId, double? coercion)
-    {
-        var rel = Writable(subject.Social.Ensure(towardId));
-        rel.AssessedCoercion = coercion is { } c ? Clamp(c) : null;
     }
 
     /// <summary>Drops what this character holds against that one. Scenario construction only.</summary>

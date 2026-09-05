@@ -34,26 +34,13 @@ public enum RelationshipFacet
     Grievance = 8,
     Fear = 16,
 
-    /// <summary>
-    /// What the actor believes about another person's Coercion —
-    /// <see cref="CrimeSim.Domain.IRelationship.AssessedCoercion"/>, read by the "executor
-    /// capability" component on a delegation candidate.
-    ///
-    /// <b>PROVISIONAL, and expected to be removed rather than kept.</b> Milestone 020 added
-    /// `AssessedCoercion` as a relationship dimension and tagged the component that reads it
-    /// <see cref="None"/> — the mirror image of the defect this enum exists to prevent, since the
-    /// component genuinely does read relationship state and the developer channel could not see it.
-    /// This member makes the derivation truthful **for as long as the assessment lives on the
-    /// relationship**. Matt ruled on 2026-09-04 that capability belief belongs in
-    /// <c>Cognition</c> with provenance and confidence rather than on the relationship, because
-    /// unlike Trust, Fear and Obligation it can be *wrong* about an objective fact; when milestone
-    /// 021 moves it, this member and `AssessedCoercion` are deleted together and the component
-    /// legitimately returns to reading no relationship state at all.
-    /// </summary>
-    Capability = 32,
+    // Milestone 020 briefly needed a Capability member here, because its "executor capability"
+    // component read an AssessedCoercion figure stored on the relationship. Milestone 021 moved that
+    // belief into Cognition, where a thing that can be wrong belongs, so the component reads no
+    // relationship state and None is the truthful tag again. Both were deleted together.
 
     /// <summary>The facets that are actually relationship state, for counterfactual purposes.</summary>
-    Relational = Trust | Obligation | Grievance | Fear | Capability,
+    Relational = Trust | Obligation | Grievance | Fear,
 }
 
 /// <summary>
@@ -266,6 +253,42 @@ public static class Utility
         public bool HasGrievance => Grievance > 1e-9;
     }
 
+    /// <summary>
+    /// PROVISIONAL TUNING, not derived figures. What each rung of <see cref="CapabilityBar"/>'s
+    /// ladder is worth to a delegation candidate, before the holder's own confidence scales it.
+    ///
+    /// Chosen once, on the shape of the ladder rather than on any character's stats, and — like
+    /// <see cref="BaseRisk"/>, <see cref="BaseEffect"/> and <see cref="Exposure"/> above — not tuned
+    /// toward any particular subordinate winning. The high bar is worth appreciably more than the
+    /// low one because clearing it is the thing that distinguishes a man for this work; the low bar
+    /// is worth little on its own because being merely up to the job is close to the default
+    /// expectation of anybody a boss would send at all.
+    ///
+    /// In ladder order, and summed rather than averaged: a man believed to clear both bars is a
+    /// better bet than one believed to clear only the lower, which is exactly what a graded ladder
+    /// has to be able to say and what a single scalar could not.
+    /// </summary>
+    private static readonly (string Bar, double Weight)[] CapabilityWeights =
+    {
+        (CapabilityBar.RoughWork, 0.10),
+        (CapabilityBar.HardMan, 0.30),
+    };
+
+    /// <summary>
+    /// The reason text for one capability bar, in the developer trace's own voice.
+    ///
+    /// Kept here beside the weights rather than inlined at the call site so that the four
+    /// combinations are visible together — and so that no phrase drifts into naming a number, which
+    /// is what <c>PlayerOption</c> is separately forbidden from doing.
+    /// </summary>
+    private static string Describe(string targetId, string bar, bool held) => (bar, held) switch
+    {
+        (CapabilityBar.HardMan, true) => $"{targetId} is a hard man, not just a willing one",
+        (CapabilityBar.HardMan, false) => $"{targetId} is no more than adequate at rough work",
+        (CapabilityBar.RoughWork, true) => $"{targetId} is up to leaning on somebody",
+        _ => $"{targetId} is not the man for rough work",
+    };
+
     /// <summary>Reads the four inputs to loyalty without collapsing them.</summary>
     public static LoyaltyReading Loyalty(CharacterView actor, Psychology psy, string otherId)
     {
@@ -397,41 +420,48 @@ public static class Utility
 
         // --- executor capability (delegation only) ---------------------------------------------
         //
-        // A separate consideration from "relationship effects" above, not folded into it: how good
-        // a candidate executor is at the job is not a fact about how he is regarded. Kept a
-        // distinctly named component for that reason, which is unchanged.
+        // A separate consideration from "relationship effects" above, not folded into it: how good a
+        // candidate executor is at the job is not a fact about how he is regarded.
         //
-        // TAGGED Capability, NOT None — corrected after milestone 020's own corrections. It was
-        // tagged None on the reasoning that it "reads no relationship state whatsoever", and that
-        // was true of the milestone's first implementation, which read the executor's objective
-        // Capabilities[Skill.Coercion] off World. Correction 436f6c7 fixed that omniscient read by
-        // sourcing the figure from actor.Social.Toward(sub).AssessedCoercion — relationship state,
-        // stored on IRelationship and changed only by Relations — and did not revisit the facet.
-        // The result was the exact mirror of the defect RelationshipFacet exists to prevent: not a
-        // relationship label over a trait term (milestone 008's 61-of-168 finding), but genuine
-        // relationship state reporting itself as reading none. The developer channel could not see
-        // it, so RelationshipGross/Net omitted it and TotalWithoutRelationships — "the same score
-        // for a man holding no relationship with anybody" — kept the full term, though such a man
-        // reads Relations.Absent, whose AssessedCoercion is null, and would not score this
-        // component at all. On the capable-angelo delegation that error was +0.30 against a
-        // relationship net of +0.1688, and it reversed which candidate the counterfactual named.
+        // MILESTONE 021 — READ FROM WHAT HE BELIEVES, NOT FROM ANYTHING CARRIED HERE. This term has
+        // now been wrong twice in the same place, and both times the fault was where the figure came
+        // from rather than what was done with it. Milestone 020 read the executor's objective
+        // Capabilities[Skill.Coercion] off World — an omniscient read Codex rejected. Its first
+        // correction moved that to a number on the relationship, which was actor-held but was a
+        // scalar with no source, no confidence and no way to be revised or contested. It now reads
+        // PersonIsCapable claims out of `perceived`, like every other belief the scorer consults, so
+        // the omniscience question cannot come back through this door: Score has no World, and the
+        // candidate no longer carries a capability figure for a generator to smuggle one onto.
         //
-        // withoutRelationship: 0 for the same reason Trust and Obligation pass 0 — the whole term
-        // is owed to relationship state, and vanishes without it.
+        // TAGGED None, and this time truthfully — no relationship state is read here at all. That is
+        // the same tag milestone 020 used and the reason is finally the stated one.
         //
-        // ExecutorCoercion is null whenever there is exactly one subordinate to delegate to — every
-        // existing accepted variant — so this block adds nothing to any of them; comparing one man's
-        // capability "to the field" is meaningless with a field of one. Centered on 0.5, the natural
-        // midpoint of the [0,1] skill range, rather than on any particular character's stat: since
-        // this term is only ever emitted for a genuinely comparative delegation, it has no accepted
-        // history to preserve and no reason to be centered anywhere else.
-        if (cand.Kind == ActionKind.DelegateStrategy && cand.ExecutorCoercion is { } execCoercion)
+        // MAGNITUDE IS WHICH BARS HE HOLDS; CONFIDENCE IS HOW SURE HE IS OF EACH. The ruling behind
+        // CapabilityBar's ladder, applied: each bar contributes its own weight, scaled by the
+        // confidence of that particular belief. A firmly held "he is up to rough work" and a shaky
+        // "he is exceptional" are different inputs, and summing bars rather than averaging them is
+        // what keeps the ladder from collapsing back into one number.
+        //
+        // Only for a genuinely comparative delegation — Candidate.ComparingExecutors, set by the
+        // generator when more than one *nameable* subordinate is on offer. Comparing one man's
+        // capability to the field is meaningless with a field of one, and every accepted variant
+        // other than capable-angelo has exactly one subordinate.
+        if (cand.Kind == ActionKind.DelegateStrategy && cand.ComparingExecutors && cand.TargetId is not null)
         {
-            Add("executor capability", 1.0 * (execCoercion - 0.5),
-                execCoercion > 0.5
-                    ? $"{cand.TargetId} is better suited to lean on somebody than most"
-                    : $"{cand.TargetId} is not the man for rough work",
-                RelationshipFacet.Capability, 0);
+            foreach (var (bar, weight) in CapabilityWeights)
+            {
+                var position = perceived.Position(CapabilityBar.About(cand.TargetId, bar));
+                if (position is null) continue;
+
+                // Held pulls toward him at that bar's weight; rejected pushes away at the same
+                // weight, so a man believed *not* to be up to rough work is a worse bet than one
+                // nobody has an opinion about — which is the whole point of holding a position
+                // rather than a number. Doubts sits between and is deliberately not special-cased:
+                // IsHeld already treats Suspects as held and Doubts as not.
+                double direction = position.IsHeld ? 1.0 : -1.0;
+                Add("executor capability", direction * weight * position.Confidence,
+                    Describe(cand.TargetId, bar, position.IsHeld));
+            }
         }
 
         // --- personality and value alignment -------------------------------------------------

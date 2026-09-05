@@ -103,29 +103,27 @@ public sealed record Candidate(
     public int RequiredAuthority { get; init; }
 
     /// <summary>
-    /// What the <em>delegator</em> believes about this <see cref="ActionKind.DelegateStrategy"/>
-    /// candidate's own executor's Coercion — set only when there is a genuine choice among two or
-    /// more subordinates, and left null otherwise.
+    /// Whether this <see cref="ActionKind.DelegateStrategy"/> candidate is one of several the actor
+    /// is genuinely choosing between — set by <c>Generators.FromRelationship</c> when more than one
+    /// *nameable* subordinate is on offer.
     ///
-    /// <b>An assessment, not a reading.</b> This is <c>Generators.FromRelationship</c> copying the
-    /// delegator's own <c>Social.Toward(executorId).AssessedCoercion</c> onto the candidate — never
-    /// the executor's actual <c>Capabilities[Skill.Coercion]</c>, which the delegator has no
-    /// standing to consult while scoring an option. Milestone 020's original version did read the
-    /// objective figure straight off <c>World</c>; Codex found that violates the same rule every
-    /// other score component in <c>Decision/Utility.cs</c> obeys, and the correction is what this
-    /// field now carries instead. See <c>Domain.Relations.AssessedCoercion</c>.
+    /// <b>A flag, and deliberately not a figure.</b> Milestone 020 carried the executor's Coercion
+    /// here instead: first the objective value read off <c>World</c> (the omniscient read Codex
+    /// rejected), then the delegator's own scalar assessment off the relationship. Milestone 021
+    /// removed the figure altogether — <see cref="Utility"/> now reads
+    /// <see cref="Domain.ClaimKind.PersonIsCapable"/> beliefs out of the actor's own perceived
+    /// situation, like every other belief it consults. What is left here is only the question
+    /// generation can answer and scoring cannot: *is there anybody to compare him against.*
     ///
-    /// Null, not merely unread, when there is exactly one subordinate: "how does this man's
-    /// capability compare to the field" is meaningless with a field of one, and leaving it null
-    /// (rather than the value with nothing to compare it against) is what lets
-    /// <see cref="Utility"/> skip the comparison entirely rather than score a comparison that
-    /// never happened. That is also what keeps every existing accepted variant's score, trace and
-    /// hash untouched by this field's existence — none of them ever has more than one subordinate.
-    /// Also null whenever the delegator has formed no assessment at all, which must not be
-    /// confused with the first case: a real comparison with a genuine gap in what he knows about
-    /// one of the two men is not the same as there being nothing to compare.
+    /// That the field can no longer hold a capability value at all is the point. A generator can see
+    /// <c>World</c>; the scorer cannot. Carrying a number across that boundary is what made the same
+    /// defect available twice, and there is now nothing to carry.
+    ///
+    /// False with exactly one nameable subordinate — every accepted variant but
+    /// <c>capable-angelo</c> — because comparing one man's capability to the field is meaningless
+    /// with a field of one.
     /// </summary>
-    public double? ExecutorCoercion { get; init; }
+    public bool ComparingExecutors { get; init; }
 
     /// <summary>
     /// Set when this candidate would breach a policy. Only ever populated from policies the

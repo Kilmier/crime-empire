@@ -264,6 +264,14 @@ public sealed record PlayerSnapshot(
     IReadOnlyList<PlayerPerson> Silent,
     /// <summary>Who told him they knew nothing of what he asked, oldest first — milestone 026.</summary>
     IReadOnlyList<PlayerDisclaimer> Disclaimers,
+    /// <summary>
+    /// What hangs over him, as sentences — milestone 026's second correction. Empty when nothing
+    /// does. Built entirely from his own state: the acts he holds that name him, whether he holds
+    /// that somebody saw, what he himself has told whom about it (his own sent reports), what he
+    /// read off their faces, and whether anybody has put it to him. Never whether anybody else
+    /// knows: that is their state, and it reaches him only if they say so.
+    /// </summary>
+    IReadOnlyList<string> Exposure,
     /// <summary>What he just did, if his last committed action is still his most recent. Null only
     /// when he has never yet committed to anything at all.</summary>
     PlayerCommittedAction? LastAction,
@@ -280,6 +288,7 @@ public sealed record PlayerSnapshot(
     public IReadOnlyList<PlayerBelief> Unsettled { get; init; } = Frozen.List(Unsettled);
     public IReadOnlyList<PlayerPerson> Silent { get; init; } = Frozen.List(Silent);
     public IReadOnlyList<PlayerDisclaimer> Disclaimers { get; init; } = Frozen.List(Disclaimers);
+    public IReadOnlyList<string> Exposure { get; init; } = Frozen.List(Exposure);
     public IReadOnlyList<PlayerRequest> AwaitingAnswers { get; init; } = Frozen.List(AwaitingAnswers);
 }
 
@@ -582,10 +591,104 @@ public static class PlayerView
             unsettled,
             silent,
             disclaimers,
+            Exposure(world, who, heldRecords, name, self, Statement),
             lastAction,
             myBusiness,
             Operating(who, name, self),
             awaitingAnswers);
+    }
+
+    /// <summary>
+    /// What hangs over him — milestone 026's second correction, on Matt's finding that a pause
+    /// offered "cover it up" and "tell Salvatore it did not happen" with nothing on screen saying
+    /// why. The options come from his own guilty knowledge, not from anybody having found out, and
+    /// this says so in his own terms.
+    ///
+    /// <b>Every clause has a source on his side.</b> The acts: held claims that name him as the man
+    /// who used force or broke a rule. The witness: a held claim that somebody saw him. What he told
+    /// whom: his own sent reports, read for the claim — asserted, withheld, or denied — which are his
+    /// own acts and his to remember. The reading: his impression of the man he told. What came back:
+    /// questions put to him and accounts given to him about it, or the statement that nobody has
+    /// raised it, which is a statement about his own testimony log. Nothing here consults anybody
+    /// else's cognition, and "Salvatore knows" is a sentence this can never produce.
+    /// </summary>
+    private static IReadOnlyList<string> Exposure(
+        World world, Character who, IReadOnlyList<InformationRecord> heldRecords,
+        Func<string, string> name, Pronouns self, Func<Claim, string> statement)
+    {
+        var acts = heldRecords
+            .Where(r => r.Claim.Subject == who.Id
+                        && r.Claim.Kind is ClaimKind.PersonUsedViolence or ClaimKind.PersonBreachedPolicy)
+            .ToList();
+        if (acts.Count == 0) return Array.Empty<string>();
+
+        var lines = new List<string>();
+        string Cap(string s) => char.ToUpperInvariant(s[0]) + s[1..];
+
+        // The acts. Violence first, and the rule it broke folded in rather than said twice.
+        var violence = acts.Where(r => r.Claim.Kind == ClaimKind.PersonUsedViolence).ToList();
+        bool breach = acts.Any(r => r.Claim.Kind == ClaimKind.PersonBreachedPolicy);
+        if (violence.Count > 0)
+            lines.Add(Cap(string.Join("; ", violence.Select(r => statement(r.Claim))))
+                      + (breach ? ", against the outfit's rule." : "."));
+        else
+            lines.Add(Cap(string.Join("; ", acts.Select(r => statement(r.Claim)))) + ".");
+
+        // Whether he holds that somebody saw him.
+        foreach (var seen in heldRecords.Where(r => r.Claim.Kind == ClaimKind.WitnessSawIncident && r.Claim.Object == who.Id))
+            lines.Add(Cap(statement(seen.Claim)) + ".");
+
+        // What he has told whom about it — his own reports, his own acts.
+        var actClaims = acts.Select(r => r.Claim).ToList();
+        foreach (var recipient in world.Reports.Where(r => r.SenderId == who.Id).Select(r => r.RecipientId).Distinct())
+        {
+            var latest = world.Reports
+                .Where(r => r.SenderId == who.Id && r.RecipientId == recipient)
+                .Where(r => actClaims.Any(c => r.Asserted.Any(a => a.Claim.Equals(c)) || r.Withheld.Contains(c)))
+                .OrderByDescending(r => r.At).ThenByDescending(r => r.Id)
+                .FirstOrDefault();
+            if (latest is null) continue;
+
+            bool denied = latest.Asserted.Any(a => actClaims.Contains(a.Claim)
+                                                   && a.AssertedStance is Stance.Rejects or Stance.Doubts);
+            bool told = latest.Asserted.Any(a => actClaims.Contains(a.Claim)
+                                                 && a.AssertedStance is Stance.Knows or Stance.Believes or Stance.Suspects);
+            string when = latest.At.ToString("d MMMM", System.Globalization.CultureInfo.InvariantCulture);
+            string what = denied ? $"denied it to {name(recipient)}"
+                : told ? $"told {name(recipient)} about it"
+                : $"kept it from {name(recipient)}";
+            string line = $"{self.Subject_} {what} on {when}";
+
+            // And what he read off the man's face when he did.
+            var read = who.Social.Toward(recipient).Impressions
+                .Where(i => i.About is { } about && actClaims.Contains(about))
+                .OrderByDescending(i => i.At)
+                .FirstOrDefault();
+            if (read is not null)
+            {
+                string reading = PlayerNarration.Impression(read.Kind, self, name(recipient), null);
+                // The blank reading for a report reads "could not tell whether he believed you"; the
+                // null-about form above is the fear one, so build the belief wording by hand here.
+                if (read.Kind == ImpressionKind.GaveNothingAway)
+                    reading = $"{self.Subject} could not tell whether {name(recipient)} believed {self.Object}";
+                line += $", and {reading}";
+            }
+            lines.Add(line + ".");
+        }
+
+        // What has come back to him about it.
+        var raised = new List<string>();
+        foreach (var q in world.Requests.Where(q => q.AskedId == who.Id && actClaims.Contains(q.About)).OrderBy(q => q.At))
+            raised.Add($"{name(q.AskerId)} asked {self.Object} about it on " +
+                       q.At.ToString("d MMMM", System.Globalization.CultureInfo.InvariantCulture));
+        foreach (var t in actClaims.SelectMany(who.Cognition.AccountsOf).OrderBy(t => t.At))
+            raised.Add($"{name(t.SenderId)} spoke to {self.Object} about it on " +
+                       t.At.ToString("d MMMM", System.Globalization.CultureInfo.InvariantCulture));
+        lines.Add(raised.Count == 0
+            ? $"Nobody has raised it with {self.Object}."
+            : Cap(string.Join("; ", raised)) + ".");
+
+        return lines;
     }
 
     /// <summary>

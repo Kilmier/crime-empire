@@ -211,3 +211,54 @@ deleted, per the 018 precedent; `git diff -w` confirmed `Game.cs` carried no con
 Verification: build 0/0; **650 tests** (648 + 2); hashes unchanged from `e58dbcc` — impressions
 are not in the trace, and the reaction target is not a decision input; both viewpoint runs exit 0;
 all seven Godot invocations exit 0; both rosters read.
+
+## Second correction, same day — human context for human decisions
+
+Matt, from the third playtest, at a 20 April pause offering "cover it up", "tell Salvatore Greco it
+did not happen" and "report to Salvatore Greco, leaving out your own part": *"nothing tells me
+'Salvatore Greco found out you got violent' or who even caught me, Greco, the police? that info and
+context needs to be clearer when making decisions."* And on the readings: *"is 'he gave nothing away'
+like 'he didn't say how he knows'?"* — no, and the phrase was the problem.
+
+**Nobody had caught him.** Those options come from his own held claims that name him — he got
+violent, he broke the rule — and the generator offers a man who did that the things such a man can
+do. They appear whether or not anybody knows. The screen never joined those facts up, so the options
+read as an accusation when they were his own conscience listing exits.
+
+**`PlayerSnapshot.Exposure`** — "what hangs over you", shown above the options at a pause and as a
+section on the console. Every clause has a source on his side: the acts, from held claims naming him;
+the witness, from a held claim that somebody saw him; what he told whom, from his own sent reports —
+told, kept from, or denied, each his own act; the reading he took at the time; and what has come
+back, from questions put to him and accounts given to him, or "Nobody has raised it with you", which
+is a statement about his own testimony log. It cannot say "Salvatore knows"; that is Salvatore's
+state, and it reaches him only if somebody says so, in which case it appears in WHAT YOU KNOW like
+anything else. From the natural run, Vincent's view:
+
+```
+WHAT HANGS OVER HIM
+  Vincent Russo broke the rule: no public violence in the harbour.
+  He kept it from Salvatore Greco on 1 April.
+  Salvatore Greco asked him about it on 2 April.
+```
+
+**The silent wakes say the fact and not the outcome.** The blank date line on Matt's screen was a
+job finishing: milestone 009 made `StrategyComplete` and `StrategyBlocked` silent because the event's
+authored cause carries the outcome of work that may have been delegated. Right about the outcome,
+wrong about the fact. A completion now reads "the job you had running has come to an end, one way or
+another" — his own state, since `Strategies.Complete` cleared his instance — and a block reads "X has
+turned you down" only when the live instance shows he was the man in the room; a delegate's block
+stays silent, as milestone 024 keeps a delegate's progress silent. The two tests that pinned the
+silence now pin the fact and the absence of the outcome: "cleanup" and "worse" never cross.
+
+**The readings are worded as readings of you.** "Gave nothing away" sounded like a fact about the
+other man. Now: "Salvatore Greco seemed to believe you when you spoke about…", "did not seem to
+believe you…", "you could not tell whether Salvatore Greco believed you…", "Marco Bellini looked
+frightened", "did not look frightened", "you could not tell whether Marco Bellini was frightened".
+
+**Logged, not fixed:** "ask Tommy Nardo what he knows about whether the outfit has a rule" is a
+pointless question the corroboration generator allows because a rule told to him in person is
+acquired by testimony. A decision-quality defect; on `ROADMAP.md`'s known-debt list.
+
+Verification: build 0/0; **651 tests** (650 + 1); hashes unchanged from `e58dbcc`; three viewpoint
+runs read; all seven Godot invocations exit 0. The Godot editor's regeneration artifacts appeared
+again and were removed again.

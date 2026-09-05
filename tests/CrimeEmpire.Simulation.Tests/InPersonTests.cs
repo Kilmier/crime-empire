@@ -338,9 +338,42 @@ public sealed class InPersonTests
         var snapshot = session.Snapshot();
         var marco = snapshot.Attitudes.Single(a => a.PersonId == "marco");
         var read = Assert.Single(marco.Impressions, i => i.Description.Contains("you got violent", StringComparison.Ordinal));
-        Assert.StartsWith("Marco Bellini ", read.Description);
+        // A reading, never a fact about Marco: "seemed to", "did not seem to", or "you could not tell".
+        Assert.Matches("^(Marco Bellini seemed to believe you|Marco Bellini did not seem to believe you|you could not tell whether Marco Bellini believed you)", read.Description);
         Assert.DoesNotContain("believes", read.Description, StringComparison.Ordinal);
-        Assert.DoesNotContain("does not believe", read.Description, StringComparison.Ordinal);
+
+        // And what hangs over him says so in his own terms: the act, the witness, the denial, and
+        // that Marco put it to him — never that Marco knows.
+        string hanging = string.Join(" ", snapshot.Exposure);
+        Assert.StartsWith("You got violent at Bellini's grocery, against the outfit's rule.", hanging);
+        Assert.Contains("You denied it to Marco Bellini on ", hanging);
+        Assert.Contains("Marco Bellini asked you about it on ", hanging);
+        Assert.DoesNotContain("knows", hanging, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Before anybody has spoken to him about it, what hangs over him ends with exactly that — a
+    /// statement about his own testimony log, not about anybody's knowledge. And a man with nothing
+    /// to hide has nothing hanging over him.
+    /// </summary>
+    [Fact]
+    public void What_hangs_over_him_says_nobody_has_raised_it_until_somebody_does()
+    {
+        var clean = SimulationSession.Start(Seed, "baseline", "vincent");
+        Assert.Empty(clean.Snapshot().Exposure);
+
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+        vincent.Cognition.Learn(VincentsViolence, Stance.Knows, 1.0, SourceKind.Participant, "vincent", Cast.Start);
+        vincent.Cognition.Learn(new Claim(ClaimKind.PersonBreachedPolicy, "vincent", "no-violence-harbour"),
+            Stance.Knows, 1.0, SourceKind.Participant, "vincent", Cast.Start);
+
+        var hanging = PlayerView.Build(world, "vincent", world.Now, PlayerView.You).Exposure;
+        Assert.Equal(new[]
+        {
+            "You got violent at Bellini's grocery, against the outfit's rule.",
+            "Nobody has raised it with you.",
+        }, hanging);
     }
 
     // ================================================================= first correction

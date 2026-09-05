@@ -164,6 +164,15 @@ public static class IntelligenceWriter
             sb.AppendLine();
         }
 
+        // ---------------------------------------------------------------- what hangs over him
+        if (view.Exposure.Count > 0)
+        {
+            sb.AppendLine($"WHAT HANGS OVER {self.Object.ToUpperInvariant()}");
+            sb.AppendLine();
+            foreach (var line in view.Exposure) sb.AppendLine($"  {line}");
+            sb.AppendLine();
+        }
+
         // ---------------------------------------------------------------- open questions
         if (view.Unsettled.Count > 0 || view.Silent.Count > 0 || view.Disclaimers.Count > 0)
         {

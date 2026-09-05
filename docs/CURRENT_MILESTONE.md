@@ -14,9 +14,9 @@ committed, and **Matt is playtesting**. Milestone 021's correction awaits Codex 
 **Milestone 026** came out of the playtest of 025 rather than the arc: a man asked about something he
 holds nothing on now says so, and a man told something or threatened to his face shows something the
 speaker reads — correctly, wrongly, or not at all — as an impression on his own relationship, never as
-the other man's state. Every hash moved, as scoped. Corrected once from play the same day: he knows
-what he is good at, in words. 650 tests; twelve falsifiers; three mutation checks; seven Godot
-invocations green. Full account, with the five rulings as taken:
+the other man's state. Every hash moved, as scoped. Corrected twice from play the same day: he knows
+what he is good at, in words; and a pause says what hangs over him, in his own terms. 651 tests;
+three mutation checks; seven Godot invocations green. Full account, with the five rulings as taken:
 `docs/milestones/026-in-person-things-come-back.md`.
 
 **Everything from `34cd117` onward is unreviewed.** Codex ran out of usage during milestone 020's

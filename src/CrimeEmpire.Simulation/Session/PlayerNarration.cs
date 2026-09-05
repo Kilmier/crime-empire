@@ -203,14 +203,19 @@ public static class PlayerNarration
     /// </summary>
     public static string Impression(ImpressionKind kind, Pronouns self, string otherName, string? about)
     {
+        // A reading is a fact about the reader. "Gave nothing away" sounded like a fact about the
+        // other man — Matt read it as "he did not say how he knew" — so the blank outcome now says
+        // whose failure it is: yours.
         string on = about is null ? "" : $" when {self.Subject} spoke about whether {about}";
         return kind switch
         {
-            ImpressionKind.SeemedConvinced => $"{otherName} seemed to take {self.Possessive} word{on}",
-            ImpressionKind.SeemedUnconvinced => $"{otherName} did not look convinced{on}",
+            ImpressionKind.SeemedConvinced => $"{otherName} seemed to believe {self.Object}{on}",
+            ImpressionKind.SeemedUnconvinced => $"{otherName} did not seem to believe {self.Object}{on}",
             ImpressionKind.SeemedFrightened => $"{otherName} looked frightened",
             ImpressionKind.SeemedUnmoved => $"{otherName} did not look frightened",
-            _ => $"{otherName} gave nothing away{on}",
+            _ => about is null
+                ? $"{self.Subject} could not tell whether {otherName} was frightened"
+                : $"{self.Subject} could not tell whether {otherName} believed {self.Object}{on}",
         };
     }
 

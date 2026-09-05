@@ -352,6 +352,11 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   "instantiate a durable individual from context with a plausible history" with a diegetic wrapper,
   and it suggests the demoted state should be *cheap continued development*, not storage. Precedent,
   not design.
+- **A man can be offered a pointless question.** Noted 2026-09-05 from the second playtest of 025:
+  Vincent was offered "ask Tommy Nardo what he knows about whether the outfit has a rule". The
+  corroboration generator allows a question about anything acquired by testimony, and a rule his boss
+  told him in person is acquired by testimony. A decision-quality defect, not a display one: the
+  filter needs a notion of what is worth asking about, which is scoring's business.
 - **An assignment does not survive its officeholder, and nothing says what should happen.** Noted
   2026-09-05. No rule covers an active assignment whose holder dies, is replaced, or is removed —
   the question has never arisen because nobody has left a post mid-run. CK3's answer, as precedent

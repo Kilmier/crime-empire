@@ -30,12 +30,14 @@ using CrimeSim.Sim;
 /// what a character could honestly be said to know about it. Fail-closed rather than fail-open is
 /// the difference between this and the ruling it replaces.
 ///
-/// <b>Why the two strategy-outcome kinds are silent rather than conditional.</b> A test for "did he
-/// execute it himself" is available for <see cref="EventKind.StrategyBlocked"/>, where the instance
-/// is still live, and not for <see cref="EventKind.StrategyComplete"/>, where
-/// <see cref="Strategies.Complete"/> has already cleared it by the time the event is handled. Two
-/// rules for one question is how the distinction gets dropped on the way from one to the other. One
-/// rule, and it is silence.
+/// <b>The two strategy-outcome kinds, revisited by milestone 026's second correction.</b> Milestone
+/// 009 made both silent: a test for "did he execute it himself" is available for
+/// <see cref="EventKind.StrategyBlocked"/>, where the instance is still live, and not for
+/// <see cref="EventKind.StrategyComplete"/>, where <see cref="Strategies.Complete"/> has already
+/// cleared it. That reasoning was about the <em>outcome</em>, and it still holds: no outcome crosses.
+/// The <em>fact</em> is different. That his job has ended is his own state either way, so a
+/// completion now says so and nothing more; a block says the shop turned him down only when the
+/// instance shows he was the man in the room, and stays silent for a delegate's.
 /// </summary>
 internal static class PlayerOccasion
 {
@@ -97,9 +99,26 @@ internal static class PlayerOccasion
             // His own pressure, crossed in his own head.
             EventKind.PressureThreshold => "something has become hard to ignore",
 
-            // StrategyComplete and StrategyBlocked, and anything added later. Silence is the default
-            // and must stay the default: adding a kind here is a claim that the character necessarily
-            // knows why he is thinking, and that claim has already been wrong once.
+            // Milestone 026's second correction. Milestone 009 made these two silent because the
+            // event's authored cause carries the outcome of work that may have been delegated, and
+            // that was right about the outcome and wrong about the fact. That his job has ended is
+            // his own state — Strategies.Complete cleared his Execution.Strategy, and the screen
+            // beside this already says "you have nothing running" — so the fact is said and the
+            // outcome is not: "one way or another" is the whole of what he can be told.
+            EventKind.StrategyComplete =>
+                $"the job {self.Subject} had running has come to an end, one way or another",
+
+            // Blocked is different: the instance is still live, so whether he was the man in the
+            // room is knowable here. His own work turned down is his own experience; a delegate's
+            // is that man's, and stays silent exactly as milestone 024 keeps his progress silent.
+            EventKind.StrategyBlocked when actor.Execution.Strategy is { DelegatedToId: null } own =>
+                own.TargetId is { } target
+                    ? $"{name(target)} has turned {self.Object} down"
+                    : $"what {self.Subject} had running has stalled",
+
+            // A delegate's block, and anything added later. Silence is the default and must stay
+            // the default: adding a kind here is a claim that the character necessarily knows why
+            // he is thinking, and that claim has already been wrong once.
             _ => null,
         };
     }

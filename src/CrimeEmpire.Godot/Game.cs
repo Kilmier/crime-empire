@@ -813,6 +813,15 @@ public partial class Game : Control
 
         if (pending.Focus is { } focus) yield return Faint($"on {actor.Possessive} mind: {focus}");
 
+        // Milestone 026's second correction: what hangs over him, so that "cover it up" and "deny
+        // it" read as what they are — his own conscience listing exits — rather than as somebody
+        // having found out. Shown only where a decision is being made, because that is where Matt
+        // asked "why do I have these options".
+        if (snapshot.Exposure.Count > 0)
+        {
+            yield return Faint($"what hangs over {p.Object}: {string.Join(" ", snapshot.Exposure)}");
+        }
+
         yield return new HSeparator();
 
         foreach (var option in pending.Options)

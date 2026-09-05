@@ -619,9 +619,14 @@ public sealed class PlayerSessionTests
             id => world.Find(id)?.Name ?? id,
             id => world.Find(id)?.Pronouns ?? Pronouns.He);
 
-        Assert.Null(pending.Occasion);
-        Assert.Null(pending.Focus);
+        // Milestone 026's second correction: the fact that the job ended is his own state and is
+        // said; the outcome — "the cleanup made things worse" — is the scheduler's sentence and is
+        // not. Both halves are asserted.
+        Assert.Equal("the job he had running has come to an end, one way or another", pending.Occasion);
+        // The focus, now that the wake is described, is his own pressure in his own terms — never
+        // the outcome. Asserted by absence of the scheduler's words rather than by nullity.
         Assert.DoesNotContain("cleanup", Flatten(pending), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("worse", Flatten(pending), StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -675,6 +680,8 @@ public sealed class PlayerSessionTests
         {
             EventKind.AssignmentDelivered, EventKind.RoleReview,
             EventKind.Incident, EventKind.PressureThreshold,
+            // Milestone 026's second correction: the end of a job is his own state and is said.
+            EventKind.StrategyComplete,
         };
 
         var actor = BareActor();
@@ -686,8 +693,11 @@ public sealed class PlayerSessionTests
             else Assert.Null(occasion);
         }
 
+        // A block with nothing running, or with a delegate running it, stays silent; the bare actor
+        // has nothing running. A completion says the fact and never the outcome.
         Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyBlocked), actor, id => id));
-        Assert.Null(PlayerOccasion.For(Wake(EventKind.StrategyComplete), actor, id => id));
+        Assert.Equal("the job he had running has come to an end, one way or another",
+            PlayerOccasion.For(Wake(EventKind.StrategyComplete), actor, id => id));
     }
 
     /// <summary>

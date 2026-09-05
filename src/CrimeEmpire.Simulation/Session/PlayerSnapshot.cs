@@ -91,6 +91,27 @@ public sealed record PlayerStandingMoment(string Description, bool Warmed, DateT
 public sealed record PlayerCommittedAction(DateTime At, string Description);
 
 /// <summary>
+/// The order he currently has out — milestone 024. Null when he has nothing running.
+///
+/// <b><see cref="Progress"/> is null for delegated work, and that is the milestone rather than a
+/// gap.</b> What he ordered, who he gave it to and when are his own acts and his to know. How far
+/// along somebody else has got is not: milestones 017 and 022 both settled that the man who ordered a
+/// job learns whether it was carried out "through a report or a discovery roll like anyone else", and
+/// `StrategyInstance.StepIndex` on a delegated instance is the executor's state. Putting it on this
+/// screen would be the omniscience the information model exists to prevent, arriving through a panel
+/// instead of through a belief.
+///
+/// So a delegated operation reads as what he ordered, of whom, and silence — and the silence is
+/// honest. What breaks it is a report, a rumour, or the takings arriving, all of which reach him
+/// through channels that already exist and already surface in his beliefs.
+/// </summary>
+public sealed record PlayerOperation(
+    string Description,
+    string? ExecutorName,
+    DateTime Since,
+    string? Progress);
+
+/// <summary>
 /// The viewpoint character's own business, when he owns one. <see cref="PayingTribute"/> only — on
 /// the same footing as <see cref="PlayerSnapshot.Cash"/> (milestone 014 ruling 1): an owner always
 /// knows whether his own shop is currently paying, without needing a belief record to stand in for
@@ -226,6 +247,8 @@ public sealed record PlayerSnapshot(
     PlayerCommittedAction? LastAction,
     /// <summary>His own business's paying status, or null when he owns none.</summary>
     PlayerBusinessStatus? MyBusiness,
+    /// <summary>The order he has out, or null when he has nothing running.</summary>
+    PlayerOperation? Operation,
     IReadOnlyList<PlayerRequest> AwaitingAnswers,
     IReadOnlyList<PlayerRelationshipMovement> RecentTrustMovements)
 {
@@ -495,8 +518,45 @@ public static class PlayerView
             silent,
             lastAction,
             myBusiness,
+            Operating(who, Name, self),
             awaitingAnswers,
             trustMovements);
+    }
+
+    /// <summary>
+    /// The order he currently has out, or null when he has nothing running — milestone 024.
+    ///
+    /// <b>The whole of the information rule lives in one branch here</b>, and it is the milestone:
+    /// progress is reported for work he is doing himself and withheld for work he handed to somebody.
+    /// The step a delegate has reached is that man's state; the owner learns whether the job was
+    /// carried out through a report, a rumour or the takings arriving, exactly as milestones 017 and
+    /// 022 settled. Reading `StepIndex` off a delegated instance would hand it to him for free,
+    /// through a panel rather than through a belief, which makes it no less a leak.
+    ///
+    /// Wording comes from <see cref="PlayerOption.Work"/> rather than a second phrasing of the same
+    /// thing. That method exists, and is `internal` for this exact purpose, because
+    /// `StrategyInstance.Label` — a developer string carrying raw ids — once reached the player as a
+    /// decision's focus, and the fix was one shared vocabulary rather than two that drift.
+    /// </summary>
+    private static PlayerOperation? Operating(Character who, Func<string, string> name, Pronouns self)
+    {
+        if (who.Execution.Strategy is not { } s) return null;
+
+        // StepIndex is the *next* step to run, so the last one completed is the one before it. Null
+        // before anything has run, which reads as not having started in earnest rather than as a
+        // step named "nothing".
+        var steps = Strategy.Strategies.StepsFor(s.Kind);
+        string? lastDone = s.StepIndex > 0 && s.StepIndex - 1 < steps.Length
+            ? steps[s.StepIndex - 1]
+            : null;
+
+        return new PlayerOperation(
+            PlayerOption.Work(s.Kind, s.TargetId, name, self),
+            s.DelegatedToId is { } executor ? name(executor) : null,
+            s.StartedAt,
+            s.DelegatedToId is null
+                ? PlayerNarration.OwnProgress(lastDone, s.FailedAttempts, self)
+                : null);
     }
 
     /// <summary>

@@ -146,6 +146,53 @@ public static class PlayerNarration
     public static bool Warmed(StandingCause cause) => cause == StandingCause.AccountCorroborated;
 
     /// <summary>
+    /// How far he has got with work he is doing himself, in words — milestone 024.
+    ///
+    /// <b>Only ever called for his own work.</b> The step somebody else has reached is that man's
+    /// state, not his; see <see cref="PlayerOperation.Progress"/>. This function has no way to tell
+    /// the difference, so the caller carries that rule and a test pins it.
+    ///
+    /// Named, never indexed. `StepIndex` is 0-3 and the steps are already written in plain language
+    /// in `Strategies` — "make the approach", "put the demand" — so this reports the last one he
+    /// actually completed rather than inventing a second vocabulary for the same four things. Empty
+    /// attempts are said in words for the same reason a standing is: a count is a measurement, and
+    /// the player is being told what happened, not shown the model's arithmetic.
+    /// </summary>
+    public static string OwnProgress(string? lastStepDone, int failedAttempts, Pronouns self)
+    {
+        string where = lastStepDone is null
+            ? $"{self.Subject} {self.Verb("has", "have")} not started in earnest yet"
+            : $"{self.Subject} {self.Verb("has", "have")} {Past(lastStepDone)}";
+
+        return failedAttempts switch
+        {
+            0 => where,
+            1 => $"{where}, and once it came back empty",
+            2 => $"{where}, and twice it came back empty",
+            _ => $"{where}, and it keeps coming back empty",
+        };
+    }
+
+    /// <summary>
+    /// The step names are written as instructions — "make the approach" — and a progress line needs
+    /// them as things already done. Kept as a small table rather than a general conjugator, because
+    /// there are seven of them in the whole game and a general one would be wrong more often.
+    /// </summary>
+    private static string Past(string step) => step switch
+    {
+        "make the approach" => "made the approach",
+        "put the demand" => "put the demand",
+        "press or accept" => "pressed the point",
+        "collect" => "collected",
+        "quiet the witnesses" => "seen to the witnesses",
+        "tidy the paperwork" => "tidied the paperwork",
+        "check the records" => "been through the records",
+        "canvass the street" => "canvassed the street",
+        "put on surveillance" => "put somebody on watch",
+        _ => "made a start",
+    };
+
+    /// <summary>
     /// What he takes this man to be good for, or null when he has never formed a view.
     ///
     /// <b>A belief, and it reads like one.</b> This is not an attitude toward the man — that is

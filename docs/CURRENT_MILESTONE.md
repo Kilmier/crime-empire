@@ -7,44 +7,55 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Milestone 023 — The Roster Reads — is implemented, tested and committed.
-Milestones 021, 022 and 023 are all **unreviewed and unaccepted**.
+**Nothing is active.** Milestone 024 — The Operation Reads — is implemented, tested and committed.
+Milestones 021 through 024 are all **unreviewed and unaccepted**.
 
-**Milestone 023** gave the roster the half it never had: why a standing moved, dated and attached to
-the man it concerns, alongside where it stands. Reverses a stated position in
-`PlayerNarration.Standing` on Matt's ruling of 2026-09-04. History rather than a fifth relationship
-dimension — nothing scores it, so all six variants are byte-identical on both hashes. Full account,
-including two findings for later milestones:
-`docs/milestones/023-the-roster-reads.md`.
+**Milestone 024** put the standing order on screen: what he has running, who is carrying it, and — for
+his own work only — how far he has got. A delegated job reads as what he ordered and silence, because
+how far somebody else has got is that man's state, and milestones 017 and 022 both settled that the
+owner learns whether it was carried out through a report or a roll. All six hashes unmoved. Full
+account: `docs/milestones/024-the-operation-reads.md`.
 
 **Everything from `34cd117` onward is unreviewed.** Codex ran out of usage during milestone 020's
 correction chain. `REVIEW_LEDGER.md` calls this *cleared to build on*, not *accepted*.
 
 ## Next, per the demo arc
 
-`ROADMAP.md`'s "The demo arc" — layer 1 continues with **024 The operation reads**, then **025 The
-interface stops fighting the player**, then **026 The session has an ending**, and the layer ends in
-a playtest. Nothing there is authorized yet; scope goes into this file one milestone at a time.
+`ROADMAP.md`'s "The demo arc" — layer 1 finishes with **025 The interface stops fighting the player**
+and **026 The session has an ending**, and then the layer ends in a playtest. Nothing is authorized
+yet; scope goes into this file one milestone at a time.
+
+**025 has accumulated a specific list**, which is worth having in one place when it starts:
+
+- Milestone 018's recorded debt: the five-column layout never rebalanced after a fourth was added, the
+  vertically-wrapped date, the oversized toolbar, `PlayerNarration`'s prose, and "You control" / "You
+  see through" as one selector.
+- The RECENTLY feed now duplicates the roster history less informatively — the roster line gives the
+  cause and the feed does not. Candidate for removal or narrowing (from 023).
+- 024 added the standing order to the "WHAT JUST HAPPENED" column rather than a sixth column,
+  deliberately, to avoid making the layout worse before it is fixed.
 
 ## Open, and Matt's call
 
-**Trust from completed work.** Matt's own roster example — *"Don's opinion of Vincent is up because he
-completed a heist for him successfully"* — still does not occur. Nothing raises trust when a man
-completes work he was given; trust moves only through account conflicts and corroborations. Small in
-code, at an existing call site, and genuinely interlocking: trust feeds `Utility.Loyalty`, so it moves
-hashes. Not folded into 023 because it is a behaviour change rather than a display one.
+**A history of finished operations.** `Strategies.Complete` nulls `Execution.Strategy`, so a completed
+operation leaves nothing behind: the panel goes empty the moment a job finishes, and there is nowhere
+to read what he has already done. Honest but thin, and a natural fit for 026, where a session that ends
+needs to be able to say what happened in it.
 
 ## What is deferred
 
 Not authorization to start any of it — see `ROADMAP.md`.
 
-**From 023:** the RECENTLY feed now duplicates the roster history less informatively, a candidate for
-removal in 025; `IntelligenceWriter` does not show the history, deliberately.
+**From 024:** multiple simultaneous operations, which the model does not have — one `Strategy` per
+character.
 
-**From 022:** rumour mutation and false rumours; strength growing with repetition; street talk
-reaching civilians, which needs rumour-to-fear to matter. And the standing finding: **the honest lever
-for making rumour live is who is in earshot** — which layer 2's rival gang and extra shopkeepers
-supply for free.
+**From 023:** trust from completed work was considered and **declined** — trust means "would I take his
+word" and moves on account conflicts and corroborations, so folding job outcomes into it would collapse
+the distinction milestone 021 drew between reliability as an informant and reliability as an executor.
+
+**From 022:** rumour mutation and false rumours; strength growing with repetition; street talk reaching
+civilians, which needs rumour-to-fear to matter. The honest lever for making rumour live is **who is in
+earshot** — which layer 2's rival gang and extra shopkeepers supply for free.
 
 **From 021:** assessments of skills other than Coercion; decay of an assessment; a capability belief
 acquired by testimony being permanently unrevisable; a character's confidence in his own ability.

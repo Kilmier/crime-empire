@@ -577,6 +577,26 @@ public partial class Game : Control
         if (snapshot.MyBusiness is { } business)
             yield return Faint($"    {business.Name}: {(business.PayingTribute ? "currently paying" : "not currently paying")}");
 
+        // Milestone 024. Put in this column rather than a sixth one: the layout already carries five
+        // and has not been rebalanced since a fourth was added (milestone 018's recorded debt, which
+        // 025 exists to clear), and a standing order belongs with what he did and what came of it
+        // anyway. For delegated work this says who has it and stops — how far along somebody else
+        // has got is that man's state, not his.
+        if (snapshot.Operation is { } op)
+        {
+            yield return new HSeparator();
+            yield return Plain("WHAT HE HAS OUT");
+            yield return Faint($"    {op.Description}");
+            // The date is when the *operation* started, not when it was handed over — nothing
+            // records a handover time, and "Tommy has had it since 2 Mar" would be a false
+            // statement whenever the job was delegated later than it began. Said as the operation's
+            // own age, with who holds it stated separately.
+            yield return Faint($"    running since {op.Since.ToString("d MMM", CultureInfo.InvariantCulture)}");
+            if (op.ExecutorName is { } executor)
+                yield return Faint($"    {executor} is carrying it");
+            yield return Faint($"    {op.Progress ?? "nothing has come back yet"}");
+        }
+
         yield return new HSeparator();
         yield return Plain("AWAITING ANSWERS");
 

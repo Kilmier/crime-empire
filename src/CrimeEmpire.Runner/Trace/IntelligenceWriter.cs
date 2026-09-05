@@ -97,6 +97,25 @@ public static class IntelligenceWriter
 
         // ---------------------------------------------------------------- how he takes them
         //
+        // Milestone 024. What he has out, and — for work he handed to somebody — deliberately no
+        // more than that: who has it and since when. How far a delegate has got is that man's state.
+        if (view.Operation is { } op)
+        {
+            sb.AppendLine("WHAT HE HAS OUT");
+            sb.AppendLine();
+            sb.AppendLine($"  {op.Description}");
+            // The operation's own age, not a handover time — nothing records when it was delegated,
+            // so "X has had it since" would be false whenever the handover came later than the start.
+            sb.AppendLine($"     running since {op.Since:d MMM}");
+            if (op.ExecutorName is { } executor)
+                sb.AppendLine($"     {executor} is carrying it");
+            if (op.Progress is { } progress)
+                sb.AppendLine($"     {progress}");
+            else
+                sb.AppendLine($"     nothing has come back yet");
+            sb.AppendLine();
+        }
+
         // His own attitude, and only ever his own — what *he* makes of the people he deals with, and
         // nothing about what they make of him, which is their private state and not his to know. The
         // three rules that keep this section honest (never a number, never an accusation, never

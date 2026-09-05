@@ -343,6 +343,69 @@ public sealed class InPersonTests
         Assert.DoesNotContain("does not believe", read.Description, StringComparison.Ordinal);
     }
 
+    // ================================================================= first correction
+
+    /// <summary>
+    /// He knows what he is good at, in words and never in numbers — Matt's ruling from the second
+    /// playtest, in the register he gave. Vincent as written: a fair talker, physically
+    /// threatening, keeps a straight face well enough, reads people badly. Kane is the mirror on
+    /// the last two, and she is described as herself.
+    /// </summary>
+    [Fact]
+    public void He_knows_what_he_is_good_at_in_words()
+    {
+        var session = SimulationSession.Start(Seed, "baseline", "vincent");
+        var you = session.Snapshot().SelfKnowledge;
+        Assert.Equal(new[]
+        {
+            "you can talk and communicate with people fairly well",
+            "you are physically threatening",
+            "you keep a straight face well enough",
+            "you have a hard time reading people",
+        }, you);
+
+        var world = Cast.Build(Seed, "baseline");
+        var kane = PlayerView.Build(world, "kane", world.Now).SelfKnowledge;
+        Assert.Contains("she reads people well", kane);
+        Assert.Contains("she is not physically threatening", kane);
+
+        foreach (var c in world.Characters.Values)
+            Assert.All(PlayerView.Build(world, c.Id, world.Now).SelfKnowledge,
+                line => Assert.DoesNotMatch(@"\d", line));
+    }
+
+    /// <summary>
+    /// The reaction attaches to the claim that landed, not the one the report led with. A report
+    /// that opens by repeating the boss's own rule back to him and then tells him something new
+    /// leaves an impression about the news.
+    /// </summary>
+    [Fact]
+    public void The_reaction_is_about_the_claim_that_landed_not_the_one_the_report_led_with()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var salvatore = world.Get("salvatore");
+        var vincent = world.Get("vincent");
+        // The rule he set himself, and something he holds nothing on: the scenario seeds him with
+        // the grocery's weakness too, so that would have been corroboration, not news.
+        var rule = world.Org.Policies[0].AwarenessClaim(Cast.OrgId);
+        var news = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery);
+        Assert.Null(salvatore.Cognition.Find(news));
+        vincent.Cognition.Learn(rule, Stance.Believes, 0.75, SourceKind.Report, "salvatore", Cast.Start);
+        vincent.Cognition.Learn(news, Stance.Believes, 0.6, SourceKind.Discovery, "vincent", Cast.Start);
+
+        var report = new Report(1, "vincent", "salvatore", Cast.Start.AddDays(3), ReportCandor.Candid,
+            new[]
+            {
+                ReportedClaim.Honest(rule, Stance.Believes, 0.7, SourceKind.Report),
+                ReportedClaim.Honest(news, Stance.Believes, 0.5, SourceKind.Discovery),
+            },
+            Array.Empty<Claim>(), "staged");
+        Reporting.Deliver(world, report, salvatore);
+
+        var impression = Assert.Single(vincent.Social.Toward("salvatore").Impressions);
+        Assert.Equal(news, impression.About!.Value);
+    }
+
     // ================================================================= fixtures
 
     private static PendingDecision AdvanceToPause(SimulationSession session)

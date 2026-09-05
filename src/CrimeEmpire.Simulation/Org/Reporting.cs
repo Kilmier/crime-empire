@@ -332,9 +332,11 @@ public static class Reporting
     /// </summary>
     public static void Deliver(World world, Report report, Character recipient)
     {
+        var receipts = new List<(ReportedClaim Claim, Receipt Receipt)>();
         foreach (var claim in report.Asserted)
         {
             var receipt = recipient.Cognition.Receive(claim, report.SenderId, report.At);
+            receipts.Add((claim, receipt));
 
             // What the recipient made of it is his business, and the social consequence is applied
             // from his side only. Note this reads the receipt, never the report: `report.Candor`
@@ -368,6 +370,6 @@ public static class Reporting
         // And what the speaker read off the listener's face, now that the listener has made of it
         // what he made of it. After the receipt, deliberately: the read is against his position
         // once he has heard the account, not before.
-        Reactions.AfterReport(world, world.Get(report.SenderId), recipient, report);
+        Reactions.AfterReport(world, world.Get(report.SenderId), recipient, report, receipts);
     }
 }

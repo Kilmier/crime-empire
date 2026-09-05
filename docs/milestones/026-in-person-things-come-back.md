@@ -164,3 +164,50 @@ rather than appended verbatim; nothing in it was dropped on the way.
 ## Commit
 
 One implementation-and-archive commit.
+
+## Correction, same day — he knows what he is good at
+
+Matt, from the second playtest: "I think it should be ok for a player character to be aware of
+their own stats, so for instance whether my character is better at persuasion or threatening." Ruled
+yes with one line drawn: his own skills are his to know the way his cash is (milestone 014, ruling 1),
+and the number is not. Matt supplied the register — "You can talk and communicate with people fairly
+well; you are not physically threatening; you have a hard time reading people."
+
+**`PlayerSnapshot.SelfKnowledge`**, four clauses from his own `Capabilities` on three bands (strong
+at 0.6, weak under 0.35, fair between), rendered by `PlayerNarration.SelfKnowledge` and shown as the
+first entry of WHAT YOU THINK OF PEOPLE, above the men he deals with, because the last clause explains
+the readings beneath. Vincent as written:
+
+```
+You
+    you can talk and communicate with people fairly well
+    you are physically threatening
+    you keep a straight face well enough
+    you have a hard time reading people
+```
+
+His actual numbers make him threatening and a fair talker, which is not the example line Matt wrote;
+the words follow the numbers. What he *believes* about himself and may be wrong about stays milestone
+021's deferred item.
+
+**And the reaction attaches to the claim that landed.** The first version read the impression
+against the first claim a report asserted, and a capo who opened his report by repeating the boss's
+own rule back to him came away with "Salvatore Greco gave nothing away when you spoke about whether
+the outfit has a rule". `Reactions.Landed` now picks, from the listener's receipts, something he
+pushed back on, else something that was news to him, else something he already held and heard again,
+else what the report led with — news above corroboration, because the boss's own rule repeated back
+to him *is* corroboration. The 1 April golden-path read is now about "Tommy Nardo got violent at
+Bellini's grocery", which is what Vincent went to tell him. The test for this was staged wrong
+once: the "news" chosen was the grocery's weakness, which the scenario seeds the boss with, so it was
+corroboration too. Fixed to a claim he genuinely lacks, and the fixture asserts that before relying
+on it.
+
+**The Godot editor regenerated the project again.** Matt ran the game from the editor, which left
+the three artifacts milestone 018 recorded — the csproj target framework overwritten with `net8.0`,
+the `project.godot` header replaced with boilerplate, `Game.cs` re-tabbed with no content change —
+plus `Game.cs.uid` and `CrimeEmpire.Godot.csproj.old`. All reverted to `HEAD` and the sidecars
+deleted, per the 018 precedent; `git diff -w` confirmed `Game.cs` carried no content change.
+
+Verification: build 0/0; **650 tests** (648 + 2); hashes unchanged from `e58dbcc` — impressions
+are not in the trace, and the reaction target is not a decision input; both viewpoint runs exit 0;
+all seven Godot invocations exit 0; both rosters read.

@@ -728,11 +728,21 @@ public partial class Game : Control
     private IEnumerable<Control> BuildAttitudes(PlayerSnapshot snapshot)
     {
         var p = snapshot.ViewpointPronouns;
+
+        // Himself first — milestone 026's first correction. What he is good and bad at, in words,
+        // his to know the way his cash is. Placed above the men he deals with because the last
+        // clause explains the readings beneath: a man who reads people badly gets "gave nothing
+        // away" a lot, and the screen should say why.
+        yield return Plain(PlayerView.IsSecondPerson(p) ? "You" : snapshot.ViewpointName);
+        foreach (string clause in snapshot.SelfKnowledge)
+            yield return Faint($"    {clause}");
+
         if (snapshot.Attitudes.Count == 0)
         {
-            yield return Plain($"{p.Subject_} {p.Verb("has", "have")} nothing much to say about anybody.");
+            yield return Faint($"{p.Subject_} {p.Verb("has", "have")} nothing much to say about anybody else.");
             yield break;
         }
+        yield return new HSeparator();
 
         foreach (var attitude in snapshot.Attitudes)
         {

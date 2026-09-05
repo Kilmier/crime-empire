@@ -251,6 +251,12 @@ public sealed record PlayerSnapshot(
     /// about him, not a measurement the model took of anybody.
     /// </summary>
     double Cash,
+    /// <summary>
+    /// What he knows about himself — his own skills, in words. Milestone 026's first correction, on
+    /// the same footing as <see cref="Cash"/>: his own state, copied out of his own
+    /// <see cref="Domain.Capabilities"/>, never a number and never anybody else's.
+    /// </summary>
+    IReadOnlyList<string> SelfKnowledge,
     IReadOnlyList<PlayerBelief> Known,
     IReadOnlyList<PlayerDisagreement> Disagreements,
     IReadOnlyList<PlayerAttitude> Attitudes,
@@ -267,6 +273,7 @@ public sealed record PlayerSnapshot(
     PlayerOperation? Operation,
     IReadOnlyList<PlayerRequest> AwaitingAnswers)
 {
+    public IReadOnlyList<string> SelfKnowledge { get; init; } = Frozen.List(SelfKnowledge);
     public IReadOnlyList<PlayerBelief> Known { get; init; } = Frozen.List(Known);
     public IReadOnlyList<PlayerDisagreement> Disagreements { get; init; } = Frozen.List(Disagreements);
     public IReadOnlyList<PlayerAttitude> Attitudes { get; init; } = Frozen.List(Attitudes);
@@ -566,6 +573,9 @@ public static class PlayerView
             who.RoleTitle,
             self,
             who.Capabilities.Cash,
+            PlayerNarration.SelfKnowledge(
+                who.Capabilities[Skill.Persuasion], who.Capabilities[Skill.Coercion],
+                who.Capabilities[Skill.Discretion], who.Capabilities[Skill.Investigation], self),
             held,
             disagreements,
             attitudes,

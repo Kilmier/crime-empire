@@ -51,15 +51,20 @@ public static class Reactions
     /// <summary>
     /// After an account is delivered: what the recipient seemed to make of what was put to him.
     ///
-    /// The exchange is about the question answered, or failing that the first thing asserted. A
-    /// report that asserts nothing about it — a man saying he knows nothing — puts nothing to the
-    /// listener to take or not, and leaves no impression. "Taken" means the listener's own position,
-    /// after <see cref="Cognition.Receive"/> has had its say, points the way the assertion pointed.
+    /// The exchange is about the question answered, or failing that the claim that actually landed
+    /// — one he pushed back on, one he took as news, in that order — and only then whatever the
+    /// report led with. The first version took the first assertion, and a capo who opened his report
+    /// by repeating the boss's own rule back to him came away with a reading of how the boss took
+    /// his own rule. A report that asserts nothing about it — a man saying he knows nothing — puts
+    /// nothing to the listener to take or not, and leaves no impression. "Taken" means the
+    /// listener's own position, after <see cref="Cognition.Receive"/> has had its say, points the
+    /// way the assertion pointed.
     /// </summary>
-    public static void AfterReport(World world, Character sender, Character recipient, Report report)
+    public static void AfterReport(
+        World world, Character sender, Character recipient, Report report,
+        IReadOnlyList<(ReportedClaim Claim, Receipt Receipt)> receipts)
     {
-        Claim? aboutOrNull = report.AnsweringClaim
-            ?? (report.Asserted.Count > 0 ? report.Asserted[0].Claim : null);
+        Claim? aboutOrNull = report.AnsweringClaim ?? Landed(receipts, report.At);
         if (aboutOrNull is not { } about) return;
 
         ReportedClaim? assertionOrNull = null;
@@ -84,6 +89,25 @@ public static class Reactions
             taken ? ImpressionKind.SeemedUnconvinced : ImpressionKind.SeemedConvinced);
 
         Relations.RecordImpression(sender, recipient.Id, new Impression(read, about, report.At));
+    }
+
+    /// <summary>
+    /// The claim an exchange was really about, from the listener's receipts: something he pushed
+    /// back on, else something that was news to him, else something he already held and heard
+    /// again from a new voice, else what the report led with. News outranks corroboration because
+    /// a capo repeating the boss's own rule back to him corroborates it — the boss holds it — and
+    /// the first version of this read how the boss took his own rule.
+    /// </summary>
+    private static Claim? Landed(IReadOnlyList<(ReportedClaim Claim, Receipt Receipt)> receipts, DateTime at)
+    {
+        if (receipts.Count == 0) return null;
+        foreach (var (claim, receipt) in receipts)
+            if (receipt.Conflict is not null) return claim.Claim;
+        foreach (var (claim, receipt) in receipts)
+            if (receipt.Record.AcquiredAt == at) return claim.Claim;
+        foreach (var (claim, receipt) in receipts)
+            if (receipt.Agreement is not null) return claim.Claim;
+        return receipts[0].Claim.Claim;
     }
 
     /// <summary>

@@ -214,6 +214,47 @@ public static class PlayerNarration
         };
     }
 
+    /// <summary>
+    /// What he knows about himself — milestone 026's first correction, on Matt's ruling that a
+    /// player character may be aware of his own stats. Qualitative, in the register Matt gave:
+    /// "You can talk and communicate with people fairly well; you are not physically threatening;
+    /// you have a hard time reading people." A fact about him on the same footing as his cash — his
+    /// own <see cref="Capabilities"/>, never a number, never anybody else's. What he believes about
+    /// himself and may be wrong about is milestone 021's deferred item, not this.
+    ///
+    /// Three bands: strong at 0.6 and above, weak under 0.35, fair between. Every skill is said,
+    /// because "middling" is information too when the other three are not.
+    /// </summary>
+    public static IReadOnlyList<string> SelfKnowledge(
+        double persuasion, double coercion, double discretion, double investigation, Pronouns self)
+    {
+        string s = self.Subject;
+        string V(string singular, string plural) => self.Verb(singular, plural);
+
+        return new[]
+        {
+            Band(persuasion,
+                $"{s} can talk and communicate with people well",
+                $"{s} can talk and communicate with people fairly well",
+                $"{s} {V("is", "are")} not much of a talker"),
+            Band(coercion,
+                $"{s} {V("is", "are")} physically threatening",
+                $"{s} can be threatening when {s} {V("needs", "need")} to be",
+                $"{s} {V("is", "are")} not physically threatening"),
+            Band(discretion,
+                $"{s} {V("gives", "give")} very little away",
+                $"{s} {V("keeps", "keep")} a straight face well enough",
+                $"{self.Possessive} face gives {self.Object} away"),
+            Band(investigation,
+                $"{s} {V("reads", "read")} people well",
+                $"{s} {V("reads", "read")} people well enough",
+                $"{s} {V("has", "have")} a hard time reading people"),
+        };
+
+        static string Band(double skill, string strong, string fair, string weak)
+            => skill >= 0.6 ? strong : skill >= 0.35 ? fair : weak;
+    }
+
     /// <summary>A man's answer that he knows nothing of the matter — milestone 026.</summary>
     public static string Disclaimer(string otherName, Pronouns other, string about)
         => $"{otherName} says {other.Subject} {other.Verb("knows", "know")} nothing about whether {about}";

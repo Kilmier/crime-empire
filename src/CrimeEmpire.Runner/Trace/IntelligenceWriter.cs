@@ -125,10 +125,14 @@ public static class IntelligenceWriter
         // nothing about what they make of him, which is their private state and not his to know. The
         // three rules that keep this section honest (never a number, never an accusation, never
         // anybody he does not know) are enforced where the snapshot is built.
+        // Himself first — milestone 026's first correction; the same words the Godot roster uses.
+        sb.AppendLine("HOW HE TAKES THEM");
+        sb.AppendLine();
+        sb.AppendLine($"  {view.ViewpointName} ({self.Reflexive})");
+        foreach (string clause in view.SelfKnowledge)
+            sb.AppendLine($"     {clause}");
         if (view.Attitudes.Count > 0)
         {
-            sb.AppendLine("HOW HE TAKES THEM");
-            sb.AppendLine();
             foreach (var a in view.Attitudes)
             {
                 sb.AppendLine($"  {a.PersonName}");

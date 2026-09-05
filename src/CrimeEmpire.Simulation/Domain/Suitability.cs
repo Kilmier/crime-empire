@@ -23,6 +23,19 @@ namespace CrimeSim.Domain;
 /// acquire one because a job went well — that would be a different and much stronger claim, and
 /// <see cref="Cognition.Revise"/>'s own contract (it returns null when there is no such record)
 /// makes the boundary structural rather than remembered.
+///
+/// <b>AND IT IS ONLY EVER CALLED WHERE SOMETHING ACTUALLY REACHED HIM.</b> Milestone 021's
+/// correction. This ran on the blocked path too, where the job came back empty and *nobody told
+/// him* — no report, no observation, no discovery roll — so the belief moved on world state the
+/// character had no access to. One call site remains, the collection: he finds the takings arriving,
+/// which is a real <see cref="SourceKind.Discovery"/> the same branch already files a claim for.
+/// The rule is the milestone's own, applied to itself: an assessment may be confounded, it may be
+/// wrong, and it may get wronger — but it may not move on information he never received.
+///
+/// <b>It cannot make a ladder position incoherent.</b> It only ever revises, and
+/// <see cref="Cognition.Revise"/> moves confidence and never stance, so no run of this can turn a
+/// rejected bar into a held one. See <see cref="CapabilityBar.Read"/> for what happens when a
+/// character holds an incoherent pair anyway.
 /// </summary>
 public static class Suitability
 {
@@ -70,8 +83,15 @@ public static class Suitability
             // which is why the seeded belief is SourceKind.Inference sourced to the holder. A
             // capability belief somebody was *told* is not revisable by watching a job go well, and
             // that restriction is inherited rather than restated here.
+            //
+            // Discovery, and precisely: he came upon the consequence afterwards. The takings turning
+            // up is not something he did (Participant), was present for (Witness) or was told
+            // (Report) — it is the same acquisition the collection branch files for the claim that
+            // the shop has stopped holding out, and naming it identically here is what keeps the two
+            // halves of one occasion from describing themselves differently.
             owner.Cognition.Revise(
-                claim, prior.Confidence + direction * OutcomeConfidenceShift, owner.Id, at);
+                claim, prior.Confidence + direction * OutcomeConfidenceShift, owner.Id, at,
+                new Reconsideration(ReconsiderCause.DelegatedOutcome, SourceKind.Discovery, executorId));
         }
     }
 }

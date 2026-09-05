@@ -275,6 +275,74 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 021, capability is a belief, corrected once, still unaccepted
+
+**The first Codex review since the tool ran out of usage mid-way through milestone 020.** It read
+`e65f0cd` and returned FAIL with three defects plus two documentation requirements. All five are
+addressed by one correction commit; nothing in the milestone's design was rejected, and the three
+code findings are all instances of rules this project had already settled elsewhere.
+
+**What the three findings were, and why each was right.**
+
+1. **A belief moved where no information reached the character.** `Suitability.RecordDelegatedOutcome`
+   ran on `Strategies.Blocked` as well as on the collection. The blocked branch is silent — the target
+   held out, and no report, observation or discovery roll carries that to whoever ordered the job — so
+   the delegator's read of his man was moving on world state he had no access to. Waking him is not
+   informing him: the `EventKind.StrategyBlocked` that branch schedules carries no claim into anybody's
+   cognition. The call is removed; the collection keeps its own, where he genuinely finds the takings
+   arriving and the same branch already files a `SourceKind.Discovery` claim for it.
+2. **A revision could not say what had moved it.** Confidence drifted with only a `ReconsideredAt`
+   stamp on the record, so a belief that shifted because a job came back was indistinguishable from one
+   that shifted because a canvass found nothing. `InformationRecord` gains `Reconsidered`, and
+   `Cognition.Revise` takes the occasion as a **required** parameter — optional would have left the same
+   gap open to the next caller. Acquisition is preserved rather than overwritten.
+3. **The `CapabilityBar` ladder was not enforced anywhere.** `HardMan` implies `RoughWork`, and each
+   reader resolved a contradictory pair alone.
+
+**Matt's ruling on the third, 2026-09-05, and it reverses a position this archive stated.** Milestone
+021 recorded that the implication was "deliberately not enforced on write … nothing gets to tidy his
+beliefs behind his back." That reason is kept and the mechanism moved: **resolution happens on read.**
+Raw cognition may still hold the incoherent pair, no lower-bar belief is invented, and both consumers
+go through `CapabilityBar.Read`. One rule — the highest bar he holds sets his tier and everything below
+is entailed — covers both the gap and the contradiction.
+
+**Authorized hash movement, and it is correction 1's alone.** Matt authorized the new `capable-angelo`
+baseline on 2026-09-05 after being shown the measurement.
+
+- `capable-angelo` trace `6B355EEF852AFA6C` → **`12AF1B71EBBDF51F`**; chosen actions
+  `3D2A052BDF22B72A` → **`1EDE45C580544105`**; decisions 36 → **37**. The superseded figures stay
+  written here rather than being edited out; they were correct for the state they described.
+- **All five pre-existing variants unmoved**, verified before and after: `baseline 9AF57665067AEA11`,
+  `cautious-vincent 86EC1ADA4A4E9179`, `watchful-boss 84AC3F65E4102EBA`,
+  `disloyal-vincent 9A6E0E518294532F`, `resentful-tommy 3C4483640153DA88`.
+- Corrections 2 and 3 moved nothing further, which was measured rather than assumed: the hashes were
+  read after correction 1 alone and again after all three, and they match. That is what establishes the
+  ladder resolution is behaviour-preserving on the accepted fixture — in it, Vincent holds both bars on
+  Angelo coherently, so there is nothing for the rule to resolve.
+
+**Verification.** Build 0/0; tests **636** (623 + 12 new + 1 comparator test); `--verify` on baseline,
+`disloyal-vincent`, `resentful-tommy` and `capable-angelo`; both required viewpoint runs; five Godot
+self-tests and the two-process restart proof all exit 0.
+
+**Four mutation checks, each a real temporary production edit, each confirmed and reverted.**
+Restoring the blocked-path revision fails exactly the correction-1 test; dropping `Reconsidered` from
+`Revise` fails exactly the three provenance tests; reverting the scorer to read raw positions fails
+exactly the ladder test; dropping the occasion from the replay comparator fails exactly the comparator
+test.
+
+**One of those mutations found a defect in this correction's own tests, and it is the row worth
+reading.** The roster half of the ladder test was written asserting that the panel and the scorer could
+not disagree — and the mutation that should have falsified it did not. `PlayerNarration.TakenFor`'s
+switch matches `(_, true)` before it reaches the low bar, so raw `(false, true)` and resolved
+`(true, true)` render the identical sentence: **the roster never displayed the disagreement, and the
+observable defect was scoring-only.** The test was rewritten to claim only what it proves, and now
+says so in its own summary. Recorded because the mutation check caught a green test that proved
+nothing — the fourth instance in this project of that shape, and the first where the mutation
+discipline itself is what caught it rather than a later reader.
+
+**Still unreviewed and unaccepted.** This correction has not been back to Codex, and neither have
+milestones 022–025. Status is `CURRENT_MILESTONE.md`'s to state, not this file's.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

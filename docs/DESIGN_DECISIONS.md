@@ -569,6 +569,58 @@ extracted to a shared constant, not a fresh one.
   to this, because `PreparedDecision.Available`'s candidate-id ordering (milestone 009, ruling 5) is
   deliberately not rank order.
 
+## Capability as belief — settled by milestone 021 and its correction
+
+See `milestones/021-capability-is-a-belief-not-a-stat.md`, including the appended correction. Recorded
+here because milestone 020 put the same distinction in the wrong place twice and two Codex rounds were
+spent moving it, which is the signature of a rule that was never written down.
+
+- **An assessment of somebody's capability lives in `Cognition`, not on the relationship.** Trust, fear
+  and obligation are attitudes and have no truth value; how good a man is at a job is a fact about the
+  world with a referent — his own `Capabilities[Skill.Coercion]` — so a character can be *wrong* about
+  it, and things a character can be wrong about are beliefs. It is `ClaimKind.PersonIsCapable`, with a
+  source, a confidence and a revision path, and it travels through the report and corroboration
+  channels like any other claim. **Scoring may not consult the objective figure**: only committed
+  resolution (`Strategies.ResolveViolence`) reads `Capabilities`, because that is computing what
+  happened rather than weighing an option.
+- **Magnitude is carried by graded propositions, never by confidence.** Which bars of
+  `CapabilityBar`'s ladder a character holds says how good he takes the man to be;
+  `InformationRecord.Confidence` says how sure he is of each, separately. Encoding "he is very good"
+  as "I am very sure he is good" collapses two axes into one number — the conflation `LoyaltyReading`
+  was unbundled to avoid and `RelationshipFacet` was built to detect. A man firmly believed to clear
+  the low bar and firmly believed to fail the high one is a sharper statement than any scalar, and
+  only a ladder can make it.
+- **The ladder's implication is enforced on read, never on write.** Clearing `HardMan` implies
+  clearing `RoughWork`. Storage still admits an incoherent pair, because a character is allowed to be
+  wrong and nothing may tidy his beliefs behind his back — but every consumer resolves through
+  `CapabilityBar.Read`, so no two readers can reach different tiers for the same man and no scorer can
+  emit two components pulling opposite ways. **The rule is one sentence: the highest bar he holds sets
+  his tier, and every bar below it is entailed.** That single rule covers both a gap and a
+  contradiction; letting a rejection of the low bar win instead would need a second rule and would
+  leave the gap case inconsistent with it. Entailment supplies a position and never overwrites one
+  that already agrees, so an independently held bar keeps its own confidence. Only a scenario fixture
+  can seed an incoherent pair: `Cognition.Revise` moves confidence and never stance, so no runtime
+  path can build one.
+- **A belief moves only where information actually reached the character, and the record says what
+  moved it.** Milestone 021 revised a delegator's read of his man on the blocked path, where the job
+  came back empty and nobody told him — the owner reading world state he had no access to, which is
+  the same omniscience the scoring term had already been corrected for twice. Waking a character is
+  not informing him: `EventKind.StrategyBlocked` carries no claim. Every `Cognition.Revise` call now
+  states its occasion (`Reconsideration`), kept **alongside** the acquisition source and never in
+  place of it — overwriting `SourceKind`/`SourceId` with the revision's would make a March inference
+  look like a May discovery, the same silent rewrite `AcquiredAt` and `ReconsideredAt` are kept apart
+  to prevent. The parameter is required rather than optional, because the defect it answers was a
+  confidence figure drifting with nothing on the record to say why.
+- **Revising from confounded evidence is a deliberate attribution error, on the channels that carry
+  information.** Whether a shakedown works turns on the mark's resistance, the method, the owner's own
+  Persuasion and a roll; the executor's Coercion is one input among several and on the persuade path
+  is not an input at all. A delegator who concludes something about his man from the takings arriving
+  is reasoning from confounded evidence, and does it anyway, because people do and because a belief
+  that can only ever become more accurate is not worth modelling. The milestone's proof obligation
+  follows: an assessment must be able to end up *further* from the truth than it started. **The
+  correction narrowed where this applies without weakening it** — an assessment may be confounded,
+  wrong, and get wronger, but it may not move on information the character never received.
+
 ## Player-neutral architecture and future institutional roles — clarified 2026-08-19
 
 Not a new commitment. This section names something the milestone 009 player boundary already made

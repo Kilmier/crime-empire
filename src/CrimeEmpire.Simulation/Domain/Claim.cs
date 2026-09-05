@@ -71,10 +71,16 @@ public enum ClaimKind
 /// <see cref="ClaimKind.PolicyIssued"/> sets by naming a policy id in a claim's Object.
 ///
 /// <b>Two, and about force only.</b> Milestone 021 proves the mechanism on one skill; assessments of
-/// Persuasion, Discretion or Investigation are explicitly out of its scope. The ladder is ordered —
-/// clearing <see cref="HardMan"/> implies clearing <see cref="RoughWork"/> — but that implication is
-/// deliberately *not* enforced on write: a character is allowed to hold an incoherent pair, because
-/// he is allowed to be wrong and nothing in the model gets to tidy his beliefs up behind his back.
+/// Persuasion, Discretion or Investigation are explicitly out of its scope.
+///
+/// <b>The ladder is ordered, and since milestone 021's correction that ordering is enforced on read
+/// rather than on write.</b> Clearing <see cref="HardMan"/> implies clearing <see cref="RoughWork"/>.
+/// Storage still admits an incoherent pair — a man may hold the high bar while rejecting the low one,
+/// because he is allowed to be wrong and nothing gets to tidy his beliefs behind his back, which is
+/// the same rule the correction enforces one file over by refusing to move a belief no information
+/// reached him about. What changed is that no *reader* may act on the raw pair: every consumer goes
+/// through <see cref="Read"/>, so the scorer and the roster cannot arrive at different tiers for the
+/// same man, and the original records stay exactly as he formed them for developer traces and replay.
 /// </summary>
 public static class CapabilityBar
 {
@@ -90,7 +96,95 @@ public static class CapabilityBar
     /// <summary>The claim that <paramref name="personId"/> clears <paramref name="bar"/>.</summary>
     public static Claim About(string personId, string bar)
         => new(ClaimKind.PersonIsCapable, personId, bar);
+
+    /// <summary>
+    /// One coherent reading of where somebody sits on the ladder, for every bar the reader has any
+    /// position on. THE SINGLE DERIVATION — <see cref="Decision.Utility"/> and
+    /// <see cref="Session.PlayerView"/> both come through here, so what the decision weighed and what
+    /// the roster says he takes the man for cannot disagree.
+    ///
+    /// <b>The rule, in one sentence: the highest bar he holds sets his tier, and every bar below it
+    /// is entailed.</b> That single rule covers both ways the raw records fall short of a coherent
+    /// ladder — a gap (he holds the high bar and has never considered the low one) and a genuine
+    /// contradiction (he holds the high bar and rejects the low one). Resolving the contradiction the
+    /// other way, letting the rejection win, would need a second rule and would make the gap case
+    /// inconsistent with it.
+    ///
+    /// <b>Entailment supplies a position; it never overwrites one that already agrees.</b> A bar he
+    /// independently holds keeps its own confidence, so a firm "up to rough work" is not quietly
+    /// reduced to the confidence of a shakier belief above it. Only a bar he has no view on, or one
+    /// he rejects while holding something above it, takes the entailing bar's confidence — and is
+    /// marked <see cref="CapabilityReading.Entailed"/> so a caller can tell a conclusion he reached
+    /// from one the ladder reached for him.
+    ///
+    /// <b>Nothing here mutates cognition.</b> It reads through the supplied lookup and returns a
+    /// projection; the records it read are untouched and stay available raw.
+    /// </summary>
+    /// <param name="personId">The man being assessed.</param>
+    /// <param name="position">
+    /// The reader's own lookup — <c>PerceivedSituation.Position</c> for scoring, a scan of
+    /// <c>Cognition.Records</c> for presentation. Called once per bar, lowest first, so a lookup with
+    /// its own bookkeeping (the perceived situation marks a record as consulted) sees the same order
+    /// it always did.
+    /// </param>
+    public static IReadOnlyList<CapabilityReading> Read(
+        string personId, Func<Claim, InformationRecord?> position)
+    {
+        var raw = new InformationRecord?[Ladder.Count];
+        for (int i = 0; i < Ladder.Count; i++)
+            raw[i] = position(About(personId, Ladder[i]));
+
+        var readings = new List<CapabilityReading>(Ladder.Count);
+
+        for (int i = 0; i < Ladder.Count; i++)
+        {
+            if (raw[i] is { IsHeld: true } own)
+            {
+                readings.Add(new CapabilityReading(Ladder[i], true, own.Confidence, Entailed: false));
+                continue;
+            }
+
+            // The highest bar above this one that he actually holds. Searched downward from the top
+            // so the answer does not depend on how many rungs the ladder has.
+            InformationRecord? entailing = null;
+            for (int j = Ladder.Count - 1; j > i; j--)
+                if (raw[j] is { IsHeld: true } higher) { entailing = higher; break; }
+
+            if (entailing is { } e)
+                readings.Add(new CapabilityReading(Ladder[i], true, e.Confidence, Entailed: true));
+            else if (raw[i] is { } rejected)
+                readings.Add(new CapabilityReading(Ladder[i], false, rejected.Confidence, Entailed: false));
+        }
+
+        return readings;
+    }
+
+    /// <summary>
+    /// Whether a resolved reading clears one named bar, or null where he has no view of it at all.
+    /// Null is deliberately not folded into false — "he has never thought about it" and "he has
+    /// concluded the man is not up to it" are different things and the roster renders them so.
+    /// </summary>
+    public static bool? Clears(IReadOnlyList<CapabilityReading> readings, string bar)
+    {
+        foreach (var r in readings)
+            if (string.Equals(r.Bar, bar, StringComparison.Ordinal)) return r.Clears;
+        return null;
+    }
 }
+
+/// <summary>
+/// One bar of <see cref="CapabilityBar"/>'s ladder as a reader should act on it, after the ladder's
+/// implication has been applied. See <see cref="CapabilityBar.Read"/>.
+/// </summary>
+/// <param name="Bar">Which bar, from <see cref="CapabilityBar.Ladder"/>.</param>
+/// <param name="Clears">Whether he takes the man to clear it.</param>
+/// <param name="Confidence">How sure — his own for a position he holds, the entailing bar's otherwise.</param>
+/// <param name="Entailed">
+/// True when the ladder supplied this position rather than the man himself: he either had no view of
+/// this bar, or rejected it while holding one above it. Kept so a developer trace can tell the two
+/// apart; no scoring rule reads it, because an entailed position is a position.
+/// </param>
+public readonly record struct CapabilityReading(string Bar, bool Clears, double Confidence, bool Entailed);
 
 /// <summary>A proposition a character can hold, communicate, or be wrong about.</summary>
 public readonly record struct Claim(ClaimKind Kind, string Subject, string Object = "", long EventId = 0)
@@ -156,6 +250,53 @@ public enum SourceKind
 }
 
 /// <summary>
+/// Why a settled belief was last reconsidered — the occasion, not the original acquisition.
+///
+/// Added by milestone 021's correction. Confidence was moving on evidence and the record said only
+/// *when*, so a belief that shifted because a job came back looked identical to one that shifted
+/// because a canvass found nothing. Named causes rather than free text, following
+/// <see cref="StandingCause"/>, which milestone 023 added to the relationship record for the same
+/// reason and in the same shape.
+/// </summary>
+public enum ReconsiderCause
+{
+    /// <summary>Work he handed to somebody came back, and he read something into it about the man.</summary>
+    DelegatedOutcome,
+
+    /// <summary>He went back over an incident of his own and revised who he thinks can place him there.</summary>
+    ConcealmentAttempted,
+
+    /// <summary>He looked for a witness and did not find one, which weakens the lead without refuting it.</summary>
+    CanvassFoundNothing,
+}
+
+/// <summary>
+/// What moved a belief the last time it moved, kept alongside — never instead of — how it was first
+/// acquired.
+///
+/// <b>Both halves are the point.</b> <see cref="InformationRecord.SourceKind"/> and
+/// <see cref="InformationRecord.SourceId"/> still say how he came to hold the thing at all; this says
+/// what later gave him cause to think again, and through what channel that reached him. Overwriting
+/// the acquisition source with the revision's would make a belief he inferred in March look like one
+/// he discovered in May — the same silent-rewrite failure <see cref="InformationRecord.AcquiredAt"/>
+/// and <see cref="InformationRecord.ReconsideredAt"/> are kept separate to prevent.
+/// </summary>
+/// <param name="Cause">The occasion.</param>
+/// <param name="Via">
+/// How the evidence for the revision reached him — <see cref="SourceKind.Discovery"/> for takings
+/// arriving, <see cref="SourceKind.Participant"/> for something he did himself. Never a source he
+/// was not actually on the receiving end of.
+/// </param>
+/// <param name="AboutId">
+/// Who or what the occasion concerned — the man he sent, the incident he went back over. An id, not
+/// a sentence: this is state, and the wording belongs to the player-facing layer.
+/// </param>
+public readonly record struct Reconsideration(ReconsiderCause Cause, SourceKind Via, string AboutId)
+{
+    public override string ToString() => $"{Cause}:{Via}:{AboutId}";
+}
+
+/// <summary>
 /// One character's stance on one claim. Confidence is character-relative and carries no guarantee
 /// of truth — a high-confidence belief may be flatly wrong, and the simulation must never use this
 /// record as a shortcut to authoritative world state.
@@ -168,8 +309,18 @@ public sealed record InformationRecord(
     string SourceId,
     DateTime AcquiredAt,
     DateTime? LastReconsideredAt = null,
-    bool Contested = false)
+    bool Contested = false,
+    Reconsideration? Reconsidered = null)
 {
+    /// <summary>
+    /// What last gave him cause to think again, or null if nothing has since he acquired it.
+    ///
+    /// Paired with <see cref="ReconsideredAt"/>, which says when. Deliberately not a history: the
+    /// settled belief keeps one stance and one occasion, and anything richer belongs in the
+    /// append-only testimony log rather than here.
+    /// </summary>
+    public Reconsideration? Reconsidered { get; init; } = Reconsidered;
+
     /// <summary>
     /// Set when somebody has told him the opposite of this, whatever he concluded in the end.
     ///

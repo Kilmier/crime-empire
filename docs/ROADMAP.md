@@ -195,8 +195,11 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   man then does in front of him. **Retired 2026-09-04 by milestone 021**, which moved capability
   belief out of the relationship record into `Cognition` as `ClaimKind.PersonIsCapable` on a graded
   `CapabilityBar` ladder, and gave it a revision path: the outcome of delegated work moves the
-  delegator's confidence in what he already believes about the man he sent. See
-  `docs/milestones/021-*.md`.
+  delegator's confidence in what he already believes about the man he sent. **Narrowed by that
+  milestone's correction, 2026-09-05**: the revision fires only where the outcome actually reached
+  him — the takings arriving, which he comes upon — and not on the blocked path, which is silent.
+  Every revision now also records what occasioned it, alongside the acquisition source rather than
+  in place of it. See `docs/milestones/021-*.md`, including the appended correction.
 - **A capability belief acquired by testimony can never be revised.** Surfaced by milestone 021 and
   deliberately not fixed by it. Putting capability into the ordinary claim vocabulary means capability
   claims travel through the report and corroboration channels like any other — which is the

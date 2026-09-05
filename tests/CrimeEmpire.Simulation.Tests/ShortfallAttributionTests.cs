@@ -18,6 +18,19 @@ namespace CrimeEmpire.Simulation.Tests;
 /// </summary>
 public sealed class ShortfallAttributionTests
 {
+
+    /// <summary>
+    /// A stand-in occasion for revisions these tests stage themselves.
+    ///
+    /// Every assertion below is about <see cref="Cognition.Revise"/>'s own contract — whose readings
+    /// it will accept, that it clamps, that it moves the reconsideration stamp and not the
+    /// acquisition one. None of them is about what occasioned the revision, and none of the three
+    /// production causes is the fiction being staged here, so naming one would be a claim the test
+    /// is not making. Milestone 021's correction made the parameter required precisely so a caller
+    /// has to answer the question; answering it "this is staged" is the honest answer here.
+    /// </summary>
+    private static readonly Reconsideration Occasion =
+        new(ReconsiderCause.CanvassFoundNothing, SourceKind.Inference, "staged-by-test");
     private static readonly Claim Attributed = new(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
     private static readonly Claim Gap = new(ClaimKind.UnattributedShortfall, Cast.Harbour);
 
@@ -125,7 +138,7 @@ public sealed class ShortfallAttributionTests
             ReportedClaim.Honest(Attributed, Stance.Rejects, 0.9, SourceKind.Participant), vincent.Id, world.Now);
         Inference.Reconsider(world, salvatore, world.Now);
 
-        var revised = salvatore.Cognition.Revise(Gap, 0.05, salvatore.Id, world.Now);
+        var revised = salvatore.Cognition.Revise(Gap, 0.05, salvatore.Id, world.Now, Occasion);
         Assert.NotNull(revised);
         Assert.Equal(0.05, revised!.Confidence, 6);
     }

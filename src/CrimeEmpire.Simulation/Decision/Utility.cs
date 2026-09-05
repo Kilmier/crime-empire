@@ -448,19 +448,27 @@ public static class Utility
         // other than capable-angelo has exactly one subordinate.
         if (cand.Kind == ActionKind.DelegateStrategy && cand.ComparingExecutors && cand.TargetId is not null)
         {
+            // THROUGH THE SHARED READING, NOT THE RAW RECORDS. Milestone 021's correction: the
+            // ladder's implication is resolved in one place so this and the roster panel cannot
+            // arrive at different tiers for the same man, and so a character holding the high bar
+            // while rejecting the low one cannot produce two score components pulling opposite ways
+            // — which is not him being wrong about the man, it is the model contradicting itself
+            // about what his own beliefs amount to.
+            var reading = CapabilityBar.Read(cand.TargetId, perceived.Position);
+
             foreach (var (bar, weight) in CapabilityWeights)
             {
-                var position = perceived.Position(CapabilityBar.About(cand.TargetId, bar));
-                if (position is null) continue;
+                var position = reading.FirstOrDefault(r => r.Bar == bar);
+                if (position.Bar is null) continue;
 
                 // Held pulls toward him at that bar's weight; rejected pushes away at the same
                 // weight, so a man believed *not* to be up to rough work is a worse bet than one
                 // nobody has an opinion about — which is the whole point of holding a position
                 // rather than a number. Doubts sits between and is deliberately not special-cased:
                 // IsHeld already treats Suspects as held and Doubts as not.
-                double direction = position.IsHeld ? 1.0 : -1.0;
+                double direction = position.Clears ? 1.0 : -1.0;
                 Add("executor capability", direction * weight * position.Confidence,
-                    Describe(cand.TargetId, bar, position.IsHeld));
+                    Describe(cand.TargetId, bar, position.Clears));
             }
         }
 

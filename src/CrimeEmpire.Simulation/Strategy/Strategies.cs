@@ -307,9 +307,18 @@ public static class Strategies
             $"{business.Name} still would not pay ({s.Method.ToString().ToLowerInvariant()}, attempt {s.FailedAttempts})");
         owner.Motivations.AddPressure(PressureKind.RevenueShortfall, 0.2);
 
-        // A job that came back empty costs the man he sent some of his standing as a useful pair of
-        // hands — whether or not it was his doing. Milestone 021; see Suitability.
-        Suitability.RecordDelegatedOutcome(owner, executor.Id, succeeded: false, world.Now);
+        // NOTHING IS LEARNED HERE, AND THAT IS THE CORRECTION.
+        //
+        // Milestone 021 revised the owner's read of the man he sent on this path too. It was wrong:
+        // this branch is silent. The target held out, and no report, no observation and no discovery
+        // roll has carried that back to whoever ordered the job — the owner is not present, nobody
+        // has told him, and the claim the collection path files on him has no counterpart here. A
+        // belief moving anyway is the owner reading the world's state directly, which is the
+        // omniscience this milestone's own scoring term had already been corrected for twice.
+        //
+        // The event below wakes him, and waking is not learning: EventKind.StrategyBlocked carries no
+        // claim into anybody's cognition. That a pause is itself observable to a *player* is a known
+        // and separately recorded leak (ROADMAP.md); it is not a channel to his character.
         world.Queue.Schedule(world.Now, EventKind.StrategyBlocked, owner.Id,
             $"{business.Name} held out against {s.Method.ToString().ToLowerInvariant()}",
             new EventPayload { TargetId = business.Id, Strategy = s.Kind });
@@ -599,7 +608,10 @@ public static class Strategies
             .ToList();
 
         foreach (var r in about)
-            executor.Cognition.Revise(r.Claim, r.Confidence + delta, executor.Id, world.Now);
+            executor.Cognition.Revise(
+                r.Claim, r.Confidence + delta, executor.Id, world.Now,
+                new Reconsideration(
+                    ReconsiderCause.ConcealmentAttempted, SourceKind.Participant, s.TargetId ?? executor.Id));
     }
 
     // ------------------------------------------------------------------ investigation
@@ -705,7 +717,10 @@ public static class Strategies
             // witness is not evidence the account was false.
             foreach (var stale in executor.Cognition.OfKind(ClaimKind.WitnessSawIncident)
                          .Where(r => r.Claim.EventId == cold).ToList())
-                executor.Cognition.Revise(stale.Claim, stale.Confidence * 0.5, executor.Id, world.Now);
+                executor.Cognition.Revise(
+                    stale.Claim, stale.Confidence * 0.5, executor.Id, world.Now,
+                    new Reconsideration(
+                        ReconsiderCause.CanvassFoundNothing, SourceKind.Inference, executor.Id));
         }
 
         Complete(world, owner, s, named ? "the canvass turned up a name" : "the trail went cold");

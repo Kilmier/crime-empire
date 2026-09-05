@@ -869,6 +869,336 @@ public sealed class ExecutorSuitabilityTests
             .Where(c => c.Name == "executor capability")
             .ToList();
 
+    // ================================================================= milestone 021's correction
+    //
+    // Codex's review of `e65f0cd`. Three defects, and they are one defect seen from three sides: a
+    // belief was moving where nothing had reached the man, the record could not say what had moved
+    // it, and two readers were free to disagree about what his beliefs added up to.
+
+    /// <summary>
+    /// <b>Correction 1.</b> A delegated job that came back empty tells the man who sent it nothing,
+    /// because nothing carried it to him — no report, no observation, no discovery roll. Milestone
+    /// 021 revised his read of the executor on that path anyway, which is the owner reading world
+    /// state he has no access to.
+    ///
+    /// Proved as a difference rather than an inspection, and the control is the point: the same
+    /// staged operation resolving the other way — the takings arriving, which he does come upon —
+    /// must move it. Asserting only "the blocked path changes nothing" would pass against an
+    /// implementation where nothing ever moved a capability belief at all, which is the milestone
+    /// deleted rather than corrected.
+    /// </summary>
+    [Fact]
+    public void A_job_that_came_back_empty_moves_nothing_because_nothing_reached_him()
+    {
+        static (double RoughWork, double HardMan, DateTime? Stamp) Held(World world)
+        {
+            var vincent = world.Get(Vincent);
+            var rough = vincent.Cognition.Records.Single(
+                r => r.Claim.Equals(CapabilityBar.About(Angelo, CapabilityBar.RoughWork)));
+            var hard = vincent.Cognition.Records.Single(
+                r => r.Claim.Equals(CapabilityBar.About(Angelo, CapabilityBar.HardMan)));
+            return (rough.Confidence, hard.Confidence, rough.LastReconsideredAt);
+        }
+
+        var blocked = BuildAngeloWorld(actualCoercion: 0.80);
+        var before = Held(blocked);
+
+        var vincent = blocked.Get(Vincent);
+        var angelo = blocked.Get(Angelo);
+        var s = OpenTributeCase(blocked, vincent, angelo, CoercionMethod.Threaten);
+
+        // Held out against everything, so the operation can only ever come back empty.
+        blocked.Businesses[Cast.Grocery].Resistance = 1.0;
+        AdvanceTributeSteps(blocked, angelo, s, steps: 8);
+
+        Assert.True(s.FailedAttempts > 0,
+            "the staged operation never came back empty, so this proves nothing");
+        Assert.Equal(before, Held(blocked));
+
+        // The control: the same operation, resolved by the money turning up.
+        var collected = BuildAngeloWorld(actualCoercion: 0.80);
+        var owner = collected.Get(Vincent);
+        var executor = collected.Get(Angelo);
+        var open = OpenTributeCase(collected, owner, executor, CoercionMethod.Threaten);
+
+        // PayingTribute, not Resistance: step 3 branches on whether the grocer came to terms,
+        // which is his own decision made elsewhere in the pipeline. Resistance is what that
+        // decision reads, and staging it here would be staging the input to a decision this test
+        // is not running.
+        collected.Businesses[Cast.Grocery].PayingTribute = true;
+        AdvanceTributeSteps(collected, executor, open, steps: 8);
+
+        Assert.NotEqual(before, Held(collected));
+    }
+
+    /// <summary>
+    /// <b>Correction 2.</b> A revision keeps how the belief was acquired and adds what later moved
+    /// it. Both halves are asserted: overwriting the acquisition source would make a March inference
+    /// look like a May discovery, and recording nothing at all is the state the correction ends.
+    /// </summary>
+    [Fact]
+    public void A_revision_keeps_its_acquisition_source_and_names_what_moved_it()
+    {
+        var world = BuildAngeloWorld(actualCoercion: 0.80);
+        var vincent = world.Get(Vincent);
+        var claim = CapabilityBar.About(Angelo, CapabilityBar.RoughWork);
+
+        var acquired = vincent.Cognition.Records.Single(r => r.Claim.Equals(claim));
+        Assert.Null(acquired.Reconsidered);
+
+        Suitability.RecordDelegatedOutcome(vincent, Angelo, succeeded: true, world.Now.AddDays(1));
+
+        var after = vincent.Cognition.Records.Single(r => r.Claim.Equals(claim));
+
+        // Acquisition, untouched.
+        Assert.Equal(SourceKind.Inference, after.SourceKind);
+        Assert.Equal(Vincent, after.SourceId);
+        Assert.Equal(acquired.AcquiredAt, after.AcquiredAt);
+
+        // And the occasion, which is the half that did not exist.
+        Assert.NotNull(after.Reconsidered);
+        Assert.Equal(ReconsiderCause.DelegatedOutcome, after.Reconsidered!.Value.Cause);
+        Assert.Equal(SourceKind.Discovery, after.Reconsidered.Value.Via);
+        Assert.Equal(Angelo, after.Reconsidered.Value.AboutId);
+    }
+
+    /// <summary>
+    /// <b>Correction 2, through persistence.</b> The occasion survives a save and a load, which for
+    /// this project means it survives replay: milestone 015 stores a replay log rather than a world
+    /// blob, so any state that does not fall out of re-running the same inputs is state that quietly
+    /// does not persist.
+    ///
+    /// Compared against a fresh control rather than against typed-in values, so the test cannot
+    /// drift into pinning whatever the implementation happens to produce.
+    /// </summary>
+    [Fact]
+    public void The_reconsideration_cause_survives_save_and_load()
+    {
+        static IReadOnlyList<string> Causes(World world)
+            => world.Get(Vincent).Cognition.Records
+                .Where(r => r.Reconsidered is not null)
+                .OrderBy(r => r.Claim.Subject, StringComparer.Ordinal)
+                .ThenBy(r => r.Claim.Object, StringComparer.Ordinal)
+                .Select(r => $"{r.Claim.Kind}|{r.Claim.Subject}|{r.Claim.Object}|" +
+                             $"{r.Reconsidered!.Value}|{r.ReconsideredAt:O}")
+                .ToList();
+
+        string path = Path.Combine(Path.GetTempPath(), $"ce-reconsider-{Guid.NewGuid():N}.db");
+        try
+        {
+            // Nobody controlled: the clock has to run 60 days without stopping for a decision,
+            // and a controlled character would pause at the first fork.
+            var session = CrimeEmpire.Persistence.Session.PersistentSession.Start(
+                Seed, Variant, null, Vincent);
+            session.AdvanceDays(60);
+
+            var expected = Causes(session.InnerSession.World);
+            Assert.NotEmpty(expected);
+
+            session.Save(path);
+            var loaded = CrimeEmpire.Persistence.Session.PersistentSession.Load(path);
+
+            Assert.Equal(expected, Causes(loaded.InnerSession.World));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    /// <summary>
+    /// <b>Correction 3, and why it is a correction rather than a preference.</b> Vincent holds that
+    /// Angelo is a hard man and rejects that he is up to rough work. That pair is incoherent — the
+    /// higher bar entails the lower — and before this correction each reader resolved it alone. The
+    /// scorer produced two "executor capability" components pulling in opposite directions: the man
+    /// was simultaneously a reason to send him and a reason not to, which is not Vincent being wrong
+    /// about Angelo but the model contradicting itself about what Vincent's own beliefs amount to.
+    ///
+    /// <b>The scorer is the half that had the defect, and it is the half this test falsifies.</b>
+    /// Reverting <c>Utility</c> to read <c>perceived.Position</c> directly makes the opposite-signs
+    /// assertion below fail; that mutation was applied, confirmed, and reverted.
+    ///
+    /// <b>The roster half is asserted but is currently guarded structurally rather than observably,
+    /// and saying so is the point.</b> Scoping this correction turned up that
+    /// <see cref="PlayerNarration.TakenFor"/>'s switch matches <c>(_, true)</c> before it reaches the
+    /// low bar at all, so a man taken for a hard man renders as one whether or not the reader
+    /// resolved the ladder first — raw <c>(false, true)</c> and resolved <c>(true, true)</c> produce
+    /// the identical sentence. The roster therefore never displayed the disagreement, and a test
+    /// claiming to have caught it there would be claiming a mutation it cannot detect.
+    ///
+    /// What the shared accessor buys on that side is that the two surfaces cannot come apart later —
+    /// when the ladder gains a rung, or when that switch is reordered, neither of which would
+    /// announce itself. The assertion below pins today's wording so such a change has to be
+    /// deliberate.
+    /// </summary>
+    [Fact]
+    public void The_scorer_never_weighs_one_bar_against_another_on_the_same_man()
+    {
+        var world = BuildAngeloWorld(
+            actualCoercion: 0.80, believedRoughWork: 0.60, believedHardMan: 0.70, roughWorkRejected: true);
+
+        // What he actually holds is still the incoherent pair — nothing tidied it away.
+        var vincent = world.Get(Vincent);
+        Assert.False(vincent.Cognition.Records
+            .Single(r => r.Claim.Equals(CapabilityBar.About(Angelo, CapabilityBar.RoughWork))).IsHeld);
+        Assert.True(vincent.Cognition.Records
+            .Single(r => r.Claim.Equals(CapabilityBar.About(Angelo, CapabilityBar.HardMan))).IsHeld);
+
+        // The scorer: both bars push the same way, because he takes the man for a hard man and that
+        // entails the bar beneath it. A contradictory tier shows one positive and one negative.
+        var prepared = AdvanceToVincentsFork(world);
+        var bars = prepared.Scored
+            .Single(s => s.Candidate.Kind == ActionKind.DelegateStrategy && s.Candidate.TargetId == Angelo)
+            .Components.Where(c => c.Name == "executor capability").ToList();
+
+        Assert.Equal(2, bars.Count);
+        Assert.All(bars, b => Assert.True(b.Value > 0,
+            "a bar scored against him while the bar above it scored for him — the ladder contradicted itself"));
+
+        // The roster, off the same resolution. Pins the wording rather than catching a live defect;
+        // see this test's summary for why that distinction is stated rather than glossed.
+        var takenFor = PlayerView.Build(world, Vincent, world.Now)
+            .Attitudes.Single(a => a.PersonName == "Angelo Conti").TakenFor;
+
+        Assert.NotNull(takenFor);
+        Assert.Contains("hard man", takenFor!, StringComparison.Ordinal);
+        Assert.DoesNotContain("would not send", takenFor, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// <b>Correction 3 — reading is a read.</b> Both consumers run over the incoherent pair and the
+    /// records come back byte-identical: stance, confidence, provenance and both stamps.
+    ///
+    /// This is what makes resolve-on-read different from the enforce-on-write alternative that was
+    /// considered and rejected. A character may hold the contradiction, the raw pair stays available
+    /// to developer traces and to replay, and nothing writes a lower-bar belief he never formed.
+    /// </summary>
+    [Fact]
+    public void Reading_the_ladder_does_not_touch_what_he_believes()
+    {
+        static IReadOnlyList<string> Fingerprint(Character who)
+            => who.Cognition.Records
+                .Where(r => r.Claim.Kind == ClaimKind.PersonIsCapable)
+                .OrderBy(r => r.Claim.Subject, StringComparer.Ordinal)
+                .ThenBy(r => r.Claim.Object, StringComparer.Ordinal)
+                .Select(r => $"{r.Claim}|{r.Stance}|{r.Confidence:R}|{r.SourceKind}|{r.SourceId}|" +
+                             $"{r.AcquiredAt:O}|{r.ReconsideredAt:O}|{r.Reconsidered}")
+                .ToList();
+
+        var world = BuildAngeloWorld(
+            actualCoercion: 0.80, believedRoughWork: 0.60, believedHardMan: 0.70, roughWorkRejected: true);
+        var before = Fingerprint(world.Get(Vincent));
+
+        AdvanceToVincentsFork(world);
+        PlayerView.Build(world, Vincent, world.Now);
+
+        var vincent = world.Get(Vincent);
+        CapabilityBar.Read(Angelo, c => vincent.Cognition.Records.FirstOrDefault(r => r.Claim.Equals(c)));
+
+        Assert.Equal(before, Fingerprint(world.Get(Vincent)));
+    }
+
+    /// <summary>
+    /// <b>Correction 3 — the resolution rule itself, as a table.</b> One rule covers every case: the
+    /// highest bar he holds sets his tier, and every bar below it is entailed.
+    ///
+    /// The last two rows are the ones that matter — the gap (he holds the high bar and has no view of
+    /// the low one) and the contradiction (he holds the high bar and rejects the low one). Both
+    /// resolve the same way, which is why one rule suffices. Letting the rejection win instead would
+    /// need a second rule and would leave the gap row inconsistent with it.
+    /// </summary>
+    [Theory]
+    [InlineData(true, false, true, false, true, true, false)]   // holds both — coherent, untouched
+    [InlineData(true, false, false, false, true, null, false)]  // up to rough work, no view above
+    [InlineData(true, true, false, false, false, null, false)]  // rejects rough work, no view above
+    [InlineData(false, false, true, false, true, true, true)]   // gap: nothing below the held high bar
+    [InlineData(true, true, true, false, true, true, true)]     // contradiction: the high bar wins
+    public void The_highest_bar_he_holds_sets_his_tier_and_everything_below_is_entailed(
+        bool roughPresent, bool roughRejected, bool hardPresent, bool hardRejected,
+        bool clearsRough, bool? clearsHard, bool roughEntailed)
+    {
+        var world = BuildAngeloWorld(
+            actualCoercion: 0.80,
+            believedRoughWork: roughPresent ? 0.60 : null,
+            believedHardMan: hardPresent ? 0.70 : null,
+            hardManRejected: hardRejected,
+            roughWorkRejected: roughRejected);
+
+        var vincent = world.Get(Vincent);
+        var reading = CapabilityBar.Read(
+            Angelo, c => vincent.Cognition.Records.FirstOrDefault(r => r.Claim.Equals(c)));
+
+        Assert.Equal(clearsRough, CapabilityBar.Clears(reading, CapabilityBar.RoughWork));
+        Assert.Equal(clearsHard, CapabilityBar.Clears(reading, CapabilityBar.HardMan));
+        Assert.Equal(roughEntailed, reading.Single(r => r.Bar == CapabilityBar.RoughWork).Entailed);
+    }
+
+    /// <summary>
+    /// <b>Correction 3 — deterministic, and not by accident.</b> The same beliefs resolve identically
+    /// however the records happen to sit in the list. Insertion order is not something the model
+    /// controls: <c>Cognition.Learn</c> appends, so the order reflects what a character happened to
+    /// conclude first, which is a scheduling accident and must never reach a decision.
+    ///
+    /// Also asserts entailment never quietly reduces a confidence he holds independently: a firmly
+    /// held low bar keeps its own figure rather than inheriting a shakier one from above.
+    /// </summary>
+    [Fact]
+    public void The_resolution_does_not_depend_on_the_order_the_beliefs_were_formed()
+    {
+        static string Render(World world)
+        {
+            var vincent = world.Get(Vincent);
+            var reading = CapabilityBar.Read(
+                Angelo, c => vincent.Cognition.Records.FirstOrDefault(r => r.Claim.Equals(c)));
+            return string.Join(";", reading.Select(r => $"{r.Bar}:{r.Clears}:{r.Confidence:R}:{r.Entailed}"));
+        }
+
+        var lowFirst = BuildAngeloWorld(
+            actualCoercion: 0.80, believedRoughWork: 0.90, believedHardMan: 0.50);
+
+        var highFirst = BuildAngeloWorld(
+            actualCoercion: 0.80, believedRoughWork: null, believedHardMan: 0.50);
+        highFirst.Get(Vincent).Cognition.Learn(
+            CapabilityBar.About(Angelo, CapabilityBar.RoughWork),
+            Stance.Believes, 0.90, SourceKind.Inference, Vincent, highFirst.Now);
+
+        Assert.Equal(Render(lowFirst), Render(highFirst));
+
+        // The independently held low bar kept its own 0.9 rather than inheriting the 0.5 above it.
+        Assert.Contains($"{CapabilityBar.RoughWork}:True:0.9:False", Render(lowFirst), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// <b>Correction 3 — the system's own writers cannot build the contradiction.</b> Only a scenario
+    /// fixture can seed one, which is the deliberate part; nothing at runtime may produce one, which
+    /// is what "should not silently produce contradictory tier positions" asks for.
+    ///
+    /// Proved at the mechanism rather than by sampling a run. <see cref="Cognition.Revise"/> is the
+    /// only path a capability belief moves through, and it moves confidence and never stance — driven
+    /// here to both clamps in both directions, because a stance flip, if one were possible at all,
+    /// would be likeliest at the ends of the range.
+    /// </summary>
+    [Fact]
+    public void No_runtime_revision_can_turn_a_rejected_bar_into_a_held_one()
+    {
+        var world = BuildAngeloWorld(
+            actualCoercion: 0.80, believedRoughWork: 0.60, believedHardMan: 0.70, roughWorkRejected: true);
+        var vincent = world.Get(Vincent);
+        var rough = CapabilityBar.About(Angelo, CapabilityBar.RoughWork);
+
+        for (int i = 0; i < 40; i++)
+            Suitability.RecordDelegatedOutcome(
+                vincent, Angelo, succeeded: i % 2 == 0, world.Now.AddDays(i + 1));
+
+        Assert.Equal(
+            Stance.Rejects,
+            vincent.Cognition.Records.Single(r => r.Claim.Equals(rough)).Stance);
+
+        var occasion = new Reconsideration(ReconsiderCause.DelegatedOutcome, SourceKind.Discovery, Angelo);
+        Assert.Equal(Stance.Rejects, vincent.Cognition.Revise(rough, 1.0, Vincent, world.Now, occasion)!.Stance);
+        Assert.Equal(Stance.Rejects, vincent.Cognition.Revise(rough, 0.0, Vincent, world.Now, occasion)!.Stance);
+    }
+
     // ================================================================= helpers — natural/session level
 
     private static PendingDecision RunToNextPause(SimulationSession session, DateTime horizon)
@@ -961,7 +1291,8 @@ public sealed class ExecutorSuitabilityTests
         double actualCoercion,
         double? believedRoughWork = 0.80,
         double? believedHardMan = 0.70,
-        bool hardManRejected = false)
+        bool hardManRejected = false,
+        bool roughWorkRejected = false)
     {
         var world = Cast.Build(Seed, Baseline);
         var vincent = world.Get(Vincent);
@@ -1010,7 +1341,8 @@ public sealed class ExecutorSuitabilityTests
         if (believedRoughWork is { } roughWork)
             vincent.Cognition.Learn(
                 CapabilityBar.About(Angelo, CapabilityBar.RoughWork),
-                Stance.Believes, roughWork, SourceKind.Inference, Vincent, world.Now);
+                roughWorkRejected ? Stance.Rejects : Stance.Believes,
+                roughWork, SourceKind.Inference, Vincent, world.Now);
 
         if (believedHardMan is { } hardMan)
             vincent.Cognition.Learn(

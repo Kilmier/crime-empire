@@ -92,13 +92,65 @@ public sealed class SimulationReplayTests
             CapabilityBar.About("angelo", CapabilityBar.HardMan),
             confidence: 0.20,
             holderId: "vincent",
-            at: Cast.Start.AddDays(1));
+            at: Cast.Start.AddDays(1),
+            because: new Reconsideration(
+                ReconsiderCause.DelegatedOutcome, SourceKind.Discovery, "angelo"));
 
         Assert.NotNull(revised);
         Assert.Equal(0.20, revised!.Confidence, precision: 9);
 
         Assert.NotEqual(Snapshot(unperturbed), Snapshot(perturbed));
         Assert.NotEqual(BehavioralSnapshot(unperturbed), BehavioralSnapshot(perturbed));
+    }
+
+    /// <summary>
+    /// Milestone 021's correction: the comparator sees the revision's <em>occasion</em>, not merely
+    /// that a revision happened.
+    ///
+    /// Two worlds whose beliefs end up in the identical state — same claim, same stance, same
+    /// confidence, same reconsideration stamp — differing only in what is recorded as having moved
+    /// them. Before the correction there was nothing to differ by; after it, a replay that
+    /// reproduced the number while attributing it to another channel would be reproducing the
+    /// figure and not the history, and the comprehensive comparator must refuse that.
+    ///
+    /// <b>Deliberately absent from <see cref="BehavioralSnapshot"/>.</b> That comparator carries
+    /// what changes behaviour, and no decision reads the occasion — it is a provenance record for
+    /// developer traces and for this check. Asserting it stays equal there is the other half of the
+    /// claim: the correction added an audit trail without adding a behavioural input.
+    /// </summary>
+    [Fact]
+    public void The_comprehensive_comparator_sees_what_moved_a_belief_and_the_behavioural_one_does_not()
+    {
+        var discovered = Cast.Build(seed: 42, variant: "capable-angelo");
+        var inferred = Cast.Build(seed: 42, variant: "capable-angelo");
+
+        Assert.Equal(Snapshot(discovered), Snapshot(inferred));
+
+        var claim = CapabilityBar.About("angelo", CapabilityBar.HardMan);
+        var at = Cast.Start.AddDays(1);
+
+        var a = discovered.Get("vincent").Cognition.Revise(
+            claim, confidence: 0.20, holderId: "vincent", at: at,
+            because: new Reconsideration(ReconsiderCause.DelegatedOutcome, SourceKind.Discovery, "angelo"));
+
+        var b = inferred.Get("vincent").Cognition.Revise(
+            claim, confidence: 0.20, holderId: "vincent", at: at,
+            because: new Reconsideration(ReconsiderCause.CanvassFoundNothing, SourceKind.Inference, "angelo"));
+
+        // The two records are otherwise identical, which is what makes the occasion the only thing
+        // the comparator could be reacting to.
+        Assert.NotNull(a);
+        Assert.NotNull(b);
+        Assert.Equal(a!.Confidence, b!.Confidence, precision: 9);
+        Assert.Equal(a.Stance, b.Stance);
+        Assert.Equal(a.SourceKind, b.SourceKind);
+        Assert.Equal(a.SourceId, b.SourceId);
+        Assert.Equal(a.AcquiredAt, b.AcquiredAt);
+        Assert.Equal(a.ReconsideredAt, b.ReconsideredAt);
+        Assert.NotEqual(a.Reconsidered, b.Reconsidered);
+
+        Assert.NotEqual(Snapshot(discovered), Snapshot(inferred));
+        Assert.Equal(BehavioralSnapshot(discovered), BehavioralSnapshot(inferred));
     }
 
     /// <summary>
@@ -259,10 +311,19 @@ public sealed class SimulationReplayTests
                           string.Join(",", rel.Grievances.Select(g =>
                               $"{g.Description}:{Number(g.Severity)}:{g.At:O}")));
 
+            // Milestone 021's correction added the revision occasion, and it is fingerprinted here
+            // rather than left to the ReconsideredAt stamp: the stamp says a belief moved, and the
+            // occasion says what moved it. A replay that reproduced the confidence and the date but
+            // attributed the change to a different channel would be reproducing the number and not
+            // the history, and this comparator exists to refuse exactly that kind of near-miss.
+            //
+            // Claim.Kind/Subject/Object rather than Claim.ToString(), as everywhere in this file:
+            // ToString embeds WorldEvent.Id and would make the fingerprint depend on scheduling.
             lines.AddRange(character.Cognition.Records.Select(r =>
                 $"knowledge|{character.Id}|{r.Claim.Kind}|{r.Claim.Subject}|{r.Claim.Object}|" +
                 $"{r.Stance}|{Number(r.Confidence)}|{r.SourceKind}|{r.SourceId}|{r.AcquiredAt:O}|" +
-                $"{r.ReconsideredAt:O}|{r.Contested}"));
+                $"{r.ReconsideredAt:O}|{r.Contested}|" +
+                $"{(r.Reconsidered is { } b ? $"{b.Cause}:{b.Via}:{b.AboutId}" : "-")}"));
 
             // Claimed basis, not actual: this is the listener's log, and what the speaker really
             // had never enters it. The distinction is decision-relevant — it decides whether the

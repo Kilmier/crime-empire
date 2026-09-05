@@ -27,6 +27,19 @@ namespace CrimeEmpire.Simulation.Tests;
 /// </summary>
 public sealed class ExposureAndDenialTests
 {
+
+    /// <summary>
+    /// A stand-in occasion for revisions these tests stage themselves.
+    ///
+    /// Every assertion below is about <see cref="Cognition.Revise"/>'s own contract — whose readings
+    /// it will accept, that it clamps, that it moves the reconsideration stamp and not the
+    /// acquisition one. None of them is about what occasioned the revision, and none of the three
+    /// production causes is the fiction being staged here, so naming one would be a claim the test
+    /// is not making. Milestone 021's correction made the parameter required precisely so a caller
+    /// has to answer the question; answering it "this is staged" is the honest answer here.
+    /// </summary>
+    private static readonly Reconsideration Occasion =
+        new(ReconsiderCause.CanvassFoundNothing, SourceKind.Inference, "staged-by-test");
     // ================================================================ the instance names its incident
 
     [Fact]
@@ -271,7 +284,7 @@ public sealed class ExposureAndDenialTests
         var claim = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, tommy.Id, 7);
         tommy.Cognition.Learn(claim, Stance.Believes, 0.6, provenance, tommy.Id, world.Now);
 
-        var revised = tommy.Cognition.Revise(claim, 0.1, tommy.Id, world.Now);
+        var revised = tommy.Cognition.Revise(claim, 0.1, tommy.Id, world.Now, Occasion);
 
         Assert.Null(revised);
         Assert.Equal(0.6, tommy.Cognition.ConfidenceIn(claim), 6);
@@ -298,7 +311,7 @@ public sealed class ExposureAndDenialTests
         var claim = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, tommy.Id, 7);
         tommy.Cognition.Learn(claim, Stance.Believes, 0.6, provenance, tommy.Id, world.Now);
 
-        var revised = tommy.Cognition.Revise(claim, 0.1, tommy.Id, world.Now);
+        var revised = tommy.Cognition.Revise(claim, 0.1, tommy.Id, world.Now, Occasion);
 
         Assert.NotNull(revised);
         Assert.Equal(0.1, tommy.Cognition.ConfidenceIn(claim), 6);
@@ -314,7 +327,7 @@ public sealed class ExposureAndDenialTests
         var claim = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, tommy.Id, 7);
         tommy.Cognition.Learn(claim, Stance.Believes, 0.6, SourceKind.Inference, "vincent", world.Now);
 
-        Assert.Null(tommy.Cognition.Revise(claim, 0.1, tommy.Id, world.Now));
+        Assert.Null(tommy.Cognition.Revise(claim, 0.1, tommy.Id, world.Now, Occasion));
         Assert.Equal(0.6, tommy.Cognition.ConfidenceIn(claim), 6);
     }
 
@@ -334,7 +347,7 @@ public sealed class ExposureAndDenialTests
         Believe(tommy, world, claim, 0.6);
 
         var later = acquired.AddDays(3);
-        var revised = tommy.Cognition.Revise(claim, 0.4, tommy.Id, later);
+        var revised = tommy.Cognition.Revise(claim, 0.4, tommy.Id, later, Occasion);
 
         Assert.NotNull(revised);
         Assert.Equal(Stance.Believes, revised!.Stance);
@@ -351,8 +364,8 @@ public sealed class ExposureAndDenialTests
         var claim = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, tommy.Id, 7);
         Believe(tommy, world, claim, 0.6);
 
-        Assert.Equal(0.0, tommy.Cognition.Revise(claim, -3.0, tommy.Id, world.Now)!.Confidence, 6);
-        Assert.Equal(1.0, tommy.Cognition.Revise(claim, 4.0, tommy.Id, world.Now)!.Confidence, 6);
+        Assert.Equal(0.0, tommy.Cognition.Revise(claim, -3.0, tommy.Id, world.Now, Occasion)!.Confidence, 6);
+        Assert.Equal(1.0, tommy.Cognition.Revise(claim, 4.0, tommy.Id, world.Now, Occasion)!.Confidence, 6);
     }
 
     // ================================================================ pricing a denial

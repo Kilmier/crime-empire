@@ -7,9 +7,18 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Milestone 025 — The Interface Stops Fighting the Player — is implemented,
-tested and committed, and **Matt is playtesting it.** Milestones 021 through 025 are all
-**unreviewed and unaccepted**.
+**Nothing is active.** Milestone 021's correction — Codex's review of `e65f0cd` — is implemented,
+tested and committed, and is **awaiting Codex re-review**. Milestone 025 is implemented and committed
+and **Matt is playtesting it**. Milestones 021 through 025 are all **unreviewed and unaccepted**;
+021's correction has not been back to Codex either.
+
+**Milestone 021's correction** removed a belief revision from the silent blocked path (nothing had
+reached the man), made every `Cognition.Revise` state its occasion alongside the acquisition source,
+and made `CapabilityBar`'s ladder resolve on read through one shared accessor so the scorer and the
+roster cannot reach different tiers. **`capable-angelo`'s hashes moved, authorized by Matt on
+2026-09-05**: trace `12AF1B71EBBDF51F`, actions `1EDE45C580544105`, 37 decisions; the other five
+variants unmoved. 636 tests; four mutation checks. Full account: the appended correction in
+`docs/milestones/021-capability-is-a-belief-not-a-stat.md`.
 
 **Milestone 025** cleared milestone 018's presentation debt by subtraction: two of the five columns
 were copies and went, with their projections; the rest became four weighted panels under a two-row

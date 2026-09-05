@@ -212,3 +212,122 @@ debt on the judgement that it is defensible rather than on a proof that it is.
 One implementation-and-archive commit. Status is not established by this file —
 `docs/CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
 thing that counts as acceptance.
+
+## Correction 1 — Codex's review of `e65f0cd`, 2026-09-05
+
+**Appended, not rewritten.** Everything above stands as the account of what was built and why. This
+section records what was wrong with it, and one statement above that this correction reverses. Codex
+returned FAIL with three code defects and two documentation requirements; all five are addressed in
+one commit, and none of the milestone's design was rejected.
+
+### 1. A belief moved where nothing had reached the man
+
+`Suitability.RecordDelegatedOutcome` was called from `Strategies.Blocked` as well as from the
+collection. **The blocked branch is silent.** The target held out, and no report, no observation and
+no discovery roll carries that to whoever ordered the job — the owner is not there, nobody has told
+him, and the branch files no claim on him the way the collection path does. His read of the man he
+sent moved anyway, which is the owner reading world state he has no access to: the same omniscience
+this milestone's own scoring term had already been corrected for twice.
+
+The event that branch schedules does wake him, and **waking is not learning** —
+`EventKind.StrategyBlocked` carries no claim into anybody's cognition. That the *timing* of a pause is
+observable to a player is a separate, known leak recorded in `ROADMAP.md`; it is not a channel to his
+character.
+
+The call is removed. The collection keeps its own, where he genuinely comes upon the takings and the
+same branch already files a `SourceKind.Discovery` claim for exactly that.
+
+**The milestone's deliverable survives intact, which was measured before the change was made.** With
+the call removed, all of `ExecutorSuitabilityTests` still passes — including
+`The_delegators_read_of_his_man_moves_during_a_natural_run`, this milestone's headline claim. In the
+unmodified `capable-angelo` run the belief moves through the *collection*, so the natural proof never
+depended on the path that was wrong. Ruling 6's proof obligation also survives: a success still makes
+an already-wrong belief wronger, because direction is relative to what he already holds.
+
+**It moves `capable-angelo`, and only `capable-angelo`.** Trace `6B355EEF852AFA6C` →
+`12AF1B71EBBDF51F`, chosen actions `3D2A052BDF22B72A` → `1EDE45C580544105`, 36 decisions → 37. The
+other five variants are byte-identical, verified before and after. Ruling 4 permits exactly this
+shape; Matt authorized the new baseline on 2026-09-05.
+
+### 2. A revision could not say what moved it
+
+Confidence drifted with nothing on the record but a `ReconsideredAt` stamp, so a belief that shifted
+because a job came back was indistinguishable from one that shifted because a canvass found nothing.
+
+`InformationRecord` gains `Reconsidered`, a `Reconsideration(Cause, Via, AboutId)` recording the
+occasion, the channel the evidence arrived through, and who or what it concerned. **Kept alongside the
+acquisition source, never in place of it** — overwriting `SourceKind`/`SourceId` with the revision's
+would make a March inference look like a May discovery, which is the silent rewrite `AcquiredAt` and
+`ReconsideredAt` are already kept separate to prevent.
+
+`Cognition.Revise` takes it as a **required** parameter. Optional would have left the same gap open to
+the next caller, and the defect being answered is precisely a figure moving with no reason recorded.
+All three production call sites now name their occasion; the comprehensive replay comparator carries
+it, and `BehavioralSnapshot` deliberately does not, because no decision reads it.
+
+### 3. The ladder was not a ladder — and this reverses a statement above
+
+The section "What was completed → `Domain/Claim.cs`" states that the implication is "deliberately
+**not** enforced on write: a character may hold an incoherent pair, because he is allowed to be wrong
+and nothing gets to tidy his beliefs behind his back."
+
+**The reason stands; the conclusion drawn from it was too broad.** A character being *factually
+wrong* and the *model* contradicting itself about what his beliefs amount to are different things, and
+that sentence licensed the second in the name of the first. Vincent holding that Angelo is a hard man
+while rejecting that he is up to rough work produced two "executor capability" components pulling in
+opposite directions — the same man simultaneously a reason to send him and a reason not to.
+
+**Matt's ruling, 2026-09-05: resolve on read.** Storage still admits the incoherent pair, nothing
+rewrites cognition, and no lower-bar belief is invented — the raw records stay exactly as he formed
+them, available to developer traces and to replay. What changed is that no *reader* may act on the raw
+pair: `Utility` and `PlayerView` both go through `CapabilityBar.Read`.
+
+The rule is one sentence: **the highest bar he holds sets his tier, and every bar below it is
+entailed.** That covers both ways the raw records fall short — a gap (holds the high bar, no view of
+the low one) and a contradiction (holds the high bar, rejects the low one). Letting the rejection win
+instead would need a second rule and would leave the gap case inconsistent with it. Entailment
+supplies a position and never overwrites one that agrees, so an independently held bar keeps its own
+confidence rather than inheriting a shakier one from above.
+
+Nothing at runtime can build the pair: `Cognition.Revise` moves confidence and never stance, so only a
+scenario fixture can seed one. **It does not move any hash** — in the accepted fixture Vincent holds
+both bars on Angelo coherently, so there is nothing to resolve, which was measured rather than assumed.
+
+### 4 and 5 — the durable rulings, and the record
+
+`DESIGN_DECISIONS.md` gains "Capability as belief — settled by milestone 021 and its correction":
+capability lives in `Cognition`; magnitude is graded propositions and never confidence; the ladder
+resolves on read; a belief moves only where information reached the character and the record says what
+moved it; and confounded attribution is deliberate. **That last one is narrowed rather than
+transcribed**, because correction 1 removed half of what ruling 6 originally covered — an assessment
+may be confounded, wrong, and get wronger, but it may not move on information the character never
+received. Writing ruling 6 down verbatim would have made the canon durably describe a mechanism this
+correction deleted.
+
+The raw `PersonIsCapable` player-output leak Codex noted was already fixed by `4da1e66` and was not
+touched again.
+
+### What this correction's own testing found
+
+**A mutation check caught a green test of this correction's that proved nothing.** The ladder test was
+written asserting the scorer and the roster could not disagree — and the mutation that should have
+falsified the roster half did not fail it. `PlayerNarration.TakenFor`'s switch matches `(_, true)`
+before it ever reaches the low bar, so raw `(false, true)` and resolved `(true, true)` render the same
+sentence. **The roster could never have displayed the disagreement; the observable defect was
+scoring-only.** The test was rewritten to claim only what it proves and now states the distinction in
+its own summary rather than leaving a reader to assume both halves are load-bearing.
+
+Recorded because it is the fourth instance in this project of a green test concealing a real gap, and
+the first that the mutation discipline itself caught rather than a later reader.
+
+### Verification
+
+Build 0 warnings / 0 errors; tests **636** (623 + 12 + 1). `--verify` on baseline,
+`disloyal-vincent`, `resentful-tommy` and `capable-angelo`; both required viewpoint runs; five Godot
+self-tests and the two-process restart proof all exit 0. Four mutation checks, each a real temporary
+production edit, each failing exactly the intended tests and nothing else, each reverted with
+`git diff` confirmed clean afterward.
+
+### Commit
+
+One correction commit. Still unreviewed and unaccepted — this correction has not been back to Codex.

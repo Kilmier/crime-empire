@@ -491,9 +491,20 @@ public sealed class Cognition
     /// <see cref="Org.Reporting.NeedsConveying"/> for a position he has moved on.
     ///
     /// Being wrong stays possible in both directions: this changes what he thinks, and nothing else.
+    ///
+    /// <b>Every revision states its occasion.</b> Milestone 021's correction made
+    /// <paramref name="because"/> required rather than optional, so a caller cannot move a belief
+    /// without saying what moved it. That is deliberately a compile-time obligation: the defect it
+    /// answers was a confidence figure drifting with nothing on the record to say why, and an
+    /// optional parameter would have left the same gap available to the next caller.
     /// </summary>
+    /// <param name="because">
+    /// What gave him cause to think again, and through what channel — kept alongside the acquisition
+    /// source, never in place of it.
+    /// </param>
     /// <returns>The revised record, or null when he held no conclusion of his own to revise.</returns>
-    public InformationRecord? Revise(Claim claim, double confidence, string holderId, DateTime at)
+    public InformationRecord? Revise(
+        Claim claim, double confidence, string holderId, DateTime at, Reconsideration because)
     {
         int i = _records.FindIndex(r => r.Claim.Equals(claim));
         if (i < 0) return null;
@@ -501,10 +512,17 @@ public sealed class Cognition
         var prior = _records[i];
         if (!prior.SourceKind.IsOwnReading() || prior.SourceId != holderId) return null;
 
+        // Acquisition is preserved and the occasion is recorded beside it — milestone 021's
+        // correction. SourceKind/SourceId still say how he came to hold this at all; `because` says
+        // what later gave him cause to think again. STANCE IS NOT TOUCHED, and that is load-bearing
+        // rather than incidental: this method moves how sure he is and never what he thinks, so no
+        // revision path can turn a rejection into a holding, and the system therefore cannot build
+        // an incoherent position on CapabilityBar's ladder by revising its way there.
         var revised = prior with
         {
             Confidence = Math.Clamp(confidence, 0, 1),
             LastReconsideredAt = at,
+            Reconsidered = because,
         };
         _records[i] = revised;
         return revised;

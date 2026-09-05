@@ -386,18 +386,30 @@ public static class PlayerView
         // What he takes a man to be good for, off his own beliefs — never the man's actual
         // Capabilities, which he has no way to read. Null on a bar means he has formed no view of
         // it, which the renderer keeps distinct from a poor view.
-        bool? Holds(string personId, string bar)
+        //
+        // THROUGH CapabilityBar.Read, THE SAME DERIVATION THE SCORER USES. Milestone 021's
+        // correction. This used to scan the raw records itself, so a character holding the high bar
+        // while rejecting the low one would be described here as somebody the player "would not send
+        // to lean on anybody" while the decision that sent him had weighed him as a hard man. Two
+        // readers resolving a ladder independently is the failure REVIEW_LEDGER.md records as a
+        // distinction drawn in one place and dropped on the way to the next; there is now one
+        // resolution and two renderings of it.
+        InformationRecord? Position(Claim claim)
         {
             foreach (var r in who.Cognition.Records)
-                if (r.Claim.Equals(CapabilityBar.About(personId, bar))) return r.IsHeld;
+                if (r.Claim.Equals(claim)) return r;
             return null;
         }
 
-        string? TakenFor(string personId) => PlayerNarration.TakenFor(
-            Holds(personId, CapabilityBar.RoughWork),
-            Holds(personId, CapabilityBar.HardMan),
-            self,
-            Theirs(personId));
+        string? TakenFor(string personId)
+        {
+            var reading = CapabilityBar.Read(personId, Position);
+            return PlayerNarration.TakenFor(
+                CapabilityBar.Clears(reading, CapabilityBar.RoughWork),
+                CapabilityBar.Clears(reading, CapabilityBar.HardMan),
+                self,
+                Theirs(personId));
+        }
 
         var attitudes = KnownPeople(world, who)
             .Select(id => (Id: id, Rel: who.Social.Toward(id), TakenFor: TakenFor(id)))

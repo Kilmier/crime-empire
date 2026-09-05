@@ -71,7 +71,12 @@ public static class IntelligenceWriter
             {
                 string mark = b.Contested ? " ⚠" : "";
                 sb.AppendLine($"  {b.AcquiredAt:d MMM}  {b.Statement}{mark}");
-                sb.AppendLine($"           {b.Confidence}, {b.Attribution}");
+                // Source, then how sure — either may be absent by design: no certainty on what he
+                // saw or did himself, no source on an act of his own the sentence already names him
+                // as the author of. See PlayerBelief.
+                string[] basis = { b.Attribution ?? "", b.Certainty ?? "" };
+                string line = string.Join("; ", basis.Where(x => x.Length > 0));
+                if (line.Length > 0) sb.AppendLine($"           {line}");
             }
         }
         sb.AppendLine();
@@ -86,10 +91,10 @@ public static class IntelligenceWriter
                 sb.AppendLine($"  On whether {d.Statement}:");
 
                 if (d.OwnBasis is { } basis)
-                    sb.AppendLine($"     {basis,-20} — {(d.OwnPositionHeld ? "it happened" : "it did not")}");
+                    sb.AppendLine($"     {basis,-20} — {(d.OwnPositionHeld ? "says so" : "says otherwise")}");
 
                 foreach (var a in d.Accounts)
-                    sb.AppendLine($"     {a.SourceName,-20} — {(a.Affirms ? "it happened" : "it did not")} ({a.At:d MMM})");
+                    sb.AppendLine($"     {a.SourceName,-20} — {(a.Affirms ? "says so" : "says otherwise")} ({a.At:d MMM})");
 
                 sb.AppendLine();
             }
@@ -108,11 +113,11 @@ public static class IntelligenceWriter
             // so "X has had it since" would be false whenever the handover came later than the start.
             sb.AppendLine($"     running since {op.Since:d MMM}");
             if (op.ExecutorName is { } executor)
-                sb.AppendLine($"     {executor} is carrying it");
+                sb.AppendLine($"     {executor} is handling it");
             if (op.Progress is { } progress)
                 sb.AppendLine($"     {progress}");
             else
-                sb.AppendLine($"     nothing has come back yet");
+                sb.AppendLine($"     no word back yet");
             sb.AppendLine();
         }
 
@@ -156,9 +161,9 @@ public static class IntelligenceWriter
             sb.AppendLine($"WHAT {self.Subject.ToUpperInvariant()} CANNOT SETTLE");
             sb.AppendLine();
             foreach (var b in view.Unsettled)
-                sb.AppendLine($"  · whether {b.Statement} — {b.Confidence}");
+                sb.AppendLine($"  · whether {b.Statement}{(b.Certainty is { } c ? $" — {c}" : "")}");
             foreach (var p in view.Silent)
-                sb.AppendLine($"  · {p.Name} has not given {self.Object} an account");
+                sb.AppendLine($"  · {p.Name} has not told {self.Object} anything yet");
             sb.AppendLine();
         }
 

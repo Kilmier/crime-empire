@@ -58,24 +58,27 @@ internal static class PlayerOccasion
     /// decision it wakes is about — unlike the RoleReview cases above, no option elsewhere on the
     /// same panel already names him.
     /// </summary>
-    internal static string? For(ScheduledEvent trigger, Character actor, Func<string, string> name)
+    /// <param name="voice">The pronoun set to speak in; the actor's own when null. The session
+    /// passes <see cref="PlayerView.You"/> for the controlled character (milestone 025).</param>
+    internal static string? For(
+        ScheduledEvent trigger, Character actor, Func<string, string> name, Pronouns? voice = null)
     {
-        var self = actor.Pronouns;
+        var self = voice ?? actor.Pronouns;
 
         return trigger.Kind switch
         {
             // He has just been briefed, through Cognition.Receive, by the man who issued it.
             EventKind.AssignmentDelivered =>
-                $"{self.Subject} {self.Verb("has", "have")} just been handed something to do",
+                $"{self.Subject} {self.Verb("has", "have")} just been given a job",
 
             // Somebody spoke to him, and the note says which act it was. Each is established for him
             // by the act itself: he was the one asked, reported to, or petitioned.
             EventKind.RoleReview => trigger.Payload.Note switch
             {
-                "asked-to-account" => $"somebody has put a question to {self.Object}",
+                "asked-to-account" => $"somebody has asked {self.Object} a question",
                 "reported-to" => $"somebody has reported to {self.Object}",
-                "permission-sought" => $"somebody has asked {self.Object} for room to move",
-                _ => $"{self.Subject} came back round to {self.Possessive} own patch",
+                "permission-sought" => $"somebody has asked {self.Object} for permission",
+                _ => $"{self.Subject} {self.Verb("is", "are")} checking on {self.Possessive} own patch",
             },
 
             // Runner.Observe schedules this only after the observer actually acquired something, so
@@ -86,12 +89,12 @@ internal static class PlayerOccasion
             EventKind.Incident => trigger.Payload.Note switch
             {
                 "tribute-demanded" when trigger.Payload.TargetId is { } demanderId =>
-                    Demand(actor, demanderId, trigger.Payload.AboutClaim?.Subject, name),
-                _ => $"something reached {self.Object}",
+                    Demand(actor, demanderId, trigger.Payload.AboutClaim?.Subject, name, self),
+                _ => $"something has come to {self.Possessive} attention",
             },
 
             // His own pressure, crossed in his own head.
-            EventKind.PressureThreshold => "something had got hard to ignore",
+            EventKind.PressureThreshold => "something has become hard to ignore",
 
             // StrategyComplete and StrategyBlocked, and anything added later. Silence is the default
             // and must stay the default: adding a kind here is a claim that the character necessarily
@@ -114,12 +117,13 @@ internal static class PlayerOccasion
     /// threatened-but-not-yet-forced demand reads as a plain demand rather than asserting a method the
     /// character has no structural record of experiencing.
     /// </summary>
-    private static string Demand(Character actor, string demanderId, string? businessId, Func<string, string> name)
+    private static string Demand(
+        Character actor, string demanderId, string? businessId, Func<string, string> name, Pronouns self)
         => businessId is not null
            && actor.Cognition.OfKind(ClaimKind.PersonUsedViolence)
                .Any(r => r.Claim.Subject == demanderId && r.Claim.Object == businessId)
             ? $"{name(demanderId)} has already used force over this"
-            : $"{name(demanderId)} is demanding tribute from {actor.Pronouns.Object}";
+            : $"{name(demanderId)} is demanding tribute from {self.Object}";
 
     /// <summary>
     /// What is on his mind — derived from his own state, never passed through from the agenda's
@@ -142,11 +146,14 @@ internal static class PlayerOccasion
     /// The two that do pass their description through are prose a person wrote about him and that he
     /// holds: the objective he was briefed on, and his own standing responsibility.
     /// </summary>
-    internal static string? Focus(Character actor, Agenda agenda, ScheduledEvent trigger, Func<string, string> name)
+    internal static string? Focus(
+        Character actor, Agenda agenda, ScheduledEvent trigger, Func<string, string> name, Pronouns? voice = null)
     {
+        var self = voice ?? actor.Pronouns;
+
         // A wake we cannot describe is a wake we say nothing about. Otherwise the focus would narrate
         // the same delegated outcome the occasion was suppressed for.
-        if (For(trigger, actor, name) is null) return null;
+        if (For(trigger, actor, name, self) is null) return null;
 
         return agenda.Kind switch
         {
@@ -158,11 +165,11 @@ internal static class PlayerOccasion
 
             // The course of action he started, described as his options describe it.
             AgendaKind.ContinueCommitment when actor.Execution.Strategy is { } s =>
-                PlayerOption.Work(s.Kind, s.TargetId, name, actor.Pronouns),
+                PlayerOption.Work(s.Kind, s.TargetId, name, self),
 
             // What is pressing on him, by what it is rather than by its enum name.
             AgendaKind.RelievePressure =>
-                actor.Motivations.Dominant() is { } p ? Pressure(p.Kind, actor.Pronouns) : null,
+                actor.Motivations.Dominant() is { } p ? Pressure(p.Kind, self) : null,
 
             _ => null,
         };
@@ -174,9 +181,9 @@ internal static class PlayerOccasion
     /// </summary>
     private static string? Pressure(PressureKind kind, Pronouns self) => kind switch
     {
-        PressureKind.RevenueShortfall => "the money that is not arriving",
+        PressureKind.RevenueShortfall => "the money that is not coming in",
         PressureKind.LegalExposure => $"how exposed {self.Subject} {self.Verb("is", "are")}",
-        PressureKind.Resentment => $"what {self.Subject} {self.Verb("is", "are")} carrying against somebody",
+        PressureKind.Resentment => $"a grudge {self.Subject} {self.Verb("is", "are")} nursing",
         PressureKind.Fear => $"what {self.Subject} {self.Verb("is", "are")} afraid of",
         PressureKind.OrganizationalInstability => "how unsteady the outfit has become",
         _ => null,

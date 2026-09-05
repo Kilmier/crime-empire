@@ -114,10 +114,10 @@ public sealed class PronounTests
         var withKane = PlayerView.Build(world, "tommy", world.Now).Attitudes
             .Single(a => a.PersonId == "kane");
 
-        // "he takes her as he finds her" — Tommy is the subject and Kane is the object, so both
-        // forms belong in the sentence and only the object's is under test here.
+        // "he would take her word within reason" — Tommy is the subject and Kane is the object, so
+        // both forms belong in the sentence and only the object's is under test here.
         Assert.Equal(Pronouns.She, withKane.PersonPronouns);
-        Assert.Equal("he takes her as he finds her", withKane.Standing);
+        Assert.Equal("he would take her word within reason", withKane.Standing);
     }
 
     /// <summary>

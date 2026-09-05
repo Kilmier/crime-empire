@@ -106,10 +106,10 @@ public sealed class OperationReadsTests
     /// arithmetic rather than something that happened to him.
     /// </summary>
     [Theory]
-    [InlineData(0, "put the demand")]
-    [InlineData(1, "once it came back empty")]
-    [InlineData(2, "twice it came back empty")]
-    [InlineData(5, "keeps coming back empty")]
+    [InlineData(0, "made his demand")]
+    [InlineData(1, "once it went nowhere")]
+    [InlineData(2, "twice it went nowhere")]
+    [InlineData(5, "keeps going nowhere")]
     public void Refusals_on_his_own_work_are_counted_in_words(int failures, string expected)
     {
         var world = Operating(delegated: false, stepIndex: 2);

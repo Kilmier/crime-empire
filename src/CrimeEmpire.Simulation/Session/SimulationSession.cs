@@ -160,7 +160,14 @@ public sealed class SimulationSession
     /// returned as an immutable record, so holding on to an old one is a stale view rather than a
     /// window that quietly widens.
     /// </summary>
-    public PlayerSnapshot Snapshot() => PlayerView.Build(_world, ViewpointCharacterId, _clock);
+    /// <summary>
+    /// The snapshot speaks to the player as "you" when the viewpoint is the character he controls,
+    /// and about "him" or "her" when it is somebody being watched — milestone 025. A voice, not a
+    /// widening: the same fields, worded for whoever is reading.
+    /// </summary>
+    public PlayerSnapshot Snapshot() => PlayerView.Build(_world, ViewpointCharacterId, _clock, Voice);
+
+    private Pronouns? Voice => _controlledId == ViewpointCharacterId ? PlayerView.You : null;
 
     // ---------------------------------------------------------------- advancing time
     /// <summary>
@@ -275,7 +282,9 @@ public sealed class SimulationSession
             if (step.Status == StepStatus.AwaitingChoice)
             {
                 _prepared = step.Awaiting;
-                _pending = Project(step.Awaiting!, _optionIds, NameIn(_world), PronounsIn(_world));
+                // A pause is always the controlled character's own, so the decision is put to the
+                // player in the second person whoever the viewpoint is.
+                _pending = Project(step.Awaiting!, _optionIds, PlayerView.NameIn(_world), PronounsIn(_world), PlayerView.You);
                 Reached(_world.Now);
                 return;
             }
@@ -321,10 +330,6 @@ public sealed class SimulationSession
         _optionIds.Clear();
     }
 
-    /// <summary>Display names, which are public knowledge. The only thing the world is asked for here.</summary>
-    private static Func<string, string> NameIn(World world)
-        => id => world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id;
-
     /// <summary>
     /// How to refer to somebody, which is public knowledge in the same way a display name is.
     /// Falls back to the same default <see cref="Character.Pronouns"/> carries, so an id that names
@@ -351,9 +356,10 @@ public sealed class SimulationSession
         PreparedDecision prepared,
         IDictionary<string, string> optionIds,
         Func<string, string> name,
-        Func<string, Pronouns> pronouns)
+        Func<string, Pronouns> pronouns,
+        Pronouns? voice = null)
     {
-        var self = prepared.Actor.Pronouns;
+        var self = voice ?? prepared.Actor.Pronouns;
 
         optionIds.Clear();
 
@@ -370,7 +376,8 @@ public sealed class SimulationSession
                     $"option token collision at {prepared.Actor.Id}'s decision: '{candidate.Id}' and " +
                     $"'{optionIds[token]}' both hash to '{token}'.");
 
-            options.Add(new PendingOption(token, PlayerOption.Describe(candidate, name, self, pronouns)));
+            options.Add(new PendingOption(
+                token, PlayerOption.Describe(candidate, name, self, pronouns, prepared.Actor.Id)));
         }
 
         return new PendingDecision(
@@ -379,8 +386,8 @@ public sealed class SimulationSession
             prepared.Actor.Name,
             prepared.Actor.RoleTitle,
             self,
-            PlayerOccasion.For(prepared.Trigger, prepared.Actor, name),
-            PlayerOccasion.Focus(prepared.Actor, prepared.Agenda, prepared.Trigger, name),
+            PlayerOccasion.For(prepared.Trigger, prepared.Actor, name, self),
+            PlayerOccasion.Focus(prepared.Actor, prepared.Agenda, prepared.Trigger, name, self),
             options);
     }
 

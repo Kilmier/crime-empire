@@ -50,7 +50,7 @@ public sealed class CausalFeedbackTests
     private const string Marco = "marco";
 
     private const string AskVincent =
-        "ask Vincent Russo for his own account of whether Bellini's grocery is holding back what it owes";
+        "ask Vincent Russo what he knows about whether Bellini's grocery is not paying its tribute";
 
     // ================================================================= proof A: Salvatore asks Vincent
 
@@ -80,14 +80,13 @@ public sealed class CausalFeedbackTests
         var request = Assert.Single(snapshot.AwaitingAnswers);
         Assert.Equal("vincent", request.AskedId);
         Assert.Equal("Vincent Russo", request.AskedName);
-        Assert.Equal("Bellini's grocery is holding back what it owes", request.Statement);
+        Assert.Equal("Bellini's grocery is not paying its tribute", request.Statement);
         Assert.Equal(session.Date, request.AskedAt);
         // Silence remains silence at this exact moment: nothing has yet reached Salvatore attributing
         // an account to Vincent on this subject, even though the wake that will let Vincent answer is
         // already sitting in the event queue.
         Assert.DoesNotContain(snapshot.Disagreements, d => d.Accounts.Any(a => a.SourceName == "Vincent Russo"));
-        Assert.DoesNotContain(snapshot.Known, b => b.Attribution.Contains("Vincent", StringComparison.Ordinal));
-        Assert.DoesNotContain(snapshot.Recent, b => b.Attribution.Contains("Vincent", StringComparison.Ordinal));
+        Assert.DoesNotContain(snapshot.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -232,9 +231,9 @@ public sealed class CausalFeedbackTests
     [Fact]
     public void Two_different_private_non_communicating_choices_are_indistinguishable_to_the_asker()
     {
-        const string silence = "let it lie";
+        const string silence = "take no action";
         const string partialWithholding =
-            "tell Vincent Russo about whether Tommy Nardo put hands on Bellini's grocery, leaving out his own part";
+            "tell Vincent Russo about whether you got violent at Bellini's grocery, leaving out your own part";
 
         var silent = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
         silent.Choose(AdvanceToPause(silent).Options.Single(o => o.Description == silence).Id);
@@ -266,7 +265,7 @@ public sealed class CausalFeedbackTests
     [Fact]
     public void A_communicated_denial_is_answered_and_drops_out_like_any_other_answer()
     {
-        const string falseDenial = "tell Vincent Russo that it is not so, about whether Tommy Nardo put hands on Bellini's grocery";
+        const string falseDenial = "tell Vincent Russo it is not true that you got violent at Bellini's grocery";
 
         var session = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
         var pending = AdvanceToPause(session);
@@ -285,7 +284,7 @@ public sealed class CausalFeedbackTests
     [Fact]
     public void Save_load_correctly_resolves_a_communicated_denial()
     {
-        const string falseDenial = "tell Vincent Russo that it is not so, about whether Tommy Nardo put hands on Bellini's grocery";
+        const string falseDenial = "tell Vincent Russo it is not true that you got violent at Bellini's grocery";
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-denial-{Guid.NewGuid():N}.db");
         try
         {
@@ -322,7 +321,7 @@ public sealed class CausalFeedbackTests
     public void Save_load_preserves_an_unresolved_request_after_a_private_decline()
     {
         const string partialWithholding =
-            "tell Vincent Russo about whether Tommy Nardo put hands on Bellini's grocery, leaving out his own part";
+            "tell Vincent Russo about whether you got violent at Bellini's grocery, leaving out your own part";
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-pending-{Guid.NewGuid():N}.db");
         try
         {
@@ -360,7 +359,7 @@ public sealed class CausalFeedbackTests
     public void Request_outstanding_status_is_identical_whether_the_asked_persons_choice_was_autonomous_or_player_chosen()
     {
         const string partialWithholding =
-            "tell Vincent Russo about whether Tommy Nardo put hands on Bellini's grocery, leaving out his own part";
+            "tell Vincent Russo about whether you got violent at Bellini's grocery, leaving out your own part";
 
         var autoResolved = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
         AdvanceToPause(autoResolved);
@@ -385,7 +384,7 @@ public sealed class CausalFeedbackTests
         var pending = AdvanceToPause(session);
 
         Assert.Equal(Marco, pending.ActorId);
-        Assert.Equal("Vincent Russo is demanding tribute from him", pending.Occasion);
+        Assert.Equal("Vincent Russo is demanding tribute from you", pending.Occasion);
     }
 
     /// <summary>Falsifier: each of Marco's three responses to the first demand gets an immediate
@@ -393,7 +392,7 @@ public sealed class CausalFeedbackTests
     [Theory]
     [InlineData("pay what Vincent Russo is asking")]
     [InlineData("refuse Vincent Russo")]
-    [InlineData("let it lie")]
+    [InlineData("take no action")]
     public void Each_of_marcos_responses_produces_an_immediate_acknowledgement(string choice)
     {
         var session = SimulationSession.Start(Seed, Baseline, Marco);
@@ -528,50 +527,6 @@ public sealed class CausalFeedbackTests
         Assert.Equal(
             "Tommy Nardo is demanding tribute from him",
             PlayerOccasion.For(bakeryTrigger, nunzio, id => world.Find(id)?.Name ?? id));
-    }
-
-    // ================================================================= relationship movement
-
-    /// <summary>Mutation guard: trust movement is shown only to the character whose own outward
-    /// relationship moved, never to anybody else — staged directly against a hand-built
-    /// <see cref="AccountConflict"/> so the filter is proven independent of scenario timing.</summary>
-    [Fact]
-    public void Trust_movement_is_shown_only_to_the_listener_whose_own_relationship_moved()
-    {
-        var world = Cast.Build(Seed, Baseline);
-        var conflict = new AccountConflict(
-            new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery),
-            "tommy", Stance.Rejects, 0.8, SourceKind.Report,
-            Stance.Believes, 0.5, SourceKind.Report, "the-books");
-        world.AccountConflicts.Add(new PerceivedConflict("vincent", conflict, world.Now));
-
-        var vincentSnapshot = PlayerView.Build(world, "vincent", world.Now);
-        var salvatoreSnapshot = PlayerView.Build(world, Salvatore, world.Now);
-
-        var movement = Assert.Single(vincentSnapshot.RecentTrustMovements);
-        Assert.Equal("tommy", movement.PersonId);
-        Assert.False(movement.Warmed);
-        Assert.Empty(salvatoreSnapshot.RecentTrustMovements);
-    }
-
-    /// <summary>The mirror image: a fresh agreement warms trust, shown only to its own listener.</summary>
-    [Fact]
-    public void Trust_agreement_warms_and_is_also_listener_scoped()
-    {
-        var world = Cast.Build(Seed, Baseline);
-        var agreement = new AccountAgreement(
-            new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery),
-            "tommy", Stance.Believes, 0.7, SourceKind.Report,
-            Stance.Believes, 0.5, SourceKind.Report, "the-books");
-        world.AccountAgreements.Add(new PerceivedAgreement("vincent", agreement, world.Now));
-
-        var vincentSnapshot = PlayerView.Build(world, "vincent", world.Now);
-        var salvatoreSnapshot = PlayerView.Build(world, Salvatore, world.Now);
-
-        var movement = Assert.Single(vincentSnapshot.RecentTrustMovements);
-        Assert.Equal("tommy", movement.PersonId);
-        Assert.True(movement.Warmed);
-        Assert.Empty(salvatoreSnapshot.RecentTrustMovements);
     }
 
     // ================================================================= action-kind audit (correction)

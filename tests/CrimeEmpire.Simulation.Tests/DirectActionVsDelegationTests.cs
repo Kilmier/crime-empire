@@ -46,7 +46,7 @@ public sealed class DirectActionVsDelegationTests
     private static DateTime End => Cast.Start.AddDays(90);
 
     private const string CarryOn = "carry on getting Bellini's grocery to pay";
-    private const string DelegateToTommy = "have Tommy Nardo take it on";
+    private const string DelegateToTommy = "hand it to Tommy Nardo";
 
     // Vincent's very first pause is the start decision itself (SevenChoiceSequence[0] in
     // PlayerOwnedOperationTests/PersistenceTests) — "talk Bellini's grocery round" for the Persuade
@@ -54,7 +54,7 @@ public sealed class DirectActionVsDelegationTests
     // that follows it, not the first pause overall. Independently pinned here, matching those two
     // files' own copies, per this project's practice of not sharing the same constant across files
     // that check the same assumption.
-    private const string StartPersuade = "talk Bellini's grocery round";
+    private const string StartPersuade = "persuade Bellini's grocery to pay";
 
     // ================================================================= Section A: the natural fork
 
@@ -647,11 +647,11 @@ public sealed class DirectActionVsDelegationTests
 
     private static IEnumerable<string> Phrases(PlayerSnapshot s)
     {
-        foreach (var b in s.Known.Concat(s.Recent).Concat(s.Unsettled))
+        foreach (var b in s.Known.Concat(s.Unsettled))
         {
             yield return b.Statement;
-            yield return b.Confidence;
-            yield return b.Attribution;
+            if (b.Certainty is { } c) yield return c;
+            if (b.Attribution is { } a) yield return a;
         }
 
         foreach (var d in s.Disagreements)

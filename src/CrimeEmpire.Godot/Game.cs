@@ -30,10 +30,18 @@ namespace CrimeEmpire.GodotShell;
 /// The console renderer and this file are two layouts over one source-limited derivation, which is
 /// the point of <see cref="PlayerView"/> existing.
 ///
-/// <b>It is deliberately plain.</b> No theme, no art, no animation, no map. Labels in columns and
+/// <b>It is deliberately plain.</b> No theme, no art, no animation, no map. Panels of labels and
 /// buttons that move the clock, plus milestone 015's one fixed save slot. Milestone 009's scope
 /// forbids polish beyond a clear functional layout, and there is a reason beyond time: a shell that
 /// looked finished would invite judgements about the game that only the simulation can earn.
+///
+/// <b>The layout (milestone 025).</b> A strip along the top — the date, who you are, your cash, the
+/// clock controls — and four weighted panels beneath it: what you know, what you are doing, what you
+/// think of people, and the decision in front of you. The two panels the screen used to carry
+/// besides these, "LATELY" and "RECENTLY", were copies: the same beliefs re-sorted, and the same trust
+/// movements the roster already explains. Recency is now the order of the first panel and a rule
+/// across it, and nothing is drawn twice — <see cref="AssertNoClaimDrawnTwice"/> is the guard, run
+/// on every screen every self-test builds.
 ///
 /// <b>Save and load (milestone 015).</b> One fixed slot, <see cref="ProductionSavePath"/> — no file
 /// picker, no slot management, no autosave. <see cref="PersistentSession"/> is the only new thing
@@ -73,8 +81,8 @@ public partial class Game : Control
 
     /// <summary>
     /// Command-line switch for milestone 018's first natural proof: Salvatore's own seed-42
-    /// <c>cautious-vincent</c> ask — "ask Vincent Russo for his own account of whether Bellini's
-    /// grocery is holding back what it owes" — played through real button presses. Proves the request
+    /// <c>cautious-vincent</c> ask — "ask Vincent Russo what he knows about whether Bellini's
+    /// grocery is not paying its tribute" — played through real button presses. Proves the request
     /// renders as an immediate, unresolved acknowledgement, and that Vincent's own naturally-occurring
     /// answer (observed directly before this flag was written, never staged or tuned) resolves it and
     /// attributes the account to him on the live screen.
@@ -108,6 +116,15 @@ public partial class Game : Control
 
     /// <summary>How far the self-test runs the scenario, matching the runner's default span.</summary>
     private const int SelfTestDays = 90;
+
+    /// <summary>
+    /// Node metadata key stamped on every label that presents a claim as an entry of its own — a
+    /// belief headline, or the head of a standalone disagreement. <see cref="AssertNoClaimDrawnTwice"/>
+    /// reads it back off the live tree. Stamped inside the one helper that draws such an entry, so a
+    /// second rendering of the same claim through the same helper is caught by construction; a
+    /// hand-rolled duplicate that bypassed the helper would escape, and that is the stated limit.
+    /// </summary>
+    private const string ClaimMeta = "claim";
 
     /// <summary>
     /// The one fixed save slot a real player's Save/Load buttons write to (ruling 4). Overridable via
@@ -149,7 +166,9 @@ public partial class Game : Control
     // Start-screen state, read once when the game begins and not consulted afterwards.
     private LineEdit _seedField = null!;
     private OptionButton _variantField = null!;
-    private OptionButton _controlledField = null!;
+    private OptionButton _playAsField = null!;
+    private CheckBox _watchOnlyField = null!;
+    private CheckBox _developerViewpointToggle = null!;
     private OptionButton _viewpointField = null!;
 
     private IReadOnlyList<ScenarioCharacter> _cast = Array.Empty<ScenarioCharacter>();
@@ -164,6 +183,7 @@ public partial class Game : Control
         AddChild(margin);
 
         _root = new VBoxContainer();
+        _root.AddThemeConstantOverride("separation", 8);
         margin.AddChild(_root);
 
         _cast = Roster.Characters("baseline");
@@ -221,7 +241,13 @@ public partial class Game : Control
     // ================================================================= start screen
 
     /// <summary>
-    /// Seed, scenario variant, who is controlled, and whose eyes the world is seen through.
+    /// Seed, scenario variant, and who you play.
+    ///
+    /// "Play as" is one field (milestone 025): the person you control is the person whose eyes you
+    /// see through. "Watch only" keeps the old "nobody" mode — everybody decides for themselves and
+    /// you read what your chosen character comes to hear. A viewpoint that differs from the
+    /// controlled character is a debugging capability — the no-leak proofs depend on it — so it stays
+    /// reachable, behind a developer toggle at the foot of the screen rather than on the front door.
     ///
     /// The cast and variant lists come from <see cref="Roster"/> rather than from a world, so
     /// populating a dropdown never touches simulation state. Listing the cast here is a fact about
@@ -232,7 +258,7 @@ public partial class Game : Control
     {
         Clear(_root);
 
-        _root.AddChild(Heading("CRIMINAL EMPIRE"));
+        _root.AddChild(Title("CRIMINAL EMPIRE"));
         _root.AddChild(Plain("A headless simulation with a window cut into it. Choose a starting point."));
         _root.AddChild(new HSeparator());
 
@@ -251,18 +277,15 @@ public partial class Game : Control
         _variantField.Selected = 0;
         grid.AddChild(_variantField);
 
-        grid.AddChild(Plain("You control"));
-        _controlledField = new OptionButton();
-        _controlledField.AddItem("nobody — watch the simulation run");
-        foreach (var c in _cast) _controlledField.AddItem($"{c.Name} — {c.RoleTitle}");
-        _controlledField.Selected = 1 + IndexOfCharacter(Roster.DefaultControlledId);
-        grid.AddChild(_controlledField);
+        grid.AddChild(Plain("Play as"));
+        _playAsField = new OptionButton();
+        foreach (var c in _cast) _playAsField.AddItem($"{c.Name} — {c.RoleTitle}");
+        _playAsField.Selected = IndexOfCharacter(Roster.DefaultControlledId);
+        grid.AddChild(_playAsField);
 
-        grid.AddChild(Plain("You see through"));
-        _viewpointField = new OptionButton();
-        foreach (var c in _cast) _viewpointField.AddItem($"{c.Name} — {c.RoleTitle}");
-        _viewpointField.Selected = IndexOfCharacter(Roster.DefaultControlledId);
-        grid.AddChild(_viewpointField);
+        grid.AddChild(Plain(""));
+        _watchOnlyField = new CheckBox { Text = "Watch only — everybody decides for themselves" };
+        grid.AddChild(_watchOnlyField);
 
         _root.AddChild(new HSeparator());
 
@@ -279,11 +302,29 @@ public partial class Game : Control
         buttons.AddChild(load);
 
         _root.AddChild(Plain(
-            "Controlling somebody stops the clock whenever they have a decision to make, and offers " +
-            "what actually occurred to them. Everyone else goes on deciding for themselves either " +
-            "way."));
+            "Playing somebody stops the clock whenever they have a decision to make, and offers what " +
+            "actually occurred to them. Everyone else goes on deciding for themselves either way."));
 
         if (_statusMessage is { } status) _root.AddChild(Faint($"· {status}"));
+
+        // Developer: see through somebody other than the person you play. Hidden until asked for.
+        var spacer = new Control { SizeFlagsVertical = SizeFlags.ExpandFill };
+        _root.AddChild(spacer);
+
+        var developer = new HBoxContainer();
+        developer.AddThemeConstantOverride("separation", 12);
+        _root.AddChild(developer);
+
+        _developerViewpointToggle = new CheckBox { Text = "developer: see through somebody else" };
+        _developerViewpointToggle.Modulate = new Color(1, 1, 1, 0.6f);
+        developer.AddChild(_developerViewpointToggle);
+
+        _viewpointField = new OptionButton { Visible = false };
+        foreach (var c in _cast) _viewpointField.AddItem($"{c.Name} — {c.RoleTitle}");
+        _viewpointField.Selected = IndexOfCharacter(Roster.DefaultControlledId);
+        developer.AddChild(_viewpointField);
+
+        _developerViewpointToggle.Toggled += on => _viewpointField.Visible = on;
     }
 
     private int IndexOfCharacter(string id)
@@ -301,13 +342,13 @@ public partial class Game : Control
 
         string variant = _variants[Math.Max(0, _variantField.Selected)].Id;
 
-        // Index 0 is "nobody"; every later entry is a character in cast order.
-        int controlledIndex = _controlledField.Selected - 1;
-        string? controlled = controlledIndex >= 0 && controlledIndex < _cast.Count
-            ? _cast[controlledIndex].Id
-            : null;
+        string playAs = _cast[Math.Max(0, _playAsField.Selected)].Id;
+        string? controlled = _watchOnlyField.ButtonPressed ? null : playAs;
 
-        string viewpoint = _cast[Math.Max(0, _viewpointField.Selected)].Id;
+        // The viewpoint is the person you play unless the developer toggle says otherwise.
+        string viewpoint = _developerViewpointToggle.ButtonPressed
+            ? _cast[Math.Max(0, _viewpointField.Selected)].Id
+            : playAs;
 
         StartSession(seed, variant, controlled, viewpoint);
     }
@@ -373,59 +414,90 @@ public partial class Game : Control
         Clear(_root);
 
         var snapshot = session.Snapshot();
+        var p = snapshot.ViewpointPronouns;
+        string who = p.Subject.ToUpperInvariant();
 
         _root.AddChild(BuildToolbar(session, snapshot));
-        if (_statusMessage is { } status) _root.AddChild(Faint($"· {status}"));
-        _root.AddChild(new HSeparator());
 
         var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
-        columns.AddThemeConstantOverride("separation", 18);
+        columns.AddThemeConstantOverride("separation", 10);
         _root.AddChild(columns);
 
-        columns.AddChild(Column("WHAT HE KNOWS", BuildKnowledge(snapshot)));
-        columns.AddChild(Column("LATELY", BuildRecent(snapshot)));
-        columns.AddChild(Column("WHAT JUST HAPPENED", BuildCausalThread(snapshot)));
-        columns.AddChild(Column("HOW HE TAKES THEM", BuildAttitudes(snapshot)));
-        columns.AddChild(Column(
-            session.ControlledCharacterId is null ? "NOBODY IS BEING CONTROLLED" : "A DECISION",
-            BuildDecision(session, snapshot)));
+        // Weighted, not equal: the knowledge panel and the decision panel carry the longest lines.
+        columns.AddChild(Panel($"WHAT {who} {p.Verb("KNOWS", "KNOW")}", BuildKnowledge(snapshot), 1.25f));
+        columns.AddChild(Panel($"WHAT {who} {p.Verb("IS", "ARE")} DOING", BuildDoing(snapshot), 1.0f));
+        columns.AddChild(Panel($"WHAT {who} {p.Verb("THINKS", "THINK")} OF PEOPLE", BuildAttitudes(snapshot), 1.0f));
+        columns.AddChild(Panel(
+            session.ControlledCharacterId is null ? "WATCHING ONLY" : "A DECISION",
+            BuildDecision(session, snapshot),
+            1.25f));
     }
 
+    /// <summary>
+    /// The strip along the top: two rows.
+    ///
+    /// The first is what a player glances at — the date, who you are, your cash — and the controls
+    /// that move the clock. The second is the session's state and, far right and faint, the seed and
+    /// variant, which are developer metadata and were the fourth thing on the old single row.
+    ///
+    /// <b>Why the date used to wrap.</b> <see cref="Plain"/> sets <c>ExpandFill</c> and the old
+    /// toolbar used it for every label, so four expanding labels took all the slack of the row and
+    /// the non-expanding date heading was squeezed to its minimum width, where word-wrap broke it
+    /// vertically. Nothing on this strip expands now except the spacer.
+    /// </summary>
     private Control BuildToolbar(PersistentSession session, PlayerSnapshot snapshot)
     {
         var p = snapshot.ViewpointPronouns;
-        var bar = new HBoxContainer();
-        bar.AddThemeConstantOverride("separation", 12);
+        var strip = new PanelContainer();
+        var inner = new MarginContainer();
+        foreach (string side in new[] { "margin_left", "margin_right", "margin_top", "margin_bottom" })
+            inner.AddThemeConstantOverride(side, 8);
+        strip.AddChild(inner);
 
-        bar.AddChild(Heading(session.Date.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)));
-        bar.AddChild(Plain($"· {snapshot.ViewpointName}, {snapshot.ViewpointRole}"));
-        bar.AddChild(Plain($"· cash on hand {snapshot.Cash.ToString("N0", CultureInfo.InvariantCulture)}"));
-        bar.AddChild(Plain($"· seed {session.Seed.ToString(CultureInfo.InvariantCulture)} · {session.Variant}"));
+        var rows = new VBoxContainer();
+        rows.AddThemeConstantOverride("separation", 4);
+        inner.AddChild(rows);
 
-        var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        bar.AddChild(spacer);
+        var top = new HBoxContainer();
+        top.AddThemeConstantOverride("separation", 18);
+        rows.AddChild(top);
+
+        top.AddChild(Title(session.Date.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)));
+        top.AddChild(Chip($"{snapshot.ViewpointName}, {snapshot.ViewpointRole}"));
+        top.AddChild(Chip($"cash on hand {snapshot.Cash.ToString("N0", CultureInfo.InvariantCulture)}"));
+
+        top.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
 
         bool paused = session.Status == SessionStatus.AwaitingChoice;
 
-        bar.AddChild(Advance("Next event", paused, () => session.StepEvent()));
-        bar.AddChild(Advance("Advance a day", paused, () => session.AdvanceDays(1)));
-        bar.AddChild(Advance("Advance a week", paused, () => session.AdvanceDays(7)));
+        top.AddChild(Advance("Next event", paused, () => session.StepEvent()));
+        top.AddChild(Advance("Advance a day", paused, () => session.AdvanceDays(1)));
+        top.AddChild(Advance("Advance a week", paused, () => session.AdvanceDays(7)));
+
+        top.AddChild(new Control { CustomMinimumSize = new Vector2(12, 0) });
 
         // Save and load work in either state (ruling 6) — unlike the three clock controls above,
         // neither is disabled while paused.
         var save = new Button { Text = "Save" };
         save.Pressed += () => SaveFixedSlot(session);
-        bar.AddChild(save);
+        top.AddChild(save);
 
         var load = new Button { Text = "Load" };
         load.Pressed += LoadFixedSlot;
-        bar.AddChild(load);
+        top.AddChild(load);
 
-        bar.AddChild(Plain(paused
-            ? $"· paused — {p.Subject} {p.Verb("has", "have")} something to decide"
-            : "· running"));
+        var bottom = new HBoxContainer();
+        bottom.AddThemeConstantOverride("separation", 18);
+        rows.AddChild(bottom);
 
-        return bar;
+        bottom.AddChild(FaintChip(paused
+            ? $"paused — {p.Subject} {p.Verb("has", "have")} something to decide"
+            : "running"));
+        if (_statusMessage is { } status) bottom.AddChild(FaintChip($"· {status}"));
+        bottom.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        bottom.AddChild(FaintChip($"seed {session.Seed.ToString(CultureInfo.InvariantCulture)} · {session.Variant}"));
+
+        return strip;
     }
 
     /// <summary>
@@ -446,159 +518,169 @@ public partial class Game : Control
         return button;
     }
 
+    /// <summary>
+    /// Everything he holds, in one list, newest first.
+    ///
+    /// <b>Recency is ordering and emphasis, not a second list</b> — Matt's ruling 2 for milestone
+    /// 025. Ordered by when he last had cause to think about it, so a three-week-old belief somebody
+    /// disputed yesterday reads as news, which is what it is. The beliefs inside
+    /// <see cref="PlayerView.RecentWindow"/> come first; a faint rule separates them from the rest.
+    ///
+    /// A disagreement about a belief he holds is drawn under that belief — who said what, with dates
+    /// — rather than as a second entry restating the claim. A disagreement about a claim he does
+    /// <em>not</em> hold, which the projection allows, has no belief to nest under and is drawn on
+    /// its own under its own heading.
+    ///
+    /// Thin or disputed beliefs are not repeated in a "cannot settle" list of their own: the
+    /// certainty phrase on each entry already says "not sure" or "disputed", and drawing the belief a
+    /// second time was the same duplication as the two panels this milestone removed. Who has told
+    /// him nothing keeps its place, because that is not a belief.
+    /// </summary>
     private IEnumerable<Control> BuildKnowledge(PlayerSnapshot snapshot)
     {
         var p = snapshot.ViewpointPronouns;
         if (snapshot.Known.Count == 0)
         {
-            yield return Plain($"Nothing. Nobody has told {p.Object} anything and {p.Subject} {p.Verb("has", "have")} seen nothing {p.Reflexive}.");
-            yield break;
-        }
-
-        foreach (var belief in snapshot.Known)
-        {
             yield return Plain(
-                $"{belief.AcquiredAt.ToString("d MMM", CultureInfo.InvariantCulture)}  " +
-                $"{belief.Statement}{(belief.Contested ? "  (contradicted)" : "")}");
-            yield return Faint($"        {belief.Confidence}, {belief.Attribution}");
+                $"Nothing yet. Nobody has told {p.Object} anything and {p.Subject} " +
+                $"{p.Verb("has", "have")} seen nothing {p.Reflexive}.");
         }
 
-        if (snapshot.Unsettled.Count > 0 || snapshot.Silent.Count > 0)
-        {
-            yield return new HSeparator();
-            yield return Plain("WHAT HE CANNOT SETTLE");
-            foreach (var belief in snapshot.Unsettled)
-                yield return Faint($"· whether {belief.Statement} — {belief.Confidence}");
-            foreach (var person in snapshot.Silent)
-                yield return Faint($"· {person.Name} has not given {snapshot.ViewpointPronouns.Object} an account");
-        }
-    }
+        var byClaim = snapshot.Disagreements.ToDictionary(d => d.Claim, d => d);
+        var ordered = snapshot.Known
+            .OrderByDescending(b => b.ReconsideredAt)
+            .ThenBy(b => b.Claim.ToString(), StringComparer.Ordinal)
+            .ToList();
+        DateTime freshSince = snapshot.Date - PlayerView.RecentWindow;
 
-    /// <summary>
-    /// Recent observable consequences — and only where the viewpoint character could know them.
-    ///
-    /// Every entry is something he holds; the window only decides how much of what he already knows
-    /// is worth putting in front of him first. Ordered by when he last had cause to think about it,
-    /// so a three-week-old belief somebody contradicted yesterday reads as news, which is what it is.
-    /// </summary>
-    private IEnumerable<Control> BuildRecent(PlayerSnapshot snapshot)
-    {
-        var p = snapshot.ViewpointPronouns;
-        if (snapshot.Recent.Count == 0)
-        {
-            yield return Plain($"Nothing has reached {snapshot.ViewpointPronouns.Object} lately.");
-            yield break;
-        }
+        bool anyFresh = ordered.Any(b => b.ReconsideredAt >= freshSince);
+        bool anyEarlier = ordered.Any(b => b.ReconsideredAt < freshSince);
+        bool ruleDrawn = false;
 
-        foreach (var belief in snapshot.Recent)
+        foreach (var belief in ordered)
         {
-            yield return Plain(
-                $"{belief.ReconsideredAt.ToString("d MMM", CultureInfo.InvariantCulture)}  {belief.Statement}");
-            yield return Faint($"        {belief.Confidence}, {belief.Attribution}");
-        }
-
-        foreach (var disagreement in snapshot.Disagreements)
-        {
-            yield return new HSeparator();
-            yield return Plain($"Accounts differ on whether {disagreement.Statement}");
-            if (disagreement.OwnBasis is { } basis)
-                yield return Faint($"    {basis} — {(disagreement.OwnPositionHeld ? "it happened" : "it did not")}");
-            foreach (var account in disagreement.Accounts)
-                yield return Faint(
-                    $"    {account.SourceName} — {(account.Affirms ? "it happened" : "it did not")} " +
-                    $"({account.At.ToString("d MMM", CultureInfo.InvariantCulture)})");
-        }
-    }
-
-    private IEnumerable<Control> BuildAttitudes(PlayerSnapshot snapshot)
-    {
-        var p = snapshot.ViewpointPronouns;
-        if (snapshot.Attitudes.Count == 0)
-        {
-            yield return Plain($"{p.Subject_} {p.Verb("has", "have")} nothing much to say about anybody.");
-        }
-        else
-        {
-            foreach (var attitude in snapshot.Attitudes)
+            if (anyFresh && anyEarlier && !ruleDrawn && belief.ReconsideredAt < freshSince)
             {
-                yield return Plain(attitude.PersonName);
-                yield return Faint($"    {attitude.Standing}");
-                if (attitude.Wariness is { } wariness)
-                    yield return Faint($"    {wariness}");
-                // What he takes the man to be good for — a belief about him, not an attitude toward
-                // him, and the two are deliberately separate lines because the model keeps them
-                // separate: a man whose word he would not take can still be the one he sends.
-                if (attitude.TakenFor is { } takenFor)
-                    yield return Faint($"    {takenFor}");
-                foreach (var grievance in attitude.Grievances)
-                    yield return Faint(
-                        $"    what {p.Subject} {p.Verb("holds", "hold")} against " +
-                        $"{attitude.PersonPronouns.Object}: \"{grievance}\"");
+                yield return Faint("— earlier —");
+                ruleDrawn = true;
+            }
 
-                // Why it got that way — milestone 023, and the half this column never had. Oldest
-                // first, because that is the order a history reads in, and dated because "when"
-                // is most of what makes it a history rather than a list of grumbles. The arrow
-                // carries the direction so the line does not have to say "grew"/"cooled" twice.
-                foreach (var moment in attitude.History)
+            foreach (var row in BeliefEntry(belief, byClaim.GetValueOrDefault(belief.Claim), p))
+                yield return row;
+        }
+
+        // Disagreements with no held belief to sit under.
+        var heldClaims = snapshot.Known.Select(b => b.Claim).ToHashSet();
+        var standalone = snapshot.Disagreements.Where(d => !heldClaims.Contains(d.Claim)).ToList();
+        if (standalone.Count > 0)
+        {
+            yield return new HSeparator();
+            yield return Plain("ACCOUNTS DIFFER");
+            foreach (var d in standalone)
+            {
+                yield return ClaimEntry(d.Claim, $"on whether {d.Statement}");
+                if (d.OwnBasis is { } basis)
                     yield return Faint(
-                        $"    {moment.At.ToString("d MMM", CultureInfo.InvariantCulture)}  " +
-                        $"{(moment.Warmed ? "↑" : "↓")} {moment.Description}");
+                        $"        {p.Subject} {p.Verb("thinks", "think")} " +
+                        $"{(d.OwnPositionHeld ? "so" : "otherwise")} ({basis})");
+                foreach (var row in AccountRows(d)) yield return row;
             }
         }
 
-        // Qualitative trust movement only — see PlayerRelationshipMovement's own doc comment for why
-        // fear, obligation and grievance are not shown here. Shown regardless of whether the person
-        // otherwise made the Attitudes list above, so a fresh movement is never silently absorbed.
-        if (snapshot.RecentTrustMovements.Count > 0)
+        if (snapshot.Silent.Count > 0)
         {
             yield return new HSeparator();
-            yield return Plain("RECENTLY");
-            foreach (var movement in snapshot.RecentTrustMovements)
-                yield return Faint(
-                    $"{movement.At.ToString("d MMM", CultureInfo.InvariantCulture)}  " +
-                    $"{PlayerNarration.Movement(movement.Warmed, p, movement.PersonName)}");
+            yield return Plain("NOT HEARD FROM");
+            foreach (var person in snapshot.Silent)
+                yield return Faint($"· {person.Name} has not told {p.Object} anything yet");
         }
     }
 
     /// <summary>
-    /// The viewpoint character's own causal thread: what he last committed to, his own business's
-    /// status if he owns one, and what he is still waiting to hear back on. Milestone 018 — every
-    /// value here is a projection already computed onto <see cref="PlayerSnapshot"/>, never a second
-    /// record this file keeps of its own.
+    /// One belief, drawn once: the dated statement, then how he has it, then — if his sources
+    /// disagree about it — who said what. The only place a <see cref="PlayerBelief"/> is turned into
+    /// widgets, which is what makes <see cref="AssertNoClaimDrawnTwice"/> a check by construction.
     /// </summary>
-    private IEnumerable<Control> BuildCausalThread(PlayerSnapshot snapshot)
+    private static IEnumerable<Control> BeliefEntry(PlayerBelief belief, PlayerDisagreement? disagreement, Pronouns p)
+    {
+        yield return ClaimEntry(
+            belief.Claim,
+            $"{belief.ReconsideredAt.ToString("d MMM", CultureInfo.InvariantCulture)}  {belief.Statement}");
+
+        // Source, then how sure, then since when — each only when it says something. No certainty
+        // on what he saw or did himself; no source on an act of his own the sentence already names
+        // him as the author of; no "since" when he has had it since the day he got it.
+        var parts = new List<string>();
+        if (belief.Attribution is { } attribution) parts.Add(attribution);
+        if (belief.Certainty is { } certainty) parts.Add(certainty);
+        if (belief.ReconsideredAt != belief.AcquiredAt)
+            parts.Add($"first learned {belief.AcquiredAt.ToString("d MMM", CultureInfo.InvariantCulture)}");
+        if (parts.Count > 0) yield return Faint($"        {string.Join("; ", parts)}");
+
+        if (disagreement is not null)
+            foreach (var row in AccountRows(disagreement)) yield return row;
+    }
+
+    private static IEnumerable<Control> AccountRows(PlayerDisagreement d)
+    {
+        foreach (var account in d.Accounts)
+            yield return Faint(
+                $"        {account.SourceName} {(account.Affirms ? "says so" : "says otherwise")} " +
+                $"({account.At.ToString("d MMM", CultureInfo.InvariantCulture)})");
+    }
+
+    /// <summary>A claim presented as an entry of its own, stamped so the duplicate guard can find it.</summary>
+    private static Label ClaimEntry(PlayerClaim claim, string text)
+    {
+        var label = Plain(text);
+        label.SetMeta(ClaimMeta, claim.ToString());
+        return label;
+    }
+
+    /// <summary>
+    /// What he is doing: the order he has out, what he just did, and what he is waiting to hear
+    /// back on. Milestone 024 put the standing order into the causal-thread column to avoid making
+    /// the old layout worse; milestone 025 gives it the top of a panel of its own.
+    ///
+    /// For delegated work this says who has it and stops — how far along somebody else has got is
+    /// that man's state, not his. Every value here is a projection already computed onto
+    /// <see cref="PlayerSnapshot"/>, never a second record this file keeps of its own.
+    /// </summary>
+    private IEnumerable<Control> BuildDoing(PlayerSnapshot snapshot)
     {
         var p = snapshot.ViewpointPronouns;
 
-        yield return snapshot.LastAction is { } action
-            ? Plain($"{action.At.ToString("d MMM", CultureInfo.InvariantCulture)}  {p.Subject_} chose to {action.Description}")
-            : Plain($"{p.Subject_} {p.Verb("has", "have")} not committed to anything yet.");
-
-        if (snapshot.MyBusiness is { } business)
-            yield return Faint($"    {business.Name}: {(business.PayingTribute ? "currently paying" : "not currently paying")}");
-
-        // Milestone 024. Put in this column rather than a sixth one: the layout already carries five
-        // and has not been rebalanced since a fourth was added (milestone 018's recorded debt, which
-        // 025 exists to clear), and a standing order belongs with what he did and what came of it
-        // anyway. For delegated work this says who has it and stops — how far along somebody else
-        // has got is that man's state, not his.
         if (snapshot.Operation is { } op)
         {
-            yield return new HSeparator();
-            yield return Plain("WHAT HE HAS OUT");
-            yield return Faint($"    {op.Description}");
+            yield return Plain(op.Description);
             // The date is when the *operation* started, not when it was handed over — nothing
             // records a handover time, and "Tommy has had it since 2 Mar" would be a false
             // statement whenever the job was delegated later than it began. Said as the operation's
             // own age, with who holds it stated separately.
             yield return Faint($"    running since {op.Since.ToString("d MMM", CultureInfo.InvariantCulture)}");
             if (op.ExecutorName is { } executor)
-                yield return Faint($"    {executor} is carrying it");
-            yield return Faint($"    {op.Progress ?? "nothing has come back yet"}");
+                yield return Faint($"    {executor} is handling it");
+            yield return Faint($"    {op.Progress ?? "no word back yet"}");
+        }
+        else
+        {
+            yield return Plain($"{p.Subject_} {p.Verb("has", "have")} nothing running.");
         }
 
         yield return new HSeparator();
-        yield return Plain("AWAITING ANSWERS");
+        yield return Plain("WHAT JUST HAPPENED");
+
+        yield return snapshot.LastAction is { } action
+            ? Faint($"{action.At.ToString("d MMM", CultureInfo.InvariantCulture)}  {p.Subject} chose to {action.Description}")
+            : Faint($"{p.Subject_} {p.Verb("has", "have")} not committed to anything yet.");
+
+        if (snapshot.MyBusiness is { } business)
+            yield return Faint(
+                $"{Capital(p.Possessive)} own shop, {business.Name}, is " +
+                $"{(business.PayingTribute ? "paying" : "not paying")} at the moment");
+
+        yield return new HSeparator();
+        yield return Plain("WAITING TO HEAR BACK");
 
         if (snapshot.AwaitingAnswers.Count == 0)
         {
@@ -608,23 +690,61 @@ public partial class Game : Control
 
         foreach (var request in snapshot.AwaitingAnswers)
         {
+            var asked = request.AskedPronouns;
             yield return Plain(
                 $"{request.AskedAt.ToString("d MMM", CultureInfo.InvariantCulture)}  asked {request.AskedName} " +
-                $"for {request.AskedPronouns.Possessive} own account of whether {request.Statement}");
+                $"what {asked.Subject} {asked.Verb("knows", "know")} about whether {request.Statement}");
             // Every entry here is Pending by construction (an Answered request already dropped out —
             // see PlayerSnapshot.AwaitingAnswers). Nothing has reached him, whether the asked person
             // has not yet decided or decided privately and said nothing — genuinely indistinguishable
             // to him, per milestone 018's second correction, and must not be rendered as though they
             // were different facts. A communicated answer, in either direction, is not shown here at
-            // all — it already appears via the existing Known/Recent/Disagreements surfaces.
+            // all — it already appears under the belief it concerns.
             yield return Faint("    no answer yet");
         }
     }
 
+    private IEnumerable<Control> BuildAttitudes(PlayerSnapshot snapshot)
+    {
+        var p = snapshot.ViewpointPronouns;
+        if (snapshot.Attitudes.Count == 0)
+        {
+            yield return Plain($"{p.Subject_} {p.Verb("has", "have")} nothing much to say about anybody.");
+            yield break;
+        }
+
+        foreach (var attitude in snapshot.Attitudes)
+        {
+            yield return Plain(attitude.PersonName);
+            yield return Faint($"    {attitude.Standing}");
+            if (attitude.Wariness is { } wariness)
+                yield return Faint($"    {wariness}");
+            // What he takes the man to be good for — a belief about him, not an attitude toward
+            // him, and the two are deliberately separate lines because the model keeps them
+            // separate: a man whose word he would not take can still be the one he sends.
+            if (attitude.TakenFor is { } takenFor)
+                yield return Faint($"    {takenFor}");
+            foreach (var grievance in attitude.Grievances)
+                yield return Faint(
+                    $"    what {p.Subject} {p.Verb("holds", "hold")} against " +
+                    $"{attitude.PersonPronouns.Object}: \"{grievance}\"");
+
+            // Why it got that way — milestone 023. Oldest first, because that is the order a
+            // history reads in, and dated because "when" is most of what makes it a history rather
+            // than a list of grumbles. The arrow carries the direction so the line does not have to
+            // say "grew"/"cooled" twice.
+            foreach (var moment in attitude.History)
+                yield return Faint(
+                    $"    {moment.At.ToString("d MMM", CultureInfo.InvariantCulture)}  " +
+                    $"{(moment.Warmed ? "↑" : "↓")} {moment.Description}");
+        }
+    }
+
     /// <summary>
-    /// The controlled character's decision. Its pronouns are the *viewpoint's* until there is a
-    /// pending decision to take them from — the two are the same character in this shell, and where
-    /// they are not, the panel is describing the man being watched rather than the man deciding.
+    /// The controlled character's decision, put to the player as "you". The panel's pronouns are
+    /// the *viewpoint's* until there is a pending decision to take them from — the two are the same
+    /// character unless the developer viewpoint is in use, and then the panel is describing the man
+    /// being watched rather than the man deciding.
     /// </summary>
     private IEnumerable<Control> BuildDecision(PersistentSession session, PlayerSnapshot snapshot)
     {
@@ -633,16 +753,15 @@ public partial class Game : Control
         if (session.ControlledCharacterId is null)
         {
             yield return Plain(
-                $"Everybody is deciding for themselves. Advance the clock and read what {p.Subject} " +
-                $"{p.Verb("comes", "come")} to hear about it.");
+                $"Nobody is under your control. Move the clock on and read what {p.Subject} " +
+                $"{p.Verb("comes", "come")} to hear.");
             yield break;
         }
 
         if (session.Pending is not { } pending)
         {
-            yield return Plain(
-                $"{p.Subject_} {p.Verb("has", "have")} nothing in front of {p.Object} at the moment.");
-            yield return Faint($"Advance the clock until something reaches {p.Object}.");
+            yield return Plain("Nothing to decide right now.");
+            yield return Faint("Move the clock on until something comes up.");
             yield break;
         }
 
@@ -683,9 +802,8 @@ public partial class Game : Control
         }
 
         yield return Faint(
-            $"These are the options that occurred to {actor.Object} and that {actor.Subject} could " +
-            $"actually take. What {actor.Subject} never thought of, and what {actor.Subject} " +
-            $"{actor.Verb("does", "do")} not know, are not listed.");
+            $"Only what occurred to {actor.Object}, and what {actor.Subject} could actually do. " +
+            $"What {actor.Subject} never thought of is not here.");
     }
 
     // ================================================================= self-test
@@ -733,7 +851,7 @@ public partial class Game : Control
         // Collected from the live node tree rather than from the snapshot behind it, because the
         // claim under test is about the interface.
         var transcript = new StringBuilder();
-        Collect(this, transcript);
+        transcript.Append(Screen());
 
         // Bounded rather than "until done": a loop that could not terminate would hang a headless
         // verification run instead of failing it.
@@ -764,7 +882,7 @@ public partial class Game : Control
                 throw new InvalidOperationException($"no button reading \"{label}\" is on screen");
 
             if (session.Status == SessionStatus.AwaitingChoice) decisionScreens++;
-            Collect(this, transcript);
+            transcript.Append(Screen());
         }
 
         GD.Print($"CE-SELFTEST date={session.Date:yyyy-MM-dd} " +
@@ -794,37 +912,23 @@ public partial class Game : Control
     // ================================================================= golden path (milestone 014)
 
     /// <summary>
-    /// Drives Vincent's own seed-42 <c>SecureTribute</c> operation against Bellini's grocery through
-    /// real button presses — the interactive playthrough itself, not a claim about it. Presses the
-    /// seven pinned option texts in order (independently derived from the same accepted trace as
-    /// <c>PlayerOwnedOperationTests</c> in the test project, not shared with it, so the two checks
-    /// cannot both be wrong about the same assumption), and reads the rendered cash label off the
-    /// live screen — never <see cref="SimulationSession"/>'s internal state — to confirm the accepted
-    /// 1 April consequence: 6,000 rising to 6,840. No further time advance is needed after the
-    /// seventh choice: the collection that pays Vincent happens in the same event sweep that produces
-    /// his seventh decision (reporting the outcome to Salvatore), so the rendered cash is already
-    /// current by the time that screen is on-screen.
-    ///
-    /// <b>Asserts the opening screen too, before any button is pressed.</b> A check that only reads
-    /// the final screen cannot tell a real 6,000-to-6,840 change from a toolbar that always rendered
-    /// 6,840 regardless of what happened — confirmed by mutation: temporarily hardcoding the toolbar
-    /// to a fixed "6,840" made the opening assertion fail, before the mutation was reverted.
-    /// </summary>
-    /// <summary>
     /// The exact seven option descriptions Vincent's accepted seed-42 <c>SecureTribute</c> operation
     /// offers, in order — shared by <see cref="GoldenPathSelfTest"/> and milestone 015's two-process
     /// restart proof, which is this same sequence split after the third choice rather than a second,
-    /// independently-typed copy of it.
+    /// independently-typed copy of it. Independently derived from the same accepted trace as
+    /// <c>PlayerOwnedOperationTests</c> in the test project, not shared with it, so the two checks
+    /// cannot both be wrong about the same assumption. Re-pointed at the same seven choices when
+    /// milestone 025 reworded the options; the choices, and the pauses they are made at, did not move.
     /// </summary>
     private static readonly string[] SevenChoiceSequence =
     {
-        "talk Bellini's grocery round",
+        "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
-        "have Tommy Nardo take it on",
-        "change tack with Bellini's grocery — threats instead",
-        "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
+        "hand it to Tommy Nardo",
+        "switch to threats with Bellini's grocery",
+        "switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
         "carry on getting Bellini's grocery to pay",
-        "report to Salvatore Greco, leaving out his own part",
+        "report to Salvatore Greco, leaving out your own part",
     };
 
     /// <summary>
@@ -832,7 +936,8 @@ public partial class Game : Control
     /// never "Advance a week", which carries an outstanding fast-forward horizon across a
     /// <c>Choose</c> call and can silently sail past the decision this is looking for. Throws rather
     /// than returning a partial result if the run gives up before every choice is made, so a caller
-    /// never has to remember to check how far it got.
+    /// never has to remember to check how far it got. Every screen built on the way is checked for a
+    /// claim drawn twice.
     /// </summary>
     private void PressChoicesInOrder(PersistentSession session, IReadOnlyList<string> choices, string logTag)
     {
@@ -845,7 +950,8 @@ public partial class Game : Control
                 GD.Print($"{logTag} decision {choiceIndex + 1} on {session.Date:yyyy-MM-dd} — pressing \"{expected}\"");
                 if (!Press(expected))
                     throw new InvalidOperationException(
-                        $"the decision on {session.Date:yyyy-MM-dd} does not offer \"{expected}\"");
+                        $"the decision on {session.Date:yyyy-MM-dd} does not offer \"{expected}\" — offered: " +
+                        string.Join(" | ", session.Pending!.Options.Select(o => o.Description)));
                 choiceIndex++;
             }
             else
@@ -853,6 +959,8 @@ public partial class Game : Control
                 if (!Press("Next event"))
                     throw new InvalidOperationException("no \"Next event\" control is available");
             }
+
+            AssertNoClaimDrawnTwice();
         }
 
         if (choiceIndex < choices.Count)
@@ -873,6 +981,17 @@ public partial class Game : Control
         }
     }
 
+    /// <summary>
+    /// Drives Vincent's own seed-42 <c>SecureTribute</c> operation against Bellini's grocery through
+    /// real button presses — the interactive playthrough itself, not a claim about it — and reads the
+    /// rendered cash label off the live screen, never <see cref="SimulationSession"/>'s internal
+    /// state, to confirm the accepted 1 April consequence: 6,000 rising to 6,840.
+    ///
+    /// <b>Asserts the opening screen too, before any button is pressed.</b> A check that only reads
+    /// the final screen cannot tell a real 6,000-to-6,840 change from a toolbar that always rendered
+    /// 6,840 regardless of what happened — confirmed by mutation: temporarily hardcoding the toolbar
+    /// to a fixed "6,840" made the opening assertion fail, before the mutation was reverted.
+    /// </summary>
     private void GoldenPathSelfTest()
     {
         GD.Print("CE-GOLDENPATH begin");
@@ -880,12 +999,7 @@ public partial class Game : Control
         StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
         var session = _session!;
 
-        // Proves a displayed *change*, not merely that the final screen happens to read 6,840 — a
-        // check that only asserted the end value would pass just as well against a toolbar that
-        // always rendered 6,840 regardless of the snapshot behind it.
-        var startScreen = new StringBuilder();
-        Collect(this, startScreen);
-        if (!startScreen.ToString().Contains("cash on hand 6,000", StringComparison.Ordinal))
+        if (!Screen().Contains("cash on hand 6,000", StringComparison.Ordinal))
             throw new InvalidOperationException(
                 "the opening screen does not read \"cash on hand 6,000\" — the golden path's own " +
                 "starting point is wrong, so the later 6,840 would prove nothing");
@@ -902,9 +1016,7 @@ public partial class Game : Control
 
         // The rendered screen, exactly as a person watching would read it — collected the same way
         // the general self-test proves its own transcript, never by reading World or Capabilities.
-        var screenText = new StringBuilder();
-        Collect(this, screenText);
-        string screen = screenText.ToString();
+        string screen = Screen();
 
         GD.Print("== CE-GOLDENPATH-SCREEN-BEGIN ==");
         GD.Print(screen);
@@ -930,7 +1042,7 @@ public partial class Game : Control
     /// <summary>
     /// Milestone 017: the same seed-42 Vincent <c>SecureTribute</c> operation
     /// <see cref="GoldenPathSelfTest"/> plays, but never delegated — Vincent presses "carry on" at the
-    /// exact pause that also offers "have Tommy Nardo take it on" (the fork this milestone is about),
+    /// exact pause that also offers "hand it to Tommy Nardo" (the fork this milestone is about),
     /// then continues personally through escalation. Independently pinned from a live run of the
     /// interactive path, the same way <see cref="SevenChoiceSequence"/> itself was derived, not shared
     /// with it or with the test project's copy of the same fork.
@@ -942,14 +1054,14 @@ public partial class Game : Control
     /// </summary>
     private static readonly string[] DirectActionChoiceSequence =
     {
-        "talk Bellini's grocery round",
+        "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
-        "change tack with Bellini's grocery — threats instead",
-        "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
-        "clean up after it before anyone else does",
+        "switch to threats with Bellini's grocery",
+        "switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
+        "cover it up before anyone finds out",
         "carry on covering it up",
-        "ask Salvatore Greco for room to move",
-        "give Salvatore Greco his account of whether Bellini's grocery is holding back what it owes",
+        "ask Salvatore Greco for permission",
+        "tell Salvatore Greco what you know about whether Bellini's grocery is not paying its tribute",
     };
 
     private static bool DirectActionRequested()
@@ -963,6 +1075,7 @@ public partial class Game : Control
         for (int guard = 0; guard < 2000 && session.Status != SessionStatus.AwaitingChoice; guard++)
         {
             if (!Press("Next event")) throw new InvalidOperationException("no \"Next event\" control is available");
+            AssertNoClaimDrawnTwice();
         }
         if (session.Status != SessionStatus.AwaitingChoice)
             throw new InvalidOperationException("gave up waiting for a decision to appear");
@@ -988,9 +1101,7 @@ public partial class Game : Control
         StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
         var session = _session!;
 
-        var startScreen = new StringBuilder();
-        Collect(this, startScreen);
-        if (!startScreen.ToString().Contains("cash on hand 6,000", StringComparison.Ordinal))
+        if (!Screen().Contains("cash on hand 6,000", StringComparison.Ordinal))
             throw new InvalidOperationException(
                 "the opening screen does not read \"cash on hand 6,000\" — this proof's own starting " +
                 "point is wrong, so a later change would prove nothing");
@@ -1015,7 +1126,7 @@ public partial class Game : Control
         // and click a button by its rendered text, so the check inspects exactly what a person looking
         // at the screen would see.
         bool carryOnRendered = FindButton(this, "carry on getting Bellini's grocery to pay") is not null;
-        bool delegateRendered = FindButton(this, "have Tommy Nardo take it on") is not null;
+        bool delegateRendered = FindButton(this, "hand it to Tommy Nardo") is not null;
         if (!carryOnRendered || !delegateRendered)
             throw new InvalidOperationException(
                 "the fork pause does not render both continuation and delegation as real buttons — " +
@@ -1023,9 +1134,7 @@ public partial class Game : Control
 
         PressChoicesInOrder(session, DirectActionChoiceSequence.Skip(1).ToList(), "CE-DIRECTACTION");
 
-        var screenText = new StringBuilder();
-        Collect(this, screenText);
-        string screen = screenText.ToString();
+        string screen = Screen();
 
         GD.Print("== CE-DIRECTACTION-SCREEN-BEGIN ==");
         GD.Print(screen);
@@ -1037,10 +1146,11 @@ public partial class Game : Control
         bool proceeds = screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
 
         // Execution responsibility is exactly what diverged: Vincent himself put hands on the target
-        // and knows it as his own act ("he had a hand in it himself"), never Tommy — the opposite of
-        // the accepted delegated trace, where Tommy is the one named and Vincent only came across it.
-        bool executedPersonally = screen.Contains("Vincent Russo put hands on Bellini's grocery", StringComparison.Ordinal);
-        bool noTommyExecution = !screen.Contains("Tommy Nardo put hands on Bellini's grocery", StringComparison.Ordinal);
+        // and knows it as his own act — in the second person, since he is the man playing — never
+        // Tommy, the opposite of the accepted delegated trace, where Tommy is the one named and
+        // Vincent only came across it.
+        bool executedPersonally = screen.Contains("you got violent at Bellini's grocery", StringComparison.Ordinal);
+        bool noTommyExecution = !screen.Contains("Tommy Nardo got violent at Bellini's grocery", StringComparison.Ordinal);
 
         if (proceeds && executedPersonally && noTommyExecution)
         {
@@ -1081,8 +1191,10 @@ public partial class Game : Control
     ///
     /// Vincent's answer is not staged: observed directly, before this method was written, to arrive
     /// naturally within a few days through the ordinary report channel, and to contradict what
-    /// Salvatore already held from "the books" — so this proof also exercises a live disagreement
-    /// resolving with attribution, not merely a belief appearing.
+    /// Salvatore already held from the books — so this proof also exercises a live disagreement
+    /// resolving with attribution, not merely a belief appearing. Since milestone 025 the differing
+    /// account is drawn beneath the belief it disputes rather than as a second entry, and that is
+    /// what the final assertion reads.
     /// </summary>
     private void CorroborationSelfTest()
     {
@@ -1092,15 +1204,14 @@ public partial class Game : Control
         var session = _session!;
 
         const string ask =
-            "ask Vincent Russo for his own account of whether Bellini's grocery is holding back what it owes";
+            "ask Vincent Russo what he knows about whether Bellini's grocery is not paying its tribute";
+        const string claim = "Bellini's grocery is not paying its tribute";
 
         AdvanceToPause(session);
         if (!Press(ask))
             throw new InvalidOperationException($"the natural run never offers \"{ask}\" to Salvatore");
 
-        var afterAsk = new StringBuilder();
-        Collect(this, afterAsk);
-        string afterAskText = afterAsk.ToString();
+        string afterAskText = Screen();
 
         GD.Print("== CE-CORROBORATION-AFTER-ASK-BEGIN ==");
         GD.Print(afterAskText);
@@ -1108,9 +1219,7 @@ public partial class Game : Control
 
         bool acknowledged = afterAskText.Contains("chose to ask Vincent Russo", StringComparison.Ordinal);
         bool unresolved =
-            afterAskText.Contains(
-                "asked Vincent Russo for his own account of whether Bellini's grocery is holding back what it owes",
-                StringComparison.Ordinal)
+            afterAskText.Contains($"asked Vincent Russo what he knows about whether {claim}", StringComparison.Ordinal)
             && afterAskText.Contains("no answer yet", StringComparison.Ordinal);
 
         if (!acknowledged || !unresolved)
@@ -1128,9 +1237,7 @@ public partial class Game : Control
         string finalText = afterAskText;
         for (int guard = 0; guard < 100; guard++)
         {
-            var current = new StringBuilder();
-            Collect(this, current);
-            finalText = current.ToString();
+            finalText = Screen();
             if (!finalText.Contains("no answer yet", StringComparison.Ordinal)) break;
             if (!Press("Next event")) break;
         }
@@ -1140,9 +1247,12 @@ public partial class Game : Control
         GD.Print("== CE-CORROBORATION-FINAL-END ==");
 
         bool resolved = !finalText.Contains("no answer yet", StringComparison.Ordinal);
-        bool attributedToVincent =
-            finalText.Contains("Accounts differ on whether Bellini's grocery is holding back", StringComparison.Ordinal)
-            && finalText.Contains("Vincent Russo", StringComparison.Ordinal);
+
+        // Vincent's differing account is attributed to him by name, on the line beneath the claim
+        // it disputes — the same fact the old "Accounts differ on whether…" block carried.
+        int claimAt = finalText.IndexOf(claim, StringComparison.Ordinal);
+        int accountAt = finalText.IndexOf("Vincent Russo says otherwise", StringComparison.Ordinal);
+        bool attributedToVincent = claimAt >= 0 && accountAt > claimAt;
 
         if (resolved && attributedToVincent)
         {
@@ -1188,16 +1298,14 @@ public partial class Game : Control
 
         AdvanceToPause(session);
 
-        var beforeChoice = new StringBuilder();
-        Collect(this, beforeChoice);
-        string beforeChoiceText = beforeChoice.ToString();
+        string beforeChoiceText = Screen();
 
         GD.Print("== CE-TRIBUTE-BEFORE-BEGIN ==");
         GD.Print(beforeChoiceText);
         GD.Print("== CE-TRIBUTE-BEFORE-END ==");
 
         bool namesTheDemander =
-            beforeChoiceText.Contains("Vincent Russo is demanding tribute from him", StringComparison.Ordinal);
+            beforeChoiceText.Contains("Vincent Russo is demanding tribute from you", StringComparison.Ordinal);
         if (!namesTheDemander)
         {
             GD.PrintErr("CE-TRIBUTE FAILED — the panel does not name the demander before Marco chooses");
@@ -1208,9 +1316,7 @@ public partial class Game : Control
         if (!Press("refuse Vincent Russo"))
             throw new InvalidOperationException("could not press \"refuse Vincent Russo\"");
 
-        var afterChoice = new StringBuilder();
-        Collect(this, afterChoice);
-        string afterChoiceText = afterChoice.ToString();
+        string afterChoiceText = Screen();
 
         GD.Print("== CE-TRIBUTE-AFTER-BEGIN ==");
         GD.Print(afterChoiceText);
@@ -1218,7 +1324,7 @@ public partial class Game : Control
 
         bool acknowledged = afterChoiceText.Contains("chose to refuse Vincent Russo", StringComparison.Ordinal);
         bool businessStatusShown =
-            afterChoiceText.Contains("Bellini's grocery: not currently paying", StringComparison.Ordinal);
+            afterChoiceText.Contains("Bellini's grocery, is not paying at the moment", StringComparison.Ordinal);
         bool noInventedRetaliation = !afterChoiceText.Contains("harder", StringComparison.Ordinal);
 
         if (acknowledged && businessStatusShown && noInventedRetaliation)
@@ -1270,9 +1376,7 @@ public partial class Game : Control
         StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
         var session = _session!;
 
-        var startScreen = new StringBuilder();
-        Collect(this, startScreen);
-        if (!startScreen.ToString().Contains("cash on hand 6,000", StringComparison.Ordinal))
+        if (!Screen().Contains("cash on hand 6,000", StringComparison.Ordinal))
             throw new InvalidOperationException("the opening screen does not read \"cash on hand 6,000\"");
 
         PressChoicesInOrder(session, SevenChoiceSequence.Take(3).ToArray(), "CE-RESTART-SAVE");
@@ -1344,9 +1448,7 @@ public partial class Game : Control
                 throw new InvalidOperationException(
                     $"an unaddressed decision followed the seventh choice, on {session.Date:yyyy-MM-dd}");
 
-            var screenText = new StringBuilder();
-            Collect(this, screenText);
-            string screen = screenText.ToString();
+            string screen = Screen();
 
             GD.Print("== CE-RESTART-LOAD-SCREEN-BEGIN ==");
             GD.Print(screen);
@@ -1424,6 +1526,47 @@ public partial class Game : Control
     private static bool SelfTestRequested()
         => OS.GetCmdlineArgs().Contains(SelfTestFlag) || OS.GetCmdlineUserArgs().Contains(SelfTestFlag);
 
+    /// <summary>
+    /// The live screen as text, checked for a claim drawn twice on the way. Every self-test reads the
+    /// interface through this, so the guard runs on every screen any of them looks at.
+    /// </summary>
+    private string Screen()
+    {
+        AssertNoClaimDrawnTwice();
+        var sb = new StringBuilder();
+        Collect(this, sb);
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Milestone 025's one real regression guard: no claim is presented as an entry of its own twice
+    /// on one screen. Walks the live node tree for labels stamped by <see cref="ClaimEntry"/> and
+    /// throws on a repeat. Mutation-checked by re-adding a second rendering of the belief list, which
+    /// fails every self-test at the first screen with a belief on it.
+    ///
+    /// The limit, stated: a second rendering that bypassed <see cref="ClaimEntry"/> would not be
+    /// stamped and would escape. <see cref="BeliefEntry"/> is the only thing that accepts a
+    /// <see cref="PlayerBelief"/>, so writing such a bypass means writing a second belief-drawing
+    /// path, which is the thing prohibited.
+    /// </summary>
+    private void AssertNoClaimDrawnTwice()
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string claim in ClaimsDrawn(this))
+            if (!seen.Add(claim))
+                throw new InvalidOperationException($"the claim {claim} is drawn twice on one screen");
+    }
+
+    private static IEnumerable<string> ClaimsDrawn(Node node)
+    {
+        if (node is Label label && label.HasMeta(ClaimMeta))
+            yield return label.GetMeta(ClaimMeta).AsString();
+
+        foreach (var child in node.GetChildren())
+            foreach (string claim in ClaimsDrawn(child))
+                yield return claim;
+    }
+
     private static void Collect(Node node, StringBuilder into)
     {
         switch (node)
@@ -1443,13 +1586,39 @@ public partial class Game : Control
             Collect(child, into);
     }
 
+    private static string Capital(string s) => char.ToUpperInvariant(s[0]) + s[1..];
+
     // ================================================================= plain widgets
 
-    private static Label Heading(string text) => new()
+    /// <summary>The screen's title, and the date on the strip: larger, never wrapped, never expanding.</summary>
+    private static Label Title(string text)
+    {
+        var label = new Label { Text = text };
+        label.AddThemeFontSizeOverride("font_size", 22);
+        return label;
+    }
+
+    /// <summary>A panel heading: a little larger than body text, so the eye finds the panel first.</summary>
+    private static Label Heading(string text)
+    {
+        var label = new Label { Text = text, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        label.AddThemeFontSizeOverride("font_size", 17);
+        return label;
+    }
+
+    /// <summary>A short fact on the strip. Takes its own width and no more — see <see cref="BuildToolbar"/>.</summary>
+    private static Label Chip(string text) => new()
     {
         Text = text,
-        AutowrapMode = TextServer.AutowrapMode.WordSmart,
+        SizeFlagsVertical = SizeFlags.ShrinkCenter,
     };
+
+    private static Label FaintChip(string text)
+    {
+        var label = Chip(text);
+        label.Modulate = new Color(1, 1, 1, 0.72f);
+        return label;
+    }
 
     private static Label Plain(string text) => new()
     {
@@ -1465,28 +1634,45 @@ public partial class Game : Control
         return label;
     }
 
-    private static Control Column(string title, IEnumerable<Control> rows)
+    /// <summary>
+    /// A boxed panel with a heading and a scrolling body. <paramref name="weight"/> is its share of
+    /// the row's width relative to its neighbours.
+    /// </summary>
+    private static Control Panel(string title, IEnumerable<Control> rows, float weight)
     {
-        var box = new VBoxContainer
+        var panel = new PanelContainer
         {
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ExpandFill,
+            SizeFlagsStretchRatio = weight,
         };
 
+        var margin = new MarginContainer();
+        foreach (string side in new[] { "margin_left", "margin_right", "margin_top", "margin_bottom" })
+            margin.AddThemeConstantOverride(side, 10);
+        panel.AddChild(margin);
+
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 6);
+        margin.AddChild(box);
+
         box.AddChild(Heading(title));
+        box.AddChild(new HSeparator());
 
         var scroll = new ScrollContainer
         {
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ExpandFill,
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
         };
         box.AddChild(scroll);
 
         var inner = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        inner.AddThemeConstantOverride("separation", 4);
         scroll.AddChild(inner);
 
         foreach (var row in rows) inner.AddChild(row);
-        return box;
+        return panel;
     }
 
     /// <summary>

@@ -487,7 +487,7 @@ public sealed class PlayerSessionTests
             var snap = session.Snapshot();
             surface.AppendLine(Flatten(snap));
             surface.AppendLine(IntelligenceWriter.Render(snap));
-            claimsShown.AddRange(snap.Known.Concat(snap.Recent).Concat(snap.Unsettled).Select(b => b.Claim));
+            claimsShown.AddRange(snap.Known.Concat(snap.Unsettled).Select(b => b.Claim));
             claimsShown.AddRange(snap.Disagreements.Select(d => d.Claim));
 
             if (session.Pending is { } pending) surface.AppendLine(Flatten(pending));
@@ -700,10 +700,10 @@ public sealed class PlayerSessionTests
     /// so no scheduler's wording crosses the boundary either way.
     /// </summary>
     [Theory]
-    [InlineData("asked-to-account", "somebody has put a question to him")]
+    [InlineData("asked-to-account", "somebody has asked him a question")]
     [InlineData("reported-to", "somebody has reported to him")]
-    [InlineData("permission-sought", "somebody has asked him for room to move")]
-    [InlineData(null, "he came back round to his own patch")]
+    [InlineData("permission-sought", "somebody has asked him for permission")]
+    [InlineData(null, "he is checking on his own patch")]
     public void A_role_review_somebody_caused_says_which_act_it_was(string? note, string expected)
         => Assert.Equal(expected, PlayerOccasion.For(Wake(EventKind.RoleReview, note), BareActor(), id => id));
 
@@ -786,7 +786,6 @@ public sealed class PlayerSessionTests
             => who.Cognition.Records.Any(r => r.IsHeld && shown.Matches(r.Claim));
 
         foreach (var b in snapshot.Known) Assert.True(HeHolds(b.Claim));
-        foreach (var b in snapshot.Recent) Assert.True(HeHolds(b.Claim));
         foreach (var b in snapshot.Unsettled) Assert.True(HeHolds(b.Claim));
 
         foreach (var a in snapshot.Attitudes) Assert.Contains(a.PersonId, known);
@@ -1445,11 +1444,11 @@ public sealed class PlayerSessionTests
 
     private static IEnumerable<string> Phrases(PlayerSnapshot s)
     {
-        foreach (var b in s.Known.Concat(s.Recent).Concat(s.Unsettled))
+        foreach (var b in s.Known.Concat(s.Unsettled))
         {
             yield return b.Statement;
-            yield return b.Confidence;
-            yield return b.Attribution;
+            if (b.Certainty is { } c) yield return c;
+            if (b.Attribution is { } a) yield return a;
         }
 
         foreach (var d in s.Disagreements)
@@ -1476,7 +1475,6 @@ public sealed class PlayerSessionTests
             yield return r.AskedName;
             yield return r.Statement;
         }
-        foreach (var m in s.RecentTrustMovements) yield return m.PersonName;
     }
 
     private static string Flatten(PlayerSnapshot s)

@@ -54,16 +54,16 @@ public sealed class PlayerOwnedOperationTests
     // money arrives.
     private static readonly string[] SevenChoiceSequence =
     {
-        "talk Bellini's grocery round",
+        "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
-        "have Tommy Nardo take it on",
-        "change tack with Bellini's grocery — threats instead",
-        "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
+        "hand it to Tommy Nardo",
+        "switch to threats with Bellini's grocery",
+        "switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
         "carry on getting Bellini's grocery to pay",
-        "report to Salvatore Greco, leaving out his own part",
+        "report to Salvatore Greco, leaving out your own part",
     };
 
-    private const string LetItLie = "let it lie";
+    private const string LetItLie = "take no action";
 
     // ================================================================= natural run
 
@@ -458,11 +458,11 @@ public sealed class PlayerOwnedOperationTests
 
     private static IEnumerable<string> Phrases(PlayerSnapshot s)
     {
-        foreach (var b in s.Known.Concat(s.Recent).Concat(s.Unsettled))
+        foreach (var b in s.Known.Concat(s.Unsettled))
         {
             yield return b.Statement;
-            yield return b.Confidence;
-            yield return b.Attribution;
+            if (b.Certainty is { } c) yield return c;
+            if (b.Attribution is { } a) yield return a;
         }
 
         foreach (var d in s.Disagreements)

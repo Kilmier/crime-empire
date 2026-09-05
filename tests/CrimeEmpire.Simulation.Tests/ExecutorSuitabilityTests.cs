@@ -77,10 +77,10 @@ public sealed class ExecutorSuitabilityTests
 
     // Independently pinned, matching DirectActionVsDelegationTests' own copy, per this project's
     // practice of not sharing the same constant across files that check the same assumption.
-    private const string StartPersuade = "talk Bellini's grocery round";
+    private const string StartPersuade = "persuade Bellini's grocery to pay";
     private const string CarryOn = "carry on getting Bellini's grocery to pay";
-    private const string DelegateToTommy = "have Tommy Nardo take it on";
-    private const string DelegateToAngelo = "have Angelo Conti take it on";
+    private const string DelegateToTommy = "hand it to Tommy Nardo";
+    private const string DelegateToAngelo = "hand it to Angelo Conti";
 
     // ================================================================= natural + eligibility
 
@@ -1158,11 +1158,11 @@ public sealed class ExecutorSuitabilityTests
 
     private static IEnumerable<string> Phrases(PlayerSnapshot s)
     {
-        foreach (var b in s.Known.Concat(s.Recent).Concat(s.Unsettled))
+        foreach (var b in s.Known.Concat(s.Unsettled))
         {
             yield return b.Statement;
-            yield return b.Confidence;
-            yield return b.Attribution;
+            if (b.Certainty is { } c) yield return c;
+            if (b.Attribution is { } a) yield return a;
         }
 
         foreach (var d in s.Disagreements)

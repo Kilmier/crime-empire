@@ -320,13 +320,13 @@ public sealed class InformationTransmissionTests
         string view = IntelligenceWriter.Render(world, "vincent");
         Assert.Contains("ACCOUNTS THAT DO NOT AGREE", view, StringComparison.Ordinal);
 
-        // The "contradicted" label replaces a confidence label, so it can only appear against a
+        // The "disputed" label replaces a certainty phrase, so it can only appear against a
         // claim he still holds. Here he has come to *reject* the contested claim, which puts it in
         // the disagreements section and out of what he has — so the word is legitimately absent.
         // Asserting it unconditionally, as this test did while it read the boss, passes or fails on
         // which side of the argument the viewpoint character happened to end up on.
         bool holdsAContestedClaim = contested.Any(c => contradicted.Cognition.Find(c) is { IsHeld: true });
-        Assert.Equal(holdsAContestedClaim, view.Contains("contradicted", StringComparison.Ordinal));
+        Assert.Equal(holdsAContestedClaim, view.Contains("disputed", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -534,8 +534,7 @@ public sealed class InformationTransmissionTests
         Assert.Equal(SourceKind.Participant, ownBreach!.SourceKind);
 
         string view = IntelligenceWriter.Render(world, "vincent");
-        string wording = IntelligenceWriter.Describe(ownBreach.Claim, id =>
-            world.Find(id)?.Name ?? world.Businesses.GetValueOrDefault(id)?.Name ?? id);
+        string wording = IntelligenceWriter.Describe(ownBreach.Claim, CrimeSim.Session.PlayerView.NameIn(world));
 
         Assert.Contains(wording, view, StringComparison.Ordinal);
 

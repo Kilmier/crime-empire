@@ -41,16 +41,16 @@ public sealed class PersistenceTests
     // shared code, so the three cannot all be wrong about the same assumption together.
     private static readonly string[] SevenChoiceSequence =
     {
-        "talk Bellini's grocery round",
+        "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
-        "have Tommy Nardo take it on",
-        "change tack with Bellini's grocery — threats instead",
-        "change tack with Bellini's grocery — force instead — against the standing rule \"no-violence-harbour\"",
+        "hand it to Tommy Nardo",
+        "switch to threats with Bellini's grocery",
+        "switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
         "carry on getting Bellini's grocery to pay",
-        "report to Salvatore Greco, leaving out his own part",
+        "report to Salvatore Greco, leaving out your own part",
     };
 
-    private const string LetItLie = "let it lie";
+    private const string LetItLie = "take no action";
 
     // ================================================================= exact internal identity (ruling 7)
 

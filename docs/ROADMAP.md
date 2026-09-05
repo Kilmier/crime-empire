@@ -296,14 +296,21 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   before implementation and reset out of it by the archive-and-close commit, they survive only in the
   archive that reproduces them. Milestone 006 lost its set this way and milestone 007 nearly repeated
   it. Fixing it means changing `AGENTS.md`, which is Matt's call and has not been made.
-- **Playtest-discovered presentation debt, surfaced but explicitly deferred by milestone 018.** The
-  five-column layout (a fourth added for causal feedback, on top of the original four) has not been
-  redesigned or rebalanced now that it carries more; the vertically-wrapped date and oversized toolbar
-  controls remain; "he takes him as he finds him" and the rest of `PlayerNarration`'s prose have not
-  had a general rewrite; and "You control" / "You see through" remain two separate start-screen
-  fields rather than one normal-mode "Play as" selector. None of this was implemented — milestone 018
-  was explicitly scoped not to — but it was surfaced by actually building and playing the new columns,
-  so it is recorded here rather than silently dropped.
+- ~~**Playtest-discovered presentation debt, surfaced but explicitly deferred by milestone 018.**~~
+  **Largely retired 2026-09-05 by milestone 025** (`docs/milestones/025-the-interface-stops-fighting-the-player.md`).
+  Fixed: the five-column layout is four weighted panels, and two of the old five turned out to be
+  copies (`LATELY` a re-sort of `WHAT HE KNOWS`, `RECENTLY` a less informative reading of the roster
+  history) and were removed with their projections; the wrapped date and the ten-child toolbar are a
+  two-row strip in which only the spacer expands; "You control" / "You see through" is one "Play as"
+  field with the divergent viewpoint behind a developer toggle; and `PlayerNarration`'s prose, the
+  option wording and the occasion wording were rewritten into plain English, in the second person when
+  the viewpoint is the character being played. **Still out:** a history of finished operations (026);
+  the console `--viewpoint` render still shows thin or disputed beliefs a second time under "WHAT HE
+  CANNOT SETTLE", which the Godot screen no longer does; the report attribution for a non-person
+  source is written for the one such source that exists ("the books say so") and would misconjugate a
+  singular one; `Sim/World.cs`'s doc comment on `PerceivedConflict`/`PerceivedAgreement` still cites
+  the removed `PlayerRelationshipMovement`, left because 025 was forbidden to touch `Sim/`; and no art,
+  theme, map or animation, which the sequencing in `DESIGN_DECISIONS.md` §Stack has not retired.
 - ~~**Controlling a character and immediately auto-resolving is not guaranteed to reproduce the same
   choice a fully autonomous run of the identical character would make.**~~ **Retired 2026-08-26 by
   milestone 019, which could not reproduce it.** This entry's own citation —
@@ -532,10 +539,12 @@ without it is the thing he had already said is not enough.
 came back. Today the player sees a decision prompt at a pause and nothing between pauses, so a
 delegated operation is invisible for its whole life.
 
-**025 — The interface stops fighting the player.** *Additive.* Milestone 018's recorded presentation
-debt: the five-column layout never rebalanced after a fourth column was added, the vertically-wrapped
-date, the oversized toolbar, `PlayerNarration`'s prose, and "You control" / "You see through" as one
-selector.
+**025 — The interface stops fighting the player.** *Additive.* **Built 2026-09-05, unreviewed.**
+Milestone 018's recorded presentation debt, cleared by subtraction: two of the five columns were
+copies and went, with their projections; the rest was rebalanced, the toolbar split, "Play as" made one
+field, and — widened by Matt mid-milestone, reversing his own ruling 3 — every player-facing phrase
+rewritten into plain English and put in the second person for the character being played. See the
+archive.
 
 **026 — The session has an ending.** *Interlocking (new terminal state).* Designed here, and built as
 far as a stated win/lose condition and a clock, even though what makes it dramatic arrives in layer 3.

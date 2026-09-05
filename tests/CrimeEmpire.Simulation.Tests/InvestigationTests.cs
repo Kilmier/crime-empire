@@ -381,7 +381,7 @@ public sealed class InvestigationTests
 
         Assert.Contains(offered, o =>
             o.Contains("ask Tommy Nardo", StringComparison.Ordinal)
-            && o.Contains("put hands on", StringComparison.Ordinal));
+            && o.Contains("got violent at", StringComparison.Ordinal));
     }
 
     // ================================================================ delegated investigation

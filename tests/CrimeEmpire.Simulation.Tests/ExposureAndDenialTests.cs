@@ -442,7 +442,7 @@ public sealed class ExposureAndDenialTests
         {
             var snapshot = PlayerView.Build(world, viewpoint.Id, world.Now);
 
-            foreach (var belief in snapshot.Known.Concat(snapshot.Recent).Concat(snapshot.Unsettled))
+            foreach (var belief in snapshot.Known.Concat(snapshot.Unsettled))
             {
                 shown++;
                 Assert.True(

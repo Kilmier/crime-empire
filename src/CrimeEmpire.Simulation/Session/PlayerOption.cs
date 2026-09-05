@@ -32,40 +32,50 @@ using CrimeSim.Domain;
 /// </summary>
 internal static class PlayerOption
 {
+    /// <summary>
+    /// <paramref name="selfId"/> is the actor's own id, so a claim in the wording that is about him
+    /// reads "you" in the second person — see
+    /// <see cref="PlayerNarration.Describe(Claim, Func{string, string}, string?, Pronouns?)"/>.
+    /// Null keeps every name.
+    /// </summary>
     internal static string Describe(
-        Candidate c, Func<string, string> name, Pronouns self, Func<string, Pronouns> pronouns)
+        Candidate c, Func<string, string> name, Pronouns self, Func<string, Pronouns> pronouns,
+        string? selfId = null)
     {
-        string text = Body(c, name, self, pronouns);
+        string text = Body(c, name, self, pronouns, selfId);
 
         // A rule he knows about, being stepped over. Admissible because BreachesPolicyId is only ever
         // populated from policies the character actually holds — Generators.Coercive reads
-        // ctx.KnownPolicies, and an unknown rule deters nobody.
+        // ctx.KnownPolicies, and an unknown rule deters nobody. name() resolves the policy id to the
+        // rule's own description (milestone 025); the id itself is developer text.
         return c.BreachesPolicyId is { } policy
-            ? $"{text} — against the standing rule \"{policy}\""
+            ? $"{text} — breaking the rule: {name(policy)}"
             : text;
     }
 
     private static string Body(
-        Candidate c, Func<string, string> name, Pronouns self, Func<string, Pronouns> pronouns) => c.Kind switch
+        Candidate c, Func<string, string> name, Pronouns self, Func<string, Pronouns> pronouns,
+        string? selfId) => c.Kind switch
     {
         ActionKind.ContinueStrategy => $"carry on {Work(c, name, self)}",
         ActionKind.AlterStrategy when c.Method is { } m && c.TargetId is { } t =>
-            $"change tack with {name(t)} — {Verb(m)} instead",
-        ActionKind.AlterStrategy => "change tack",
-        ActionKind.DelegateStrategy when c.TargetId is { } sub => $"have {name(sub)} take it on",
+            $"switch to {Verb(m)} with {name(t)}",
+        ActionKind.AlterStrategy => "change approach",
+        ActionKind.DelegateStrategy when c.TargetId is { } sub => $"hand it to {name(sub)}",
         ActionKind.DelegateStrategy => "hand it to somebody",
         ActionKind.PostponeStrategy => "leave it for now",
         ActionKind.AbandonStrategy => $"drop {Work(c, name, self)}",
         ActionKind.StartStrategy => Start(c, name),
-        ActionKind.ReportToSuperior => Speak(c, name, self),
-        ActionKind.SeekApproval when c.TargetId is { } boss => $"ask {name(boss)} for room to move",
-        ActionKind.SeekApproval => "ask for room to move",
+        ActionKind.ReportToSuperior => Speak(c, name, self, selfId),
+        ActionKind.SeekApproval when c.TargetId is { } boss => $"ask {name(boss)} for permission",
+        ActionKind.SeekApproval => "ask for permission",
         ActionKind.SeekCorroboration when c.TargetId is { } other =>
             c.AboutClaim is { } about
-                ? $"ask {name(other)} for {pronouns(other).Possessive} own account of whether " +
-                  $"{PlayerNarration.Describe(about, name)}"
-                : $"ask {name(other)} for {pronouns(other).Possessive} own account",
-        ActionKind.SeekCorroboration => "get somebody else's account",
+                ? $"ask {name(other)} what {pronouns(other).Subject} " +
+                  $"{pronouns(other).Verb("knows", "know")} about whether " +
+                  $"{PlayerNarration.Describe(about, name, selfId, self)}"
+                : $"ask {name(other)} what {pronouns(other).Subject} {pronouns(other).Verb("knows", "know")}",
+        ActionKind.SeekCorroboration => "ask somebody what they know",
         ActionKind.RequestHelp when c.TargetId is { } helper => $"ask {name(helper)} for help",
         ActionKind.RequestHelp => "ask for help",
         ActionKind.Retaliate when c.TargetId is { } enemy => $"move against {name(enemy)}",
@@ -74,7 +84,10 @@ internal static class PlayerOption
         ActionKind.Concede => "pay what is being asked",
         ActionKind.Refuse when c.TargetId is { } asker => $"refuse {name(asker)}",
         ActionKind.Refuse => "refuse",
-        _ => "let it lie",
+        // Not "do nothing": the floor candidate's id is the word "nothing", and a test guards that
+        // no candidate id ever reaches the player's text — a guard worth keeping even when the id
+        // happens to be a plain word.
+        _ => "take no action",
     };
 
     private static string Work(Candidate c, Func<string, string> name, Pronouns self)
@@ -104,11 +117,11 @@ internal static class PlayerOption
     {
         StrategyKind.SecureTribute when c.TargetId is { } t && c.Method is { } m => m switch
         {
-            CoercionMethod.Persuade => $"talk {name(t)} round",
-            CoercionMethod.Threaten => $"lean on {name(t)}",
-            _ => $"strong-arm {name(t)}",
+            CoercionMethod.Persuade => $"persuade {name(t)} to pay",
+            CoercionMethod.Threaten => $"threaten {name(t)}",
+            _ => $"use force on {name(t)}",
         },
-        StrategyKind.ConcealIncident => "clean up after it before anyone else does",
+        StrategyKind.ConcealIncident => "cover it up before anyone finds out",
         StrategyKind.InvestigateIncident when c.TargetId is { } t => $"open an investigation at {name(t)}",
         StrategyKind.InvestigateIncident => "open an investigation",
         _ => "set something in motion",
@@ -121,19 +134,19 @@ internal static class PlayerOption
     /// property of it. What the claim is about goes through the narrator, so a claim's counter never
     /// appears; a report with no particular subject is a general account and says so.
     /// </summary>
-    private static string Speak(Candidate c, Func<string, string> name, Pronouns self)
+    private static string Speak(Candidate c, Func<string, string> name, Pronouns self, string? selfId)
     {
         string who = c.TargetId is { } t ? name(t) : $"{self.Possessive} superior";
 
         if (c.AnsweringClaim is { } question)
         {
-            string subject = PlayerNarration.Describe(question, name);
+            string subject = PlayerNarration.Describe(question, name, selfId, self);
             return c.Candor switch
             {
                 ReportCandor.Partial =>
                     $"tell {who} about whether {subject}, leaving out {self.Possessive} own part",
-                ReportCandor.False => $"tell {who} that it is not so, about whether {subject}",
-                _ => $"give {who} {self.Possessive} account of whether {subject}",
+                ReportCandor.False => $"tell {who} it is not true that {subject}",
+                _ => $"tell {who} what {self.Subject} {self.Verb("knows", "know")} about whether {subject}",
             };
         }
 

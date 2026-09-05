@@ -95,6 +95,25 @@ public static class PlayerNarration
     }
 
     /// <summary>
+    /// The claim denied, as a sentence — what a man says when he lies about it. Only the two kinds a
+    /// man can be asked about himself have a shape of their own; anything else falls back to "it is
+    /// not true that…", which is always grammatical and never wrong.
+    /// </summary>
+    public static string Deny(Claim c, Func<string, string> name, string? selfId, Pronouns? self)
+    {
+        bool second = self is not null && selfId is not null && PlayerView.IsSecondPerson(self);
+        string subject = second && c.Subject == selfId ? self!.Subject : name(c.Subject);
+        string obj = second && c.Object == selfId ? self!.Object : name(c.Object);
+
+        return c.Kind switch
+        {
+            ClaimKind.PersonUsedViolence => $"{subject} did not get violent at {obj}",
+            ClaimKind.PersonBreachedPolicy => $"{subject} did not break the rule: {name(c.Object)}",
+            _ => $"it is not true that {Describe(c, name, selfId, self)}",
+        };
+    }
+
+    /// <summary>
     /// How far he would go on this person's word, in words.
     ///
     /// Qualitative for the same reason confidence is: the number is hidden state, and a percentage
@@ -183,12 +202,15 @@ public static class PlayerNarration
             ? $"{self.Subject} {self.Verb("has", "have")} not properly started yet"
             : $"{self.Subject} {self.Verb("has", "have")} {Past(lastStepDone, self)}";
 
+        // A failed attempt is the target holding out — `Strategies.Blocked` records it as
+        // "tribute-refused" — so it is said as a refusal. "Went nowhere" read as if nothing had
+        // happened at all; Matt's playtest finding.
         return failedAttempts switch
         {
             0 => where,
-            1 => $"{where}, and once it went nowhere",
-            2 => $"{where}, and twice it went nowhere",
-            _ => $"{where}, and it keeps going nowhere",
+            1 => $"{where}, and been refused once",
+            2 => $"{where}, and been refused twice",
+            _ => $"{where}, and been refused again and again",
         };
     }
 

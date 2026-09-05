@@ -369,3 +369,58 @@ read but never moved; save slots, autosave, a save browser, cross-build migratio
 `OPEN_CONCERNS.md` #3: decay, negative trust, whether respect and resentment are separate dimensions,
 whether provenance should weight the social consequence, and whether `GrievanceWeight` should be
 capped.
+
+## Correction, same day — the playtest's first findings
+
+Matt played it on 2026-09-05 and sent back six points with screenshots. Four were wording or
+projection and are corrected here; two are simulation behaviour and are drafted as the next
+milestone's scope in `CURRENT_MILESTONE.md`, awaiting his authorization, with the candidate entry
+in `ROADMAP.md` updated to carry his rulings.
+
+**1. A decision arrived with no context but "restore the harbour tribute".** Everything a player
+wants at that moment is in the `Assignment` record taken at issuance — who gave it, the deadline, what
+he disclosed, the rule he attached — and the focus line showed the objective alone. `PlayerOccasion.Focus`
+now takes a lookup for the assignment and composes the briefing from that record:
+
+```
+on your mind: restore the harbour tribute, for Salvatore Greco, by 1 April. Salvatore Greco told you:
+Bellini's grocery is not paying its tribute. His standing rule: no public violence in the harbour.
+```
+
+Nothing reads the issuer's current mind. Matt's own suggested wording, "Greco is waiting to see how
+you'll handle it", is Salvatore's state and the capo does not have it; "by 1 April" is the deadline he
+was given, so that one is his. The rule is stated once, from the constraint, and the disclosed
+awareness claim that says the same thing is skipped. Without the lookup — every older test — the
+focus is the objective alone, as before.
+
+**4. "You made your demand, and once it went nowhere."** A failed attempt is `Strategies.Blocked`
+recording `tribute-refused`; the shop held out. It now reads "and been refused once", "twice", "again
+and again". What the shopkeeper *said* — "I'm not paying" or "I don't have the money" — is a reason the
+model does not hold, so no words are put in his mouth. The six days it takes to reach the first refusal
+are the operation's own pacing (`StepInterval`, three days a step) and are on Matt's list to come back
+to, not changed here.
+
+**5. The footer** now reads "These are the things that occurred to you and that you could actually
+do. Anything you did not think of is not here."
+
+**6. The three answers could not be told apart.** Read from the generator and `Reporting.Compose`
+rather than guessed: a *partial* answer to a question withholds the one claim the question is about,
+so it is silence on the subject; a *false* answer is a bare denial; and the candid answer, when the
+question is about his own act — the only case deception is offered for — is an admission. They now
+read "admit it to Salvatore Greco: you got violent at Bellini's grocery", "say nothing to Salvatore
+Greco about it either way", and "deny it to Salvatore Greco: tell him you did not get violent at
+Bellini's grocery". "Leaving out your own part" described the mechanism, not the effect, and was a
+mistranslation. `PlayerNarration.Deny` gives the two self-namable claim kinds a denial of their own;
+anything else falls back to "it is not true that…".
+
+**2 and 3 — not here.** "If a character is not informed of something they should just say so" (Tommy,
+asked about the grocery, has no position and is offered nothing to say, so the request sits unanswered
+for the whole run) and "an indication of how characters feel" (a threatened shopkeeper's fear, a lied-to
+man's disbelief) are new channels — communicated replies and readable reactions — and touch `Decision/`
+and `Org/`. Drafted as scope for Matt to authorize; see `CURRENT_MILESTONE.md`.
+
+**Verification.** Build 0/0; **638 tests** (636 + 2, the briefing); all six hashes unmoved — the
+`capable-angelo` values are those milestone 021's correction authorized the same day; `--verify`
+deterministic; both viewpoint runs exit 0; all seven Godot invocations exit 0; the rendered briefing
+read on every pause of the general self-test. Pins re-pointed at the same facts: the Tommy-to-Vincent
+partial and false answers in `CausalFeedbackTests`, the refusal counts in `OperationReadsTests`.

@@ -802,8 +802,8 @@ public partial class Game : Control
         }
 
         yield return Faint(
-            $"Only what occurred to {actor.Object}, and what {actor.Subject} could actually do. " +
-            $"What {actor.Subject} never thought of is not here.");
+            $"These are the things that occurred to {actor.Object} and that {actor.Subject} could " +
+            $"actually do. Anything {actor.Subject} did not think of is not here.");
     }
 
     // ================================================================= self-test

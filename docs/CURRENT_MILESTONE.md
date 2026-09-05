@@ -7,37 +7,83 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Milestone 021's correction — Codex's review of `e65f0cd` — is implemented,
-tested and committed, and is **awaiting Codex re-review**. Milestone 025 is implemented and committed
-and **Matt is playtesting it**. Milestones 021 through 025 are all **unreviewed and unaccepted**;
-021's correction has not been back to Codex either.
+**Nothing is active.** Milestone 025 — The Interface Stops Fighting the Player — is implemented,
+committed, and corrected once from Matt's playtest (same day); he is still playtesting. Milestone
+021's correction is committed and awaiting Codex re-review. Milestones 021 through 025 are all
+**unreviewed and unaccepted**.
 
-**Milestone 021's correction** removed a belief revision from the silent blocked path (nothing had
-reached the man), made every `Cognition.Revise` state its occasion alongside the acquisition source,
-and made `CapabilityBar`'s ladder resolve on read through one shared accessor so the scorer and the
-roster cannot reach different tiers. **`capable-angelo`'s hashes moved, authorized by Matt on
-2026-09-05**: trace `12AF1B71EBBDF51F`, actions `1EDE45C580544105`, 37 decisions; the other five
-variants unmoved. 636 tests; four mutation checks. Full account: the appended correction in
-`docs/milestones/021-capability-is-a-belief-not-a-stat.md`.
-
-**Milestone 025** cleared milestone 018's presentation debt by subtraction: two of the five columns
-were copies and went, with their projections; the rest became four weighted panels under a two-row
-strip; "Play as" is one field; and — widened by Matt mid-milestone, reversing his own ruling 3 —
-every player-facing phrase was rewritten into plain English and put in the second person for the
-character being played. All six hashes unmoved by construction; 623 tests; seven Godot invocations
-green; the duplicate-claim guard mutation-checked. Full account, including the authorization text as
-written: `docs/milestones/025-the-interface-stops-fighting-the-player.md`.
+**Milestone 025** cleared milestone 018's presentation debt by subtraction and, widened by Matt
+mid-milestone, rewrote every player-facing phrase into plain English in the second person. Its
+first correction gave a decision its briefing, reworded the three answers to a question so they can be
+told apart, and said "refused" where the screen said "went nowhere". 638 tests; all six hashes
+unmoved; seven Godot invocations green. Full account: `docs/milestones/025-the-interface-stops-fighting-the-player.md`.
 
 **Everything from `34cd117` onward is unreviewed.** Codex ran out of usage during milestone 020's
-correction chain. `REVIEW_LEDGER.md` calls this *cleared to build on*, not *accepted*. The playtest at
-the end of layer 1 is the review 025 gets.
+correction chain. `REVIEW_LEDGER.md` calls this *cleared to build on*, not *accepted*.
 
-## Next, per the demo arc
+## Proposed next — awaiting Matt's authorization
 
-`ROADMAP.md`'s "The demo arc" — layer 1 finishes with **026 The session has an ending**, and then the
-layer ends in a playtest. Nothing is authorized; scope goes into this file one milestone at a time,
-and what the playtest of 025 finds goes first.
+**Not authorized. Drafted from Matt's playtest rulings of 2026-09-05 so the scope is in one place
+when he decides.** The demo arc says what the playtest of 025 finds goes before 026; this is what it
+found. If authorized it takes the next number and "the session has an ending" moves back one.
 
-**Carried into 026 from 025:** a history of finished operations (`Strategies.Complete` nulls the
-instance, so the "what you are doing" panel goes empty the moment a job finishes); and whatever lines
-still read badly in play — the prose has been rewritten once, by one reader.
+### In person, things come back
+
+Two rulings from play, both about the same gap: the game has channels for reports and rumours and
+none for what happens between two men in a room.
+
+1. **"If a character is not informed of something they should just say so."** Vincent asked Tommy on
+   2 March what he knew about the grocery. Tommy had never been told anything about it, holds no
+   position, and `Generators` offers a man with no position nothing to say — so the request sits as
+   "no answer yet" until June. Correct as silence; wrong as a scene. A man asked in person about
+   something he knows nothing of says so, and the asker learns that he knows nothing.
+2. **"It'd be helpful to get an indication about how characters feel."** You threaten Bellini and see
+   nothing; you lie to Marco's face and see nothing. Fear moves in the model and disbelief is recorded
+   in the model, and neither reaches the man standing there. This is `ROADMAP.md` candidate 7, "The
+   lie has a face", scope-reviewed the same day.
+
+**The rule this has to keep, stated up front because Matt's framing was "too much hidden info".** The
+canon hides other people's minds on purpose: `DESIGN_DECISIONS.md` settles that a conflict is
+perceived, never detected, and that the listener's reaction is his own state. What this milestone adds
+is *channels* — a reply, a face — through which the viewpoint character forms his own belief about
+another man, with a source and a confidence, and which can be wrong. It does not add disclosure. "Marco
+did not look convinced" is Vincent's reading; "Marco does not believe you" would be a leak, and the
+screen will never say it.
+
+**Scope.**
+
+- A *no-position reply*: when the asked man holds nothing on the claim, he answers that he knows
+  nothing of it. Shape to be ruled on — the report vocabulary has affirm and deny and no "don't know";
+  the asker's `Testimony` records affirm and deny only. The request drops out of WAITING TO HEAR BACK
+  and the answer reads "Tommy Nardo says he knows nothing about it (3 Mar)". Actor-neutral: an NPC
+  asker gets the same reply and the same record.
+- A *reaction*: after an account delivered to a man's face, and after a threat made to one, the
+  speaker acquires a belief about how it landed — believed or not, frightened or not — by a keyed RNG
+  draw against the listener's Discretion and the speaker's Investigation (the skill `Runner.Observe`
+  already uses for noticing). Derived from the listener's receipt and relationship, never from
+  `Report.Candor` or `ActualBasis`. Reads under WHAT JUST HAPPENED: "Marco Bellini did not look
+  convinced"; "Marco Bellini looked frightened".
+- The narration for both, in the same milestone.
+
+**Rulings needed before it starts** (from the scope review, plus one from the second ruling):
+
+- (a) Which deliveries are in person. Every report today goes through one `Reporting.Deliver` with
+  no channel field. The reply-to-a-question path and the tribute demand are the two natural cases.
+- (b) The reaction's shape — a new `ClaimKind` about a person's stance, or a memory on the speaker's
+  relationship — and the no-position reply's shape.
+- (c) Whether seeing you were not believed moves the *speaker's* trust. Recommended: no.
+- (d) Whether an NPC reader of the reaction is in scope. Recommended: defer, and say so.
+- (e) Whether fear reads the same way as belief — one reaction channel with two subjects, or two.
+
+**Expected costs, disclosed now.** Every variant's trace hash moves: a new belief prints in the trace,
+and a reply is a new report. `Decision/` and `Org/` are touched. The information boundary tests for
+024's shape apply: two worlds identical but for the listener's state must render differently on a
+clean read and identically on a failed one, and a misread must be demonstrated in the fixture.
+
+**Out.** The operation's pacing (three days a step, six to the first refusal) — Matt: "we can come
+back to that". A history of finished operations — still 026's.
+
+## Carried from 025
+
+The prose has been rewritten once, by one reader, and corrected once from play. What still reads
+badly is the playtest's to find.

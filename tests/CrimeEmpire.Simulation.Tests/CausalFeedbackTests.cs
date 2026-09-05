@@ -233,7 +233,7 @@ public sealed class CausalFeedbackTests
     {
         const string silence = "take no action";
         const string partialWithholding =
-            "tell Vincent Russo about whether you got violent at Bellini's grocery, leaving out your own part";
+            "say nothing to Vincent Russo about it either way";
 
         var silent = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
         silent.Choose(AdvanceToPause(silent).Options.Single(o => o.Description == silence).Id);
@@ -265,7 +265,7 @@ public sealed class CausalFeedbackTests
     [Fact]
     public void A_communicated_denial_is_answered_and_drops_out_like_any_other_answer()
     {
-        const string falseDenial = "tell Vincent Russo it is not true that you got violent at Bellini's grocery";
+        const string falseDenial = "deny it to Vincent Russo: tell him you did not get violent at Bellini's grocery";
 
         var session = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
         var pending = AdvanceToPause(session);
@@ -284,7 +284,7 @@ public sealed class CausalFeedbackTests
     [Fact]
     public void Save_load_correctly_resolves_a_communicated_denial()
     {
-        const string falseDenial = "tell Vincent Russo it is not true that you got violent at Bellini's grocery";
+        const string falseDenial = "deny it to Vincent Russo: tell him you did not get violent at Bellini's grocery";
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-denial-{Guid.NewGuid():N}.db");
         try
         {
@@ -321,7 +321,7 @@ public sealed class CausalFeedbackTests
     public void Save_load_preserves_an_unresolved_request_after_a_private_decline()
     {
         const string partialWithholding =
-            "tell Vincent Russo about whether you got violent at Bellini's grocery, leaving out your own part";
+            "say nothing to Vincent Russo about it either way";
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-pending-{Guid.NewGuid():N}.db");
         try
         {
@@ -359,7 +359,7 @@ public sealed class CausalFeedbackTests
     public void Request_outstanding_status_is_identical_whether_the_asked_persons_choice_was_autonomous_or_player_chosen()
     {
         const string partialWithholding =
-            "tell Vincent Russo about whether you got violent at Bellini's grocery, leaving out your own part";
+            "say nothing to Vincent Russo about it either way";
 
         var autoResolved = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
         AdvanceToPause(autoResolved);

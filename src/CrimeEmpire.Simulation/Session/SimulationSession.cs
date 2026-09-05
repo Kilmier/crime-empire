@@ -284,7 +284,9 @@ public sealed class SimulationSession
                 _prepared = step.Awaiting;
                 // A pause is always the controlled character's own, so the decision is put to the
                 // player in the second person whoever the viewpoint is.
-                _pending = Project(step.Awaiting!, _optionIds, PlayerView.NameIn(_world), PronounsIn(_world), PlayerView.You);
+                _pending = Project(
+                    step.Awaiting!, _optionIds, PlayerView.NameIn(_world), PronounsIn(_world), PlayerView.You,
+                    id => _world.Org.Assignments.FirstOrDefault(a => a.Id == id));
                 Reached(_world.Now);
                 return;
             }
@@ -357,7 +359,8 @@ public sealed class SimulationSession
         IDictionary<string, string> optionIds,
         Func<string, string> name,
         Func<string, Pronouns> pronouns,
-        Pronouns? voice = null)
+        Pronouns? voice = null,
+        Func<long, Org.Assignment?>? assignment = null)
     {
         var self = voice ?? prepared.Actor.Pronouns;
 
@@ -387,7 +390,7 @@ public sealed class SimulationSession
             prepared.Actor.RoleTitle,
             self,
             PlayerOccasion.For(prepared.Trigger, prepared.Actor, name, self),
-            PlayerOccasion.Focus(prepared.Actor, prepared.Agenda, prepared.Trigger, name, self),
+            PlayerOccasion.Focus(prepared.Actor, prepared.Agenda, prepared.Trigger, name, self, assignment, pronouns),
             options);
     }
 

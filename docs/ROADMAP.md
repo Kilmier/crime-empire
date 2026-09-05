@@ -510,6 +510,17 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    not argued; and every variant's trace hash will move, because a new belief prints in the trace,
    so the disclosure is expected rather than a breach.
 
+   **Matt's rulings from the 2026-09-05 playtest**, which widen this: *"if a character is not informed
+   of something they should just say so"* — Tommy, asked about the grocery, holds no position, is
+   offered nothing to say, and the request sits as "no answer yet" for the whole run; and *"there might
+   be too much hidden info in the simulation not shown to the player — it'd be helpful to get an
+   indication about how characters feel"* — a threatened shopkeeper's fear, a lied-to man's disbelief.
+   Both are channels, not disclosures: what the player gets is his own character's reading of a face
+   or a reply, never the other man's numbers. Drafted as the next milestone's scope in
+   `CURRENT_MILESTONE.md`, awaiting authorization. **Parked with it, Matt's "come back to that":** the
+   six days between starting a tribute operation and its first refusal, which is `StepInterval` at
+   three days a step and moves every hash if touched.
+
 ### Deferred instrumentation candidates
 
 These are unnumbered candidates, not a sequence and not authorization. Milestone 013 was deliberately

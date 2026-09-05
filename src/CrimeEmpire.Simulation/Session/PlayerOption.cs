@@ -66,7 +66,7 @@ internal static class PlayerOption
         ActionKind.PostponeStrategy => "leave it for now",
         ActionKind.AbandonStrategy => $"drop {Work(c, name, self)}",
         ActionKind.StartStrategy => Start(c, name),
-        ActionKind.ReportToSuperior => Speak(c, name, self, selfId),
+        ActionKind.ReportToSuperior => Speak(c, name, self, pronouns, selfId),
         ActionKind.SeekApproval when c.TargetId is { } boss => $"ask {name(boss)} for permission",
         ActionKind.SeekApproval => "ask for permission",
         ActionKind.SeekCorroboration when c.TargetId is { } other =>
@@ -134,19 +134,35 @@ internal static class PlayerOption
     /// property of it. What the claim is about goes through the narrator, so a claim's counter never
     /// appears; a report with no particular subject is a general account and says so.
     /// </summary>
-    private static string Speak(Candidate c, Func<string, string> name, Pronouns self, string? selfId)
+    /// <summary>
+    /// What he would say, and how straight he would say it — milestone 025's first correction
+    /// reworded the three answers after Matt could not tell them apart in play.
+    ///
+    /// The partial answer to a question withholds the one claim the question is about, so it is
+    /// silence on the subject, and says so; "leaving out his own part" described the mechanism and
+    /// not the effect. The false answer is a denial and reads as one. And when the question is about
+    /// his own act — the only case the generator offers deception for — the honest answer is an
+    /// admission, and reads as one.
+    /// </summary>
+    private static string Speak(
+        Candidate c, Func<string, string> name, Pronouns self, Func<string, Pronouns> pronouns, string? selfId)
     {
         string who = c.TargetId is { } t ? name(t) : $"{self.Possessive} superior";
+        var whom = c.TargetId is { } id ? pronouns(id) : Pronouns.He;
 
         if (c.AnsweringClaim is { } question)
         {
             string subject = PlayerNarration.Describe(question, name, selfId, self);
+            bool ownAct = selfId is not null && question.Subject == selfId
+                          && question.Kind is ClaimKind.PersonUsedViolence or ClaimKind.PersonBreachedPolicy;
             return c.Candor switch
             {
-                ReportCandor.Partial =>
-                    $"tell {who} about whether {subject}, leaving out {self.Possessive} own part",
-                ReportCandor.False => $"tell {who} it is not true that {subject}",
-                _ => $"tell {who} what {self.Subject} {self.Verb("knows", "know")} about whether {subject}",
+                ReportCandor.Partial => $"say nothing to {who} about it either way",
+                ReportCandor.False =>
+                    $"deny it to {who}: tell {whom.Object} {PlayerNarration.Deny(question, name, selfId, self)}",
+                _ => ownAct
+                    ? $"admit it to {who}: {subject}"
+                    : $"tell {who} what {self.Subject} {self.Verb("knows", "know")} about whether {subject}",
             };
         }
 

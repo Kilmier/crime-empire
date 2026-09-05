@@ -206,6 +206,46 @@ public sealed class PlainLanguageTests
         Assert.False(PlayerView.IsSecondPerson(Pronouns.They));
     }
 
+    // ================================================================= the briefing (first correction)
+
+    /// <summary>
+    /// A decision arrives with the job as it was given, not the objective alone: who wants it, by
+    /// when, what he was told, and the rule he was told to keep. All of it from the record taken at
+    /// issuance — never the issuer's current mind.
+    /// </summary>
+    [Fact]
+    public void A_decision_carries_the_briefing_as_it_was_given()
+    {
+        var session = SimulationSession.Start(Seed, "baseline", "vincent");
+        AdvanceToPause(session);
+
+        string focus = session.Pending!.Focus!;
+        Assert.StartsWith("restore the harbour tribute, for Salvatore Greco, by ", focus);
+        Assert.Contains("Salvatore Greco told you: Bellini's grocery is not paying its tribute.", focus);
+        Assert.Contains("His standing rule: no public violence in the harbour.", focus);
+        // The rule is stated once, from the constraint, not again from the disclosed awareness claim.
+        Assert.Equal(1, focus.Split("no public violence in the harbour").Length - 1);
+        Assert.DoesNotContain("no-violence-harbour", focus, StringComparison.Ordinal);
+    }
+
+    /// <summary>Without the record to hand, the objective alone — the shape every older test pins.</summary>
+    [Fact]
+    public void Without_the_record_the_focus_is_the_objective_alone()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var agenda = new CrimeSim.Decision.Agenda(
+            CrimeSim.Decision.AgendaKind.FulfilAssignment, "restore the harbour tribute", "why", AssignmentId: 1);
+        var wake = new ScheduledEvent
+        {
+            Id = 1, Time = world.Now, Kind = EventKind.AssignmentDelivered, OwnerId = "vincent", Cause = "staged",
+        };
+
+        Assert.Equal("restore the harbour tribute",
+            PlayerOccasion.Focus(world.Get("vincent"), agenda, wake, id => id));
+        Assert.Equal("restore the harbour tribute",
+            PlayerOccasion.Focus(world.Get("vincent"), agenda, wake, id => id, assignment: _ => null));
+    }
+
     // ================================================================= fixtures
 
     private static void AdvanceToPause(SimulationSession session)

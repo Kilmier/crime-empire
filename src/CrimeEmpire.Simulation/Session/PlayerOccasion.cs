@@ -2,6 +2,7 @@ namespace CrimeSim.Session;
 
 using CrimeSim.Decision;
 using CrimeSim.Domain;
+using CrimeSim.Org;
 using CrimeSim.Sim;
 
 /// <summary>
@@ -146,8 +147,13 @@ internal static class PlayerOccasion
     /// The two that do pass their description through are prose a person wrote about him and that he
     /// holds: the objective he was briefed on, and his own standing responsibility.
     /// </summary>
+    /// <param name="assignment">Resolves an assignment id to the record of what was said when it
+    /// was issued — who gave it, what he disclosed, the rule he attached, the deadline. Null keeps
+    /// the objective alone. Milestone 025's first correction, on Matt's playtest finding that a
+    /// decision arrived with no context but "restore the harbour tribute".</param>
     internal static string? Focus(
-        Character actor, Agenda agenda, ScheduledEvent trigger, Func<string, string> name, Pronouns? voice = null)
+        Character actor, Agenda agenda, ScheduledEvent trigger, Func<string, string> name, Pronouns? voice = null,
+        Func<long, Assignment?>? assignment = null, Func<string, Pronouns>? pronouns = null)
     {
         var self = voice ?? actor.Pronouns;
 
@@ -157,8 +163,12 @@ internal static class PlayerOccasion
 
         return agenda.Kind switch
         {
-            // The objective he was handed, in the issuer's words, which he was told.
-            AgendaKind.FulfilAssignment => agenda.Description,
+            // The objective he was handed, in the issuer's words, which he was told — and, when the
+            // record of the briefing is to hand, the rest of what he was told with it.
+            AgendaKind.FulfilAssignment =>
+                agenda.AssignmentId is { } id && assignment?.Invoke(id) is { } given
+                    ? Briefing(given, agenda.Description, actor, name, self, pronouns)
+                    : agenda.Description,
 
             // His own standing duty, in the words the scenario gave it.
             AgendaKind.DischargeResponsibility => agenda.Description,
@@ -174,6 +184,46 @@ internal static class PlayerOccasion
             _ => null,
         };
     }
+
+    /// <summary>
+    /// The job as it was given, from the record taken at issuance: the objective, who wants it and by
+    /// when, what he was told, and the rule he was told to keep.
+    ///
+    /// <b>Everything here was said to him.</b> <see cref="Assignment.Disclosed"/> is the snapshot of
+    /// what the issuer asserted at the time, delivered through <c>Cognition.Receive</c> like any
+    /// account; <see cref="Assignment.Constraints"/> is the rule's own description; the deadline is
+    /// the one he was given. Nothing reads the issuer's current mind — "he is waiting to see how you
+    /// handle it" would be the boss's state, which the capo does not have — and the rule is stated
+    /// from the constraint rather than repeated from the disclosed awareness claim, so it appears
+    /// once.
+    /// </summary>
+    private static string Briefing(
+        Assignment given, string objective, Character actor, Func<string, string> name, Pronouns self,
+        Func<string, Pronouns>? pronouns)
+    {
+        var issuer = pronouns?.Invoke(given.IssuerId) ?? Pronouns.He;
+        string issuerName = name(given.IssuerId);
+
+        var told = given.Disclosed
+            .Where(d => d.Claim.Kind != ClaimKind.PolicyIssued)
+            .Select(d => d.AssertedStance is Stance.Suspects or Stance.Doubts
+                ? $"{issuer.Subject} {issuer.Verb("suspects", "suspect")} {PlayerNarration.Describe(d.Claim, name, actor.Id, self)}"
+                : PlayerNarration.Describe(d.Claim, name, actor.Id, self))
+            .ToList();
+
+        var parts = new List<string>
+        {
+            $"{objective}, for {issuerName}, by {given.Deadline.ToString("d MMMM", System.Globalization.CultureInfo.InvariantCulture)}.",
+        };
+        if (told.Count > 0)
+            parts.Add($"{issuerName} told {self.Object}: {string.Join("; ", told)}.");
+        if (given.Constraints.Count > 0)
+            parts.Add($"{Capital(issuer.Possessive)} standing rule: {string.Join("; ", given.Constraints)}.");
+
+        return string.Join(" ", parts);
+    }
+
+    private static string Capital(string s) => char.ToUpperInvariant(s[0]) + s[1..];
 
     /// <summary>
     /// A pressure in the character's own terms. Closed, and silent on anything unnamed — the same

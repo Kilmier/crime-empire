@@ -442,6 +442,70 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    fresh-agreement branch `Cognition.Receive` already had. Demonstrated against the unmodified
    baseline seed-42 scenario before being scoped, not invented for it. See
    `docs/milestones/016-trust-can-be-earned.md`.
+7. **The lie has a face.** Surfaced by Matt playtesting milestone 025 on 2026-09-05: he told Marco
+   Bellini, to his face, that the violence at his shop had not happened, and the screen showed the
+   choice and then silence. *"I could lie about whether I used violence or not — I think we need an
+   indication that they do or don't believe me."*
+
+   **What the model already does.** Marco was there. He holds the violence as his own eyes, being
+   told never overwrites what he saw, the account conflict is recorded on his side and his trust in
+   Vincent drops. The lie has its consequence; the model is right underneath the silence.
+
+   **What it withholds, and why the silence is only half right.** Whether Marco believed him is
+   Marco's private state, and `DESIGN_DECISIONS.md` settles that the conflict is *perceived, never
+   detected* and that the consequence lands on the listener's side alone — **"the speaker's does not,
+   unless he separately observes a response."** That last clause is the hook. There is currently no
+   response to observe: a report is delivered as a message and the recipient's face is not a channel.
+   Correct for an account sent by messenger; wrong for a man you lied to standing in front of you.
+
+   **The scope, if authorized.** A listener's *reaction* as a sourced signal to the speaker, not a
+   display of the listener's belief. After an account delivered in person, the listener yields an
+   observable reaction and the speaker acquires a belief about it the ordinary way — a claim of his
+   own, with a source kind and a confidence, through `Cognition`, never through a panel.
+
+   Three things make it a milestone rather than a line on the screen:
+   - **It must be able to be wrong.** A reaction that always reports the listener's true state is a
+     belief-reader wearing a face. The natural inputs already exist and are read nowhere else for
+     this: the listener's `Skill.Discretion` (how well he hides it) against the speaker's
+     `Skill.Persuasion` or `Investigation` (how well he reads people). A misread must be reachable
+     in the fixture, not merely possible in principle.
+   - **It must be actor-neutral.** Tommy lying to Vincent gets the same channel as Vincent lying to
+     Marco, so an NPC can learn he was not believed and act on it — and nothing may branch on
+     `Report.Candor` or `ReportedClaim.ActualBasis` to decide the reaction, which stays assembled from
+     the listener's side exactly as `AccountConflict` is.
+   - **One visible line, one falsifier.** On the screen, under WHAT JUST HAPPENED: "Marco Bellini did
+     not look convinced", attributed as the speaker's own reading. The boundary test is a difference,
+     not an inspection: two worlds identical but for whether the listener believed the speaker must
+     render differently when the reaction was read cleanly, and identically when it was not.
+
+   **Open before authorization.** Which deliveries count as "in person" — the model does not
+   currently distinguish a face-to-face account from a sent one, and inventing that distinction is
+   itself a design decision. Whether the reaction is a new `ClaimKind` (a belief about a person's
+   stance toward a claim, which the vocabulary does not have) or a `StandingChange`-shaped memory on
+   the speaker's relationship. And whether a reaction should feed the speaker's *next* decision — a
+   man who sees he was not believed has reason to reconsider — which would move hashes and is the
+   part that makes it interlocking rather than additive.
+
+   **The cheaper half is not a substitute.** The option text could say what the speaker already knows
+   about who he is lying to — "though he was there" — but the model holds only "somebody on the street
+   saw you", not "Marco saw you", so even that needs a projection rule. Recorded so it is not slipped
+   in as interface work.
+
+   **Scope-reviewed 2026-09-05 (`review-new-system`): authorize after revision.** Four rulings the
+   canon cannot answer, needed before it goes into `CURRENT_MILESTONE.md`: (a) which deliveries are
+   "in person" — every report today goes through one `Reporting.Deliver`, with no channel field, and
+   the reply-to-a-question path Matt hit is the one natural case; (b) the reaction's shape — a new
+   `ClaimKind` about a person's stance toward a claim, or a memory on the speaker's relationship —
+   with the narration for it in the same milestone, since milestone 021's unnarrated claim kind
+   reached players as a raw dump; (c) whether seeing you were not believed moves the *speaker's*
+   trust, which `DESIGN_DECISIONS.md` leaves open by exactly one clause and which the first cut
+   should answer "no"; (d) whether an NPC reader of the reaction — a generator that offers a man who
+   was not believed something to do about it — is in the milestone or deferred, which is the
+   difference between additive and interlocking. Also required: the read is a keyed RNG draw
+   (milestone 005's rule) against the listener's Discretion and the speaker's Investigation, the
+   skill `Runner.Observe` already uses for noticing; a misread must be demonstrated in the fixture,
+   not argued; and every variant's trace hash will move, because a new belief prints in the trace,
+   so the disclosure is expected rather than a breach.
 
 ### Deferred instrumentation candidates
 

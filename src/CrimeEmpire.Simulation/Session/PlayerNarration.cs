@@ -44,6 +44,14 @@ public static class PlayerNarration
         // Subject is a domain, never a person or a business — name() must not be called on it, or a
         // display-name lookup would either resolve nothing or, worse, resolve something by accident.
         ClaimKind.UnattributedShortfall => $"something in the {c.Subject} still is not paying what it owes",
+        // Milestone 021 added this claim kind and did not add it here, so it fell through to the
+        // fallback below and reached players as a raw `PersonIsCapable(angelo -> hard-man)` dump —
+        // ids and all, on a surface whose entire design exists to keep them out. Found while
+        // scoping milestone 024. The Object is a CapabilityBar token, not a name, so it is matched
+        // rather than passed to name().
+        ClaimKind.PersonIsCapable => c.Object == CapabilityBar.HardMan
+            ? $"{name(c.Subject)} is a hard man"
+            : $"{name(c.Subject)} is up to leaning on somebody",
         _ => c.ToString(),
     };
 
@@ -51,11 +59,17 @@ public static class PlayerNarration
     /// How far he would go on this person's word, in words.
     ///
     /// Qualitative for the same reason confidence is: the number is hidden state, and a percentage
-    /// would let the player read the model instead of the man. Note that nothing here explains
-    /// *why* he stands where he does. A relationship that cooled because an account did not match
-    /// reads identically to one that was never warm, which is correct — the difference is a matter
-    /// of history the player has to reconstruct from the accounts, not a label the interface hands
-    /// over.
+    /// would let the player read the model instead of the man.
+    ///
+    /// <b>Nothing in this phrase explains why he stands where he does, and that part still holds.</b>
+    /// What no longer holds is the conclusion this comment used to draw from it — that a relationship
+    /// which cooled because an account did not match *should* read identically to one that was never
+    /// warm, leaving the difference for the player to reconstruct from the claim log. Matt reversed
+    /// that on 2026-09-04: defensible for a developer reading a trace, wrong for somebody playing a
+    /// game. Milestone 023 put the cause on the roster beside this phrase, as
+    /// <see cref="WhyStandingMoved"/>, dated and attached to the man. The phrase itself is unchanged
+    /// and still leaks neither the cause nor a number, which is what the original reasoning was
+    /// actually protecting.
     /// </summary>
     public static string Standing(double trust, Pronouns self, Pronouns other) => trust switch
     {

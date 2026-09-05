@@ -621,6 +621,30 @@ spent moving it, which is the signature of a rule that was never written down.
   correction narrowed where this applies without weakening it** — an assessment may be confounded,
   wrong, and get wronger, but it may not move on information the character never received.
 
+## Factions, if they are ever built — ruled 2026-09-05
+
+Not scope, and nothing here authorizes a second organisation, diplomacy, or factional play. Recorded
+because Matt ruled on the *shape* while reading CK3's faction design, and a ruling taken this far
+ahead of the work is exactly the kind that gets lost between the conversation and the milestone.
+
+- **A faction must emerge from relationship state, shared motive, and the traits that make a man
+  likely to affiliate — never from an aggregate discontent score.** CK3's factions are objects
+  carrying a military-power ratio and a discontent meter that ticks toward an ultimatum, with
+  membership derived from an opinion threshold. That is the same shape as the global attention value
+  this project rejects — `GAME_VISION.md`'s anti-heat-bar heuristics and
+  `INFORMATION_AND_LEGIBILITY.md`'s anti-heat-bar tests — and it produces the failure
+  `SIMULATION_ARCHITECTURE.md` names directly: N independent agents wearing a shared colour, rather
+  than an organisation.
+- **The inputs already exist and are the ones to use.** Grievances are itemised, dated and
+  relationship-keyed; Trust and Obligation are directional; Belonging is a drive; and milestone 021
+  established that a belief about another man is a claim in `Cognition` rather than a stat. A man
+  throwing in with others against his boss should be the readable consequence of what he holds
+  against that boss and what he believes about the men beside him — the derivation `Utility.Loyalty`
+  already performs, pointed at a coordination question it does not currently ask.
+- **The test it has to pass is the one every dimension passes.** Name the decision that reads
+  affiliation, and the event that moves it. A faction object that exists because factions are a
+  thing games have would fail the rule that removed `Affection` in milestone 006.
+
 ## Player-neutral architecture and future institutional roles — clarified 2026-08-19
 
 Not a new commitment. This section names something the milestone 009 player boundary already made

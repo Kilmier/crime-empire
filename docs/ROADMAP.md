@@ -344,6 +344,20 @@ worth anything once it is shown" to **which readers are worth strengthening, and
 - **Relevance tiering.** Active / Supporting / Background promotion and demotion are designed in
   `SIMULATION_ARCHITECTURE.md` and not implemented. The six-character cast makes this a non-issue
   at present scale, which also means it is unvalidated.
+
+  **Worth having seen before it is scoped, noted 2026-09-05:** CK3's wanderers are a worked version of
+  demotion that does not freeze anybody. A character who leaves a court is not deleted or suspended —
+  he travels, keeps marrying, gaining skills and acquiring secrets offscreen, and can return with a
+  history that developed while nobody was watching. That is `SIMULATION_ARCHITECTURE.md`'s
+  "instantiate a durable individual from context with a plausible history" with a diegetic wrapper,
+  and it suggests the demoted state should be *cheap continued development*, not storage. Precedent,
+  not design.
+- **An assignment does not survive its officeholder, and nothing says what should happen.** Noted
+  2026-09-05. No rule covers an active assignment whose holder dies, is replaced, or is removed —
+  the question has never arisen because nobody has left a post mid-run. CK3's answer, as precedent
+  only: a council task persists across councillor changes, pauses while the seat is empty, and
+  cancels only when its target stops being a valid place to perform it. Cheap, and it becomes live
+  the moment anybody can be taken out of play — which `ROADMAP.md`'s layer 2 sketches as an arrest.
 - ~~**Godot.**~~ **Retired 2026-08-16 by milestone 009, and the fallback is what happened.** Godot
   4.7.1 hosts .NET 8, not .NET 10, so the simulation library multi-targets `net8.0;net10.0` and the
   Godot project is on `net8.0` while the runner and tests stay on `net10.0`. The library gained no
@@ -523,6 +537,29 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    `CURRENT_MILESTONE.md`, awaiting authorization. **Parked with it, Matt's "come back to that":** the
    six days between starting a tribute operation and its first refusal, which is `StepInterval` at
    three days a step and moves every hash if touched.
+
+8. **Favours, and the obligation writer.** Raised by Matt on 2026-09-05, reading CK3's dev diaries
+   against the schema. `RELATIONSHIPS.md` has recorded since milestone 008 that **Obligation has no
+   runtime writer** — `Relations.Establish` is its only one, so it holds its seeded value for a whole
+   run while being read by `SeekApproval` at `+0.4 × Obligation` and by `Utility.Loyalty` at weight
+   `0.30`. Milestone 016 gave Trust a second update path and left this one alone; it is **still true
+   at milestone 026**. Of the four dimensions it is the only one that is read and never moves, which
+   the schema document already calls the weakest part of itself.
+
+   **The shape, if authorized: a favour granted raises it, a favour called in spends it.** The
+   precedent is CK3's feudal contract, where leverage converts into terms at a stated rate rather than
+   sitting as a mood — a hook counts as one free change in a negotiation, and an imposition made
+   without trading costs the imposer reputation. **What transfers is the exchange, not the currency.**
+   This project has no Hook object and should not acquire one: a spendable token is an abstraction
+   *over* the social fact, and the fact is what `Cognition` and `Relations` already hold. The same
+   objection that keeps corruption from being `-20% Heat` applies to favours being a counter.
+
+   **What it must not become.** A tally of owed favours that decisions read as a number is
+   `GrievanceWeight`'s unbounded-sum problem in a new place. The standing rule is unchanged — a
+   dimension earns its place by naming a decision that reads it, and a *writer* earns its place by
+   naming the event that justifies the move. If no existing candidate route grants or calls in a
+   favour, that is a finding to report rather than a reason to invent a generator: milestone 012's
+   ruling 2, applied here.
 
 ### Deferred instrumentation candidates
 

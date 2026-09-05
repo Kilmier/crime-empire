@@ -268,7 +268,7 @@ public static class Relations
         // afterwards, from the same listener-side evidence the movement itself came from: this method
         // cannot reach the truth log or the speaker's candour, so what it remembers cannot claim to
         // know he was lied to. It records that he was contradicted, which is all the listener has.
-        rel.Remember(new StandingChange(StandingCause.AccountContradicted, at));
+        rel.Remember(new StandingChange(StandingCause.AccountContradicted, at, conflict.Claim));
     }
 
     // ---------------------------------------------------------------- the agreement consequence
@@ -306,7 +306,7 @@ public static class Relations
     {
         var rel = Writable(listener.Social.Ensure(agreement.SpeakerId));
         rel.Trust = Clamp(rel.Trust + AccountAgreementTrustGain * agreement.Strength);
-        rel.Remember(new StandingChange(StandingCause.AccountCorroborated, at));
+        rel.Remember(new StandingChange(StandingCause.AccountCorroborated, at, agreement.Claim));
     }
 
     // ---------------------------------------------------------------- ordinary movement

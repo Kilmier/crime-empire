@@ -116,18 +116,62 @@ public static class PlayerNarration
     /// <see cref="Movement"/> do — and never asserts the speaker was lying, because the character
     /// cannot know that. Being contradicted is a fact about the exchange; who was right is not.
     /// </summary>
-    public static string WhyStandingMoved(StandingCause cause, Pronouns self, string otherName)
-        => cause switch
+    public static string WhyStandingMoved(
+        StandingCause cause, Pronouns self, string otherName, string? about = null)
+    {
+        // What it was about, when there is a proposition in it. Without this the roster rendered
+        // three genuinely different corroborations on one day as the same sentence three times, and
+        // a history that cannot tell its own entries apart reads as a bug even when the state behind
+        // it is correct. Found by reading the output, not by a test.
+        // Colon rather than "about", because the claim descriptions are whole clauses — "somebody on
+        // the street saw Angelo Conti at Bellini's grocery" — and "…what he already believed about
+        // somebody on the street saw…" is not a sentence.
+        string on = about is null ? "" : $": {about}";
+
+        return cause switch
         {
+            // Deliberately not the word "contradicted": that is a *confidence label*, replacing the
+            // usual one on a belief he still holds, and `InformationTransmissionTests` pins its
+            // appearance to exactly that case. Reusing it here made the word show up on a roster
+            // line and broke a biconditional that was correctly asserting something else.
             StandingCause.AccountContradicted =>
-                $"{otherName} told {self.Object} the opposite of what {self.Subject} had",
+                $"{otherName} told {self.Object} otherwise{on}",
             StandingCause.AccountCorroborated =>
-                $"{otherName} backed up what {self.Subject} already believed",
+                $"{otherName} backed {self.Object} up{on}",
             _ => $"{otherName} put the frighteners on {self.Object}",
         };
+    }
 
     /// <summary>Which way a remembered cause moves the standing. Derived, never stored twice.</summary>
     public static bool Warmed(StandingCause cause) => cause == StandingCause.AccountCorroborated;
+
+    /// <summary>
+    /// What he takes this man to be good for, or null when he has never formed a view.
+    ///
+    /// <b>A belief, and it reads like one.</b> This is not an attitude toward the man — that is
+    /// <see cref="Standing"/> — it is what he thinks is true about him, held on the
+    /// <see cref="CapabilityBar"/> ladder in his own cognition, and it can be flatly wrong. The
+    /// wording says "takes him for" rather than "is" for exactly that reason: the roster is reporting
+    /// his opinion, not the man.
+    ///
+    /// Both bars null means no opinion, and the line is omitted rather than rendered as an absence —
+    /// "he has no view on whether Vincent is any good" is a sentence about the model, not about the
+    /// world. That is the same null-versus-zero distinction the ladder itself is built on: having no
+    /// view and having a poor view are different states and must not collapse into one phrase.
+    /// </summary>
+    public static string? TakenFor(bool? roughWork, bool? hardMan, Pronouns self, Pronouns other)
+        => (roughWork, hardMan) switch
+        {
+            (null, null) => null,
+            (_, true) => $"{self.Subject} {self.Verb("takes", "take")} {other.Object} for a hard man",
+            (true, _) => $"{self.Subject} {self.Verb("reckons", "reckon")} {other.Subject} is up to " +
+                         "leaning on somebody",
+            (false, _) => $"{self.Subject} would not send {other.Object} to lean on anybody",
+            // No view on the low bar but a settled one that he is no hard man — an odd shape, and
+            // reported as what it is rather than smoothed into either neighbour.
+            (null, false) => $"{self.Subject} {self.Verb("does", "do")} not take {other.Object} " +
+                             "for a hard man",
+        };
 
     /// <summary>
     /// Qualitative confidence only. INFORMATION_AND_LEGIBILITY.md lists the vocabulary; the numeric

@@ -111,6 +111,12 @@ public static class IntelligenceWriter
                 sb.AppendLine($"     {a.Standing}");
                 if (a.Wariness is { } wariness)
                     sb.AppendLine($"     {wariness}");
+                // Milestone 023's two additions, mirrored here so this surface and the Godot roster
+                // agree about what "how he takes them" means. They had diverged: the panel gained
+                // the standing history and what he takes a man for, and this kept showing neither,
+                // so `--viewpoint` reported a roster the player would not recognise.
+                if (a.TakenFor is { } takenFor)
+                    sb.AppendLine($"     {takenFor}");
                 // Quoted rather than folded into the sentence. Grievance descriptions are written
                 // from the holder's own side and mostly in the first person — "moved against me",
                 // "the harbour was handed to me only after it stopped earning" — so embedding one
@@ -119,6 +125,8 @@ public static class IntelligenceWriter
                 foreach (var g in a.Grievances)
                     sb.AppendLine($"     what {self.Subject} {self.Verb("holds", "hold")} against " +
                                   $"{a.PersonPronouns.Object}: \"{g}\"");
+                foreach (var m in a.History)
+                    sb.AppendLine($"     {m.At:d MMM}  {(m.Warmed ? "up" : "down")} — {m.Description}");
             }
             sb.AppendLine();
         }

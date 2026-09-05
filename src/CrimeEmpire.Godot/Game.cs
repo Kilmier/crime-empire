@@ -525,6 +525,11 @@ public partial class Game : Control
                 yield return Faint($"    {attitude.Standing}");
                 if (attitude.Wariness is { } wariness)
                     yield return Faint($"    {wariness}");
+                // What he takes the man to be good for — a belief about him, not an attitude toward
+                // him, and the two are deliberately separate lines because the model keeps them
+                // separate: a man whose word he would not take can still be the one he sends.
+                if (attitude.TakenFor is { } takenFor)
+                    yield return Faint($"    {takenFor}");
                 foreach (var grievance in attitude.Grievances)
                     yield return Faint(
                         $"    what {p.Subject} {p.Verb("holds", "hold")} against " +

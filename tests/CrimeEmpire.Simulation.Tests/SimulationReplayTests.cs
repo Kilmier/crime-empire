@@ -255,7 +255,7 @@ public sealed class SimulationReplayTests
                           // had diverged. The cause and the order are what carry meaning; the
                           // timestamp is included because a history that lost its dates would still
                           // compare equal without it.
-                          string.Join(",", rel.StandingHistory.Select(h => $"{h.Cause}:{h.At:O}")) + "|" +
+                          string.Join(",", rel.StandingHistory.Select(h => $"{h.Cause}:{h.At:O}:{h.About}")) + "|" +
                           string.Join(",", rel.Grievances.Select(g =>
                               $"{g.Description}:{Number(g.Severity)}:{g.At:O}")));
 
@@ -322,7 +322,12 @@ public sealed class SimulationReplayTests
                           // had diverged. The cause and the order are what carry meaning; the
                           // timestamp is included because a history that lost its dates would still
                           // compare equal without it.
-                          string.Join(",", rel.StandingHistory.Select(h => $"{h.Cause}:{h.At:O}")) + "|" +
+                          string.Join(",", rel.StandingHistory.Select(h =>
+                              // Kind/subject/object, never Claim.ToString() — that prints a nonzero
+                              // EventId, which is a WorldEvent counter, which is precisely the class
+                              // of field this comparator exists to exclude. Same shape as
+                              // AttemptedConcealments above. Caught by the insertion-stability test.
+                              $"{h.Cause}:{h.At:O}:{h.About?.Kind}:{h.About?.Subject}:{h.About?.Object}")) + "|" +
                           string.Join(",", rel.Grievances.Select(g => Number(g.Severity))));
 
             lines.AddRange(character.Cognition.Records.Select(r =>

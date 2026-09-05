@@ -51,8 +51,16 @@ public enum StandingCause
 /// costs trust, a corroboration always adds it, being frightened always adds fear — so storing the
 /// direction alongside the cause would be one fact in two places, free to disagree. The reader derives
 /// it.
+///
+/// <b><paramref name="About"/> is what the exchange was about, and it was not here at first.</b> The
+/// first version stored the cause alone, and the rendered roster came out as three identical lines on
+/// one day — three genuinely different corroborations, which milestone 016's freshness rule permits
+/// and requires, rendered as the same sentence repeated. A history that cannot distinguish its own
+/// entries reads as a bug even when the state behind it is right. Null for
+/// <see cref="StandingCause.Frightened"/>, which is about no claim at all: somebody put the
+/// frighteners on him, and there is no proposition in it.
 /// </summary>
-public sealed record StandingChange(StandingCause Cause, DateTime At);
+public sealed record StandingChange(StandingCause Cause, DateTime At, Claim? About = null);
 
 /// <summary>
 /// One character's directed social state.

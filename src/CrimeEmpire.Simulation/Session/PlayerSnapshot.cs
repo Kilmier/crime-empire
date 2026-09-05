@@ -52,6 +52,7 @@ public sealed record PlayerAttitude(
     Pronouns PersonPronouns,
     string Standing,
     string? Wariness,
+    string? TakenFor,
     IReadOnlyList<string> Grievances,
     IReadOnlyList<PlayerStandingMoment> History)
 {
@@ -343,15 +344,36 @@ public static class PlayerView
         }
 
         // ---------------------------------------------------------------- how he takes people
+        // What he takes a man to be good for, off his own beliefs — never the man's actual
+        // Capabilities, which he has no way to read. Null on a bar means he has formed no view of
+        // it, which the renderer keeps distinct from a poor view.
+        bool? Holds(string personId, string bar)
+        {
+            foreach (var r in who.Cognition.Records)
+                if (r.Claim.Equals(CapabilityBar.About(personId, bar))) return r.IsHeld;
+            return null;
+        }
+
+        string? TakenFor(string personId) => PlayerNarration.TakenFor(
+            Holds(personId, CapabilityBar.RoughWork),
+            Holds(personId, CapabilityBar.HardMan),
+            self,
+            Theirs(personId));
+
         var attitudes = KnownPeople(world, who)
-            .Select(id => (Id: id, Rel: who.Social.Toward(id)))
-            .Where(x => x.Rel.Trust > 0 || x.Rel.Fear > 0 || x.Rel.Grievances.Count > 0)
+            .Select(id => (Id: id, Rel: who.Social.Toward(id), TakenFor: TakenFor(id)))
+            // A man he has an opinion of the usefulness of belongs on the roster even with no
+            // relationship dimension moved toward him — otherwise the one thing this column was
+            // extended to show could be filtered out before it was ever rendered.
+            .Where(x => x.Rel.Trust > 0 || x.Rel.Fear > 0 || x.Rel.Grievances.Count > 0
+                        || x.TakenFor is not null)
             .Select(x => new PlayerAttitude(
                 x.Id,
                 Name(x.Id),
                 Theirs(x.Rel.OtherId),
                 PlayerNarration.Standing(x.Rel.Trust, self, Theirs(x.Rel.OtherId)),
                 PlayerNarration.Wariness(x.Rel.Fear, self, Theirs(x.Rel.OtherId)),
+                x.TakenFor,
                 // Quoted verbatim by the surfaces that show them. Grievance descriptions are
                 // written from the holder's own side and mostly in the first person, so they read
                 // correctly as his words about it and stay his.
@@ -360,7 +382,9 @@ public static class PlayerView
                 // order a history has to be read in. Rendered here, from the typed cause, rather
                 // than carried as prose out of the domain.
                 x.Rel.StandingHistory.Select(h => new PlayerStandingMoment(
-                    PlayerNarration.WhyStandingMoved(h.Cause, self, Name(x.Rel.OtherId)),
+                    PlayerNarration.WhyStandingMoved(
+                        h.Cause, self, Name(x.Rel.OtherId),
+                        h.About is { } about ? PlayerNarration.Describe(about, Name) : null),
                     PlayerNarration.Warmed(h.Cause),
                     h.At)).ToList()))
             .ToList();

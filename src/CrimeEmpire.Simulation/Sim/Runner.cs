@@ -301,18 +301,30 @@ public static class Runner
         bool learnedSomething = false;
         foreach (var claim in ev.Payload.Claims)
         {
-            // Direct, and sourced to the observer himself: he noticed this, nobody told him. The
-            // confidence is well short of certainty because noticing a trace is not the same as
-            // understanding it — but it is his own, which is what makes it hard to talk him out
-            // of later. This is the "direct observation" half of the information loop; there is
-            // no rumour network here, and a claim acquired this way is never re-transmitted
-            // except through the explicit report channel.
-            // Discovery, and this is the load-bearing one. He is rolling against how discoverable a
-            // trace was, a day after the fact — a wrecked shopfront, a man visibly worked over,
-            // talk on the street. None of that puts him at the scene, and recording it as
-            // witnessing would have the simulation assert his whereabouts on the strength of a
-            // discovery roll.
-            observer.Cognition.Learn(claim, Stance.Believes, 0.6, SourceKind.Discovery, observer.Id, world.Now);
+            // How he came by it, decided at the scheduling site rather than assumed here — see
+            // EventPayload.AcquiredAs. Never Witness: rolling against how discoverable a trace was,
+            // a day after the fact, does not put him at the scene, and recording it as witnessing
+            // would have the simulation assert his whereabouts on the strength of a roll.
+            //
+            // Discovery is his own reading — a wrecked shopfront he came across — so it names him
+            // as its source, is only lightly discounted by suspicion, and resists being argued
+            // away. Rumour is the opposite on every count: it names the neighbourhood rather than
+            // any man, takes the heaviest suspicion discount, is worth less to begin with, and is
+            // the one thing he can actually go and check with somebody, because you can only
+            // corroborate what you were told. Milestone 022; before it, both were Discovery and
+            // street talk had the standing of something seen.
+            bool hearsay = ev.Payload.AcquiredAs == SourceKind.Rumor;
+            observer.Cognition.Learn(
+                claim,
+                // PROVISIONAL TUNING, in the same family as the discovery confidence beside it:
+                // Suspects rather than Believes, because "it is going round" is not "I know", and
+                // 0.35 rather than 0.6 because the weakest acquisition category should not arrive
+                // as firmly as the strongest. Neither figure was tuned toward an outcome.
+                hearsay ? Stance.Suspects : Stance.Believes,
+                hearsay ? 0.35 : 0.6,
+                ev.Payload.AcquiredAs,
+                ev.Payload.AttributedTo ?? observer.Id,
+                world.Now);
             learnedSomething = true;
 
             if (claim.Kind == ClaimKind.PersonBreachedPolicy && claim.Subject != observer.Id)

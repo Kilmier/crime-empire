@@ -116,6 +116,11 @@ public static class PlayerNarration
             SourceKind.FirstHandTestimony => $"{name(r.SourceId)} was in it and told {self.Object} so",
             SourceKind.Report => $"{name(r.SourceId)} told {self.Object}",
             SourceKind.Inference => $"{self.Subject} worked it out {self.Reflexive}",
+            // Names a place, never a man — that is what makes it a rumour rather than an account,
+            // and it is why this arm cannot borrow the "X told him" shape above. Milestone 022 made
+            // this explicit rather than the fallback it had been since milestone 003, because it is
+            // now reachable: something finally produces a rumour.
+            SourceKind.Rumor => $"it is going round {name(r.SourceId)}",
             _ => $"talk, no better sourced than {name(r.SourceId)}",
         };
 

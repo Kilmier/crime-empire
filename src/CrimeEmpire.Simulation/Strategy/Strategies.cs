@@ -417,9 +417,10 @@ public static class Strategies
         // (the boss, who is both owed a report about the breach and works the same district) would
         // otherwise get two independent rolls, notice twice, and deliberate twice at the same
         // instant on the same news.
-        var opportunities = new Dictionary<string, (double Discoverability, Claim[] Claims)>(StringComparer.Ordinal);
+        var opportunities =
+            new Dictionary<string, (double Discoverability, SourceKind As, Claim[] Claims)>(StringComparer.Ordinal);
 
-        void Offer(string? id, double discoverability, params Claim[] claims)
+        void Offer(string? id, double discoverability, SourceKind acquiredAs, params Claim[] claims)
         {
             // Only the man who was there is excluded. The one who ordered it is not: he was not
             // present, he has been told nothing, and he works the same district as everybody else
@@ -430,7 +431,7 @@ public static class Strategies
             // Better access wins. Two routes to the same news is not twice the chance of hearing
             // it; it is one chance, on the better of the two terms.
             if (opportunities.TryGetValue(id, out var existing) && existing.Discoverability >= discoverability) return;
-            opportunities[id] = (discoverability, claims);
+            opportunities[id] = (discoverability, acquiredAs, claims);
         }
 
         // Two different reasons to notice, and they are not the same reason. Someone whose job is
@@ -438,12 +439,20 @@ public static class Strategies
         // because it happened where they are — proximity, not skill. Without the second, the only
         // people who can ever contradict an account are investigators, and an organisation becomes
         // a place where nobody sees anything.
+        // Milestone 022: the two reasons are now two *kinds* of knowing as well as two chances at
+        // it. Someone whose job is looking establishes what she finds — her own reading, and she can
+        // say how she came by it. Someone who works the same street hears about it, from the street:
+        // he was not there, nobody reported it to him, and there is no man he could name as having
+        // told him. Filing the second as Discovery gave a piece of neighbourhood talk the standing
+        // of something seen, and — because the corroboration generator only offers to check things
+        // you were *told* — made the one belief most worth checking the one belief he could not.
         foreach (var c in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
         {
             if (c.Capabilities[Skill.Investigation] >= 0.4)
-                Offer(c.Id, 0.6, witnessClaim);
+                Offer(c.Id, 0.6, SourceKind.Discovery, witnessClaim);
             else if (c.IsOrgMember && c.Capabilities.Districts.Contains(business.DistrictId))
-                Offer(c.Id, 0.35, witnessClaim, violenceClaim);
+                Offer(c.Id, 0.35, c.Id == owner.Id ? SourceKind.Discovery : SourceKind.Rumor,
+                    witnessClaim, violenceClaim);
         }
 
         // The boss has better access to what happened on his own territory than a passer-by does.
@@ -456,11 +465,22 @@ public static class Strategies
         // in the other direction — there would be nothing left for Vincent to hide. He can reach
         // it by inference (Decision/Inference.cs) or be told; both are defeasible, and observing
         // a wrecked shop is neither.
+        //
+        // Rumour, not discovery, on Matt's ruling 2 of milestone 022: better access to his own
+        // territory is a better chance of *hearing*, not a different way of knowing. He is no more
+        // present than the capo who works the street, and a boss who "came across" who beat up a
+        // grocer would be establishing by proximity a thing he was never told.
         if (s.BreachedPolicyId is not null)
-            Offer(world.Org.BossId, 0.5, violenceClaim, witnessClaim);
+            Offer(world.Org.BossId, 0.5, SourceKind.Rumor, violenceClaim, witnessClaim);
 
         foreach (var (id, o) in opportunities.OrderBy(k => k.Key, StringComparer.Ordinal))
-            ScheduleObservation(world, s, "violence", id, ev.Id, ev.TargetId, o.Discoverability, o.Claims);
+            ScheduleObservation(
+                world, s, "violence", id, ev.Id, ev.TargetId, o.Discoverability, o.Claims,
+                o.As,
+                // Attributed to the neighbourhood the talk is going round, never to a person —
+                // INFORMATION_AND_LEGIBILITY.md's own form. Null for an own reading, which must
+                // name its holder and does so in Observe.
+                o.As == SourceKind.Rumor ? business.DistrictId : null);
     }
 
     /// <summary>
@@ -474,7 +494,8 @@ public static class Strategies
     /// </summary>
     private static void ScheduleObservation(
         World world, StrategyInstance s, string traceKind, string? observerId,
-        long relatedEventId, string? relatedTargetId, double discoverability, IReadOnlyList<Claim> claims)
+        long relatedEventId, string? relatedTargetId, double discoverability, IReadOnlyList<Claim> claims,
+        SourceKind acquiredAs = SourceKind.Discovery, string? attributedTo = null)
     {
         if (observerId is null) return;
 
@@ -496,6 +517,8 @@ public static class Strategies
                 Claims = claims,
                 Discoverability = discoverability,
                 OccasionKey = occasionKey,
+                AcquiredAs = acquiredAs,
+                AttributedTo = attributedTo,
             });
     }
 

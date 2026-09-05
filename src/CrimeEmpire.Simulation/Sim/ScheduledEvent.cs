@@ -59,6 +59,30 @@ public sealed class EventPayload
     public double Discoverability { get; init; }
 
     /// <summary>
+    /// How the claims above would be acquired if the observer notices them, and what they would be
+    /// attributed to. Used by ObservationOpportunity; milestone 022.
+    ///
+    /// <b>Not every chance to notice is the same kind of noticing, and treating them alike was the
+    /// defect.</b> A detective who went looking and found a wrecked shopfront established that
+    /// herself. A man who works the same street and hears what happened did not: he was told, by
+    /// nobody in particular. Before this the scheduler could say how likely somebody was to find
+    /// out and not how, so both were filed as <see cref="Domain.SourceKind.Discovery"/> sourced to
+    /// the observer — which gave street talk the resistance to contradiction of a thing you saw
+    /// yourself, and made it ineligible for the corroboration it most obviously deserves. See
+    /// <c>Provenance.cs</c> on why bundling acquisition categories is the mistake this repeats.
+    ///
+    /// <see cref="AttributedTo"/> null means the observer himself, which is what an own-reading
+    /// category requires. A rumour names a place instead, per
+    /// <c>INFORMATION_AND_LEGIBILITY.md</c>'s "a rumor attributed to a neighborhood or source" —
+    /// never a person, because the whole point of talk going round is that there is nobody to go
+    /// back to.
+    /// </summary>
+    public Domain.SourceKind AcquiredAs { get; init; } = Domain.SourceKind.Discovery;
+
+    /// <summary>Who or what the acquired claims are attributed to. Null means the observer himself.</summary>
+    public string? AttributedTo { get; init; }
+
+    /// <summary>
     /// What the recipient of an <c>asked-to-account</c> event is being asked about.
     ///
     /// The request itself records a subject, but the event that wakes the respondent is what

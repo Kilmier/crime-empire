@@ -436,9 +436,22 @@ public sealed class ScenarioReachTests
     /// and had never been chosen in any variant, losing every time to a report that was being paid
     /// afresh for concealing what it had already concealed.
     ///
-    /// Note what is asserted: that it was chosen, by the generator that offers it, against the man he
-    /// sent. Not that it was chosen at a particular moment or with a particular score — nothing was
-    /// tuned to make it win, and pinning the margin would invite exactly that.
+    /// Note what is asserted: that it was chosen, against the man he sent, about that man's own act.
+    /// Not that it was chosen at a particular moment or with a particular score — nothing was tuned
+    /// to make it win, and pinning the margin would invite exactly that.
+    ///
+    /// <b>Milestone 022 removed the generator name from this assertion, and strengthened what
+    /// replaced it.</b> It used to require <c>Generator == "FromDelegation"</c>. Once violence
+    /// arrives as street talk rather than as something Vincent worked out himself, the belief is
+    /// testimony — so <c>FromRelationship</c>'s ordinary "go and check what you were told" branch
+    /// accepts it too, runs first, and wins the <c>(kind, target, claim)</c> dedupe. Matt ruled on
+    /// 2026-09-05 that this is the wanted surface: *ask Tommy for his own account*, so we hear what
+    /// Tommy says about it, rather than a delegator-specific audit.
+    ///
+    /// What the assertion pins instead is the thing that actually matters and that the generator name
+    /// was only standing in for: Vincent puts the question **to Tommy, about Tommy's own act**. A
+    /// generic question that happened to land on Tommy about somebody else's business would pass the
+    /// old test's target check and fails this one.
     /// </summary>
     [Theory]
     [InlineData("baseline")]
@@ -452,8 +465,9 @@ public sealed class ScenarioReachTests
         Assert.Contains(world.Decisions, d =>
             d.ActorId == "vincent"
             && d.Chosen?.Candidate.Kind == ActionKind.SeekCorroboration
-            && d.Chosen.Candidate.Generator == "FromDelegation"
-            && d.Chosen.Candidate.TargetId == "tommy");
+            && d.Chosen.Candidate.TargetId == "tommy"
+            && d.Chosen.Candidate.AboutClaim is { } about
+            && about.Subject == "tommy");
     }
 
     /// <summary>

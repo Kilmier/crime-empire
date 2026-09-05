@@ -225,7 +225,18 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   the simulation library are mutually exclusive. Every project now names the framework it wants, so
   the test project's declaration stopped being redundant rather than being tidied away. Carried since
   milestone 002.
-- **The cast is six, and six is a ceiling rather than a trend.** `nunzio` was added by milestone 007
+- **~~The cast is six, and six is a ceiling rather than a trend.~~ Ceiling lifted 2026-09-05 by
+  Matt's ruling, and lifted in a specific shape rather than raised to a bigger number.** New
+  characters arrive as **members of something** — a rival gang who are clearly hostile to the player,
+  additional business owners, and a police force — rather than as individuals appended to the roster.
+  The rationale is that this is what has always been missing from the per-character exception: a
+  character added this way arrives with a reason to exist, an affiliation, and a stance toward the
+  player, which is precisely what the `nunzio` and `angelo` exceptions had to argue for one at a time.
+  Cast growth inside that shape no longer needs a per-character ruling; a character who belongs to
+  nothing still does. The history below is kept because the reasoning that produced the ceiling is
+  what the new rule has to keep honouring.
+
+  Original entry: `nunzio` was added by milestone 007
   against that milestone's own written "no new characters" exclusion, because `AdvanceTribute`
   resolves a demand through the owner's own decision and `Commit` finds a business by owner, so two
   shops need two owners. Codex found the breach and Matt accepted it as a bounded scenario-fixture
@@ -446,3 +457,98 @@ them. Scenario reach was candidate 1 and became milestone 007. "A scenario varia
 candidate 5, was attempted inside milestone 006 and did not succeed, and is now **half** achieved:
 milestone 007 makes the delegator ask and the executor answer, in play, but the executor answers
 honestly. What remains of it is candidate 2 above.
+
+## The demo arc
+
+**Planned 2026-09-05 with Matt. Nothing here authorizes anything** — this file never does. Scope still
+goes into `CURRENT_MILESTONE.md` one milestone at a time. What this section adds is a destination and
+an order, so each milestone can be judged against where it is meant to be going rather than only
+against itself.
+
+### The destination
+
+**One session.** Matt's ruling, 2026-09-05: an evening, with a save, that has a beginning and an end —
+not an open-ended campaign. A player sits down, runs a district, and the run resolves.
+
+That constraint does more work than it looks like. It means **the run needs a terminal condition**, and
+that condition is what gives every operation below a scale to be measured against. A session that
+cannot be won or lost is a sandbox, and the numbers in it mean nothing in particular. **The ending
+should be designed in layer 1 even though it is built in layer 3**, because until it exists, "is this a
+good operation" has no answer.
+
+### How the arc is ordered, and why not by dependency
+
+**By risk retired.** The riskiest unknown is not whether rackets can be built — that is work, not risk.
+It is whether twenty milestones of belief, provenance, trust and delegation are **legible to a player
+at all**, or whether the game reads as nothing happening. If that is broken, no amount of added content
+repairs it and most of the existing simulation was decorative. It is also the cheapest thing to test.
+So it goes first, ahead of content that would otherwise look more urgent.
+
+### The four layers
+
+Each layer ends in a playtest. **The playtest is the review** — Codex is unavailable, and a person
+playing the game has the one property `REVIEW_LEDGER.md` says an adversary supplies: priors that are
+not the author's.
+
+1. **Make one day playable and legible.** Look at your men, give an order, advance time, understand
+   what came back — with only the three operations that already exist. *Gate: does the existing depth
+   read as anything?*
+2. **Make the day have choices.** The rival gang, more business owners, the police force, more kinds of
+   operation, money that spends. *Gate: is there a reason to prefer one day's plan over another?*
+3. **Make the run have shape.** A terminal condition, police who can take somebody from you, territory
+   that can be lost. *Gate: does a session end in a way worth replaying?*
+4. **Whatever the playtests found**, which will not be what was predicted here.
+
+### Rules this arc is held to
+
+- **Four specified, the rest sketched.** Past roughly the fourth milestone this is fiction. Milestone
+  019 discovered its own premise was false; 022 discovered its mechanism was inert in the fixture.
+  Writing milestone 12 precisely today mostly makes it harder to abandon when it turns out wrong.
+- **Every milestone is marked additive or interlocking.** *Additive* work adds characters, businesses,
+  organisations, operations or screens without changing shared machinery, and chains safely without a
+  gate. *Interlocking* work changes the decision pipeline, the belief model or scoring — where all
+  three of milestone 020's P1s lived — and waits for a gate. **Layer 2 is almost entirely additive**,
+  which is what makes it the natural long code-ahead run.
+- **Every milestone must be visible in play.** If the playtest is the review, invisible work cannot be
+  reviewed. This disqualifies the recent pattern — a diagnostic facet, a storage location — which
+  becomes maintenance rather than a milestone.
+- **Fixture growth is a first-class item.** The most repeated finding in this project, five times now
+  including milestone 022, is *"the mechanism works and the scenario cannot show it."* Six characters,
+  one district, two shops, and every milestone dutifully declaring cast growth out of scope. The
+  ceiling ruling above exists to stop that recurring.
+- **Corrections are budgeted, not assumed away.** Milestone 020 needed three. Some fraction of this arc
+  is repair.
+
+### Layer 1 — specified
+
+**023 — The roster reads.** *Interlocking (player projection).* One panel: every man you can name, how
+you regard him, and **why it moved** — the durable, dated, per-relationship record that grudges already
+get and that nothing positive does. Requires deciding whether standing history is surfaced at all,
+which reverses a stated position in `PlayerNarration.Standing` ("the difference is a matter of history
+the player has to reconstruct"). Matt was 50/50 on this on 2026-09-04; it returns here because a roster
+without it is the thing he had already said is not enough.
+
+**024 — The operation reads.** *Interlocking (player projection).* What is running, who is on it, what
+came back. Today the player sees a decision prompt at a pause and nothing between pauses, so a
+delegated operation is invisible for its whole life.
+
+**025 — The interface stops fighting the player.** *Additive.* Milestone 018's recorded presentation
+debt: the five-column layout never rebalanced after a fourth column was added, the vertically-wrapped
+date, the oversized toolbar, `PlayerNarration`'s prose, and "You control" / "You see through" as one
+selector.
+
+**026 — The session has an ending.** *Interlocking (new terminal state).* Designed here, and built as
+far as a stated win/lose condition and a clock, even though what makes it dramatic arrives in layer 3.
+Everything in layer 2 is measured against it.
+
+### Layer 2 onward — sketched, deliberately
+
+The rival gang and its crew; more business owners; the police as an organisation with an arrest that
+can remove somebody from play; further operation kinds beyond extort/conceal/investigate; money with a
+sink so accumulation means something; territory worth contesting. Roughly six to eight milestones,
+almost all additive, and the natural place for a long code-ahead run.
+
+**Two things layer 2 gets for free, worth stating so nobody rebuilds them:** more people on the street
+is exactly the lever milestone 022 named for making rumour live — a mechanism that is correct, tested,
+and currently inert because one man is in earshot. And a hostile organisation finally gives
+`ActionKind.Retaliate` and the grievance model something to point at other than one's own boss.

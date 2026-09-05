@@ -396,7 +396,13 @@ public sealed class RelationalConsequenceTests
                 bool fromEncounter = world.Encounters.Any(
                     e => e.WhoId == c.Id && e.MetId == rel.OtherId);
 
-                Assert.True(moved || fromConflict || fromEncounter,
+                // Milestone 026: the fourth legitimate origin. Reading a man's face after telling
+                // him something or threatening him is remembered on the relationship itself, and a
+                // read creates no impression — only a delivered report or a demand does, both of
+                // which the truth log records.
+                bool fromImpression = rel.Impressions.Count > 0;
+
+                Assert.True(moved || fromConflict || fromEncounter || fromImpression,
                     $"{c.Id} holds an all-zero relationship toward {rel.OtherId} that no recorded " +
                     "event accounts for, which means something created one by reading it.");
             }

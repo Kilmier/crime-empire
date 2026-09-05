@@ -1178,6 +1178,15 @@ public sealed class InformationTransmissionTests
 
             var touched = reply.Asserted.Select(a => a.Claim).Concat(reply.Withheld).ToList();
 
+            // Milestone 026: "I know nothing of it" answers the question by asserting nothing at
+            // all — the report names what it answers and touches no claim, which is the whole of
+            // what it says.
+            if (reply.Candor == ReportCandor.Uninformed)
+            {
+                Assert.Empty(touched);
+                continue;
+            }
+
             Assert.True(touched.Contains(asked),
                 $"[{variant}] {reply.SenderId} was asked about {asked} and replied about " +
                 $"{string.Join(", ", touched)}");
@@ -1308,8 +1317,12 @@ public sealed class InformationTransmissionTests
         foreach (var reply in world.Reports.Where(r => r.AnsweringClaim is not null))
         {
             var asked = reply.AnsweringClaim!.Value;
-            Assert.True(world.Get(reply.SenderId).Cognition.Find(asked) is not null,
-                $"[{variant}] {reply.SenderId} answered about {asked} while holding no position on it");
+            bool holds = world.Get(reply.SenderId).Cognition.Find(asked) is not null;
+
+            // Milestone 026: the one reply a man gives from no position is the one that says so,
+            // and it is given exactly when he has none — a biconditional, so a disclaimer from a man
+            // who did hold something would fail here too.
+            Assert.Equal(reply.Candor != ReportCandor.Uninformed, holds);
         }
     }
 

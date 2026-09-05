@@ -64,10 +64,18 @@ public sealed record PlayerAttitude(
     string? Wariness,
     string? TakenFor,
     IReadOnlyList<string> Grievances,
-    IReadOnlyList<PlayerStandingMoment> History)
+    IReadOnlyList<PlayerStandingMoment> History,
+    IReadOnlyList<PlayerImpression> Impressions)
 {
     /// <summary>Frozen at construction — see <see cref="Frozen"/>.</summary>
     public IReadOnlyList<string> Grievances { get; init; } = Frozen.List(Grievances);
+
+    /// <summary>
+    /// What this man has seemed to make of what he was told or shown, oldest first — milestone 026.
+    /// The viewpoint character's own readings of a face, which can be wrong, and never the man's
+    /// actual state.
+    /// </summary>
+    public IReadOnlyList<PlayerImpression> Impressions { get; init; } = Frozen.List(Impressions);
 
     /// <summary>
     /// Why his standing toward this man moved, oldest first — milestone 023.
@@ -85,6 +93,16 @@ public sealed record PlayerAttitude(
 /// <see cref="PlayerNarration.Standing"/> refuses.
 /// </summary>
 public sealed record PlayerStandingMoment(string Description, bool Warmed, DateTime At);
+
+/// <summary>One reading of a man's face, in words, dated — milestone 026. See <see cref="PlayerAttitude.Impressions"/>.</summary>
+public sealed record PlayerImpression(string PersonId, string PersonName, string Description, DateTime At);
+
+/// <summary>
+/// Somebody who, asked, said he knew nothing of the matter — milestone 026. An answer, and shown as
+/// one: it resolves the request and it is not a position, so it appears beside who has said nothing
+/// rather than among the beliefs or the disagreements.
+/// </summary>
+public sealed record PlayerDisclaimer(string PersonId, string PersonName, string Description, DateTime At);
 
 /// <summary>
 /// The viewpoint character's own most recently committed action, as he could relate it — the same
@@ -238,6 +256,8 @@ public sealed record PlayerSnapshot(
     IReadOnlyList<PlayerAttitude> Attitudes,
     IReadOnlyList<PlayerBelief> Unsettled,
     IReadOnlyList<PlayerPerson> Silent,
+    /// <summary>Who told him they knew nothing of what he asked, oldest first — milestone 026.</summary>
+    IReadOnlyList<PlayerDisclaimer> Disclaimers,
     /// <summary>What he just did, if his last committed action is still his most recent. Null only
     /// when he has never yet committed to anything at all.</summary>
     PlayerCommittedAction? LastAction,
@@ -252,6 +272,7 @@ public sealed record PlayerSnapshot(
     public IReadOnlyList<PlayerAttitude> Attitudes { get; init; } = Frozen.List(Attitudes);
     public IReadOnlyList<PlayerBelief> Unsettled { get; init; } = Frozen.List(Unsettled);
     public IReadOnlyList<PlayerPerson> Silent { get; init; } = Frozen.List(Silent);
+    public IReadOnlyList<PlayerDisclaimer> Disclaimers { get; init; } = Frozen.List(Disclaimers);
     public IReadOnlyList<PlayerRequest> AwaitingAnswers { get; init; } = Frozen.List(AwaitingAnswers);
 }
 
@@ -417,12 +438,13 @@ public static class PlayerView
             // relationship dimension moved toward him — otherwise the one thing this column was
             // extended to show could be filtered out before it was ever rendered.
             .Where(x => x.Rel.Trust > 0 || x.Rel.Fear > 0 || x.Rel.Grievances.Count > 0
-                        || x.TakenFor is not null)
+                        || x.TakenFor is not null || x.Rel.Impressions.Count > 0)
             .Select(x => new PlayerAttitude(
                 x.Id,
                 name(x.Id),
                 Theirs(x.Rel.OtherId),
-                PlayerNarration.Standing(x.Rel.Trust, self, Theirs(x.Rel.OtherId)),
+                PlayerNarration.Standing(
+                    x.Rel.Trust, self, Theirs(x.Rel.OtherId), everMoved: x.Rel.StandingHistory.Count > 0),
                 PlayerNarration.Wariness(x.Rel.Fear, self, Theirs(x.Rel.OtherId)),
                 x.TakenFor,
                 // Quoted verbatim by the surfaces that show them. Grievance descriptions are
@@ -437,7 +459,15 @@ public static class PlayerView
                         h.Cause, self, name(x.Rel.OtherId),
                         h.About is { } about ? Statement(about) : null),
                     PlayerNarration.Warmed(h.Cause),
-                    h.At)).ToList()))
+                    h.At)).ToList(),
+                // And what he has read off the man's face — milestone 026. His readings, which can
+                // be wrong; the man's own state is never consulted here.
+                x.Rel.Impressions.Select(i => new PlayerImpression(
+                    x.Id,
+                    name(x.Id),
+                    PlayerNarration.Impression(
+                        i.Kind, self, name(x.Id), i.About is { } about ? Statement(about) : null),
+                    i.At)).ToList()))
             .ToList();
 
         // ---------------------------------------------------------------- open questions
@@ -457,6 +487,18 @@ public static class PlayerView
         var silent = KnownPeople(world, who)
             .Where(id => !who.Cognition.HasAccountFrom(id))
             .Select(id => new PlayerPerson(id, name(id)))
+            .ToList();
+
+        // Who told him they knew nothing — milestone 026. Read from his own testimony, the same
+        // record a request's resolution is read from, so the two cannot disagree about whether a
+        // question was answered.
+        var disclaimers = who.Cognition.Disclaimers
+            .OrderBy(t => t.At)
+            .ThenBy(t => t.SenderId, StringComparer.Ordinal)
+            .Select(t => new PlayerDisclaimer(
+                t.SenderId, name(t.SenderId),
+                PlayerNarration.Disclaimer(name(t.SenderId), Theirs(t.SenderId), Statement(t.Claim)),
+                t.At))
             .ToList();
 
         // ---------------------------------------------------------------- what he just did
@@ -529,6 +571,7 @@ public static class PlayerView
             attitudes,
             unsettled,
             silent,
+            disclaimers,
             lastAction,
             myBusiness,
             Operating(who, name, self),

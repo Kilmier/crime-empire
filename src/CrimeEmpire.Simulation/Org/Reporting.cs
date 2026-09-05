@@ -307,6 +307,7 @@ public static class Reporting
         {
             ReportCandor.Partial => $"{sender.Name} gave {recipient.Name} an account with the worst of it left out",
             ReportCandor.False => $"{sender.Name} told {recipient.Name} it had not happened",
+            ReportCandor.Uninformed => $"{sender.Name} told {recipient.Name} he knew nothing of it",
             _ => $"{sender.Name} told {recipient.Name} what he had",
         };
 
@@ -356,7 +357,17 @@ public static class Reporting
             }
         }
 
+        // Milestone 026: "I know nothing about it" is an answer. It leaves no position and moves no
+        // standing; it is recorded so the question is answered and the man is heard from.
+        if (report.Candor == ReportCandor.Uninformed && report.AnsweringClaim is { } asked)
+            recipient.Cognition.ReceiveDisclaimer(asked, report.SenderId, report.At);
+
         world.Reports.Add(report);
         world.Record("report", report.SenderId, report.RecipientId, report.Framing);
+
+        // And what the speaker read off the listener's face, now that the listener has made of it
+        // what he made of it. After the receipt, deliberately: the read is against his position
+        // once he has heard the account, not before.
+        Reactions.AfterReport(world, world.Get(report.SenderId), recipient, report);
     }
 }

@@ -3,6 +3,26 @@ namespace CrimeSim.Domain;
 public sealed record Grievance(string AgainstId, string Description, double Severity, DateTime At);
 
 /// <summary>
+/// What a man seemed to make of what was put to him, as read off his face by the man who put it —
+/// milestone 026. A perception, and it can be wrong: see <c>Org.Reactions</c> for the roll.
+/// </summary>
+public enum ImpressionKind
+{
+    SeemedConvinced,
+    SeemedUnconvinced,
+    SeemedFrightened,
+    SeemedUnmoved,
+    GaveNothingAway,
+}
+
+/// <summary>
+/// One reading of another man's face, remembered on the reader's relationship toward him — the
+/// same shape as <see cref="StandingChange"/> and for the same reason: it is about the man, so it
+/// lives with him. <see cref="About"/> is the claim the exchange concerned, null for a demand.
+/// </summary>
+public sealed record Impression(ImpressionKind Kind, Claim? About, DateTime At);
+
+/// <summary>
 /// Why this character's standing toward another moved — the closed set of things that actually move
 /// a relationship dimension at runtime.
 ///

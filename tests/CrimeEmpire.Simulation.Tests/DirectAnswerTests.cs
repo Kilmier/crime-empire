@@ -131,6 +131,17 @@ public sealed class DirectAnswerTests
             if (decision.Chosen?.Candidate.AnsweringClaim is not { } answered) continue;
             answers++;
 
+            // Milestone 026: a man asked about something he holds nothing on says so. That answer
+            // is drawn from no belief — which is the fact it states — and the invariant for it is
+            // the mirror image: nothing about the claim was consulted, because there was nothing.
+            if (decision.Chosen.Candidate.Candor == ReportCandor.Uninformed)
+            {
+                Assert.False(decision.BeliefsUsed.Any(b => b.Claim.Equals(answered)),
+                    $"[{variant}] {decision.ActorId} said he knew nothing of {answered} on {decision.At:d MMM} "
+                    + "while a position on it was among what he consulted");
+                continue;
+            }
+
             Assert.True(decision.BeliefsUsed.Any(b => b.Claim.Equals(answered)),
                 $"[{variant}] {decision.ActorId} answered about {answered} on {decision.At:d MMM} "
                 + "without that position appearing in what he knew");

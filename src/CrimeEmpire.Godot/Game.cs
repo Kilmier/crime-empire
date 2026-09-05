@@ -594,6 +594,16 @@ public partial class Game : Control
             foreach (var person in snapshot.Silent)
                 yield return Faint($"· {person.Name} has not told {p.Object} anything yet");
         }
+
+        // Milestone 026: a man who, asked, said he knew nothing. An answer, and not a belief — so it
+        // sits here beside who has said nothing, not among the beliefs.
+        if (snapshot.Disclaimers.Count > 0)
+        {
+            yield return new HSeparator();
+            yield return Plain($"TOLD {p.Object.ToUpperInvariant()} THEY KNOW NOTHING");
+            foreach (var d in snapshot.Disclaimers)
+                yield return Faint($"{d.At.ToString("d MMM", CultureInfo.InvariantCulture)}  {d.Description}");
+        }
     }
 
     /// <summary>
@@ -674,6 +684,17 @@ public partial class Game : Control
             ? Faint($"{action.At.ToString("d MMM", CultureInfo.InvariantCulture)}  {p.Subject} chose to {action.Description}")
             : Faint($"{p.Subject_} {p.Verb("has", "have")} not committed to anything yet.");
 
+        // Milestone 026: what he read off the other man's face, if anything, since he last acted.
+        // The same reading is on the roster under the man; this is the one that answers "and how
+        // did that go" at the moment he asks it.
+        var latestRead = snapshot.Attitudes
+            .SelectMany(a => a.Impressions)
+            .Where(i => snapshot.LastAction is not { } last || i.At >= last.At)
+            .OrderByDescending(i => i.At)
+            .FirstOrDefault();
+        if (latestRead is not null)
+            yield return Faint($"{latestRead.At.ToString("d MMM", CultureInfo.InvariantCulture)}  {latestRead.Description}");
+
         if (snapshot.MyBusiness is { } business)
             yield return Faint(
                 $"{Capital(p.Possessive)} own shop, {business.Name}, is " +
@@ -729,14 +750,17 @@ public partial class Game : Control
                     $"    what {p.Subject} {p.Verb("holds", "hold")} against " +
                     $"{attitude.PersonPronouns.Object}: \"{grievance}\"");
 
-            // Why it got that way — milestone 023. Oldest first, because that is the order a
-            // history reads in, and dated because "when" is most of what makes it a history rather
-            // than a list of grumbles. The arrow carries the direction so the line does not have to
-            // say "grew"/"cooled" twice.
-            foreach (var moment in attitude.History)
-                yield return Faint(
-                    $"    {moment.At.ToString("d MMM", CultureInfo.InvariantCulture)}  " +
-                    $"{(moment.Warmed ? "↑" : "↓")} {moment.Description}");
+            // Why it got that way (milestone 023) and what his face seemed to say (milestone 026),
+            // one timeline, oldest first — the order a history reads in, and dated because "when"
+            // is most of what makes it a history rather than a list of grumbles. The arrow carries
+            // the direction of a movement; the dot marks a reading, which moved nothing and can be
+            // wrong.
+            var timeline = attitude.History
+                .Select(m => (m.At, Line: $"{(m.Warmed ? "↑" : "↓")} {m.Description}"))
+                .Concat(attitude.Impressions.Select(i => (i.At, Line: $"· {i.Description}")))
+                .OrderBy(x => x.At);
+            foreach (var (at, line) in timeline)
+                yield return Faint($"    {at.ToString("d MMM", CultureInfo.InvariantCulture)}  {line}");
         }
     }
 

@@ -225,6 +225,8 @@ public static class Commit
                         $"reported to {boss.Name}, keeping {report.Withheld.Count} thing(s) back",
                     ReportCandor.False =>
                         $"told {boss.Name} it did not happen",
+                    ReportCandor.Uninformed =>
+                        $"told {boss.Name} he knew nothing of it",
                     _ => $"reported to {boss.Name} ({report.Asserted.Count} claims passed on)",
                 };
             }

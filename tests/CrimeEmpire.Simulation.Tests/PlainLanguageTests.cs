@@ -118,7 +118,7 @@ public sealed class PlainLanguageTests
         var rule = PlayerView.Build(world, "salvatore", world.Now).Known
             .Single(b => b.Claim.Kind == ClaimKind.PolicyIssued);
 
-        Assert.Equal("the outfit's rule: no public violence in the harbour", rule.Statement);
+        Assert.Equal("the outfit has a rule: no public violence in the harbour", rule.Statement);
         Assert.Equal("he set it himself", rule.Attribution);
         Assert.Null(rule.Certainty);
     }

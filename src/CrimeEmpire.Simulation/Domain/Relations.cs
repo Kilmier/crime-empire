@@ -46,6 +46,9 @@ public interface IRelationship
     /// </summary>
     IReadOnlyList<StandingChange> StandingHistory { get; }
 
+    /// <summary>What this man has seemed to make of what he was told or shown, oldest first — milestone 026.</summary>
+    IReadOnlyList<Impression> Impressions { get; }
+
     double GrievanceWeight { get; }
 }
 
@@ -84,6 +87,8 @@ public static class Relations
         private readonly System.Collections.ObjectModel.ReadOnlyCollection<Grievance> _readOnly;
         private readonly List<StandingChange> _standingHistory = new();
         private readonly System.Collections.ObjectModel.ReadOnlyCollection<StandingChange> _historyReadOnly;
+        private readonly List<Impression> _impressions = new();
+        private readonly System.Collections.ObjectModel.ReadOnlyCollection<Impression> _impressionsReadOnly;
 
         public Relationship(string otherId, bool stored)
         {
@@ -91,6 +96,7 @@ public static class Relations
             Stored = stored;
             _readOnly = _grievances.AsReadOnly();
             _historyReadOnly = _standingHistory.AsReadOnly();
+            _impressionsReadOnly = _impressions.AsReadOnly();
         }
 
         public string OtherId { get; }
@@ -134,6 +140,11 @@ public static class Relations
         public IReadOnlyList<StandingChange> StandingHistory => _historyReadOnly;
 
         public void Remember(StandingChange change) => _standingHistory.Add(change);
+
+        /// <summary>Wrapped for the same reason <see cref="Grievances"/> is.</summary>
+        public IReadOnlyList<Impression> Impressions => _impressionsReadOnly;
+
+        public void Impress(Impression impression) => _impressions.Add(impression);
 
         public void Add(Grievance g) => _grievances.Add(g);
         public void ClearGrievances() => _grievances.Clear();
@@ -351,6 +362,13 @@ public static class Relations
         // the roster that nothing in his state changed to match.
         if (rel.Fear > before) rel.Remember(new StandingChange(StandingCause.Frightened, at));
     }
+
+    /// <summary>
+    /// He read something off that person's face — milestone 026. Remembered, never scored: no
+    /// dimension moves (ruling c), and nothing in the decision path reads it yet (ruling d).
+    /// </summary>
+    public static void RecordImpression(Character subject, string ofId, Impression impression)
+        => Writable(subject.Social.Ensure(ofId)).Impress(impression);
 
     /// <summary>He now holds something against that person.</summary>
     public static void RaiseGrievance(Character subject, Grievance grievance)

@@ -868,7 +868,8 @@ public static class Utility
             case ActionKind.SeekApproval:
                 // Reporting at all serves belonging. Concealing within it serves security instead,
                 // and costs the belonging it would otherwise have bought.
-                yield return (Drive.Belonging, c.Candor is ReportCandor.Candid or null ? 0.7 : 0.2);
+                yield return (Drive.Belonging,
+                    c.Candor is ReportCandor.Candid or ReportCandor.Uninformed or null ? 0.7 : 0.2);
                 yield return (Drive.Status, -0.25);
                 if (c.Candor is ReportCandor.Partial or ReportCandor.False)
                     yield return (Drive.Security, 0.8);

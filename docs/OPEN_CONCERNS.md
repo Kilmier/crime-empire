@@ -112,6 +112,14 @@ as a real but small change in the `relationship effects` component of his 8 Apri
 above as still open are resolved by this: decay, negative trust, dimension separateness, provenance
 weighting, and the `GrievanceWeight` cap are all unaffected and unchanged.
 
+- **Milestone 026 read the standing history to tell the two apart on the roster, without resolving
+  this.** Putting men on the roster the player has only read a face off — a shopkeeper he threatened,
+  a man he lied to — meant a zero-trust relationship with no history rendered as "you would not take
+  his word on anything", which is distrust, when nothing had ever moved it. `PlayerNarration.Standing`
+  now says "you have had no dealings with him to go on" when the standing history is empty. A
+  presentation-level distinction drawn from state the model does keep (whether anything ever moved),
+  not a change to the range; the concern stands.
+
 ### 4. ~~Trait/value vocabulary must be closed, but the concrete list still isn't committed~~
 **Retired 2026-08-14.** Milestone 001 closed the list in `Domain/Psychology.cs` and it is now
 recorded in `DESIGN_DECISIONS.md` under "Actor parity and simulation tractability" — traits

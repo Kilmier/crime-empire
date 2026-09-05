@@ -149,14 +149,19 @@ public static class IntelligenceWriter
                 foreach (var g in a.Grievances)
                     sb.AppendLine($"     what {self.Subject} {self.Verb("holds", "hold")} against " +
                                   $"{a.PersonPronouns.Object}: \"{g}\"");
-                foreach (var m in a.History)
-                    sb.AppendLine($"     {m.At:d MMM}  {(m.Warmed ? "up" : "down")} — {m.Description}");
+                // One timeline: movements (023) and readings of his face (026), oldest first.
+                var timeline = a.History
+                    .Select(m => (m.At, Line: $"{(m.Warmed ? "up" : "down")} — {m.Description}"))
+                    .Concat(a.Impressions.Select(i => (i.At, Line: $"· {i.Description}")))
+                    .OrderBy(x => x.At);
+                foreach (var (at, line) in timeline)
+                    sb.AppendLine($"     {at:d MMM}  {line}");
             }
             sb.AppendLine();
         }
 
         // ---------------------------------------------------------------- open questions
-        if (view.Unsettled.Count > 0 || view.Silent.Count > 0)
+        if (view.Unsettled.Count > 0 || view.Silent.Count > 0 || view.Disclaimers.Count > 0)
         {
             sb.AppendLine($"WHAT {self.Subject.ToUpperInvariant()} CANNOT SETTLE");
             sb.AppendLine();
@@ -164,6 +169,8 @@ public static class IntelligenceWriter
                 sb.AppendLine($"  · whether {b.Statement}{(b.Certainty is { } c ? $" — {c}" : "")}");
             foreach (var p in view.Silent)
                 sb.AppendLine($"  · {p.Name} has not told {self.Object} anything yet");
+            foreach (var d in view.Disclaimers)
+                sb.AppendLine($"  · {d.Description} ({d.At:d MMM})");
             sb.AppendLine();
         }
 

@@ -445,7 +445,10 @@ with Matt and write it into `CURRENT_MILESTONE.md` before changing simulation be
    fresh-agreement branch `Cognition.Receive` already had. Demonstrated against the unmodified
    baseline seed-42 scenario before being scoped, not invented for it. See
    `docs/milestones/016-trust-can-be-earned.md`.
-7. **The lie has a face.** Surfaced by Matt playtesting milestone 025 on 2026-09-05: he told Marco
+7. ~~**The lie has a face.**~~ **Became milestone 026, "In person, things come back", authorized by
+   Matt on 2026-09-05 with the five rulings taken as recommended and built the same day** — see
+   `docs/milestones/026-in-person-things-come-back.md`. The original entry follows as written.
+   Surfaced by Matt playtesting milestone 025 on 2026-09-05: he told Marco
    Bellini, to his face, that the violence at his shop had not happened, and the screen showed the
    choice and then silence. *"I could lie about whether I used violence or not — I think we need an
    indication that they do or don't believe me."*
@@ -624,7 +627,13 @@ field, and — widened by Matt mid-milestone, reversing his own ruling 3 — eve
 rewritten into plain English and put in the second person for the character being played. See the
 archive.
 
-**026 — The session has an ending.** *Interlocking (new terminal state).* Designed here, and built as
+**026 — In person, things come back.** *Interlocking (new channels).* **Built 2026-09-05, unreviewed.**
+Not in the arc as planned: the playtest of 025 found it, and the arc's own rule is that what the
+playtest finds goes first. A man asked about something he holds nothing on says so; a man told
+something or threatened to his face shows something the speaker can read, wrongly or not at all.
+Candidate 7 above, with Matt's two rulings. Every hash moved, as the scope said it would.
+
+**027 — The session has an ending.** *Interlocking (new terminal state).* Designed here, and built as
 far as a stated win/lose condition and a clock, even though what makes it dramatic arrives in layer 3.
 Everything in layer 2 is measured against it.
 

@@ -157,6 +157,8 @@ internal static class PlayerOption
                           && question.Kind is ClaimKind.PersonUsedViolence or ClaimKind.PersonBreachedPolicy;
             return c.Candor switch
             {
+                ReportCandor.Uninformed =>
+                    $"tell {who} {self.Subject} {self.Verb("knows", "know")} nothing about it",
                 ReportCandor.Partial => $"say nothing to {who} about it either way",
                 ReportCandor.False =>
                     $"deny it to {who}: tell {whom.Object} {PlayerNarration.Deny(question, name, selfId, self)}",

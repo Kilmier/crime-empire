@@ -242,6 +242,13 @@ public static class Strategies
                         ResolveViolence(world, owner, executor, s, business, rng);
                     }
 
+                    // Milestone 026: the man in the room reads the shopkeeper's face. The executor,
+                    // never the owner who sent him — a delegated demand stays silent to the owner,
+                    // as milestone 024 settled for progress. Its own keyed draw, so the violence
+                    // roll above and the step's other draws are not disturbed by it.
+                    Reactions.AfterDemand(world, executor, marco,
+                        $"reaction|demand|{s.OwnerId}|{s.LocalSequence}|{s.NextAdvanceOrdinal - 1}", world.Now);
+
                     world.Queue.Schedule(world.Now.AddHours(6), EventKind.Incident, marco.Id,
                         $"after {executor.Name}, the demand was still on the table",
                         new EventPayload

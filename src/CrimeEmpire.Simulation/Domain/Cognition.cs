@@ -16,8 +16,22 @@ public readonly record struct Testimony(
     double AssertedConfidence,
     string SenderId,
     DateTime At,
-    SourceKind ClaimedBasis = SourceKind.Report)
+    SourceKind ClaimedBasis = SourceKind.Report,
+    bool Disclaims = false)
 {
+    /// <summary>
+    /// He said he knows nothing about it — milestone 026. An account of a kind, since a man said it
+    /// to him and it answers a question, and recorded here so that "have I heard from him on this"
+    /// is true afterwards. <b>Never a position.</b> <see cref="Affirms"/> is false, but so is a
+    /// denial's, and every reader that treats a non-affirming account as a denial — the contested
+    /// rule, the accounts list, the repetition rule — has to check this flag first. That is the
+    /// distinction the ledger warns gets drawn in one place and dropped on the way to the next.
+    /// </summary>
+    public bool Disclaims { get; init; } = Disclaims;
+
+    public static Testimony KnowsNothing(Claim claim, string senderId, DateTime at)
+        => new(claim, Stance.Doubts, 0, senderId, at, SourceKind.Report, Disclaims: true);
+
     /// <summary>
     /// The basis the speaker presented, kept exactly as offered — and only that.
     ///
@@ -36,7 +50,10 @@ public readonly record struct Testimony(
     /// <summary>Whether the sender asserted the claim rather than denying it.</summary>
     public bool Affirms => AssertedStance is Stance.Knows or Stance.Believes or Stance.Suspects;
 
-    public override string ToString() => $"{SenderId}: {AssertedStance} {Claim} ({At:yyyy-MM-dd})";
+    public override string ToString()
+        => Disclaims
+            ? $"{SenderId}: knows nothing of {Claim} ({At:yyyy-MM-dd})"
+            : $"{SenderId}: {AssertedStance} {Claim} ({At:yyyy-MM-dd})";
 }
 
 /// <summary>
@@ -236,7 +253,9 @@ public sealed class Cognition
         for (int i = _testimony.Count - 1; i >= 0; i--)
         {
             var t = _testimony[i];
-            if (t.SenderId != senderId || !t.Claim.Equals(asserted.Claim)) continue;
+            // A disclaimer is not an account he can repeat: a man who said he knew nothing and now
+            // says something is giving his first account, not clearing his throat.
+            if (t.SenderId != senderId || !t.Claim.Equals(asserted.Claim) || t.Disclaims) continue;
             latestFromSender = t;
             break;
         }
@@ -535,9 +554,24 @@ public sealed class Cognition
         return updated;
     }
 
-    /// <summary>Every account this character was given about one claim, in arrival order.</summary>
+    /// <summary>
+    /// Every account this character was given about one claim, in arrival order. Disclaimers are
+    /// not accounts of it — a man who said he knows nothing has taken no side — so they are excluded
+    /// here and nowhere downstream can mistake one for a denial.
+    /// </summary>
     public IEnumerable<Testimony> AccountsOf(Claim claim)
-        => _testimony.Where(t => t.Claim.Equals(claim));
+        => _testimony.Where(t => t.Claim.Equals(claim) && !t.Disclaims);
+
+    /// <summary>Everybody who told him they knew nothing about something, and what — milestone 026.</summary>
+    public IEnumerable<Testimony> Disclaimers => _testimony.Where(t => t.Disclaims);
+
+    /// <summary>
+    /// He was told, to his face, that the man knows nothing about it — milestone 026. Recorded
+    /// among the accounts so that the request it answers is answered and the man counts as heard
+    /// from; it changes no belief, moves no standing, and is never a position.
+    /// </summary>
+    public void ReceiveDisclaimer(Claim claim, string senderId, DateTime at)
+        => _testimony.Add(Domain.Testimony.KnowsNothing(claim, senderId, at));
 
     /// <summary>Whether this person has given him an account of anything at all.</summary>
     public bool HasAccountFrom(string senderId)

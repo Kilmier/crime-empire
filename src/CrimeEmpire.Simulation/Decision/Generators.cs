@@ -446,9 +446,10 @@ public static class Generators
             {
                 // He answers out of what he has, and every record counts, not only held ones: a man
                 // who has come to reject something can still say so, and that denial is a real
-                // answer. Where he has no position at all, nothing is offered and the request goes
-                // unanswered — already a modelled outcome, and the only honest one. He cannot be
-                // made to produce information he does not possess.
+                // answer. Where he has no position at all he can still say so — milestone 026 — and
+                // that is the only honest thing he can produce: he cannot be made to produce
+                // information he does not possess, and before 026 the request simply went
+                // unanswered for the rest of the run.
                 var position = ctx.Perceived.Position(question);
 
                 if (position is not null)
@@ -516,6 +517,24 @@ public static class Generators
                             AnsweringClaim = question,
                         };
                     }
+                }
+                else
+                {
+                    // Asked to his face about something he holds nothing on. Matt's ruling from the
+                    // milestone 025 playtest: "if a character is not informed of something they
+                    // should just say so." The report asserts nothing and the asker records a
+                    // disclaimer — see Reporting.Deliver.
+                    yield return new Candidate(
+                        $"answer:{recipient}:{question}:nothing",
+                        ActionKind.ReportToSuperior,
+                        nameof(FromRelationship),
+                        $"tell {recipient} he knows nothing of {question}")
+                    {
+                        TargetId = recipient,
+                        Domain = ctx.Agenda.Domain,
+                        Candor = ReportCandor.Uninformed,
+                        AnsweringClaim = question,
+                    };
                 }
             }
             else

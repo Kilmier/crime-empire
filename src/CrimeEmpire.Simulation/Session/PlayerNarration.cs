@@ -78,7 +78,9 @@ public static class PlayerNarration
             ClaimKind.WitnessSawIncident => $"somebody on the street saw {Object()} at {Subject()}",
             // Subject is the organisation and Object the policy id; neither is a person. The rule's
             // text comes from name(), which resolves a policy id to its description.
-            ClaimKind.PolicyIssued => $"the outfit's rule: {name(c.Object)}",
+            // A proposition rather than a noun phrase, so "whether …" reads: the same claim appears
+            // after "about whether" in questions and in what a man's face seemed to say (026).
+            ClaimKind.PolicyIssued => $"the outfit has a rule: {name(c.Object)}",
             ClaimKind.PersonBreachedPolicy => $"{Subject()} broke the rule: {name(c.Object)}",
             ClaimKind.TargetIsVulnerable => $"{Subject()} would fold if leaned on",
             // Subject is a domain, never a person or a business — name() must not be called on it, or a
@@ -124,8 +126,20 @@ public static class PlayerNarration
     /// <see cref="WhyStandingMoved"/>, dated and attached to the man; the phrase itself still leaks
     /// neither the cause nor a number.
     /// </summary>
-    public static string Standing(double trust, Pronouns self, Pronouns other) => trust switch
+    public static string Standing(double trust, Pronouns self, Pronouns other) => Standing(trust, self, other, everMoved: true);
+
+    /// <summary>
+    /// <paramref name="everMoved"/> false means the relationship has no standing history at all —
+    /// trust is at zero because nothing has ever moved it, not because anything drove it there.
+    /// `OPEN_CONCERNS.md` #3 records that the model cannot tell absence of trust from distrust; the
+    /// history can, and milestone 026 — which puts men on the roster the player has only read a face
+    /// off — reads it so that a shopkeeper he has never dealt with in confidence is not introduced
+    /// as a man whose word he would not take on anything.
+    /// </summary>
+    public static string Standing(double trust, Pronouns self, Pronouns other, bool everMoved) => trust switch
     {
+        <= 0 when !everMoved =>
+            $"{self.Subject} {self.Verb("has", "have")} had no dealings with {other.Object} to go on",
         >= 0.60 => $"{self.Subject} would take {other.Possessive} word",
         >= 0.35 => $"{self.Subject} would take {other.Possessive} word within reason",
         >= 0.15 => $"{self.Subject} {self.Verb("has", "have")} {self.Possessive} doubts about {other.Object}",
@@ -182,6 +196,27 @@ public static class PlayerNarration
 
     /// <summary>Which way a remembered cause moves the standing. Derived, never stored twice.</summary>
     public static bool Warmed(StandingCause cause) => cause == StandingCause.AccountCorroborated;
+
+    /// <summary>
+    /// What a man's face seemed to say — milestone 026. "Seemed" and "looked" throughout, because it
+    /// is a reading and the reading can be wrong; the sentence never asserts what the man thinks.
+    /// </summary>
+    public static string Impression(ImpressionKind kind, Pronouns self, string otherName, string? about)
+    {
+        string on = about is null ? "" : $" when {self.Subject} spoke about whether {about}";
+        return kind switch
+        {
+            ImpressionKind.SeemedConvinced => $"{otherName} seemed to take {self.Possessive} word{on}",
+            ImpressionKind.SeemedUnconvinced => $"{otherName} did not look convinced{on}",
+            ImpressionKind.SeemedFrightened => $"{otherName} looked frightened",
+            ImpressionKind.SeemedUnmoved => $"{otherName} did not look frightened",
+            _ => $"{otherName} gave nothing away{on}",
+        };
+    }
+
+    /// <summary>A man's answer that he knows nothing of the matter — milestone 026.</summary>
+    public static string Disclaimer(string otherName, Pronouns other, string about)
+        => $"{otherName} says {other.Subject} {other.Verb("knows", "know")} nothing about whether {about}";
 
     /// <summary>
     /// How far he has got with work he is doing himself, in words — milestone 024.

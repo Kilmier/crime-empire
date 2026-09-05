@@ -308,6 +308,9 @@ public sealed class SimulationReplayTests
                           // timestamp is included because a history that lost its dates would still
                           // compare equal without it.
                           string.Join(",", rel.StandingHistory.Select(h => $"{h.Cause}:{h.At:O}:{h.About}")) + "|" +
+                          // Milestone 026: impressions are remembered state and read by the roster;
+                          // a replay that lost one would show the player a different history.
+                          string.Join(",", rel.Impressions.Select(i => $"{i.Kind}:{i.At:O}:{i.About}")) + "|" +
                           string.Join(",", rel.Grievances.Select(g =>
                               $"{g.Description}:{Number(g.Severity)}:{g.At:O}")));
 
@@ -330,7 +333,7 @@ public sealed class SimulationReplayTests
             // belief is first-hand testimony — so a run that changed it must fail this comparison.
             lines.AddRange(character.Cognition.Testimony.Select(t =>
                 $"testimony|{character.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|" +
-                $"{Number(t.AssertedConfidence)}|{t.ClaimedBasis}|{t.At:O}"));
+                $"{Number(t.AssertedConfidence)}|{t.ClaimedBasis}|{t.At:O}|{t.Disclaims}"));
         }
 
         return string.Join('\n', lines);
@@ -389,6 +392,8 @@ public sealed class SimulationReplayTests
                               // of field this comparator exists to exclude. Same shape as
                               // AttemptedConcealments above. Caught by the insertion-stability test.
                               $"{h.Cause}:{h.At:O}:{h.About?.Kind}:{h.About?.Subject}:{h.About?.Object}")) + "|" +
+                          string.Join(",", rel.Impressions.Select(i =>
+                              $"{i.Kind}:{i.At:O}:{i.About?.Kind}:{i.About?.Subject}:{i.About?.Object}")) + "|" +
                           string.Join(",", rel.Grievances.Select(g => Number(g.Severity))));
 
             lines.AddRange(character.Cognition.Records.Select(r =>

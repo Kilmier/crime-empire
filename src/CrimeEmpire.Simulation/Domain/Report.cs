@@ -15,6 +15,13 @@ public enum ReportCandor
     /// <summary>Everything relevant he holds, at the confidence he holds it.</summary>
     Candid,
 
+    /// <summary>
+    /// He was asked and knows nothing of it, and says so — milestone 026. Honest, and asserts
+    /// nothing: the report carries the question and no claims, and the asker records a disclaimer
+    /// rather than a position. Scored as candour is, because that is what it is.
+    /// </summary>
+    Uninformed,
+
     /// <summary>True as far as it goes. The incriminating part is simply not mentioned.</summary>
     Partial,
 

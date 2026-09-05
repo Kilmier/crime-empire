@@ -249,6 +249,13 @@ public sealed class SimulationReplayTests
             foreach (var rel in character.Social.All)
                 lines.Add($"relationship|{character.Id}|{rel.OtherId}|{Number(rel.Trust)}|" +
                           $"{Number(rel.Fear)}|{Number(rel.Obligation)}|" +
+                          // Milestone 023. Nothing scores it, so it cannot change a later decision —
+                          // but it is persistent state that save/load has to reproduce, and a
+                          // comparator that cannot see it would pass a run whose remembered history
+                          // had diverged. The cause and the order are what carry meaning; the
+                          // timestamp is included because a history that lost its dates would still
+                          // compare equal without it.
+                          string.Join(",", rel.StandingHistory.Select(h => $"{h.Cause}:{h.At:O}")) + "|" +
                           string.Join(",", rel.Grievances.Select(g =>
                               $"{g.Description}:{Number(g.Severity)}:{g.At:O}")));
 
@@ -309,6 +316,13 @@ public sealed class SimulationReplayTests
             foreach (var rel in character.Social.All)
                 lines.Add($"relationship|{character.Id}|{rel.OtherId}|{Number(rel.Trust)}|" +
                           $"{Number(rel.Fear)}|{Number(rel.Obligation)}|" +
+                          // Milestone 023. Nothing scores it, so it cannot change a later decision —
+                          // but it is persistent state that save/load has to reproduce, and a
+                          // comparator that cannot see it would pass a run whose remembered history
+                          // had diverged. The cause and the order are what carry meaning; the
+                          // timestamp is included because a history that lost its dates would still
+                          // compare equal without it.
+                          string.Join(",", rel.StandingHistory.Select(h => $"{h.Cause}:{h.At:O}")) + "|" +
                           string.Join(",", rel.Grievances.Select(g => Number(g.Severity))));
 
             lines.AddRange(character.Cognition.Records.Select(r =>

@@ -525,7 +525,7 @@ public sealed class RelationshipReaderTests
     {
         var world = Cast.Build(42, "baseline");
         var marco = world.Get("marco");
-        Relations.Frighten(marco, "tommy", 0.5);
+        Relations.Frighten(marco, "tommy", 0.5, Cast.Start);
 
         var candidate = new Candidate("concede:tommy", ActionKind.Concede, "test", "pay up")
         { TargetId = "tommy", Domain = Cast.Harbour };

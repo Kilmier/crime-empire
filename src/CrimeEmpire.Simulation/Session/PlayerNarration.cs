@@ -89,6 +89,33 @@ public static class PlayerNarration
         => $"{self.Possessive} trust in {otherName} {(warmed ? "grew" : "cooled")}";
 
     /// <summary>
+    /// Why a standing moved, in words — milestone 023, and the half
+    /// <see cref="Standing"/> deliberately withholds.
+    ///
+    /// Built from <see cref="StandingCause"/> rather than from a string written where the movement
+    /// happened, for the settled reason that no simulation-authored string crosses this boundary:
+    /// `Relations` has only ids and claims to hand, so a sentence composed there would either leak an
+    /// id or force the domain to know about names. The same rule that makes `PlayerOption` build its
+    /// wording from typed fields.
+    ///
+    /// Says what happened and never how much, exactly as the standing phrase and
+    /// <see cref="Movement"/> do — and never asserts the speaker was lying, because the character
+    /// cannot know that. Being contradicted is a fact about the exchange; who was right is not.
+    /// </summary>
+    public static string WhyStandingMoved(StandingCause cause, Pronouns self, string otherName)
+        => cause switch
+        {
+            StandingCause.AccountContradicted =>
+                $"{otherName} told {self.Object} the opposite of what {self.Subject} had",
+            StandingCause.AccountCorroborated =>
+                $"{otherName} backed up what {self.Subject} already believed",
+            _ => $"{otherName} put the frighteners on {self.Object}",
+        };
+
+    /// <summary>Which way a remembered cause moves the standing. Derived, never stored twice.</summary>
+    public static bool Warmed(StandingCause cause) => cause == StandingCause.AccountCorroborated;
+
+    /// <summary>
     /// Qualitative confidence only. INFORMATION_AND_LEGIBILITY.md lists the vocabulary; the numeric
     /// confidence behind it is hidden state and stays hidden. A contradicted account says so
     /// instead, because how sure he was stopped being the interesting fact about it.

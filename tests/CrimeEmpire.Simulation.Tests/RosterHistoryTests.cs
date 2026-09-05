@@ -1,0 +1,200 @@
+using CrimeSim.Domain;
+using CrimeSim.Scenario;
+using CrimeSim.Session;
+using CrimeSim.Sim;
+
+namespace CrimeEmpire.Simulation.Tests;
+
+/// <summary>
+/// Milestone 023 — The Roster Reads. Twenty milestones of relationship machinery, and the interface
+/// showed the player five adjectives and nothing about how any of it got that way.
+///
+/// Grudges were the only durable per-relationship history, and they run one direction only. Trust has
+/// moved at runtime since milestone 006 and both ways since 016; fear has moved since the first
+/// coercion resolution; neither left any trace of *why*. Milestone 018 added "his trust in X cooled"
+/// as a transient recent-events item, which scrolls past, says nothing about the cause, and is not
+/// attached to the man it concerns. So a relationship that cooled because somebody contradicted him
+/// to his face read exactly like one that had never been warm.
+///
+/// `PlayerNarration.Standing`'s own doc comment argued that was correct — the player "has to
+/// reconstruct" the cause from the accounts. **Matt reversed that on 2026-09-04**: defensible for a
+/// developer reading a claim log, wrong for somebody playing a game.
+/// </summary>
+public sealed class RosterHistoryTests
+{
+    private static readonly DateTime At = Cast.Start;
+    private static readonly Claim Beating = new(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery);
+
+    // ================================================================= written where it happens
+
+    /// <summary>
+    /// The movement and the memory of it are written together, in the one place that owns
+    /// relationship mutation. Anything else would be reconstructing a cause after the fact from state
+    /// that no longer says what produced it.
+    /// </summary>
+    [Fact]
+    public void A_contradiction_costs_trust_and_records_why()
+    {
+        var listener = Salvatore(out var world);
+        Relations.Establish(listener, "tommy", trust: 0.80);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
+
+        var receipt = listener.Cognition.Receive(
+            ReportedClaim.Honest(Beating, Stance.Rejects, 0.9, SourceKind.Participant),
+            "tommy", At.AddDays(1));
+        Relations.RecordAccountConflict(listener, receipt.Conflict!.Value, At.AddDays(1));
+
+        var rel = listener.Social.Toward("tommy");
+        Assert.True(rel.Trust < 0.80);
+
+        var moment = Assert.Single(rel.StandingHistory);
+        Assert.Equal(StandingCause.AccountContradicted, moment.Cause);
+        Assert.Equal(At.AddDays(1), moment.At);
+        Assert.Empty(world.TruthLog); // nothing was invented in the world to carry it
+    }
+
+    /// <summary>
+    /// The upward direction, which grudges could never express: something a man did that improved
+    /// how he is regarded, kept as durably as something he did that damaged it.
+    /// </summary>
+    [Fact]
+    public void A_corroboration_raises_trust_and_records_why()
+    {
+        var listener = Salvatore(out _);
+        Relations.Establish(listener, "tommy", trust: 0.40);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, listener.Id, At);
+
+        var receipt = listener.Cognition.Receive(
+            ReportedClaim.Honest(Beating, Stance.Believes, 0.8, SourceKind.Participant),
+            "tommy", At.AddDays(1));
+        Relations.RecordAccountAgreement(listener, receipt.Agreement!.Value, At.AddDays(1));
+
+        var rel = listener.Social.Toward("tommy");
+        Assert.True(rel.Trust > 0.40);
+        Assert.Equal(StandingCause.AccountCorroborated, Assert.Single(rel.StandingHistory).Cause);
+    }
+
+    /// <summary>
+    /// Fear, which is the third thing that moves and the one nothing has ever explained to a player.
+    ///
+    /// And the boundary: a man already as frightened as the scale allows acquires no fresh memory of
+    /// being frightened again, because nothing about his state changed to match it. A history entry
+    /// with no movement behind it is a line the roster cannot justify.
+    /// </summary>
+    [Fact]
+    public void Being_frightened_is_remembered_only_when_it_actually_moved()
+    {
+        var marco = Marco(out _);
+
+        Relations.Frighten(marco, "tommy", 0.35, At);
+        Assert.Equal(StandingCause.Frightened, Assert.Single(marco.Social.Toward("tommy").StandingHistory).Cause);
+
+        // Saturate, then push again against the ceiling.
+        Relations.Frighten(marco, "tommy", 1.0, At.AddDays(1));
+        int afterSaturating = marco.Social.Toward("tommy").StandingHistory.Count;
+        Relations.Frighten(marco, "tommy", 0.5, At.AddDays(2));
+
+        Assert.Equal(1.0, marco.Social.Toward("tommy").Fear, precision: 9);
+        Assert.Equal(afterSaturating, marco.Social.Toward("tommy").StandingHistory.Count);
+    }
+
+    /// <summary>
+    /// Directional, like every other relationship fact. A movement in what Salvatore makes of Tommy
+    /// is Salvatore's memory and appears nowhere in Tommy's.
+    /// </summary>
+    [Fact]
+    public void A_movement_is_remembered_by_the_man_it_moved_and_nobody_else()
+    {
+        var world = Cast.Build(42, "baseline");
+        var salvatore = world.Get("salvatore");
+        var tommy = world.Get("tommy");
+
+        Relations.Establish(salvatore, "tommy", trust: 0.80);
+        salvatore.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, salvatore.Id, At);
+        var receipt = salvatore.Cognition.Receive(
+            ReportedClaim.Honest(Beating, Stance.Rejects, 0.9, SourceKind.Participant),
+            "tommy", At.AddDays(1));
+        Relations.RecordAccountConflict(salvatore, receipt.Conflict!.Value, At.AddDays(1));
+
+        Assert.Single(salvatore.Social.Toward("tommy").StandingHistory);
+        Assert.Empty(tommy.Social.Toward("salvatore").StandingHistory);
+    }
+
+    // ================================================================= what the player is told
+
+    /// <summary>
+    /// The player gets the reason in words, and the words are built from the typed cause rather than
+    /// from a string written where the movement happened — `DESIGN_DECISIONS.md`'s rule that no
+    /// simulation-authored string crosses the boundary, which is why `Relations` never composes one.
+    ///
+    /// And it says what happened without asserting what was true: being contradicted is a fact about
+    /// the exchange, whereas "he lied to you" is a fact about the speaker that the listener has no
+    /// access to and the model deliberately refuses to hand over.
+    /// </summary>
+    [Fact]
+    public void The_reason_reads_as_prose_and_never_accuses()
+    {
+        string contradicted =
+            PlayerNarration.WhyStandingMoved(StandingCause.AccountContradicted, Pronouns.He, "Vincent Russo");
+
+        Assert.Contains("Vincent Russo", contradicted, StringComparison.Ordinal);
+        Assert.DoesNotContain("lie", contradicted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("false", contradicted, StringComparison.OrdinalIgnoreCase);
+
+        // No number reaches any of them — the existing standing-phrase rule, applied to the new one.
+        foreach (var cause in Enum.GetValues<StandingCause>())
+        {
+            string rendered = PlayerNarration.WhyStandingMoved(cause, Pronouns.He, "Vincent Russo");
+            Assert.DoesNotContain(rendered, ".0", StringComparison.Ordinal);
+            Assert.All("0123456789", d => Assert.DoesNotContain(d.ToString(), rendered, StringComparison.Ordinal));
+        }
+
+        // Direction is derived from the cause, never stored beside it where the two could disagree.
+        Assert.True(PlayerNarration.Warmed(StandingCause.AccountCorroborated));
+        Assert.False(PlayerNarration.Warmed(StandingCause.AccountContradicted));
+        Assert.False(PlayerNarration.Warmed(StandingCause.Frightened));
+    }
+
+    /// <summary>
+    /// The end-to-end claim, through the real player projection rather than the domain: after a run
+    /// in which somebody was contradicted, the roster carries the reason, attached to the man it is
+    /// about.
+    ///
+    /// Read off `PlayerView.Build` rather than off `Social` directly, because the milestone's claim is
+    /// about what a player sees and a test that asserted on the domain would pass with the projection
+    /// entirely unwired — the false-assurance shape this project's ledger names as recurring.
+    /// </summary>
+    [Fact]
+    public void The_roster_carries_the_reason_after_a_natural_run()
+    {
+        var world = Cast.Build(42, "baseline");
+        Runner.Run(world, Cast.Start.AddDays(90));
+
+        var withHistory = Cast.Build(42, "baseline");
+        Runner.Run(withHistory, Cast.Start.AddDays(90));
+
+        var snapshot = PlayerView.Build(withHistory, "salvatore", withHistory.Now);
+        var remembered = snapshot.Attitudes.SelectMany(a => a.History).ToList();
+
+        Assert.NotEmpty(remembered);
+        Assert.All(remembered, m => Assert.False(string.IsNullOrWhiteSpace(m.Description)));
+
+        // Attached to somebody, dated, and inside the run.
+        Assert.Contains(snapshot.Attitudes, a => a.History.Count > 0);
+        Assert.All(remembered, m => Assert.InRange(m.At, Cast.Start, Cast.Start.AddDays(90)));
+    }
+
+    // ================================================================= helpers
+
+    private static Character Salvatore(out World world)
+    {
+        world = Cast.Build(42, "baseline");
+        return world.Get("salvatore");
+    }
+
+    private static Character Marco(out World world)
+    {
+        world = Cast.Build(42, "baseline");
+        return world.Get("marco");
+    }
+}

@@ -161,7 +161,7 @@ public static class Commit
                     if (receipt.Conflict is { } conflict)
                     {
                         world.AccountConflicts.Add(new PerceivedConflict(sub.Id, conflict, world.Now));
-                        Relations.RecordAccountConflict(sub, conflict);
+                        Relations.RecordAccountConflict(sub, conflict, world.Now);
                     }
 
                     // Milestone 016: the mirror-image consequence, at the same site, for the same
@@ -170,7 +170,7 @@ public static class Commit
                     if (receipt.Agreement is { } agreement)
                     {
                         world.AccountAgreements.Add(new PerceivedAgreement(sub.Id, agreement, world.Now));
-                        Relations.RecordAccountAgreement(sub, agreement);
+                        Relations.RecordAccountAgreement(sub, agreement, world.Now);
                     }
                 }
 

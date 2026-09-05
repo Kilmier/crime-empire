@@ -262,7 +262,7 @@ public static class Runner
             if (receipt.Conflict is { } conflict)
             {
                 world.AccountConflicts.Add(new PerceivedConflict(actor.Id, conflict, world.Now));
-                Relations.RecordAccountConflict(actor, conflict);
+                Relations.RecordAccountConflict(actor, conflict, world.Now);
             }
 
             // Milestone 016: the third receipt path. A boss whose briefing corroborates what his
@@ -270,7 +270,7 @@ public static class Runner
             if (receipt.Agreement is { } agreement)
             {
                 world.AccountAgreements.Add(new PerceivedAgreement(actor.Id, agreement, world.Now));
-                Relations.RecordAccountAgreement(actor, agreement);
+                Relations.RecordAccountAgreement(actor, agreement, world.Now);
             }
         }
 

@@ -479,7 +479,7 @@ public sealed class CausalFeedbackTests
         // Strategies.cs's Threaten branch does — but it leaves no claim, only a relationship
         // dimension this occasion has no reader for. Structurally identical to a plain demand.
         var vincent = world.Get("vincent");
-        Relations.Frighten(marco, vincent.Id, 0.35);
+        Relations.Frighten(marco, vincent.Id, 0.35, Cast.Start);
         var threatenedTrigger = new ScheduledEvent
         {
             Id = 2, Time = world.Now, Kind = EventKind.Incident, OwnerId = marco.Id,

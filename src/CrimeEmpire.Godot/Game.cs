@@ -529,6 +529,15 @@ public partial class Game : Control
                     yield return Faint(
                         $"    what {p.Subject} {p.Verb("holds", "hold")} against " +
                         $"{attitude.PersonPronouns.Object}: \"{grievance}\"");
+
+                // Why it got that way — milestone 023, and the half this column never had. Oldest
+                // first, because that is the order a history reads in, and dated because "when"
+                // is most of what makes it a history rather than a list of grumbles. The arrow
+                // carries the direction so the line does not have to say "grew"/"cooled" twice.
+                foreach (var moment in attitude.History)
+                    yield return Faint(
+                        $"    {moment.At.ToString("d MMM", CultureInfo.InvariantCulture)}  " +
+                        $"{(moment.Warmed ? "↑" : "↓")} {moment.Description}");
             }
         }
 

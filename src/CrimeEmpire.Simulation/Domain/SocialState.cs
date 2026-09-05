@@ -3,6 +3,58 @@ namespace CrimeSim.Domain;
 public sealed record Grievance(string AgainstId, string Description, double Severity, DateTime At);
 
 /// <summary>
+/// Why this character's standing toward another moved — the closed set of things that actually move
+/// a relationship dimension at runtime.
+///
+/// <b>Typed, not prose, and that is the settled rule rather than a preference.</b>
+/// `DESIGN_DECISIONS.md`: "No string authored by a scheduler or a generator crosses the boundary" —
+/// `PlayerOption` builds its wording from a candidate's typed fields for exactly this reason. A
+/// description written here would have only ids and claims to work with, so it would either leak
+/// `bellini-grocery` into a sentence a player reads or force `Relations` to know about names, which
+/// it has no business knowing. `Session/PlayerNarration.cs` turns these into words.
+///
+/// One member per runtime mutator in <see cref="Relations"/> that moves a dimension. `Meet` and
+/// `Establish` are absent deliberately: meeting somebody moves nothing, and scenario construction is
+/// not something a character remembers happening to him.
+/// </summary>
+public enum StandingCause
+{
+    /// <summary>Somebody asserted the opposite of a position he held. Trust fell.</summary>
+    AccountContradicted,
+
+    /// <summary>A fresh account agreed with a position he held. Trust rose.</summary>
+    AccountCorroborated,
+
+    /// <summary>Somebody frightened him. Fear rose.</summary>
+    Frightened,
+}
+
+/// <summary>
+/// One remembered reason this character's standing toward another moved — milestone 023.
+///
+/// <b>A record of something that already happened, never an input to anything.</b> Trust has moved at
+/// runtime since milestone 006 and in both directions since 016; fear has moved since the first
+/// coercion resolution. None of it left any trace of *why*, so a relationship that cooled because
+/// somebody contradicted him to his face was indistinguishable, in the interface, from one that was
+/// never warm — which `PlayerNarration.Standing` argued was correct for a reader who could reconstruct
+/// it from the claim log, and is wrong for somebody playing a game. Matt reversed that on 2026-09-04.
+///
+/// <b>Deliberately not a dimension.</b> `RELATIONSHIPS.md`'s rule for admitting one is that it must
+/// name a decision that reads it, and nothing scores these. A durable positive counterpart to
+/// <see cref="Grievance"/> that fed loyalty would be a real fifth dimension and a much larger claim;
+/// this is the history of the four that exist. Grievance is the precedent for the shape — dated, kept
+/// on the relationship, surfaced to the player — and the reason that shape works is that it is written
+/// where the movement happens, from the same evidence the movement is derived from, so it cannot
+/// record a cause the character has no access to.
+///
+/// <b>No direction field.</b> Which way each cause moves things is fixed — a contradiction always
+/// costs trust, a corroboration always adds it, being frightened always adds fear — so storing the
+/// direction alongside the cause would be one fact in two places, free to disagree. The reader derives
+/// it.
+/// </summary>
+public sealed record StandingChange(StandingCause Cause, DateTime At);
+
+/// <summary>
 /// One character's directed social state.
 ///
 /// This type stores relationships and answers questions about them. It does not change them —

@@ -343,7 +343,7 @@ public static class Reporting
             if (receipt.Conflict is { } conflict)
             {
                 world.AccountConflicts.Add(new PerceivedConflict(recipient.Id, conflict, report.At));
-                Relations.RecordAccountConflict(recipient, conflict);
+                Relations.RecordAccountConflict(recipient, conflict, world.Now);
             }
 
             // Milestone 016: the mirror-image consequence. Same reasoning as the conflict branch
@@ -352,7 +352,7 @@ public static class Reporting
             if (receipt.Agreement is { } agreement)
             {
                 world.AccountAgreements.Add(new PerceivedAgreement(recipient.Id, agreement, report.At));
-                Relations.RecordAccountAgreement(recipient, agreement);
+                Relations.RecordAccountAgreement(recipient, agreement, world.Now);
             }
         }
 

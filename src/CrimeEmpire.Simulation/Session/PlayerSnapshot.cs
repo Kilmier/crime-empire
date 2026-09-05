@@ -52,11 +52,28 @@ public sealed record PlayerAttitude(
     Pronouns PersonPronouns,
     string Standing,
     string? Wariness,
-    IReadOnlyList<string> Grievances)
+    IReadOnlyList<string> Grievances,
+    IReadOnlyList<PlayerStandingMoment> History)
 {
     /// <summary>Frozen at construction — see <see cref="Frozen"/>.</summary>
     public IReadOnlyList<string> Grievances { get; init; } = Frozen.List(Grievances);
+
+    /// <summary>
+    /// Why his standing toward this man moved, oldest first — milestone 023.
+    ///
+    /// The half the interface never had. A standing phrase says where he stands and deliberately not
+    /// how he got there, so a relationship that cooled because he was contradicted to his face read
+    /// exactly like one that had never been warm.
+    /// </summary>
+    public IReadOnlyList<PlayerStandingMoment> History { get; init; } = Frozen.List(History);
 }
+
+/// <summary>
+/// One remembered reason a standing moved, as the player is entitled to see it: what happened, when,
+/// and which way it went. Never how far — that is the same hidden magnitude
+/// <see cref="PlayerNarration.Standing"/> and <see cref="PlayerNarration.Movement"/> already refuse.
+/// </summary>
+public sealed record PlayerStandingMoment(string Description, bool Warmed, DateTime At);
 
 /// <summary>
 /// The viewpoint character's own most recently committed action, as he could relate it — the same
@@ -338,7 +355,14 @@ public static class PlayerView
                 // Quoted verbatim by the surfaces that show them. Grievance descriptions are
                 // written from the holder's own side and mostly in the first person, so they read
                 // correctly as his words about it and stay his.
-                x.Rel.Grievances.Select(g => g.Description).ToList()))
+                x.Rel.Grievances.Select(g => g.Description).ToList(),
+                // And why his standing moved, oldest first — the order it happened in, which is the
+                // order a history has to be read in. Rendered here, from the typed cause, rather
+                // than carried as prose out of the domain.
+                x.Rel.StandingHistory.Select(h => new PlayerStandingMoment(
+                    PlayerNarration.WhyStandingMoved(h.Cause, self, Name(x.Rel.OtherId)),
+                    PlayerNarration.Warmed(h.Cause),
+                    h.At)).ToList()))
             .ToList();
 
         // ---------------------------------------------------------------- open questions

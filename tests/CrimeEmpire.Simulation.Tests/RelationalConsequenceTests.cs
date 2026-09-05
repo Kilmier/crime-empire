@@ -999,12 +999,12 @@ public sealed class RelationalConsequenceTests
         var receipt = listener.Cognition.Receive(said, senderId, at);
         if (receipt.Conflict is not { } conflict) return;
         log.Add(conflict);
-        Relations.RecordAccountConflict(listener, conflict);
+        Relations.RecordAccountConflict(listener, conflict, Cast.Start);
     }
 
     private static void Apply(Character listener, Receipt receipt)
     {
-        if (receipt.Conflict is { } conflict) Relations.RecordAccountConflict(listener, conflict);
+        if (receipt.Conflict is { } conflict) Relations.RecordAccountConflict(listener, conflict, Cast.Start);
     }
 
     private static Character Character(string id) => new()

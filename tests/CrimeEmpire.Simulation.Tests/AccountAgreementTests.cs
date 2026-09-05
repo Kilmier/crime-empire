@@ -614,8 +614,8 @@ public sealed class AccountAgreementTests
 
     private static void Apply(Character listener, Receipt receipt)
     {
-        if (receipt.Conflict is { } conflict) Relations.RecordAccountConflict(listener, conflict);
-        if (receipt.Agreement is { } agreement) Relations.RecordAccountAgreement(listener, agreement);
+        if (receipt.Conflict is { } conflict) Relations.RecordAccountConflict(listener, conflict, Cast.Start);
+        if (receipt.Agreement is { } agreement) Relations.RecordAccountAgreement(listener, agreement, Cast.Start);
     }
 
     private static Character Character(string id) => new()

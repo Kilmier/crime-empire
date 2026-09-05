@@ -7,51 +7,53 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Milestone 022 — The Street Talks — is implemented, tested and committed;
-milestones 021 and 022 are both **unreviewed and unaccepted**.
+**Nothing is active.** Milestone 023 — The Roster Reads — is implemented, tested and committed.
+Milestones 021, 022 and 023 are all **unreviewed and unaccepted**.
 
-**Milestone 022** gave `SourceKind.Rumor` its first producer. Proximity to a beating and the boss's
-access to his own territory now yield street talk — attributed to the neighbourhood, never to a man,
-at the heaviest suspicion discount — where both previously arrived as the observer's own discovery.
-The man who ordered it keeps discovery, and the detective who went looking keeps hers. **It is inert
-in the accepted fixture**: no rumour survives its roll at seed 42, every hash is unmoved, and the
-proofs are staged. That was named as an acceptable outcome before implementation and is recorded
-rather than engineered away. Full account, including the two findings that came out of implementation
-rather than review: `docs/milestones/022-the-street-talks.md`.
+**Milestone 023** gave the roster the half it never had: why a standing moved, dated and attached to
+the man it concerns, alongside where it stands. Reverses a stated position in
+`PlayerNarration.Standing` on Matt's ruling of 2026-09-04. History rather than a fifth relationship
+dimension — nothing scores it, so all six variants are byte-identical on both hashes. Full account,
+including two findings for later milestones:
+`docs/milestones/023-the-roster-reads.md`.
 
 **Everything from `34cd117` onward is unreviewed.** Codex ran out of usage during milestone 020's
-correction chain. `REVIEW_LEDGER.md` calls this state *cleared to build on*, not *accepted*.
-Milestone 020 took two Codex rejections, each a P1, plus a third defect found while scoping 021; 021's
-own headline claim proved half-demonstrated; and 022's scope review missed its load-bearing case.
-Four instances of a green suite concealing a real problem, none caught by the tests.
+correction chain. `REVIEW_LEDGER.md` calls this *cleared to build on*, not *accepted*.
 
-## What is next
+## Next, per the demo arc
 
-Matt is considering a planned arc of roughly fifteen milestones toward a playable demo — built in
-batches, playtested between them, with the playtest standing in for the missing adversary. Nothing
-about that is scoped yet and none of it is authorized.
+`ROADMAP.md`'s "The demo arc" — layer 1 continues with **024 The operation reads**, then **025 The
+interface stops fighting the player**, then **026 The session has an ending**, and the layer ends in
+a playtest. Nothing there is authorized yet; scope goes into this file one milestone at a time.
+
+## Open, and Matt's call
+
+**Trust from completed work.** Matt's own roster example — *"Don's opinion of Vincent is up because he
+completed a heist for him successfully"* — still does not occur. Nothing raises trust when a man
+completes work he was given; trust moves only through account conflicts and corroborations. Small in
+code, at an existing call site, and genuinely interlocking: trust feeds `Utility.Loyalty`, so it moves
+hashes. Not folded into 023 because it is a behaviour change rather than a display one.
 
 ## What is deferred
 
 Not authorization to start any of it — see `ROADMAP.md`.
 
-**From milestone 022:** rumour mutation and false rumours (canon's own open question, and what would
-deliver `GAME_VISION.md`'s "a capo may sincerely believe a false rumor"); strength growing with
-repetition; street talk reaching civilians, which needs rumour-to-fear to matter; media coverage; a
-social transmission graph. And the finding that shapes any of it: **the honest lever for making rumour
-live is who is in earshot**, a scenario question, not a nudged probability.
+**From 023:** the RECENTLY feed now duplicates the roster history less informatively, a candidate for
+removal in 025; `IntelligenceWriter` does not show the history, deliberately.
 
-**From milestone 021:** assessments of skills other than Coercion; decay of an assessment; a
-capability belief acquired by testimony being permanently unrevisable (in `ROADMAP.md` as debt); a
-character's confidence in his own ability.
+**From 022:** rumour mutation and false rumours; strength growing with repetition; street talk
+reaching civilians, which needs rumour-to-fear to matter. And the standing finding: **the honest lever
+for making rumour live is who is in earshot** — which layer 2's rival gang and extra shopkeepers
+supply for free.
 
-**From milestone 020 and earlier:** crew, equipment, preparation, recruitment, roster, payroll,
-resource transfer, personnel management; a third subordinate; a general suitability model. Territory,
-patrol, weekly planning; additional businesses or operations; an eighth character; the playtest-
-discovered presentation debt from milestone 018 (five-column layout, wrapped dates, `PlayerNarration`
-prose, "You control"/"You see through"); the known pause-timing information leak.
+**From 021:** assessments of skills other than Coercion; decay of an assessment; a capability belief
+acquired by testimony being permanently unrevisable; a character's confidence in his own ability.
 
-**From milestone 016 and earlier:** 124 live-edge findings and 5 apparently-dead lines
+**From 020 and earlier:** crew, equipment, preparation, recruitment, payroll, resource transfer; a
+third subordinate; a general suitability model. Territory, patrol, weekly planning; the known
+pause-timing information leak.
+
+**From 016 and earlier:** 124 live-edge findings and 5 apparently-dead lines
 (`docs/COVERAGE_ACCOUNTING.md`); systematic mutation automation and seed-sweep promotion; a queryable
 decision-trace store; nobody holding a scored relationship with Kane; the tuning guesses; obligation
 read but never moved; save slots, autosave, a save browser, cross-build migrations. From

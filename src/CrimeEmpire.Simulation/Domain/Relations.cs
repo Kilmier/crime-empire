@@ -38,6 +38,14 @@ public interface IRelationship
     /// <summary>What this character holds against that one, in the order it accumulated.</summary>
     IReadOnlyList<Grievance> Grievances { get; }
 
+    /// <summary>
+    /// Why his standing toward this person moved, in the order it moved — milestone 023.
+    ///
+    /// Read by the player-facing roster and by nothing that scores. See
+    /// <see cref="StandingChange"/> for why this is history rather than a fifth dimension.
+    /// </summary>
+    IReadOnlyList<StandingChange> StandingHistory { get; }
+
     double GrievanceWeight { get; }
 }
 
@@ -74,12 +82,15 @@ public static class Relations
     {
         private readonly List<Grievance> _grievances = new();
         private readonly System.Collections.ObjectModel.ReadOnlyCollection<Grievance> _readOnly;
+        private readonly List<StandingChange> _standingHistory = new();
+        private readonly System.Collections.ObjectModel.ReadOnlyCollection<StandingChange> _historyReadOnly;
 
         public Relationship(string otherId, bool stored)
         {
             OtherId = otherId;
             Stored = stored;
             _readOnly = _grievances.AsReadOnly();
+            _historyReadOnly = _standingHistory.AsReadOnly();
         }
 
         public string OtherId { get; }
@@ -118,6 +129,11 @@ public static class Relations
                 return sum;
             }
         }
+
+        /// <summary>Wrapped for the same reason <see cref="Grievances"/> is.</summary>
+        public IReadOnlyList<StandingChange> StandingHistory => _historyReadOnly;
+
+        public void Remember(StandingChange change) => _standingHistory.Add(change);
 
         public void Add(Grievance g) => _grievances.Add(g);
         public void ClearGrievances() => _grievances.Clear();
@@ -241,12 +257,18 @@ public static class Relations
     /// evidence of a wrong — it is two accounts that do not fit, and the man on the other end may
     /// simply be mistaken.
     /// </summary>
-    public static void RecordAccountConflict(Character listener, AccountConflict conflict)
+    public static void RecordAccountConflict(Character listener, AccountConflict conflict, DateTime at)
     {
         var rel = Writable(listener.Social.Ensure(conflict.SpeakerId));
         // Scaled by how hard the disagreement was, from the listener's side only: how firmly he held
         // the position, times how firmly it was contradicted. Both are actor-visible.
         rel.Trust = Clamp(rel.Trust - ConflictTrustCost * conflict.Strength);
+
+        // And why, for the roster to say — milestone 023. Written here rather than reconstructed
+        // afterwards, from the same listener-side evidence the movement itself came from: this method
+        // cannot reach the truth log or the speaker's candour, so what it remembers cannot claim to
+        // know he was lied to. It records that he was contradicted, which is all the listener has.
+        rel.Remember(new StandingChange(StandingCause.AccountContradicted, at));
     }
 
     // ---------------------------------------------------------------- the agreement consequence
@@ -280,10 +302,11 @@ public static class Relations
     /// reconstructing what this method dropped. See `docs/DESIGN_DECISIONS.md`, "Relationships — the
     /// agreement direction, settled by milestone 016".
     /// </summary>
-    public static void RecordAccountAgreement(Character listener, AccountAgreement agreement)
+    public static void RecordAccountAgreement(Character listener, AccountAgreement agreement, DateTime at)
     {
         var rel = Writable(listener.Social.Ensure(agreement.SpeakerId));
         rel.Trust = Clamp(rel.Trust + AccountAgreementTrustGain * agreement.Strength);
+        rel.Remember(new StandingChange(StandingCause.AccountCorroborated, at));
     }
 
     // ---------------------------------------------------------------- ordinary movement
@@ -317,10 +340,16 @@ public static class Relations
     }
 
     /// <summary>Somebody frightened him. Used by coercion resolution.</summary>
-    public static void Frighten(Character subject, string ofId, double delta)
+    public static void Frighten(Character subject, string ofId, double delta, DateTime at)
     {
         var rel = Writable(subject.Social.Ensure(ofId));
+        double before = rel.Fear;
         rel.Fear = Clamp(rel.Fear + delta);
+
+        // Only when it actually moved. A man already as frightened as the scale allows does not
+        // acquire a fresh memory of being frightened again, and recording one would put an entry on
+        // the roster that nothing in his state changed to match.
+        if (rel.Fear > before) rel.Remember(new StandingChange(StandingCause.Frightened, at));
     }
 
     /// <summary>He now holds something against that person.</summary>

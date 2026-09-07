@@ -331,3 +331,116 @@ production edit, each failing exactly the intended tests and nothing else, each 
 ### Commit
 
 One correction commit. Still unreviewed and unaccepted — this correction has not been back to Codex.
+
+## Correction 2 — Codex's review of `ab737e1`, 2026-09-07
+
+**Appended, not rewritten.** Everything above stands. Codex reviewed correction 1 itself and returned
+two P1 code defects plus one P2 documentation defect. All three are addressed in one commit; none of
+correction 1's design was rejected, and none of milestone 021's accepted behaviour moved.
+
+### 1. `Reconsidered` went stale the moment anything but `Revise` touched the record
+
+Correction 1 gave `Cognition.Revise` the only call that ever named an occasion. `Cognition.Receive` —
+a structurally different mechanism, an account arriving rather than the holder revising his own
+reading — moves `InformationRecord.LastReconsideredAt` in three of its branches (a first-time
+agreement, a same-voice restatement that does not reverse, and a disagreement) and left `Reconsidered`
+untouched in every one. Because a `with` expression that does not name a property copies it from the
+source, each of those three branches silently carried forward whatever `Reconsidered` the record
+already had. A belief `Revise`d for a delegated outcome and then argued over to his face kept naming
+the delegated outcome under a timestamp that had nothing to do with it — the exact defect
+`Reconsidered` was built to prevent, reintroduced one layer up.
+
+`ReconsiderCause` gains `GivenAnAccount`, and `Receive` computes one `Reconsideration` — cause
+`GivenAnAccount`, `Via` the claimed basis as heard from this speaker, `AboutId` the sender — once per
+call and names it in all three branches that move the timestamp. Nothing about acquisition changes:
+`SourceKind`/`SourceId` are untouched, exactly as `AcquiredAt` stays untouched by any of this.
+
+Two tests. `A_contradictory_report_after_a_direct_revision_names_itself_as_the_later_cause` is the
+regression Codex asked for by name: a direct `Revise` records `DelegatedOutcome`, a contradictory
+report then arrives, and the final record names `GivenAnAccount`, not the earlier cause.
+`An_agreeing_or_restating_account_also_replaces_the_earlier_revision_cause` covers the other two
+branches — and does it by staging a fresh `Revise` immediately before each account, not by chaining
+both accounts through one shared revision. Chaining them would have left the reaffirm branch's own
+fix untested: reaffirming after an already-correct agreement carries the same cause forward either
+way, so a passing assertion there would not have distinguished the fix from its absence. Both tests
+were mutation-checked branch by branch — each of the three `Receive` sites reverted independently,
+each failing only the assertion staged against that specific branch, each reverted afterward with
+`git diff` confirmed clean.
+
+### 2. `CapabilityBar.Ladder` was a mutable array behind an interface reference
+
+An `IReadOnlyList<string>` backed by `new[] { RoughWork, HardMan }` is exactly the shape milestone 009
+was rejected for on its player-facing DTOs: the interface only restricts what the *declared* reference
+can do, and anything holding it can cast back to `string[]` or `IList<string>` and reorder or overwrite
+the one ladder every reader shares. Nothing in this codebase currently does; the finding is that
+nothing stopped it structurally.
+
+`Ladder` is now a `System.Collections.Immutable.ImmutableArray<string>` — a value type with no
+mutating members, rather than a mutable array wearing a narrower interface. `Read`'s internal indexing
+moves from `.Count` to `.Length`, `ImmutableArray<T>`'s own member; behaviourally identical, since both
+are the same two-element sequence read the same way.
+
+`The_ladder_is_genuinely_immutable` proves both halves: content and ordering are exactly `RoughWork`
+then `HardMan`, and casting to `IList<string>` — which `ImmutableArray<T>` still implements, for
+compatibility with older APIs — and calling `Add`, the indexer setter, or `Clear` all throw
+`NotSupportedException` rather than succeeding. Mutation-checked against the pre-correction
+declaration directly: reverting `Ladder` to the old array-backed field and casting to `IList<string>`
+the same way, the indexer-set assertion failed with "no exception was thrown" — the plain array
+accepted the write silently, which is the exact defect this test exists to catch. `Add`/`Clear` still
+threw against the old array, because arrays refuse resizing regardless; the indexer was the one write
+a plain array actually permits, and the one a narrower interface could not have prevented.
+
+### 3. "Only a scenario fixture can seed" an incoherent pair overstated what was proved
+
+Correction 1's own account, and `DESIGN_DECISIONS.md`'s "Capability as belief" section, both said only
+a scenario fixture could seed an incoherent ladder pair, reasoning from `Cognition.Revise` alone: it
+moves confidence and never stance, so replaying it cannot turn a rejected bar into a held one. That
+reasoning is correct and is *all* `No_runtime_revision_can_turn_a_rejected_bar_into_a_held_one` (this
+correction renames it `Revise_alone_can_never_turn_a_rejected_bar_into_a_held_one`) actually proves.
+It says nothing about `Cognition.Learn` or `Cognition.Receive`, and both establish or move one bar's
+stance without any reference to the other bar — this file's own `BuildAngeloWorld` test helper builds
+the exact incoherent pair through two independent `Learn` calls, for several other tests in this same
+file, and it is not a scenario fixture. The `capable-angelo` scenario fixture happens to be the only
+*production* writer that currently does it; the claim that it is the only writer that *could* was
+never established and was not true.
+
+The test's docstring and name are narrowed to what its body proves — a claim about `Revise` alone —
+rather than the broader claim about the whole mechanism. `DESIGN_DECISIONS.md`'s "Capability as
+belief" section is corrected in place (not append-only, unlike this archive) to state the narrower
+claim and to say plainly that `CapabilityBar.Read` is what actually resolves the pair, regardless of
+how it arose. Nothing about the resolution rule itself was found wrong — Codex's own finding says so
+— and no test claiming to prove `CapabilityBar.Read`'s correctness is touched by this correction.
+
+### What did not move
+
+Preserved throughout, and verified rather than assumed: the silent blocked path still teaches the
+owner nothing; collection still can revise the delegator's assessment; raw cognition is untouched by
+`CapabilityBar.Read`; both scoring and presentation still go through the one shared resolver. No hash
+moved on any variant, including `capable-angelo`, which is the one variant that actually exercises
+`Revise` against a record `Receive` might otherwise have gone on to touch — `Reconsidered` is read by
+nothing that reaches a rendered trace or a chosen action, so a diagnostic-only field gaining a correct
+value where it previously carried a stale one was expected, and was measured, to move nothing.
+
+### Verification
+
+Build 0 warnings / 0 errors on both target frameworks. Tests **654** (636 + 3 new: the two
+`Reconsidered` regressions and the ladder immutability test — corrections 2 and 3 above added no new
+test, only renamed and corrected an existing one and a documentation section). `--verify` on baseline
+(`83D59F6D099B840A`), `disloyal-vincent` (`33F3C92F3DB9250C`), `resentful-tommy` (`2899736537AF3BE3`)
+and `capable-angelo` (`34E6AF60C2673B95`) — all four identical to milestone 026's accepted figures,
+confirmed by direct comparison against `docs/milestones/026-in-person-things-come-back.md` rather than
+assumed. `--compare` at seed 42: 6 configurations, 6 distinct traces, 6 distinct chosen-action
+sequences, every digest unmoved. Both required viewpoint runs
+(`disloyal-vincent`/`salvatore`, `baseline`/`vincent`) exit 0. Five Godot self-tests
+(`--selftest`, `--selftest-goldenpath`, `--selftest-directaction`, `--selftest-corroboration`,
+`--selftest-tribute`) and the two-process restart proof
+(`--selftest-restart-save`/`--selftest-restart-load`) all exit 0.
+
+Five mutation checks this round, each a real temporary production edit, each confirmed to fail only
+the test staged against it and nothing else, each reverted with `git diff` confirmed clean afterward:
+the three `Receive` branches' `Reconsidered` assignment, each reverted independently; the ladder's
+declaration, reverted to the pre-correction mutable form.
+
+### Commit
+
+One correction commit. Still unreviewed and unaccepted — this correction has not been back to Codex.

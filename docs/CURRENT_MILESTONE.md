@@ -8,8 +8,14 @@ do not create a separate handoff document.
 ## Status
 
 **Nothing is active.** Milestone 026 — In Person, Things Come Back — is implemented, tested and
-committed, and **Matt is playtesting**. Milestone 021's correction awaits Codex re-review. Milestones
-021 through 026 are all **unreviewed and unaccepted**.
+committed, and **Matt is playtesting**. Milestone 021 has a second correction, addressing Codex's
+review of the first (`ab737e1`): a `Cognition.Receive` account could leave `InformationRecord
+.Reconsidered` naming a stale `Revise` occasion, `CapabilityBar.Ladder` was a mutable array behind a
+narrower interface, and a canonical claim about who can seed an incoherent ladder pair was narrowed to
+what its test actually proves. All three fixed, 654 tests, five mutation checks, full verification
+green, no hash moved; full account in `docs/milestones/021-capability-is-a-belief-not-a-stat.md`'s
+"Correction 2". **This second correction now awaits Codex re-review.** Milestones 021 through 026 are
+all **unreviewed and unaccepted**.
 
 **Milestone 026** came out of the playtest of 025 rather than the arc: a man asked about something he
 holds nothing on now says so, and a man told something or threatened to his face shows something the

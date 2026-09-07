@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace CrimeSim.Domain;
 
 /// <summary>
@@ -90,8 +92,16 @@ public static class CapabilityBar
     /// <summary>He is exceptional at it — the bar above <see cref="RoughWork"/>.</summary>
     public const string HardMan = "hard-man";
 
-    /// <summary>The ladder, lowest bar first. Ordering is data, not a convention at each reader.</summary>
-    public static readonly IReadOnlyList<string> Ladder = new[] { RoughWork, HardMan };
+    /// <summary>
+    /// The ladder, lowest bar first. Ordering is data, not a convention at each reader.
+    ///
+    /// <see cref="ImmutableArray{T}"/> rather than an array behind an <c>IReadOnlyList</c> — a plain
+    /// array is castable back to <c>string[]</c> or <c>IList&lt;string&gt;</c> by anything holding the
+    /// interface reference, which would let a caller reorder or overwrite the one ladder every reader
+    /// shares. A value type with no mutating members closes that off structurally rather than by
+    /// convention.
+    /// </summary>
+    public static readonly ImmutableArray<string> Ladder = ImmutableArray.Create(RoughWork, HardMan);
 
     /// <summary>The claim that <paramref name="personId"/> clears <paramref name="bar"/>.</summary>
     public static Claim About(string personId, string bar)
@@ -130,13 +140,13 @@ public static class CapabilityBar
     public static IReadOnlyList<CapabilityReading> Read(
         string personId, Func<Claim, InformationRecord?> position)
     {
-        var raw = new InformationRecord?[Ladder.Count];
-        for (int i = 0; i < Ladder.Count; i++)
+        var raw = new InformationRecord?[Ladder.Length];
+        for (int i = 0; i < Ladder.Length; i++)
             raw[i] = position(About(personId, Ladder[i]));
 
-        var readings = new List<CapabilityReading>(Ladder.Count);
+        var readings = new List<CapabilityReading>(Ladder.Length);
 
-        for (int i = 0; i < Ladder.Count; i++)
+        for (int i = 0; i < Ladder.Length; i++)
         {
             if (raw[i] is { IsHeld: true } own)
             {
@@ -147,7 +157,7 @@ public static class CapabilityBar
             // The highest bar above this one that he actually holds. Searched downward from the top
             // so the answer does not depend on how many rungs the ladder has.
             InformationRecord? entailing = null;
-            for (int j = Ladder.Count - 1; j > i; j--)
+            for (int j = Ladder.Length - 1; j > i; j--)
                 if (raw[j] is { IsHeld: true } higher) { entailing = higher; break; }
 
             if (entailing is { } e)
@@ -257,6 +267,14 @@ public enum SourceKind
 /// because a canvass found nothing. Named causes rather than free text, following
 /// <see cref="StandingCause"/>, which milestone 023 added to the relationship record for the same
 /// reason and in the same shape.
+///
+/// <b>A second correction added <see cref="GivenAnAccount"/>.</b> The first version of this enum only
+/// ever named a <see cref="Cognition.Revise"/> occasion, and <see cref="Cognition.Receive"/> moved
+/// <see cref="InformationRecord.LastReconsideredAt"/> in several branches without touching
+/// <see cref="InformationRecord.Reconsidered"/> at all — so a belief revised for one reason and then
+/// argued over for another kept naming the first cause under a timestamp that belonged to the second.
+/// Every branch of <c>Receive</c> that moves the timestamp now names this cause instead of leaving the
+/// prior one to go stale.
 /// </summary>
 public enum ReconsiderCause
 {
@@ -268,6 +286,12 @@ public enum ReconsiderCause
 
     /// <summary>He looked for a witness and did not find one, which weakens the lead without refuting it.</summary>
     CanvassFoundNothing,
+
+    /// <summary>
+    /// Somebody spoke to him about it — agreeing, restating more or less firmly, or denying it — and
+    /// that account, not his own reasoning, is what last moved or restated where he stands.
+    /// </summary>
+    GivenAnAccount,
 }
 
 /// <summary>

@@ -598,9 +598,14 @@ spent moving it, which is the signature of a rule that was never written down.
   his tier, and every bar below it is entailed.** That single rule covers both a gap and a
   contradiction; letting a rejection of the low bar win instead would need a second rule and would
   leave the gap case inconsistent with it. Entailment supplies a position and never overwrites one
-  that already agrees, so an independently held bar keeps its own confidence. Only a scenario fixture
-  can seed an incoherent pair: `Cognition.Revise` moves confidence and never stance, so no runtime
-  path can build one.
+  that already agrees, so an independently held bar keeps its own confidence. **Narrowed by a second
+  correction, 2026-09-07: `Cognition.Revise` cannot build an incoherent pair, because it preserves
+  stance and only ever moves confidence — but `Learn` and `Receive` can, since each establishes or
+  updates one bar's stance without consulting the other's.** The `capable-angelo` scenario fixture is
+  the only place that currently does, not the only place that structurally could; nothing about
+  either method is fixture-only. What was never in question is that `CapabilityBar.Read` resolves the
+  pair correctly regardless of how it arose — that is the guarantee the rule above states, and it
+  does not depend on the pair being rare.
 - **A belief moves only where information actually reached the character, and the record says what
   moved it.** Milestone 021 revised a delegator's read of his man on the blocked path, where the job
   came back empty and nobody told him — the owner reading world state he had no access to, which is

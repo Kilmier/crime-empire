@@ -340,8 +340,59 @@ says so in its own summary. Recorded because the mutation check caught a green t
 nothing — the fourth instance in this project of that shape, and the first where the mutation
 discipline itself is what caught it rather than a later reader.
 
+**Still unreviewed and unaccepted at that point.** That correction had not been back to Codex, and
+neither had milestones 022–025.
+
+### Measured — milestone 021 correction 2, `ab737e1` reviewed, two P1s and one P2, corrected once, still unaccepted
+
+**Codex reviewed correction 1 (`ab737e1`) and returned FAIL with two P1 defects plus one P2
+documentation defect.** All three are addressed by one further correction commit; nothing in
+correction 1's design was rejected, and nothing accepted before it moved.
+
+1. **`InformationRecord.Reconsidered` went stale the moment anything but `Revise` touched the
+   record.** Correction 1 made `Revise` the only call that named an occasion. `Cognition.Receive` —
+   a structurally different mechanism, an account arriving rather than the holder revising his own
+   reading — moves `LastReconsideredAt` in three branches (fresh agreement, a non-reversing
+   restatement, and disagreement) and left `Reconsidered` untouched in all three, so each silently
+   carried forward whatever cause the record already had via the unnamed `with` property. A belief
+   revised for a delegated outcome and then argued over to his face kept naming the delegated outcome
+   under a timestamp that had nothing to do with it. `ReconsiderCause` gains `GivenAnAccount`, computed
+   once per `Receive` call and named in all three branches. Two regression tests, mutation-checked
+   branch by branch: the required one — direct revision, then a contradictory report, final record
+   naming the report — and a second covering the other two branches, staged so each is caught starting
+   from the cause it must replace rather than from an already-correct one left over by the branch
+   before it.
+2. **`CapabilityBar.Ladder` was a mutable array behind an `IReadOnlyList<string>` reference** —
+   castable back to `string[]` or `IList<string>` by anything holding the interface, letting a caller
+   reorder or overwrite the one ladder every reader shares. Now an `ImmutableArray<string>`, a value
+   type with no mutating members. Mutation-checked against the pre-correction declaration: casting the
+   old array-backed field to `IList<string>` and setting an index succeeded silently — no exception —
+   confirming the reachable defect the fix closes.
+3. **The canonical claim "only a scenario fixture can seed an incoherent pair" overstated what was
+   proved**, in both `DESIGN_DECISIONS.md` and a test's own docstring. `Cognition.Revise` alone cannot,
+   because it preserves stance — that is all the cited test proves, and it is renamed to say only that.
+   `Learn` and `Receive` establish or move one bar's stance without consulting the other, so either can
+   build the pair independently of any fixture — this file's own `BuildAngeloWorld` test helper already
+   does, through `Learn`, for several other tests in the same file. `CapabilityBar.Read` was never in
+   question and resolves the pair correctly regardless of how it arose; `DESIGN_DECISIONS.md` is
+   corrected in place to say so.
+
+**Verification.** Build 0/0 on both target frameworks; tests **654** (636 + 3 new — corrections 2 and
+3 above renamed and corrected existing material rather than adding tests). `--verify` on baseline
+(`83D59F6D099B840A`), `disloyal-vincent` (`33F3C92F3DB9250C`), `resentful-tommy` (`2899736537AF3BE3`)
+and `capable-angelo` (`34E6AF60C2673B95`) all identical to milestone 026's accepted figures, checked by
+direct comparison rather than assumed. `--compare` at seed 42: 6 configurations, 6 distinct traces, 6
+distinct chosen-action sequences, every digest unmoved. Both required viewpoint runs and all five Godot
+self-tests plus the two-process restart proof exit 0. Five mutation checks — the three `Receive`
+branches' `Reconsidered` assignment reverted independently, and the ladder's declaration reverted to
+its pre-correction mutable form — each confirmed to fail only its own intended assertion, each
+reverted afterward.
+
+No hash moved on any variant. `Reconsidered` is read by nothing that reaches a rendered trace or a
+chosen action, so correcting a diagnostic-only field was expected, and measured, to move nothing.
+
 **Still unreviewed and unaccepted.** This correction has not been back to Codex, and neither have
-milestones 022–025. Status is `CURRENT_MILESTONE.md`'s to state, not this file's.
+milestones 022–026. Status is `CURRENT_MILESTONE.md`'s to state, not this file's.
 
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 

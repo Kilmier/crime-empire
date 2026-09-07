@@ -515,6 +515,90 @@ public sealed class ExecutorSuitabilityTests
     }
 
     /// <summary>
+    /// Correction 2 to milestone 021 — Codex's review of <c>ab737e1</c>. <see cref="InformationRecord.Reconsidered"/>
+    /// used to survive only through <see cref="Cognition.Revise"/>: once a belief had been revised for
+    /// one named reason, an unrelated <see cref="Cognition.Receive"/> could move
+    /// <see cref="InformationRecord.LastReconsideredAt"/> again without touching
+    /// <see cref="InformationRecord.Reconsidered"/> — the timestamp said "just now" while the cause
+    /// still named the delegation outcome from days earlier.
+    ///
+    /// Direct revision, then a contradictory report against the same belief: the final record has to
+    /// name the report as what last moved it, not the delegation outcome that moved it before.
+    /// </summary>
+    [Fact]
+    public void A_contradictory_report_after_a_direct_revision_names_itself_as_the_later_cause()
+    {
+        var cognition = new Cognition();
+        var claim = CapabilityBar.About(Angelo, CapabilityBar.HardMan);
+        var t0 = Cast.Start;
+
+        // His own reading, the only kind Revise may touch.
+        cognition.Learn(claim, Stance.Believes, 0.6, SourceKind.Inference, Vincent, t0);
+
+        var delegatedOutcome = new Reconsideration(ReconsiderCause.DelegatedOutcome, SourceKind.Discovery, Angelo);
+        var revised = cognition.Revise(claim, 0.8, Vincent, t0.AddDays(1), delegatedOutcome);
+        Assert.Equal(ReconsiderCause.DelegatedOutcome, revised!.Reconsidered!.Value.Cause);
+
+        // A later, unrelated occasion: somebody tells him the opposite to his face.
+        var report = ReportedClaim.Honest(claim, Stance.Rejects, 0.9, SourceKind.Report);
+        var receipt = cognition.Receive(report, "salvatore", t0.AddDays(2));
+        Assert.NotNull(receipt.Conflict);
+
+        var final = cognition.Find(claim)!;
+        Assert.Equal(t0.AddDays(2), final.ReconsideredAt);
+        Assert.NotEqual(ReconsiderCause.DelegatedOutcome, final.Reconsidered!.Value.Cause);
+        Assert.Equal(ReconsiderCause.GivenAnAccount, final.Reconsidered.Value.Cause);
+        Assert.Equal("salvatore", final.Reconsidered.Value.AboutId);
+    }
+
+    /// <summary>
+    /// The same defect, in the other two <c>Receive</c> branches that move <c>LastReconsideredAt</c>
+    /// without a disagreement — fresh agreement and a plain restatement.
+    ///
+    /// Each is isolated against a belief that, immediately before it, carries a
+    /// <see cref="ReconsiderCause.DelegatedOutcome"/> occasion — never against one already carrying
+    /// <see cref="ReconsiderCause.GivenAnAccount"/> from the branch tested just before it. Chaining the
+    /// two accounts straight through a shared revision would leave the reaffirm branch's own fix
+    /// untested: reaffirming after an already-correct agreement carries the same cause forward either
+    /// way, so a green assertion there would prove nothing about the reaffirm branch specifically — the
+    /// revision is staged a second time, between the two accounts, precisely so each branch is caught
+    /// starting from the cause it is supposed to replace.
+    /// </summary>
+    [Fact]
+    public void An_agreeing_or_restating_account_also_replaces_the_earlier_revision_cause()
+    {
+        var cognition = new Cognition();
+        var claim = CapabilityBar.About(Angelo, CapabilityBar.HardMan);
+        var t0 = Cast.Start;
+        var delegatedOutcome = new Reconsideration(ReconsiderCause.DelegatedOutcome, SourceKind.Discovery, Angelo);
+
+        cognition.Learn(claim, Stance.Believes, 0.6, SourceKind.Inference, Vincent, t0);
+        cognition.Revise(claim, 0.8, Vincent, t0.AddDays(1), delegatedOutcome);
+
+        // Fresh agreement: a new voice affirming what he already believes.
+        var firstAccount = ReportedClaim.Honest(claim, Stance.Believes, 0.5, SourceKind.Report);
+        var agreementReceipt = cognition.Receive(firstAccount, "salvatore", t0.AddDays(2));
+        Assert.NotNull(agreementReceipt.Agreement);
+        Assert.Equal(ReconsiderCause.GivenAnAccount, cognition.Find(claim)!.Reconsidered!.Value.Cause);
+
+        // Revised again, directly — back to a cause the next account must itself replace.
+        cognition.Revise(claim, 0.85, Vincent, t0.AddDays(3), delegatedOutcome);
+        Assert.Equal(ReconsiderCause.DelegatedOutcome, cognition.Find(claim)!.Reconsidered!.Value.Cause);
+
+        // The same man restating, without reversing — no confidence change, but the timestamp moves.
+        // `latestFromSender` is still his first account, so this does not repeat verbatim.
+        var secondAccount = ReportedClaim.Honest(claim, Stance.Believes, 0.7, SourceKind.Report);
+        var reaffirmReceipt = cognition.Receive(secondAccount, "salvatore", t0.AddDays(4));
+        Assert.Null(reaffirmReceipt.Agreement);
+        Assert.Null(reaffirmReceipt.Conflict);
+
+        var final = cognition.Find(claim)!;
+        Assert.Equal(t0.AddDays(4), final.ReconsideredAt);
+        Assert.Equal(ReconsiderCause.GivenAnAccount, final.Reconsidered!.Value.Cause);
+        Assert.Equal("salvatore", final.Reconsidered.Value.AboutId);
+    }
+
+    /// <summary>
     /// Both directions of the rule, staged directly against it so the arithmetic is visible.
     /// Success makes him surer of what he holds; failure makes him less sure. The rule is exercised
     /// through its own public entry point rather than through a full run, following this project's
@@ -1169,17 +1253,21 @@ public sealed class ExecutorSuitabilityTests
     }
 
     /// <summary>
-    /// <b>Correction 3 — the system's own writers cannot build the contradiction.</b> Only a scenario
-    /// fixture can seed one, which is the deliberate part; nothing at runtime may produce one, which
-    /// is what "should not silently produce contradictory tier positions" asks for.
-    ///
-    /// Proved at the mechanism rather than by sampling a run. <see cref="Cognition.Revise"/> is the
-    /// only path a capability belief moves through, and it moves confidence and never stance — driven
-    /// here to both clamps in both directions, because a stance flip, if one were possible at all,
-    /// would be likeliest at the ends of the range.
+    /// <b>Correction 3, narrowed by a second correction — Codex's review of <c>ab737e1</c>.</b> The
+    /// original docstring here claimed "only a scenario fixture can seed" an incoherent ladder pair.
+    /// That overstates what this test proves and is not true of the mechanism: <c>Learn</c> and
+    /// <c>Receive</c> each establish or move one bar's stance without consulting the other, so either
+    /// can build the pair independently of any fixture — <see cref="BuildAngeloWorld"/>'s own
+    /// <c>roughWorkRejected</c>/<c>hardManRejected</c> parameters do exactly that, through <c>Learn</c>,
+    /// for several other tests in this file. What is true, and all this test proves, is narrower:
+    /// <see cref="Cognition.Revise"/> is the only path a capability belief moves through <em>after</em>
+    /// it exists, and it moves confidence and never stance, so replaying it — including at both
+    /// clamps, where a stance flip would be likeliest if one were possible at all — can never turn an
+    /// already-rejected bar into a held one. <see cref="CapabilityBar.Read"/> is what actually
+    /// resolves a pair however it arose; this test says nothing about that.
     /// </summary>
     [Fact]
-    public void No_runtime_revision_can_turn_a_rejected_bar_into_a_held_one()
+    public void Revise_alone_can_never_turn_a_rejected_bar_into_a_held_one()
     {
         var world = BuildAngeloWorld(
             actualCoercion: 0.80, believedRoughWork: 0.60, believedHardMan: 0.70, roughWorkRejected: true);
@@ -1197,6 +1285,25 @@ public sealed class ExecutorSuitabilityTests
         var occasion = new Reconsideration(ReconsiderCause.DelegatedOutcome, SourceKind.Discovery, Angelo);
         Assert.Equal(Stance.Rejects, vincent.Cognition.Revise(rough, 1.0, Vincent, world.Now, occasion)!.Stance);
         Assert.Equal(Stance.Rejects, vincent.Cognition.Revise(rough, 0.0, Vincent, world.Now, occasion)!.Stance);
+    }
+
+    /// <summary>
+    /// Correction 2 to milestone 021 — Codex's review of <c>ab737e1</c>. <see cref="CapabilityBar.Ladder"/>
+    /// used to be an array behind an <c>IReadOnlyList&lt;string&gt;</c> reference — genuinely mutable
+    /// underneath, reachable by anything willing to cast the interface back to <c>string[]</c> or
+    /// <c>IList&lt;string&gt;</c>, which would let a caller reorder or overwrite the one ladder every
+    /// reader shares. Proves both halves: the contents and ordering are exactly the two bars, lowest
+    /// first, and the mutating members of the collection interfaces it still implements refuse to run.
+    /// </summary>
+    [Fact]
+    public void The_ladder_is_genuinely_immutable()
+    {
+        Assert.Equal(new[] { CapabilityBar.RoughWork, CapabilityBar.HardMan }, CapabilityBar.Ladder);
+
+        IList<string> asList = CapabilityBar.Ladder;
+        Assert.Throws<NotSupportedException>(() => asList.Add("extra-bar"));
+        Assert.Throws<NotSupportedException>(() => asList[0] = "tampered");
+        Assert.Throws<NotSupportedException>(() => asList.Clear());
     }
 
     // ================================================================= helpers — natural/session level

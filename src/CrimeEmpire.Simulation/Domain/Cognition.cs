@@ -351,6 +351,15 @@ public sealed class Cognition
         // account he has been given, not the first.
         var upgraded = Upgrade(prior, asserted, senderId);
 
+        // Every branch below this point moves LastReconsideredAt, and each one is an account
+        // reaching him rather than his own reasoning — a second correction to milestone 021's
+        // Reconsidered, which only its own Revise call kept in step with the timestamp. Computed
+        // once because Via and AboutId do not vary by branch within a single Receive call; declaring
+        // it beside the timestamp it always accompanies is what keeps the two from drifting apart
+        // again the way they did here.
+        var toldOccasion = new Reconsideration(
+            ReconsiderCause.GivenAnAccount, asserted.ClaimedBasis.AsHeardFrom(), senderId);
+
         // He has said something at least slightly different. That is worth registering as a
         // development even when it does not shift the belief — which is the case for a man firming
         // up or softening a position he already gave: still one voice, so it must not compound.
@@ -358,7 +367,9 @@ public sealed class Cognition
         // without reversing is still one man's single voice, and ruling 4 requires the trigger stay
         // this narrow rather than broadening to every same-direction account.
         if (!reversal && prior.IsHeld == affirms)
-            return MakeReceipt(Replace(prior, upgraded with { LastReconsideredAt = at }), null, null);
+            return MakeReceipt(
+                Replace(prior, upgraded with { LastReconsideredAt = at, Reconsidered = toldOccasion }),
+                null, null);
 
         // Agreement, from a voice that is new to this claim or has just come round to it. Either
         // way it is support the belief did not have before — captured as an AccountAgreement,
@@ -378,7 +389,10 @@ public sealed class Cognition
                 prior.SourceKind,
                 prior.SourceId);
             return MakeReceipt(
-                Replace(prior, upgraded with { Confidence = raised, LastReconsideredAt = at }), null, agreement);
+                Replace(prior, upgraded with
+                {
+                    Confidence = raised, LastReconsideredAt = at, Reconsidered = toldOccasion,
+                }), null, agreement);
         }
 
         // Disagreement: a first denial from this man, or a reversal of what he told him before.
@@ -404,6 +418,7 @@ public sealed class Cognition
             Confidence = shaken,
             LastReconsideredAt = at,
             Contested = true,
+            Reconsidered = toldOccasion,
         });
 
         // The conflict is reported from exactly the branch that sets Contested, and describes the

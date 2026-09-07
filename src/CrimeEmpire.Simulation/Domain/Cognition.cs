@@ -209,11 +209,19 @@ public sealed class Cognition
             // He is revising something he already had, so the acquisition time stands. Only the
             // moment he last had cause to think about it moves.
             // A disagreement that has already happened is not undone by later learning more.
+            //
+            // Reconsidered names this override rather than being left at the fresh record's default
+            // null — the same timestamp/cause pairing milestone 021's corrections enforced for Revise
+            // and Receive, missed here because this branch builds its replacement from a brand-new
+            // InformationRecord rather than a `with` off the prior one. Via and AboutId are exactly
+            // this call's own sourceKind/sourceId — the channel and identity already given, never a
+            // second, free-text description of the same acquisition.
             record = record with
             {
                 AcquiredAt = prior.AcquiredAt,
                 LastReconsideredAt = at,
                 Contested = prior.Contested,
+                Reconsidered = new Reconsideration(ReconsiderCause.AcquiredAgain, sourceKind, sourceId),
             };
             _records[existing] = record;
             return record;

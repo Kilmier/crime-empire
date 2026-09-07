@@ -444,3 +444,54 @@ declaration, reverted to the pre-correction mutable form.
 ### Commit
 
 One correction commit. Still unreviewed and unaccepted — this correction has not been back to Codex.
+
+## Correction 3 — Codex's review of `b02b003`, 2026-09-07
+
+**Appended, not rewritten.** Everything above stands. Codex confirmed the three fixes in correction 2
+as correct and returned one further P1: the same timestamp/cause split, in the one writer neither
+correction 2 nor correction 1 had touched.
+
+### `Cognition.Learn`'s overriding branch left `Reconsidered` null under a timestamp that had moved
+
+`Learn`'s existing-record branch builds its replacement from a brand-new `InformationRecord(claim,
+stance, confidence, sourceKind, sourceId, at)` — which defaults `Reconsidered` to null, since nothing
+passes it — and then applies `AcquiredAt = prior.AcquiredAt, LastReconsideredAt = at, Contested =
+prior.Contested` through a `with` expression that never names `Reconsidered` either. Because the base
+record is freshly constructed rather than the prior one carried forward, this is not the staleness
+correction 2 fixed in `Receive` — there is no old cause left standing — it is the same invariant's
+other failure mode: a timestamp that says something moved, sitting next to a cause that says nothing
+did. Left open because correction 2 addressed `Revise` and `Receive`, the two writers Codex had named,
+and never re-audited `Learn`, the one writer neither correction had touched.
+
+`ReconsiderCause` gains `AcquiredAgain`: he came by the claim again himself, through whatever channel
+`Learn` was called with, confidently enough to override what he already held. `Via` and `AboutId` carry
+this call's own `sourceKind` and `sourceId` — the channel and identity already given to `Learn`, never
+a second, free-text description of the same acquisition. The overriding branch now names it in the
+same `with` expression that already moves `LastReconsideredAt`.
+
+One regression test, `An_overriding_learn_names_the_later_acquisition_as_its_own_cause`: an existing
+record, then a second `Learn` call confident enough to override it, through a different `SourceKind`
+and a different source. `AcquiredAt` stays the first call's; `ReconsideredAt` and `Reconsidered` both
+identify the second — cause `AcquiredAgain`, `Via` the second call's `SourceKind.Discovery`, `AboutId`
+its `"angelo"`. Mutation-checked: reverting the `Reconsidered` assignment throws on the test's own
+`.Value` access against a null `Reconsidered`, confirming the field really was left unset before this
+fix, not merely untested.
+
+**What did not move.** No scoring, chosen action, or fixture touched — `Learn` is called with dozens of
+`SourceKind`s across the whole simulation, far more pervasively than `Receive`, so this fix runs
+through every one of them on every accepted variant. All four required hashes (`baseline`
+`83D59F6D099B840A`, `disloyal-vincent` `33F3C92F3DB9250C`, `resentful-tommy` `2899736537AF3BE3`,
+`capable-angelo` `34E6AF60C2673B95`) measured identical to the figures both corrections 1 and 2 already
+stood on, confirming a diagnostic-only field gaining a value it previously lacked moves nothing that
+reaches a rendered trace or a chosen action, exactly as correction 2 found for `Receive`.
+
+**Verification.** Build 0/0 on both target frameworks. Tests **655** (654 + 1 new). `--verify` on all
+four required configurations, unmoved. `--compare` at seed 42: 6 configurations, 6 distinct traces, 6
+distinct chosen-action sequences, every digest unmoved. Both required viewpoint runs exit 0. Five
+Godot self-tests and the two-process restart proof all exit 0. One mutation check: the `Reconsidered`
+assignment in `Learn`'s overriding branch, reverted and confirmed to fail the new test on a null
+`Reconsidered` access, then restored, `git diff` confirmed clean.
+
+### Commit
+
+One correction commit. Still unreviewed and unaccepted — this correction has not been back to Codex.

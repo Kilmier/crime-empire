@@ -391,6 +391,40 @@ reverted afterward.
 No hash moved on any variant. `Reconsidered` is read by nothing that reaches a rendered trace or a
 chosen action, so correcting a diagnostic-only field was expected, and measured, to move nothing.
 
+**Still unreviewed and unaccepted at that point.** That correction had not been back to Codex, and
+neither had milestones 022–026.
+
+### Measured — milestone 021 correction 3, `b02b003` reviewed, one further P1, corrected once, still unaccepted
+
+**Codex reviewed correction 2 (`b02b003`) and confirmed all three of its fixes correct, returning one
+further P1:** the same timestamp/cause pairing invariant, unaddressed in the one writer neither
+correction 1 nor correction 2 had touched.
+
+`Cognition.Learn`'s overriding branch builds its replacement from a brand-new `InformationRecord`,
+which defaults `Reconsidered` to null since nothing passes it, and then advances
+`LastReconsideredAt` through a `with` expression that never names a cause either — a timestamp saying
+something moved next to a cause saying nothing did. Distinct from correction 2's `Receive` defect
+(there, a genuinely stale cause was carried forward from an earlier record; here, there was never an
+old cause to carry — `Learn` builds fresh and simply never named the new one).
+
+`ReconsiderCause` gains `AcquiredAgain`, carrying the overriding call's own `sourceKind` and
+`sourceId` as `Via`/`AboutId` — the channel and identity already given to `Learn`, never a second,
+free-text description of the same acquisition. One regression test: an existing record, then a second
+`Learn` confident enough to override it through a different source; `AcquiredAt` stays the first
+call's, `ReconsideredAt` and `Reconsidered` both identify the second. Mutation-checked: reverting the
+assignment throws on the test's own access to a null `Reconsidered`.
+
+**Verification.** Build 0/0; tests **655** (654 + 1). `--verify` on all four required configurations —
+baseline (`83D59F6D099B840A`), `disloyal-vincent` (`33F3C92F3DB9250C`), `resentful-tommy`
+(`2899736537AF3BE3`), `capable-angelo` (`34E6AF60C2673B95`) — all unmoved from corrections 1 and 2.
+`--compare` at seed 42: 6 configurations, 6 distinct traces, 6 distinct chosen-action sequences, every
+digest unmoved. Both required viewpoint runs, all five Godot self-tests, and the two-process restart
+proof exit 0. One mutation check, confirmed and reverted.
+
+No hash moved, despite `Learn` being called with far more `SourceKind`s across far more of the
+simulation than `Receive` — every one of those call sites now runs through this fix on every accepted
+variant, and none of them render `Reconsidered` into anything hashed.
+
 **Still unreviewed and unaccepted.** This correction has not been back to Codex, and neither have
 milestones 022–026. Status is `CURRENT_MILESTONE.md`'s to state, not this file's.
 

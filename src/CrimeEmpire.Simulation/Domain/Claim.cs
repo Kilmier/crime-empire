@@ -275,6 +275,13 @@ public enum SourceKind
 /// argued over for another kept naming the first cause under a timestamp that belonged to the second.
 /// Every branch of <c>Receive</c> that moves the timestamp now names this cause instead of leaving the
 /// prior one to go stale.
+///
+/// <b>A third correction added <see cref="AcquiredAgain"/>.</b> <see cref="Cognition.Learn"/>'s
+/// overriding branch built its replacement record from scratch — <c>new InformationRecord(...)</c>,
+/// defaulting <see cref="InformationRecord.Reconsidered"/> to null — and then advanced
+/// <see cref="InformationRecord.LastReconsideredAt"/> without ever naming a cause, the same
+/// timestamp/cause split the other two corrections closed for <c>Revise</c> and <c>Receive</c>, left
+/// open in the one writer neither had touched.
 /// </summary>
 public enum ReconsiderCause
 {
@@ -292,6 +299,15 @@ public enum ReconsiderCause
     /// that account, not his own reasoning, is what last moved or restated where he stands.
     /// </summary>
     GivenAnAccount,
+
+    /// <summary>
+    /// He came by it again himself — saw it, found it, concluded it anew — and it was good enough on
+    /// its own terms to override what he already had. <see cref="Reconsideration.Via"/> is the
+    /// acquisition's own <see cref="SourceKind"/> and <see cref="Reconsideration.AboutId"/> is who or
+    /// what it came from, exactly the channel and identity <see cref="Cognition.Learn"/> was called
+    /// with — never free text describing the acquisition a second way.
+    /// </summary>
+    AcquiredAgain,
 }
 
 /// <summary>

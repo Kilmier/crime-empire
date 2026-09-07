@@ -599,6 +599,38 @@ public sealed class ExecutorSuitabilityTests
     }
 
     /// <summary>
+    /// Correction 3 to milestone 021 — Codex's review of <c>b02b003</c>. <see cref="Cognition.Learn"/>'s
+    /// overriding branch builds its replacement from a brand-new <see cref="InformationRecord"/>, which
+    /// defaults <see cref="InformationRecord.Reconsidered"/> to null, and then advances
+    /// <see cref="InformationRecord.LastReconsideredAt"/> without ever naming a cause — the same
+    /// timestamp/cause split the first two corrections closed for <c>Revise</c> and <c>Receive</c>, left
+    /// open in the one writer neither had touched.
+    ///
+    /// An existing record, then a later acquisition confident enough to override it. Acquisition time
+    /// must stand — this is not testimony, so nothing here should touch <c>AcquiredAt</c> — while the
+    /// reconsideration timestamp and cause both identify the later evidence, never a stale null sitting
+    /// next to a timestamp that says something moved.
+    /// </summary>
+    [Fact]
+    public void An_overriding_learn_names_the_later_acquisition_as_its_own_cause()
+    {
+        var cognition = new Cognition();
+        var claim = CapabilityBar.About(Angelo, CapabilityBar.HardMan);
+        var t0 = Cast.Start;
+
+        cognition.Learn(claim, Stance.Believes, 0.5, SourceKind.Inference, Vincent, t0);
+
+        var overriding = cognition.Learn(
+            claim, Stance.Believes, 0.65, SourceKind.Discovery, "angelo", t0.AddDays(1));
+
+        Assert.Equal(t0, overriding.AcquiredAt);
+        Assert.Equal(t0.AddDays(1), overriding.ReconsideredAt);
+        Assert.Equal(ReconsiderCause.AcquiredAgain, overriding.Reconsidered!.Value.Cause);
+        Assert.Equal(SourceKind.Discovery, overriding.Reconsidered.Value.Via);
+        Assert.Equal("angelo", overriding.Reconsidered.Value.AboutId);
+    }
+
+    /// <summary>
     /// Both directions of the rule, staged directly against it so the arithmetic is visible.
     /// Success makes him surer of what he holds; failure makes him less sure. The rule is exercised
     /// through its own public entry point rather than through a full run, following this project's

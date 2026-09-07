@@ -8,13 +8,15 @@ do not create a separate handoff document.
 ## Status
 
 **Nothing is active.** Milestone 026 — In Person, Things Come Back — is implemented, tested and
-committed, and **Matt is playtesting**. Milestone 021 has a second correction, addressing Codex's
-review of the first (`ab737e1`): a `Cognition.Receive` account could leave `InformationRecord
-.Reconsidered` naming a stale `Revise` occasion, `CapabilityBar.Ladder` was a mutable array behind a
-narrower interface, and a canonical claim about who can seed an incoherent ladder pair was narrowed to
-what its test actually proves. All three fixed, 654 tests, five mutation checks, full verification
-green, no hash moved; full account in `docs/milestones/021-capability-is-a-belief-not-a-stat.md`'s
-"Correction 2". **This second correction now awaits Codex re-review.** Milestones 021 through 026 are
+committed, and **Matt is playtesting**. Milestone 021 now has a third correction. Codex reviewed
+correction 2 (`b02b003`), confirmed its three fixes, and found one further P1: `Cognition.Learn`'s
+overriding branch built its replacement from a brand-new `InformationRecord`, which defaults
+`Reconsidered` to null, and then advanced `LastReconsideredAt` without ever naming a cause — the same
+timestamp/cause pairing invariant correction 2 closed for `Revise` and `Receive`, left open in the one
+writer neither had touched. `ReconsiderCause` gains `AcquiredAgain`, carrying the overriding call's own
+source channel and identity; one regression test, mutation-checked. 655 tests, full verification green,
+no hash moved. Full account in `docs/milestones/021-capability-is-a-belief-not-a-stat.md`'s
+"Correction 3". **This third correction now awaits Codex re-review.** Milestones 021 through 026 are
 all **unreviewed and unaccepted**.
 
 **Milestone 026** came out of the playtest of 025 rather than the arc: a man asked about something he

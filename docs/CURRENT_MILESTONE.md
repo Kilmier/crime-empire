@@ -23,15 +23,20 @@ all **unreviewed and unaccepted**.
 holds nothing on now says so, and a man told something or threatened to his face shows something the
 speaker reads — correctly, wrongly, or not at all — as an impression on his own relationship, never as
 the other man's state. Every hash moved, as scoped. Corrected twice from play the same day: he knows
-what he is good at, in words; and a pause says what hangs over him, in his own terms. Now corrected a
-third time, from Codex's review of those two corrections: `Reactions.Landed` inferred "news" from a
-timestamp coincidence rather than from `Cognition.Receive` actually creating a fresh record, and
-`PlayerSnapshot.Exposure`'s per-recipient reaction lookup was never tied to the specific report it was
-describing, so a report that only withheld an incident could borrow an older reaction to a different
-one. Both fixed, `Receipt` gains an explicit `IsNews`, two regression tests, four mutation checks, no
-hash moved. 657 tests; all seven Godot invocations green. Full account, with the five rulings as taken
-and all three corrections: `docs/milestones/026-in-person-things-come-back.md`. **This third correction
-now awaits Codex re-review.**
+what he is good at, in words; and a pause says what hangs over him, in his own terms. Corrected a third
+time from Codex's review of those two: `Reactions.Landed` inferred "news" from a timestamp coincidence,
+and `PlayerSnapshot.Exposure`'s per-recipient reaction lookup was never tied to the specific report it
+described, so a withheld-only report could borrow an older reaction to a different incident. Now
+corrected a fourth time, from Codex's review of the third: the third correction's own match — recipient,
+timestamp, claim — was still not unique, since nothing forbids two distinct reports to the same
+recipient, about the same claim, at the same instant, and `Impression` carried no reference back to the
+report that produced it. `Impression` gains `ReportId`, set from `Reactions.AfterReport`;
+`Exposure` matches it exactly; the comprehensive replay comparator carries it and the narrower one
+deliberately does not, for the same reason it already excludes every other `Report.Id`-derived field.
+One regression test, one mutation check, no hash moved. 658 tests; all seven Godot invocations green.
+Full account, with the five rulings as taken and all four corrections:
+`docs/milestones/026-in-person-things-come-back.md`. **This fourth correction now awaits Codex
+re-review.**
 
 **Everything from `34cd117` onward is unreviewed.** Codex ran out of usage during milestone 020's
 correction chain. `REVIEW_LEDGER.md` calls this *cleared to build on*, not *accepted*.

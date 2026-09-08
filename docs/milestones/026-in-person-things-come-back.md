@@ -339,3 +339,65 @@ against it and nothing else, each reverted with `git diff` confirmed clean after
 ### Commit
 
 One correction commit. Still unreviewed and unaccepted — this correction has not been back to Codex.
+
+## Fourth correction — Codex's review of `c644b30`
+
+**Appended, not rewritten.** Everything above stands. Codex confirmed the `Receipt.IsNews` correction
+and the different-incident `Exposure` regression test as correct, and returned one further P1: the
+`Exposure` fix's own three-way match — recipient, timestamp, claim — was still not unique.
+
+### Timestamp and claim together do not identify a report
+
+Nothing forbids two distinct reports to the same recipient, about the same claim, delivered at the
+exact same instant — a delegate reporting the same incident twice in one pass, or two independent
+accounts of it landing in the same tick, are both ordinary shapes this simulation can produce.
+`Impression` carried no reference back to the report that produced it, so `Exposure`'s lookup — match
+on recipient (via `who.Social.Toward(recipient)`), `i.At == latest.At`, and the claim being one
+`latest` actually asserted — could not tell two such reports apart. Codex reproduced it directly: the
+newest of two same-instant reports was the one `Exposure` described, while the reaction it displayed
+had come from the older one.
+
+`Impression` gains `ReportId` (`long?`, default null): the originating `Report.Id` for a reading
+produced by `Reactions.AfterReport`, and null for `Reactions.AfterDemand`'s reading, which answers to
+no report at all. `Exposure`'s lookup now requires `i.ReportId == latest.Id` — the one check the
+coincidence cannot fool — alongside the timestamp and claim checks, which stay rather than being
+dropped; they are simply no longer load-bearing on their own.
+
+**Both replay comparators, and why they diverge.** `SimulationReplayTests.Snapshot`, the comprehensive
+comparator, gains `ReportId` on its `Impressions` fingerprint — persistent state a faithful replay has
+to reproduce exactly, the same reasoning `WakeEventId` was added under in milestone 018. Its own
+narrower sibling, `BehavioralSnapshot`, does **not** — its header already names `Report.Id` as one of
+the monotonic-counter classes it deliberately excludes, because that raw number legitimately shifts
+whenever an unrelated report is scheduled elsewhere in the run, which the insertion-stability suite
+built on it must not mistake for a behavioural difference. Adding `ReportId` there would have reopened
+exactly the false-difference class that comparator exists to close.
+
+One regression test, `Two_reports_at_the_same_instant_do_not_share_a_reaction`: two reports, same
+recipient, same claim, same timestamp, different ids, different reactions, staged in arrival order so
+the first report's reading sits earlier in the list — the order a `ReportId`-blind lookup would fall
+back to among tied timestamps. Asserts the exposure line carries only the newer report's reaction.
+Mutation-checked by removing the `ReportId` term: the test failed, picking the older report's "seemed
+to believe you" over the newer report's "did not seem to believe you," while the other fifteen
+`InPersonTests` kept passing — the mutation isolates this specific coincidence rather than breaking
+the mechanism generally.
+
+### What did not move
+
+No scoring, chosen action, or fixture touched. `ReportId` is read only by `Exposure`'s own selection
+logic and the comprehensive comparator; nothing in the decision path consults it, so actor neutrality
+and information boundaries are unaffected. All four required hashes measured identical to the figures
+the third correction already stood on — the coincidence was never reachable by any accepted variant's
+natural run.
+
+### Verification
+
+Build 0 warnings / 0 errors on both target frameworks. Tests **658** (657 + 1). `--verify` on all four
+required configurations (`baseline` `83D59F6D099B840A`, `disloyal-vincent` `33F3C92F3DB9250C`,
+`resentful-tommy` `2899736537AF3BE3`, `capable-angelo` `34E6AF60C2673B95`), all unmoved. `--compare` at
+seed 42: 6 configurations, 6 distinct traces, 6 distinct chosen-action sequences, every digest unmoved.
+Both required viewpoint runs and all seven Godot invocations exit 0. One mutation check, confirmed and
+reverted.
+
+### Commit
+
+One correction commit. Still unreviewed and unaccepted — this correction has not been back to Codex.

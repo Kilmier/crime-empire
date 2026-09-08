@@ -19,8 +19,14 @@ public enum ImpressionKind
 /// One reading of another man's face, remembered on the reader's relationship toward him — the
 /// same shape as <see cref="StandingChange"/> and for the same reason: it is about the man, so it
 /// lives with him. <see cref="About"/> is the claim the exchange concerned, null for a demand.
+///
+/// <see cref="ReportId"/> was added by a correction to milestone 026: recipient, timestamp and claim
+/// can all coincide for two genuinely distinct reports — nothing forbids two reports to the same man,
+/// about the same claim, delivered at the same instant — and without the originating report's own
+/// identity, a reader matching on those three alone cannot tell which exchange actually produced this
+/// reading. Null for a demand read (<c>Reactions.AfterDemand</c>), which is not a report at all.
 /// </summary>
-public sealed record Impression(ImpressionKind Kind, Claim? About, DateTime At);
+public sealed record Impression(ImpressionKind Kind, Claim? About, DateTime At, long? ReportId = null);
 
 /// <summary>
 /// Why this character's standing toward another moved — the closed set of things that actually move

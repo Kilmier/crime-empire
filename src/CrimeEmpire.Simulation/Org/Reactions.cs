@@ -88,7 +88,7 @@ public static class Reactions
             taken ? ImpressionKind.SeemedConvinced : ImpressionKind.SeemedUnconvinced,
             taken ? ImpressionKind.SeemedUnconvinced : ImpressionKind.SeemedConvinced);
 
-        Relations.RecordImpression(sender, recipient.Id, new Impression(read, about, report.At));
+        Relations.RecordImpression(sender, recipient.Id, new Impression(read, about, report.At, report.Id));
     }
 
     /// <summary>

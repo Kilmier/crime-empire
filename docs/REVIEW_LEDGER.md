@@ -275,6 +275,45 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 026 correction 4, `c644b30` reviewed, one further P1, corrected once, still unaccepted
+
+**Codex reviewed correction 3 (`c644b30`) and confirmed the `Receipt.IsNews` fix and the
+different-incident `Exposure` test as correct, and returned one further P1: the `Exposure` fix's own
+three-way match (recipient, timestamp, claim) was still not unique.** Nothing forbids two distinct
+reports to the same recipient, about the same claim, at the exact same instant, and `Impression`
+carried no reference back to the report that produced it — Codex reproduced the newest of two
+same-instant reports being described while the reaction shown had come from the older one.
+
+`Impression` gains `ReportId` (nullable, since `Reactions.AfterDemand`'s reading answers to no report
+at all), set from `report.Id` in `Reactions.AfterReport`. `PlayerSnapshot.Exposure`'s lookup now
+requires `i.ReportId == latest.Id` alongside the existing timestamp and claim checks, which are kept
+rather than dropped.
+
+**Both replay comparators, and why only one changed.** `SimulationReplayTests.Snapshot` (the
+comprehensive comparator) gains `ReportId` on its `Impressions` line — the same reasoning `WakeEventId`
+was added under in milestone 018. `BehavioralSnapshot`, the narrower sibling, does not: its own header
+already names `Report.Id` as a monotonic-counter class it deliberately excludes, since that raw number
+legitimately shifts when an unrelated report is scheduled elsewhere in the run — exactly the false
+difference the insertion-stability suite built on it must not see.
+
+One regression test, `Two_reports_at_the_same_instant_do_not_share_a_reaction`: two reports, same
+recipient, same claim, same timestamp, different ids, different reactions, staged in arrival order.
+Mutation-checked by removing the `ReportId` term — the test failed, picking the older report's reaction
+over the newer report's own, while the other fifteen `InPersonTests` kept passing.
+
+**Verification.** Build 0/0 on both target frameworks; tests **658** (657 + 1). `--verify` on all four
+required configurations (`baseline` `83D59F6D099B840A`, `disloyal-vincent` `33F3C92F3DB9250C`,
+`resentful-tommy` `2899736537AF3BE3`, `capable-angelo` `34E6AF60C2673B95`), all unmoved. `--compare` at
+seed 42: 6 configurations, 6 distinct traces, 6 distinct chosen-action sequences, every digest unmoved.
+Both required viewpoint runs and all seven Godot invocations exit 0. One mutation check, confirmed and
+reverted.
+
+No scoring, chosen action, or fixture touched — `ReportId` is read only by `Exposure`'s own selection
+logic and the comprehensive comparator.
+
+**Still unreviewed and unaccepted.** This correction has not been back to Codex. Full account:
+`docs/milestones/026-in-person-things-come-back.md`, "Fourth correction".
+
 ### Measured — milestone 026 correction 3, `3a45a27` and `e4df2ff` reviewed, two P1s, corrected once, still unaccepted
 
 **Codex reviewed the two playtest corrections milestone 026 had already appended (`3a45a27`, `e4df2ff`)

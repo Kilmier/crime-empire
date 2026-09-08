@@ -310,7 +310,12 @@ public sealed class SimulationReplayTests
                           string.Join(",", rel.StandingHistory.Select(h => $"{h.Cause}:{h.At:O}:{h.About}")) + "|" +
                           // Milestone 026: impressions are remembered state and read by the roster;
                           // a replay that lost one would show the player a different history.
-                          string.Join(",", rel.Impressions.Select(i => $"{i.Kind}:{i.At:O}:{i.About}")) + "|" +
+                          // ReportId, added by a correction: two distinct reports can otherwise share
+                          // recipient, timestamp and claim, and a replay that reattributed a reaction
+                          // to the wrong one of them would still pass without this — the comprehensive
+                          // comparator is exactly where that linkage identity belongs, unlike the
+                          // narrower BehavioralSnapshot below, which deliberately excludes Report.Id.
+                          string.Join(",", rel.Impressions.Select(i => $"{i.Kind}:{i.At:O}:{i.About}:{i.ReportId}")) + "|" +
                           string.Join(",", rel.Grievances.Select(g =>
                               $"{g.Description}:{Number(g.Severity)}:{g.At:O}")));
 
@@ -392,6 +397,11 @@ public sealed class SimulationReplayTests
                               // of field this comparator exists to exclude. Same shape as
                               // AttemptedConcealments above. Caught by the insertion-stability test.
                               $"{h.Cause}:{h.At:O}:{h.About?.Kind}:{h.About?.Subject}:{h.About?.Object}")) + "|" +
+                          // Impression.ReportId deliberately excluded, unlike in Snapshot above: it is
+                          // exactly the class of field this comparator's own header names — a
+                          // Report.Id-derived counter that legitimately shifts when an unrelated
+                          // report is scheduled elsewhere in the run, which is scheduling noise here
+                          // rather than a behavioural difference.
                           string.Join(",", rel.Impressions.Select(i =>
                               $"{i.Kind}:{i.At:O}:{i.About?.Kind}:{i.About?.Subject}:{i.About?.Object}")) + "|" +
                           string.Join(",", rel.Grievances.Select(g => Number(g.Severity))));

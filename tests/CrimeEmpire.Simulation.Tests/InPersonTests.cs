@@ -408,7 +408,7 @@ public sealed class InPersonTests
             Array.Empty<Claim>(), "staged");
         world.Reports.Add(toldAboutGrocery);
         Relations.RecordImpression(vincent, "salvatore",
-            new Impression(ImpressionKind.SeemedConvinced, groceryIncident, toldAboutGrocery.At));
+            new Impression(ImpressionKind.SeemedConvinced, groceryIncident, toldAboutGrocery.At, toldAboutGrocery.Id));
 
         var keptBakeryQuiet = new Report(2, "vincent", "salvatore", Cast.Start.AddDays(15), ReportCandor.Candid,
             Array.Empty<ReportedClaim>(), new[] { bakeryIncident }, "staged");
@@ -421,6 +421,51 @@ public sealed class InPersonTests
         Assert.DoesNotContain("seemed", toSalvatore, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("believe", toSalvatore, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tell whether", toSalvatore, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Correction found by Codex reviewing `c644b30`: recipient, timestamp and claim together are
+    /// still not unique. Nothing forbids two distinct reports to the same man, about the same claim,
+    /// delivered at the exact same instant — and without the originating report's own identity, a
+    /// lookup keyed on those three alone cannot tell which of the two actually produced a given
+    /// reaction. Codex reproduced the newest report being described while the reaction shown came
+    /// from an earlier, same-instant report.
+    ///
+    /// Same recipient, same claim, same timestamp, different report ids, different reactions. The
+    /// selected report is the newer one (ties broken by id, as `latest`'s own ordering already does);
+    /// the exposure line must use only its own reaction, never the older report's.
+    /// </summary>
+    [Fact]
+    public void Two_reports_at_the_same_instant_do_not_share_a_reaction()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+
+        var incident = new Claim(ClaimKind.PersonUsedViolence, "vincent", Cast.Grocery, 1);
+        vincent.Cognition.Learn(incident, Stance.Knows, 1.0, SourceKind.Participant, "vincent", Cast.Start);
+
+        var at = Cast.Start.AddDays(5);
+        var firstReport = new Report(1, "vincent", "salvatore", at, ReportCandor.Candid,
+            new[] { ReportedClaim.Honest(incident, Stance.Knows, 1.0, SourceKind.Participant) },
+            Array.Empty<Claim>(), "staged");
+        var secondReport = new Report(2, "vincent", "salvatore", at, ReportCandor.Candid,
+            new[] { ReportedClaim.Honest(incident, Stance.Knows, 1.0, SourceKind.Participant) },
+            Array.Empty<Claim>(), "staged");
+        world.Reports.Add(firstReport);
+        world.Reports.Add(secondReport);
+
+        // Recorded in arrival order, first report's impression first — the order they would actually
+        // land in, and the order a lookup blind to ReportId would fall back to among tied timestamps.
+        Relations.RecordImpression(vincent, "salvatore",
+            new Impression(ImpressionKind.SeemedConvinced, incident, at, firstReport.Id));
+        Relations.RecordImpression(vincent, "salvatore",
+            new Impression(ImpressionKind.SeemedUnconvinced, incident, at, secondReport.Id));
+
+        var hanging = PlayerView.Build(world, "vincent", world.Now, PlayerView.You).Exposure;
+        var toSalvatore = Assert.Single(hanging, l => l.Contains("Salvatore Greco", StringComparison.Ordinal));
+
+        Assert.Contains("did not seem to believe you", toSalvatore, StringComparison.Ordinal);
+        Assert.DoesNotContain("Salvatore Greco seemed to believe you", toSalvatore, StringComparison.Ordinal);
     }
 
     // ================================================================= first correction

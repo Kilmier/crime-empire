@@ -275,6 +275,51 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 026 correction 3, `3a45a27` and `e4df2ff` reviewed, two P1s, corrected once, still unaccepted
+
+**Codex reviewed the two playtest corrections milestone 026 had already appended (`3a45a27`, `e4df2ff`)
+and returned two defects, one per commit — both a shortcut standing in for a link the model does not
+actually have.**
+
+1. **`Reactions.Landed` (`3a45a27`) inferred "news" from a coincidence of dates.** Its rule —
+   `receipt.Record.AcquiredAt == at` — is true for a claim this exact `Receive` call just created, but
+   equally true for a claim the listener already held whose acquisition happens to date to the same
+   day this unrelated report lands. A report asserting both an old, coincidentally-dated claim and a
+   genuinely fresh one could have the old claim out-rank the news, deterministically when asserted
+   first, since the loop returns its first match. `Receipt` gains `IsNews`, set only by the branch of
+   `Cognition.Receive` that actually finds no prior record; every other branch sets it `false`
+   regardless of the timestamps. `Landed` reads it directly.
+2. **`PlayerSnapshot.Exposure` (`e4df2ff`) attached a reaction to a report that never earned one.**
+   Its per-recipient "what he told whom" line looked up the most recent impression about any act
+   claim toward that recipient — never checking that the impression came from the specific report the
+   line was describing. A later report that only withheld an incident (earning no reaction at all,
+   since `Reactions.AfterReport` only reacts to what is actually asserted) could still surface an
+   earlier, unrelated incident's reaction. The lookup now requires the impression's own timestamp to
+   match the selected report's and its claim to be one that report actually asserted.
+
+Two regression tests in `InPersonTests.cs`, each mutation-checked against the specific mechanism it
+proves: `The_reaction_is_about_the_claim_that_is_actually_new_not_one_sharing_its_timestamp` (reverting
+`Landed` to the date comparison fails it while the pre-existing "news outranks what the report led
+with" test keeps passing — the mutation isolates the coincidence rather than breaking the mechanism
+generally; a second mutation flipping `IsNews`'s only `true` assignment fails both tests) and
+`A_withheld_only_report_does_not_inherit_an_older_reaction_to_a_different_incident` (reverting the
+lookup to its unscoped form fails it on the withheld line acquiring the earlier incident's reaction).
+
+**Verification.** Build 0/0 on both target frameworks; tests **657** (655 + 2). `--verify` on all four
+required configurations (`baseline` `83D59F6D099B840A`, `disloyal-vincent` `33F3C92F3DB9250C`,
+`resentful-tommy` `2899736537AF3BE3`, `capable-angelo` `34E6AF60C2673B95`), all identical to milestone
+026's accepted figures — neither defect was reachable by any accepted variant's natural run.
+`--compare` at seed 42: 6 configurations, 6 distinct traces, 6 distinct chosen-action sequences, every
+digest unmoved. Both required viewpoint runs and all seven Godot invocations exit 0. Four mutation
+checks, each confirmed and reverted.
+
+No scoring, chosen action, or fixture touched — both fixes are presentation-layer selection logic
+reading state that already exists; actor neutrality, information boundaries and determinism are
+unaffected.
+
+**Still unreviewed and unaccepted.** This correction has not been back to Codex. Full account:
+`docs/milestones/026-in-person-things-come-back.md`, "Third correction".
+
 ### Measured — milestone 021, capability is a belief, corrected once, still unaccepted
 
 **The first Codex review since the tool ran out of usage mid-way through milestone 020.** It read

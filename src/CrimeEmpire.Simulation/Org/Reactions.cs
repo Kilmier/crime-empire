@@ -64,7 +64,7 @@ public static class Reactions
         World world, Character sender, Character recipient, Report report,
         IReadOnlyList<(ReportedClaim Claim, Receipt Receipt)> receipts)
     {
-        Claim? aboutOrNull = report.AnsweringClaim ?? Landed(receipts, report.At);
+        Claim? aboutOrNull = report.AnsweringClaim ?? Landed(receipts);
         if (aboutOrNull is not { } about) return;
 
         ReportedClaim? assertionOrNull = null;
@@ -97,14 +97,23 @@ public static class Reactions
     /// again from a new voice, else what the report led with. News outranks corroboration because
     /// a capo repeating the boss's own rule back to him corroborates it — the boss holds it — and
     /// the first version of this read how the boss took his own rule.
+    ///
+    /// <b>"News" is <see cref="Receipt.IsNews"/>, never <c>AcquiredAt == at</c>.</b> A correction
+    /// found alongside milestone 026's playtest: a claim he already held can have been acquired on
+    /// this exact date through some other channel entirely, coincidentally equal to this report's own
+    /// timestamp — the equality test could not tell "created just now, by this call" from "already
+    /// on the books, dated today by chance", and a pre-existing claim with that coincidence could
+    /// out-rank the genuinely fresh one in this same delivery. <c>Receipt.IsNews</c> is set only by
+    /// the one branch of <see cref="Cognition.Receive"/> that actually finds no prior record, so it
+    /// says what happened in this call rather than what the calendar happens to show.
     /// </summary>
-    private static Claim? Landed(IReadOnlyList<(ReportedClaim Claim, Receipt Receipt)> receipts, DateTime at)
+    private static Claim? Landed(IReadOnlyList<(ReportedClaim Claim, Receipt Receipt)> receipts)
     {
         if (receipts.Count == 0) return null;
         foreach (var (claim, receipt) in receipts)
             if (receipt.Conflict is not null) return claim.Claim;
         foreach (var (claim, receipt) in receipts)
-            if (receipt.Record.AcquiredAt == at) return claim.Claim;
+            if (receipt.IsNews) return claim.Claim;
         foreach (var (claim, receipt) in receipts)
             if (receipt.Agreement is not null) return claim.Claim;
         return receipts[0].Claim.Claim;

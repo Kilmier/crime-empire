@@ -262,3 +262,80 @@ acquired by testimony. A decision-quality defect; on `ROADMAP.md`'s known-debt l
 Verification: build 0/0; **651 tests** (650 + 1); hashes unchanged from `e58dbcc`; three viewpoint
 runs read; all seven Godot invocations exit 0. The Godot editor's regeneration artifacts appeared
 again and were removed again.
+
+## Third correction — Codex's review of `3a45a27` and `e4df2ff`
+
+Two defects, one per correction above, both a shortcut standing in for a link the model does not
+actually have — the exact false-assurance shape this project's own review culture keeps naming.
+
+### `Reactions.Landed` inferred "news" from a coincidence of dates
+
+`3a45a27` introduced `Landed`'s news-outranks-corroboration rule as `receipt.Record.AcquiredAt ==
+at`: true for a claim this exact `Receive` call just created, but also true for any claim the
+listener already held whose acquisition happens to date to the same day this unrelated report lands
+— acquired that morning through some other channel entirely, or on a prior visit that simply fell on
+the same date. The equality test could not tell "created just now, by this call" from "already on
+the books, dated today by chance," and in a report asserting both an old, coincidentally-dated claim
+and a genuinely fresh one, the old claim could out-rank the news — deterministically so when it was
+asserted first, since the loop returns its first match.
+
+`Receipt` gains `IsNews`, set only by the one branch of `Cognition.Receive` that finds no prior
+record and creates one; every other branch — verbatim repeat, reaffirmation, agreement, disagreement
+— sets it `false` regardless of what the timestamps say. `Landed` reads `receipt.IsNews` in place of
+the date comparison; the now-unused `at` parameter is removed from `Landed` and its call site rather
+than left to warn.
+
+One regression test, `The_reaction_is_about_the_claim_that_is_actually_new_not_one_sharing_its_timestamp`
+(`InPersonTests.cs`): Salvatore already holds a claim staged to have been acquired, through some other
+channel, on the exact date a new report will land; that report asserts the old claim first and a
+genuinely new one second. Mutation-checked by reverting `Landed` to the old date comparison — the new
+test failed, picking the old claim, while the pre-existing sibling test proving "news outranks what
+the report led with" kept passing, confirming the mutation exercises this specific coincidence rather
+than breaking the mechanism generally. A second mutation flipped the fresh branch's `isNews: true` to
+`false`, which failed both that test and the pre-existing sibling — `IsNews` is load-bearing for both.
+
+### `PlayerSnapshot.Exposure` attached a reaction to a report that never earned one
+
+`e4df2ff` added a per-recipient "what he told whom" line to `Exposure`, ending in the reading he took
+off that man's face — looked up as `who.Social.Toward(recipient).Impressions.Where(i => i.About is
+{} about && actClaims.Contains(about)).OrderByDescending(i => i.At).FirstOrDefault()`. Scoped only by
+recipient and "about some act claim of his," never by which report the line is actually describing.
+A man exposed on two separate incidents to the same recipient — one told, earning a real reaction;
+a later one only withheld, earning none, since `Reactions.AfterReport` only ever reacts to what a
+report actually asserts — had the later, withheld-only line silently borrow the earlier incident's
+reaction, because the lookup never checked that the impression came from the report `Exposure` was
+describing at all.
+
+The lookup now requires the impression's own timestamp to match the selected report's (`i.At ==
+latest.At`) and its claim to be one that report actually asserted, computed from `latest.Asserted`
+rather than the broader `actClaims`. A report that only withheld therefore matches nothing, exactly
+as it should: nothing was ever read off a face for a claim never put to it.
+
+One regression test, `A_withheld_only_report_does_not_inherit_an_older_reaction_to_a_different_incident`
+(`InPersonTests.cs`): two incidents, two reports to the same recipient — the earlier told and given a
+staged reaction, the later withholding a different incident entirely. Mutation-checked by reverting
+the lookup to the old, unscoped form — the test failed, the withheld-only line acquiring the earlier
+incident's "seemed to believe you" clause it must not have.
+
+### What did not move
+
+No scoring, chosen action, or fixture touched — both fixes are presentation-layer selection logic
+reading state that already exists, never inventing or moving a belief, a relationship dimension, or
+an event. Actor neutrality, information boundaries and determinism are unaffected: `IsNews` reports
+a fact `Receive` already establishes about its own call rather than reading anyone else's cognition,
+and `Exposure`'s narrower lookup still reads nothing but the viewpoint character's own reports and his
+own relationship state. All four required hashes measured identical to milestone 026's accepted
+figures (`baseline` `83D59F6D099B840A`, `disloyal-vincent` `33F3C92F3DB9250C`, `resentful-tommy`
+`2899736537AF3BE3`, `capable-angelo` `34E6AF60C2673B95`) — neither defect was reachable by any
+accepted variant's natural run, so nothing hashed depended on either bug's presence.
+
+Verification: build 0 warnings / 0 errors on both target frameworks. Tests **657** (655 + 2). `--verify`
+on all four required configurations, unmoved. `--compare` at seed 42: 6 configurations, 6 distinct
+traces, 6 distinct chosen-action sequences, every digest unmoved. Both required viewpoint runs and all
+seven Godot invocations (five self-tests, the two-process restart proof) exit 0. Four mutation checks
+this round, each a real temporary production edit, each confirmed to fail only the test staged
+against it and nothing else, each reverted with `git diff` confirmed clean afterward.
+
+### Commit
+
+One correction commit. Still unreviewed and unaccepted — this correction has not been back to Codex.

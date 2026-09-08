@@ -376,6 +376,53 @@ public sealed class InPersonTests
         }, hanging);
     }
 
+    /// <summary>
+    /// Correction found alongside milestone 026's playtest (a Codex finding): the reaction clause
+    /// used to be looked up independently of which report it was about — only "an impression about
+    /// any act claim, toward this recipient, most recent" — so a later report that only withheld a
+    /// second incident could still surface the reaction read off the recipient's face from an
+    /// earlier report about a different one. Nothing is ever read off a face for a claim that was
+    /// never put to it: <c>Reactions.AfterReport</c> only reacts to what a report actually asserts,
+    /// so a withheld-only report must show no reaction at all, however recently a different incident
+    /// earned one from the same man.
+    ///
+    /// Two incidents, two reports, one recipient. The earlier report tells Salvatore about the
+    /// grocery incident and earns a real reaction. The later report withholds the bakery incident
+    /// entirely — the one <c>Exposure</c> must describe, being the most recent — and must read as
+    /// silence about it, not as Salvatore's reaction to the grocery incident borrowed a second time.
+    /// </summary>
+    [Fact]
+    public void A_withheld_only_report_does_not_inherit_an_older_reaction_to_a_different_incident()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+
+        var groceryIncident = new Claim(ClaimKind.PersonUsedViolence, "vincent", Cast.Grocery, 1);
+        var bakeryIncident = new Claim(ClaimKind.PersonUsedViolence, "vincent", Cast.Bakery, 2);
+        vincent.Cognition.Learn(groceryIncident, Stance.Knows, 1.0, SourceKind.Participant, "vincent", Cast.Start);
+        vincent.Cognition.Learn(bakeryIncident, Stance.Knows, 1.0, SourceKind.Participant, "vincent",
+            Cast.Start.AddDays(10));
+
+        var toldAboutGrocery = new Report(1, "vincent", "salvatore", Cast.Start.AddDays(1), ReportCandor.Candid,
+            new[] { ReportedClaim.Honest(groceryIncident, Stance.Knows, 1.0, SourceKind.Participant) },
+            Array.Empty<Claim>(), "staged");
+        world.Reports.Add(toldAboutGrocery);
+        Relations.RecordImpression(vincent, "salvatore",
+            new Impression(ImpressionKind.SeemedConvinced, groceryIncident, toldAboutGrocery.At));
+
+        var keptBakeryQuiet = new Report(2, "vincent", "salvatore", Cast.Start.AddDays(15), ReportCandor.Candid,
+            Array.Empty<ReportedClaim>(), new[] { bakeryIncident }, "staged");
+        world.Reports.Add(keptBakeryQuiet);
+
+        var hanging = PlayerView.Build(world, "vincent", world.Now, PlayerView.You).Exposure;
+        var toSalvatore = Assert.Single(hanging, l => l.Contains("Salvatore Greco", StringComparison.Ordinal));
+
+        Assert.StartsWith("You kept it from Salvatore Greco on", toSalvatore);
+        Assert.DoesNotContain("seemed", toSalvatore, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("believe", toSalvatore, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("tell whether", toSalvatore, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ================================================================= first correction
 
     /// <summary>
@@ -437,6 +484,51 @@ public sealed class InPersonTests
 
         var impression = Assert.Single(vincent.Social.Toward("salvatore").Impressions);
         Assert.Equal(news, impression.About!.Value);
+    }
+
+    /// <summary>
+    /// Correction found alongside milestone 026's playtest (a Codex finding). <c>Reactions.Landed</c>
+    /// used to infer "this is news to him" by comparing <c>InformationRecord.AcquiredAt</c> against
+    /// the report's own timestamp — but a claim Salvatore already held can have been acquired, through
+    /// some other channel entirely, on the exact date this unrelated report happens to land. The
+    /// timestamp equality cannot tell that coincidence apart from a record this very call just
+    /// created, and a pre-existing claim caught in that coincidence could out-rank the claim that was
+    /// actually news in the same delivery — especially when it is asserted first, since the old check
+    /// returned on the first match it found.
+    ///
+    /// Salvatore already holds the old claim, acquired the same day this report lands — staged
+    /// directly, not produced by chance, so the coincidence is guaranteed rather than hunted for.
+    /// The genuinely new claim is asserted second. The reaction must be about the new claim.
+    /// </summary>
+    [Fact]
+    public void The_reaction_is_about_the_claim_that_is_actually_new_not_one_sharing_its_timestamp()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var salvatore = world.Get("salvatore");
+        var vincent = world.Get("vincent");
+
+        var reportDate = Cast.Start.AddDays(3);
+        var oldClaim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery);
+        var actualNews = new Claim(ClaimKind.PoliceInvestigating, "tommy");
+
+        // Acquired, by some other channel, on the exact date the report below will land — the
+        // coincidence the old heuristic could not tell apart from genuine freshness.
+        salvatore.Cognition.Learn(oldClaim, Stance.Believes, 0.6, SourceKind.Inference, salvatore.Id, reportDate);
+        Assert.Null(salvatore.Cognition.Find(actualNews));
+
+        var report = new Report(1, "vincent", "salvatore", reportDate, ReportCandor.Candid,
+            new[]
+            {
+                // The old, coincidentally-dated claim first — under the old heuristic this alone
+                // decided the match, before the genuinely fresh claim was ever considered.
+                ReportedClaim.Honest(oldClaim, Stance.Believes, 0.7, SourceKind.Report),
+                ReportedClaim.Honest(actualNews, Stance.Believes, 0.5, SourceKind.Report),
+            },
+            Array.Empty<Claim>(), "staged");
+        Reporting.Deliver(world, report, salvatore);
+
+        var impression = Assert.Single(vincent.Social.Toward("salvatore").Impressions);
+        Assert.Equal(actualNews, impression.About!.Value);
     }
 
     // ================================================================= fixtures

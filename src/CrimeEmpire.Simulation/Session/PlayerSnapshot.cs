@@ -659,9 +659,22 @@ public static class PlayerView
                 : $"kept it from {name(recipient)}";
             string line = $"{self.Subject_} {what} on {when}";
 
-            // And what he read off the man's face when he did.
+            // And what he read off the man's face when he did — tied to this exact exchange, never
+            // to the most recent reaction about any act claim. A correction to milestone 026's second
+            // correction (a Codex finding): scoped only by recipient and "about an act claim", a
+            // report that merely withheld this incident could still surface an older reaction to a
+            // different one, because the lookup below never checked that the reaction came from
+            // `latest` at all. A read is
+            // never recorded for a withheld claim in the first place (`Reactions.AfterReport` reads
+            // only what was actually asserted), so requiring the impression's own timestamp to match
+            // `latest.At` and its claim to be one `latest` actually asserted is what a withheld-only
+            // report needs to correctly surface nothing here.
+            var assertedActClaims = latest.Asserted
+                .Where(a => actClaims.Contains(a.Claim))
+                .Select(a => a.Claim)
+                .ToList();
             var read = who.Social.Toward(recipient).Impressions
-                .Where(i => i.About is { } about && actClaims.Contains(about))
+                .Where(i => i.At == latest.At && i.About is { } about && assertedActClaims.Contains(about))
                 .OrderByDescending(i => i.At)
                 .FirstOrDefault();
             if (read is not null)

@@ -161,8 +161,18 @@ public readonly record struct AccountAgreement(
 /// construction, by <see cref="Cognition.MakeReceipt"/>, which every return in
 /// <see cref="Cognition.Receive"/> is routed through; tests assert the invariant directly rather
 /// than trusting the shape of this record.
+///
+/// <b><see cref="IsNews"/>, added by a correction found alongside milestone 026's playtest.</b>
+/// <see cref="Org.Reactions.Landed"/> used to infer "he had no position on this before now" by
+/// comparing <see cref="InformationRecord.AcquiredAt"/> against the report's own timestamp — a
+/// heuristic that a genuinely pre-existing claim can satisfy by coincidence whenever it was acquired
+/// on the same date this report happens to land, and does not require the record to have been
+/// created by this call at all. Only the branch of <see cref="Cognition.Receive"/> that finds no prior
+/// record and creates one knows, directly, that the claim was actually news to him; every other
+/// branch sets this false, whatever the timestamps say.
 /// </summary>
-public readonly record struct Receipt(InformationRecord Record, AccountConflict? Conflict, AccountAgreement? Agreement);
+public readonly record struct Receipt(
+    InformationRecord Record, AccountConflict? Conflict, AccountAgreement? Agreement, bool IsNews);
 
 /// <summary>
 /// What a character knows, believes and suspects. This is the only source of situational fact a
@@ -335,8 +345,10 @@ public sealed class Cognition
             _records.Add(fresh);
             // Nothing to conflict with, and nothing to agree with either. Being told something he
             // has no position on either way is news, not a disagreement and not support, however
-            // wrong it may be.
-            return MakeReceipt(fresh, null, null);
+            // wrong it may be. This is the one branch that actually knows that, having just found no
+            // prior record at all — isNews: true here, and nowhere else, is what makes it knowledge
+            // rather than a guess from timestamps.
+            return MakeReceipt(fresh, null, null, isNews: true);
         }
 
         // Word for word what he said last time: the record is left exactly as it was, including
@@ -348,7 +360,7 @@ public sealed class Cognition
         // before the disagreement branch below is what makes "new, non-repeated" structural rather
         // than a second rule that could disagree with this one. The same early return is what stops
         // repeated denials compounding confidence loss, so the two guarantees cannot drift apart.
-        if (verbatimRepeat) return MakeReceipt(prior, null, null);
+        if (verbatimRepeat) return MakeReceipt(prior, null, null, isNews: false);
 
         // Whether this account is better sourced than the one the belief currently rests on, and
         // therefore ought to become the thing he would cite.
@@ -377,7 +389,7 @@ public sealed class Cognition
         if (!reversal && prior.IsHeld == affirms)
             return MakeReceipt(
                 Replace(prior, upgraded with { LastReconsideredAt = at, Reconsidered = toldOccasion }),
-                null, null);
+                null, null, isNews: false);
 
         // Agreement, from a voice that is new to this claim or has just come round to it. Either
         // way it is support the belief did not have before — captured as an AccountAgreement,
@@ -400,7 +412,7 @@ public sealed class Cognition
                 Replace(prior, upgraded with
                 {
                     Confidence = raised, LastReconsideredAt = at, Reconsidered = toldOccasion,
-                }), null, agreement);
+                }), null, agreement, isNews: false);
         }
 
         // Disagreement: a first denial from this man, or a reversal of what he told him before.
@@ -445,7 +457,7 @@ public sealed class Cognition
             prior.Stance,
             prior.Confidence,
             prior.SourceKind,
-            prior.SourceId), null);
+            prior.SourceId), null, isNews: false);
     }
 
     /// <summary>
@@ -455,15 +467,21 @@ public sealed class Cognition
     /// <see cref="Receipt.Agreement"/> — an account is a disagreement, an agreement, or neither, and
     /// never both at once. The two nullable fields on <see cref="Receipt"/> do not enforce this by
     /// themselves; this method is what does.
+    ///
+    /// <paramref name="isNews"/> has no default and every call site states it explicitly, the same
+    /// discipline <see cref="Revise"/>'s <c>because</c> parameter uses and for the same reason: the
+    /// one call this always mattered for is exactly the one a careless default would silently get
+    /// wrong later.
     /// </summary>
-    private static Receipt MakeReceipt(InformationRecord record, AccountConflict? conflict, AccountAgreement? agreement)
+    private static Receipt MakeReceipt(
+        InformationRecord record, AccountConflict? conflict, AccountAgreement? agreement, bool isNews)
     {
         if (conflict is not null && agreement is not null)
             throw new InvalidOperationException(
                 "a single account cannot be both a conflict and an agreement — this is a defect in " +
                 "Cognition.Receive's branches, not a state a caller can reach through normal input.");
 
-        return new Receipt(record, conflict, agreement);
+        return new Receipt(record, conflict, agreement, isNews);
     }
 
     /// <summary>

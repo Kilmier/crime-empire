@@ -23,9 +23,15 @@ all **unreviewed and unaccepted**.
 holds nothing on now says so, and a man told something or threatened to his face shows something the
 speaker reads — correctly, wrongly, or not at all — as an impression on his own relationship, never as
 the other man's state. Every hash moved, as scoped. Corrected twice from play the same day: he knows
-what he is good at, in words; and a pause says what hangs over him, in his own terms. 651 tests;
-three mutation checks; seven Godot invocations green. Full account, with the five rulings as taken:
-`docs/milestones/026-in-person-things-come-back.md`.
+what he is good at, in words; and a pause says what hangs over him, in his own terms. Now corrected a
+third time, from Codex's review of those two corrections: `Reactions.Landed` inferred "news" from a
+timestamp coincidence rather than from `Cognition.Receive` actually creating a fresh record, and
+`PlayerSnapshot.Exposure`'s per-recipient reaction lookup was never tied to the specific report it was
+describing, so a report that only withheld an incident could borrow an older reaction to a different
+one. Both fixed, `Receipt` gains an explicit `IsNews`, two regression tests, four mutation checks, no
+hash moved. 657 tests; all seven Godot invocations green. Full account, with the five rulings as taken
+and all three corrections: `docs/milestones/026-in-person-things-come-back.md`. **This third correction
+now awaits Codex re-review.**
 
 **Everything from `34cd117` onward is unreviewed.** Codex ran out of usage during milestone 020's
 correction chain. `REVIEW_LEDGER.md` calls this *cleared to build on*, not *accepted*.

@@ -446,10 +446,20 @@ public sealed class RelationalConsequenceTests
     /// scoring competition reporting-again would have to win instead. The budget's purpose is
     /// unchanged: three is still small, and a run producing conflicts in bulk would still be the
     /// runaway this pins.
+    ///
+    /// <b>watchful-boss falls from three to two, 2026-09-09, by the <see cref="Rng.ForOccasion"/>
+    /// correction — traced, not merely updated.</b> The redistributed milestone 022 observation
+    /// outcomes at seed 42 (see <c>StreetTalkTests.cs</c>) change the timing of the events upstream of
+    /// this count: Salvatore's own conflict now lands 1 April rather than 5, and the second of the two
+    /// "Vincent hears Salvatore reassert" conflicts milestone 012 traced to the second assignment
+    /// briefing no longer fires at all, leaving one instead of two. This is a redistribution of the
+    /// same kind milestone 012's own note above already describes for this budget, driven by a
+    /// different upstream cause; nothing about the conflict mechanism, `Organization.Assignments`
+    /// disclosure, or the scoring competition milestone 012 fixed was touched by this correction.
     [Theory]
     [InlineData("baseline", 2)]
     [InlineData("cautious-vincent", 3)]
-    [InlineData("watchful-boss", 3)]
+    [InlineData("watchful-boss", 2)]
     [InlineData("disloyal-vincent", 2)]
     [InlineData("resentful-tommy", 2)]
     public void The_scenario_produces_the_expected_number_of_conflicts(string variant, int expected)

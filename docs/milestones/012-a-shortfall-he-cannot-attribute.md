@@ -498,3 +498,33 @@ before.
 commit the same day and returned no findings; Matt accepted it, and milestone 012 is accordingly
 **accepted as corrected by `3c86ba4`** — see the `3c86ba4` row in `REVIEW_LEDGER.md`. Milestone 013
 was authorized on `3c86ba4` the same day, narrowed to coverage accounting; it did not remain paused.
+
+## Correction — the watchful-boss conflict count moved again, 2026-09-09
+
+**"Baselines moved, and the reason is stated", above, recorded `watchful-boss` at three conflicts —
+now two, for a reason unrelated to anything this milestone built.** The `Rng.ForOccasion` correction
+(`docs/milestones/022-the-street-talks.md`) redistributes which milestone 022 observation opportunities
+land at seed 42, which shifts the timing of the events this milestone's own account traced in detail:
+Salvatore's conflict now lands 1 April rather than 5, `lean on dorato-bakery` is chosen directly off
+the 6 April assignment delivery rather than off a `SeekCorroboration`/`UnattributedShortfall` chain
+completing around 11 May, and the second "Vincent hears Salvatore reassert" conflict that chain used to
+produce does not occur — leaving one instead of two, so two total rather than three.
+
+**The ruling this milestone actually turns on is unaffected.** `dorato-bakery` is still targeted, still
+via `Threaten`, still without a second incident, in both variants (`watchful-boss` and
+`cautious-vincent`) where Vincent's own rejection reaches Salvatore — confirmed directly against the
+current run, not assumed. `Organization.Assignments` disclosure, the scoring competition this
+milestone's fix gave Vincent between reporting again and checking the bakery, and the shortfall
+inference itself are all untouched; nothing in this correction's authorized scope touched
+`Strategies.cs`, `Inference.cs`, or `ShortfallAttributionTests.cs`, and that file's 14 facts are staged
+and pass unchanged. What is now stale is this account's own blow-by-blow date sequence (5 Apr / 6 Apr /
+11 May) for `watchful-boss`, recorded here as history rather than rewritten in place.
+
+**Test.** `RelationalConsequenceTests.The_scenario_produces_the_expected_number_of_conflicts` moves
+`watchful-boss` from 3 to 2, with the redistribution traced in the test's own doc comment.
+
+### Commit
+
+Part of the correction commit covering `docs/milestones/022-the-street-talks.md`'s own correction —
+see that file for the full account and verification. No production code this milestone touched was
+touched by this correction either.

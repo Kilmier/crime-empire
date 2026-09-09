@@ -179,6 +179,54 @@ public sealed class StreetTalkTests
     // ================================================================= complete production path
 
     /// <summary>
+    /// <b>Correction found reviewing milestone 022, 2026-09-09 — <see cref="Rng.ForOccasion"/>'s
+    /// finalizer.</b> Before this fix, three occasion keys differing only in their trailing observer
+    /// id — Salvatore's, Vincent's and Kane's, on this exact event — could never all succeed together
+    /// at any seed: the old linear finalizer let the world seed's own contribution cancel out of any
+    /// two keys' XOR difference, locking every pair of streams into one fixed, seed-independent
+    /// relationship no seed could escape. The milestone archive recorded the search that found this
+    /// (thousands of seeds, never once a joint success) as an open, unexplained property rather than a
+    /// defect, because fixing the shared RNG was out of that correction's authorization. It is not out
+    /// of this one's: <see cref="Rng.ForOccasion"/>'s doc comment has the full account.
+    ///
+    /// This is the falsifying half of that fix, kept intentionally thin: it proves the joint case that
+    /// used to be structurally impossible now occurs, at one deterministic seed, through the real
+    /// production loop — not a claim about how often, which the class doc above already forbids
+    /// asserting. <see cref="The_street_talk_survives_its_complete_production_path"/> below is the
+    /// full positive proof, with every boundary the milestone drew checked against this same seed;
+    /// this test exists so the falsifying claim has its own narrow, easily mutation-checked witness
+    /// rather than being read out of the larger test's assertions.
+    ///
+    /// <b>Mutation-checked.</b> Reverting <see cref="Rng.ForOccasion"/>'s finalizer to the old single
+    /// linear step (<c>h ^= h &gt;&gt; 15</c>) and re-running this test at this identical seed fails
+    /// it — restored and confirmed, not merely asserted.
+    /// </summary>
+    [Fact]
+    public void Three_observers_of_the_same_event_can_succeed_together_at_a_deterministic_seed()
+    {
+        const int SeedWhereAllThreeLand = 222;
+        var world = StagedBeating(SeedWhereAllThreeLand);
+
+        var executor = world.Get("tommy");
+        var salvatore = world.Get("salvatore");
+        var vincent = world.Get("vincent");
+        var kane = world.Get("kane");
+
+        var violenceEvent = world.TruthLog.Single(e => e.Kind == "violence");
+        var violenceClaim = new Claim(ClaimKind.PersonUsedViolence, executor.Id, Cast.Grocery, violenceEvent.Id);
+        var witnessClaim = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, executor.Id, violenceEvent.Id);
+
+        Runner.Run(world, world.Now.AddDays(2));
+
+        // The falsifying claim itself, and nothing more: all three genuinely came to hold something
+        // about this one event, at one seed, through the real loop — the exact joint outcome the old
+        // finalizer made permanently unreachable.
+        Assert.NotNull(salvatore.Cognition.Find(violenceClaim));
+        Assert.NotNull(vincent.Cognition.Find(violenceClaim));
+        Assert.NotNull(kane.Cognition.Find(witnessClaim));
+    }
+
+    /// <summary>
     /// Milestone 022's own archive named this the thing most worth checking and left it undone: every
     /// proof above reads the <em>scheduled payload</em> directly, which pins what the scheduler
     /// decided and never proves the real loop carries it through — that <see cref="Runner.Observe"/>
@@ -188,26 +236,31 @@ public sealed class StreetTalkTests
     /// 2026-09-08, narrowly: this proves the existing distinction survives its complete production
     /// path, and changes nothing about the mechanism itself.
     ///
-    /// <b>Why a different seed from every other test in this file.</b> The observation roll is a
-    /// genuine, irreducible Bernoulli draw — discoverability × attentiveness ≈ 0.35 × 0.49 ≈ 0.17 for
-    /// Salvatore here — and no character stat can be cast toward certainty without raising the
-    /// discoverability coefficient itself, which this correction is explicitly forbidden from
-    /// touching (`SourceKind.Rumor` at 0.35 is provisional tuning nobody has re-opened). The occasion
-    /// key the roll is seeded from is built entirely from strategy bookkeeping — owner, local
-    /// sequence, advance ordinal, observer id — none of which touches the RNG, so it is identical
-    /// whatever the world seed is; only the seed moves the roll. Seed 25 is therefore a search over
-    /// which seed lands this specific, already-scheduled roll, not a search over the mechanism, and
-    /// it changes nothing about seed 42's own honest non-result, which this correction does not touch,
-    /// re-derive, or depend on.
+    /// <b>Seed moved a second time, 2026-09-09, and the boundary assertions strengthened from guards
+    /// to positives.</b> Seed 25 was a pre-fix search result: under the old, linear finalizer, at most
+    /// one of Salvatore's, Vincent's and Kane's rolls on this event could ever land, so the two
+    /// boundary checks below could only ever be guards ("null or Discovery") rather than positive
+    /// proof — there was no seed that could make them anything else. The corrected finalizer (see
+    /// <see cref="Rng.ForOccasion"/>) removes that structural lock, and
+    /// <see cref="Three_observers_of_the_same_event_can_succeed_together_at_a_deterministic_seed"/>
+    /// above is the narrow proof that a joint-success seed exists. This test now uses that same seed
+    /// so its own boundary assertions can be positive too: not just "the owner and the investigator
+    /// never come to hold this as talk," but "they hold it as Discovery, specifically, in the same run
+    /// where Salvatore genuinely holds it as talk" — the stronger claim a guard can never make.
+    ///
+    /// <b>The roll is still a genuine, irreducible Bernoulli draw, and the seed is still found by
+    /// search, not by casting.</b> No character stat is pushed toward certainty and no discoverability
+    /// coefficient is touched — the occasion key is built entirely from strategy bookkeeping the RNG
+    /// never reads, so it is identical at every seed; only the seed moves the three rolls. This still
+    /// changes nothing about seed 42's own honest non-result, which neither this test nor the search
+    /// that found its seed touches, re-derives, or depends on.
     /// </summary>
     [Fact]
     public void The_street_talk_survives_its_complete_production_path()
     {
-        // Found by search, not by casting — see the summary above. Salvatore's roll lands here;
-        // Vincent's and Kane's do not, at this seed, which the boundary assertions below account for
-        // rather than paper over.
-        const int SeedWhereTheRollLands = 25;
-        var world = StagedBeating(SeedWhereTheRollLands);
+        // Found by search, not by casting — see the summary above. All three rolls land at this seed.
+        const int SeedWhereAllThreeLand = 222;
+        var world = StagedBeating(SeedWhereAllThreeLand);
 
         var executor = world.Get("tommy");
         var salvatore = world.Get("salvatore");
@@ -230,23 +283,120 @@ public sealed class StreetTalkTests
         Assert.Equal(Cast.Harbour, heard.SourceId);
         Assert.NotEqual(salvatore.Id, heard.SourceId);
 
-        // The two boundaries the milestone drew survive the same real loop. Both are independent
-        // Bernoulli draws that did not land at this particular seed (confirmed: both reads below are
-        // null), so this is a structural guard against the mechanism regressing rather than a second
-        // positive demonstration — the positive case for both is already pinned at the scheduling
-        // level by Proximity_is_scheduled_as_rumour_and_investigation_as_discovery and
-        // The_man_who_ordered_it_is_not_learning_it_from_the_street above.
+        // The two boundaries the milestone drew, now checked positively: at this seed both the owner
+        // and the investigator also come to hold the claim — genuinely, through the same real loop —
+        // and they hold it as Discovery, never as talk. The joint occurrence is exactly what the old
+        // finalizer made impossible to witness.
         var ownerRead = vincent.Cognition.Find(violenceClaim);
-        Assert.True(ownerRead is null or { SourceKind: SourceKind.Discovery },
-            "the man who ordered it must never come to hold this as talk");
+        Assert.NotNull(ownerRead);
+        Assert.Equal(SourceKind.Discovery, ownerRead!.SourceKind);
+        Assert.Equal(vincent.Id, ownerRead.SourceId);
 
         var investigatorRead = kane.Cognition.Find(witnessClaim);
-        Assert.True(investigatorRead is null or { SourceKind: SourceKind.Discovery },
-            "the detective must never come to hold this as talk");
+        Assert.NotNull(investigatorRead);
+        Assert.Equal(SourceKind.Discovery, investigatorRead!.SourceKind);
+        Assert.Equal(kane.Id, investigatorRead.SourceId);
 
         // A rumour still names no man he could go and find — Hearing_talk_makes_nobody_nameable's
         // claim, re-checked against a belief the real loop produced rather than one staged directly.
         Assert.DoesNotContain(Cast.Harbour, Acquaintance.KnownTo(world, salvatore));
+    }
+
+    /// <summary>
+    /// Determinism, checked at the level this correction actually touched. The same seed against the
+    /// same staged scenario must reach the identical three outcomes through the real loop — not merely
+    /// "a seed exists", which the test above already proves, but "this seed's result is reproducible."
+    /// Two independently built worlds, never one reused, so nothing but the seed and the occasion keys
+    /// carries information between them.
+    /// </summary>
+    [Fact]
+    public void Identical_seed_and_occasion_key_reproduce_the_same_observation_outcomes()
+    {
+        const int SeedWhereAllThreeLand = 222;
+
+        static (Stance? Stance, SourceKind? Source, double? Confidence) Read(World world, string observerId, Claim claim)
+        {
+            var record = world.Get(observerId).Cognition.Find(claim);
+            return (record?.Stance, record?.SourceKind, record?.Confidence);
+        }
+
+        static World RunOnce()
+        {
+            var world = StagedBeating(SeedWhereAllThreeLand);
+            Runner.Run(world, world.Now.AddDays(2));
+            return world;
+        }
+
+        var a = RunOnce();
+        var b = RunOnce();
+
+        var executorA = a.Get("tommy");
+        var violenceEventA = a.TruthLog.Single(e => e.Kind == "violence");
+        var violenceClaimA = new Claim(ClaimKind.PersonUsedViolence, executorA.Id, Cast.Grocery, violenceEventA.Id);
+        var witnessClaimA = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, executorA.Id, violenceEventA.Id);
+
+        var executorB = b.Get("tommy");
+        var violenceEventB = b.TruthLog.Single(e => e.Kind == "violence");
+        var violenceClaimB = new Claim(ClaimKind.PersonUsedViolence, executorB.Id, Cast.Grocery, violenceEventB.Id);
+        var witnessClaimB = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, executorB.Id, violenceEventB.Id);
+
+        // Two identically-built fresh worlds diverge in nothing before this point, so the event this
+        // milestone's claims are keyed on should not even shift identity, let alone outcome.
+        Assert.Equal(violenceEventA.Id, violenceEventB.Id);
+
+        Assert.Equal(Read(a, "salvatore", violenceClaimA), Read(b, "salvatore", violenceClaimB));
+        Assert.Equal(Read(a, "vincent", violenceClaimA), Read(b, "vincent", violenceClaimB));
+        Assert.Equal(Read(a, "kane", witnessClaimA), Read(b, "kane", witnessClaimB));
+    }
+
+    /// <summary>
+    /// Insertion stability, the property <see cref="Rng.ForOccasion"/>'s own doc comment names as the
+    /// reason an occasion key may never carry a global scheduling identifier: a causally unrelated
+    /// event scheduled anywhere else must not reroll this one. Proven directly rather than assumed
+    /// from the key format — a dummy <c>RoleReview</c> for a character with no bearing on this
+    /// operation is scheduled ahead of everything else in the queue, so it resolves, and decides,
+    /// first (confirmed below: Nunzio has a real decision in the disturbed run and none in the
+    /// undisturbed one), while the three observers' occasion-key-driven outcomes — built from
+    /// strategy-local bookkeeping the insertion never touches — do not move.
+    /// </summary>
+    [Fact]
+    public void Unrelated_event_insertion_does_not_reroll_an_observation()
+    {
+        const int SeedWhereAllThreeLand = 222;
+
+        static World Staged(bool withUnrelatedInsertion)
+        {
+            var world = StagedBeating(SeedWhereAllThreeLand);
+            if (withUnrelatedInsertion)
+                world.Queue.Schedule(world.Now, EventKind.RoleReview, "nunzio", "test: unrelated insertion");
+            Runner.Run(world, world.Now.AddDays(2));
+            return world;
+        }
+
+        static (bool NunzioDecided, SourceKind? Salvatore, SourceKind? Vincent, SourceKind? Kane) Outcomes(World world)
+        {
+            var executor = world.Get("tommy");
+            var violenceEvent = world.TruthLog.Single(e => e.Kind == "violence");
+            var violenceClaim = new Claim(ClaimKind.PersonUsedViolence, executor.Id, Cast.Grocery, violenceEvent.Id);
+            var witnessClaim = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, executor.Id, violenceEvent.Id);
+            return (
+                world.Decisions.Any(d => d.ActorId == "nunzio"),
+                world.Get("salvatore").Cognition.Find(violenceClaim)?.SourceKind,
+                world.Get("vincent").Cognition.Find(violenceClaim)?.SourceKind,
+                world.Get("kane").Cognition.Find(witnessClaim)?.SourceKind);
+        }
+
+        var undisturbed = Outcomes(Staged(withUnrelatedInsertion: false));
+        var disturbed = Outcomes(Staged(withUnrelatedInsertion: true));
+
+        // The insertion did perturb the run — this is not a no-op test.
+        Assert.False(undisturbed.NunzioDecided);
+        Assert.True(disturbed.NunzioDecided);
+
+        // And none of that reached the occasion keys: the same three observers land the same outcomes.
+        Assert.Equal(undisturbed.Salvatore, disturbed.Salvatore);
+        Assert.Equal(undisturbed.Vincent, disturbed.Vincent);
+        Assert.Equal(undisturbed.Kane, disturbed.Kane);
     }
 
     // ================================================================= helpers

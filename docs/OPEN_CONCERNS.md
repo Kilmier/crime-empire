@@ -133,3 +133,32 @@ deny, so their accounts differ without formally conflicting. Whether one source'
 another source's conspicuous omission deserves first-class treatment is a real design question, not
 an oversight — a boss who notices that two men's stories cover different ground is doing something
 the model currently cannot represent. Surfaced by `milestones/003-information-transmission.md`.
+
+### 6. `Rng.ForDecision` has the same GF(2)-linear finalizer shape `ForOccasion` was fixed for
+Confirmed, not fixed, by the `Rng.ForOccasion` correction of 2026-09-09 (`docs/milestones/022-the-
+street-talks.md`). `ForOccasion`'s old finalizer was a single linear step, `h ^= h >> 15`, and the
+rest of its pipeline — hashing the key with FNV-1a, then XOR-combining with the world seed — is
+linear over GF(2) throughout. That meant the seed's own contribution cancelled out of any two
+occasion keys' XOR difference algebraically, locking every pair of streams into one fixed,
+seed-independent relationship no seed could break: two observers of the same event could never both
+succeed, for any seed, ever. `ForDecision` combines its inputs (`characterId`, `worldSeed`,
+`decisionIndex`) the identical way and finalizes with the identical single linear step — the same
+proof applies to it unchanged. It seeds `Utility.Score`'s per-decision noise, so the same defect
+shape means two characters' (or two decisions') noise draws are not free to co-vary the way a
+genuine independent draw would be; they are locked into a fixed relationship by the world seed
+cancelling out, for the same algebraic reason.
+
+**Why this correction did not fix it.** Authorization was explicit and narrow: replace
+`ForOccasion`'s finalizer only, and record `ForDecision`'s identical shape as deferred rather than
+fold a second RNG change into one correction. `ForDecision` has no known concrete symptom the way
+`ForOccasion` did (the milestone 022 joint-observation exclusion, found by exhaustive seed search) —
+this is a structural risk confirmed by the same proof, not a demonstrated behavioral defect, which is
+exactly why it belongs here rather than in a second correction commit.
+
+**What would surface it.** Two characters' (or two decisions') scored candidates that should be able
+to win together under some seed, provably never doing so across a wide seed search — the same shape
+of falsifier that found the `ForOccasion` defect. Nothing in the current test suite specifically
+searches for this; it would most likely surface the same way `ForOccasion`'s did, as an unexplained
+non-result recorded honestly in a milestone archive before anyone connected it to the RNG.
+**Fix, if this is ever prioritized:** the identical fmix32 finalizer swap `ForOccasion` now uses —
+see `Rng.cs`'s doc comment on `ForOccasion` for the full algebraic argument.

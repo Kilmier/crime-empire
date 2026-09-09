@@ -716,3 +716,42 @@ only of something adjacent to it?**
 - `7a9773b` — implementation and archive. `9a29342` and `7e0700e` — the two corrections. The closeout
   commit that records this acceptance is not cited by hash here, for the reason milestone 001's
   archive gives: a commit cannot contain its own hash.
+
+## Correction — the seed-42 divergence retracted, 2026-09-09
+
+**"A soldier who resents his capo now conceals instead of reporting to him", above, was a real result
+of an RNG defect elsewhere, not of this milestone.** This correction did not touch
+`Relations`, `Utility`, `LoyaltyReading`, or any coefficient this milestone set — see
+`Rng.cs` and `docs/milestones/022-the-street-talks.md`'s own correction section for the actual defect
+and fix.
+
+`Rng.ForOccasion`'s finalizer used to let the world seed's own contribution cancel out of any two
+occasion keys' XOR difference, locking every pair of occasion-keyed streams into one fixed,
+seed-independent relationship. That is not this milestone's mechanism, but it governs which of the
+milestone 022 observation opportunities land at a given seed — and those, in turn, decide what Tommy
+and Vincent each believe by 9 April, well before the ±0.03 margin this milestone measured ever gets a
+chance to matter. Fixing it redistributes the causal history feeding decision 19, and at seed 42
+under the corrected mixer, `resentful-tommy` no longer diverges from `baseline`: `Actions(baseline)`
+and `Actions(resentful-tommy)` are now byte-identical. The archived diagnostic block above (`report:
+vincent gross 0.2520 net -0.1680 margin -0.0279 …`) described a real, correctly-computed decision at
+the time this milestone measured it and is left exactly as recorded — the causal history that decision
+depended on is what moved, not the arithmetic.
+
+**The mechanism itself is confirmed intact, not merely assumed so.** Unclamped grievance still takes
+value out of reporting to a resented man wherever the relationship channel reads it; nothing in the
+authorized scope of this correction touched trait values, `Relations`, or `Utility.Score`. What the
+carried-forward finding above should now read as: real at seed 42 when this milestone measured it,
+not present at seed 42 today, and never claimed to be robust across seeds in the first place — the
+archive said as much ("present at only two of six seeds tested") before this correction ever existed.
+
+**Test.** `ScenarioReachTests.Resentment_now_reaches_a_chosen_action_at_seed_42` — which asserted the
+divergence above — is renamed to `Resentment_no_longer_reaches_a_chosen_action_at_seed_42` and now
+asserts the convergence, per this same project's practice of retracting a claim honestly rather than
+relocating it to a seed where it still happens to hold.
+
+### Commit
+
+Part of the correction commit covering `docs/milestones/022-the-street-talks.md`'s own correction —
+see that file for the full account and verification. No production code in this milestone's own scope
+(`src/CrimeEmpire.Simulation/Domain/Relations.cs`, `Decision/Utility.cs`, `Decision/LoyaltyReading.cs`)
+was touched.

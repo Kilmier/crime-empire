@@ -23,6 +23,18 @@ public sealed class InvestigationTests
     private const long First = 11;
     private const long Second = 12;
 
+    /// <summary>
+    /// The three natural-run tests below (Kane naming a suspect, the suspect answering, and the
+    /// player-controlled allegation) all read Kane's own investigation reaching a named suspect from
+    /// an unstaged 90-day run. At seed 42, under the <see cref="Rng.ForOccasion"/> correction of
+    /// 2026-09-09, Kane's own observation roll on the violence no longer lands in any variant, so she
+    /// never opens a case and these are proofs of a capability rather than a pin on seed 42's own
+    /// history. Found by search over this same unmodified production scenario — the same search, same
+    /// seed, as <c>ScenarioReachTests.AltSeedWhereVincentAsksTommy</c>, which happens to also be the
+    /// first seed where Kane's investigation reaches a named suspect, so one seed serves both files.
+    /// </summary>
+    private const int AltSeedWhereKaneNamesASuspect = 199;
+
     // ================================================================ a case is about an incident
 
     /// <summary>The instance carries the incident from the lead it was opened on.</summary>
@@ -133,8 +145,11 @@ public sealed class InvestigationTests
     /// confidence, and Learn discards a record arriving less confident than the one already held.
     ///
     /// Staged, and it has to be. **No natural run reaches this branch** — Kane's canvass turns up a
-    /// name in all five variants at seed 42, so the fixture cannot demonstrate the fix and this test
-    /// is the only thing standing behind it.
+    /// name whenever her own observation roll on the incident lands (all five variants, at the
+    /// <c>AltSeedWhereKaneNamesASuspect</c> this file's other natural-run tests use since the
+    /// <see cref="Rng.ForOccasion"/> correction of 2026-09-09; seed 42 no longer lands that roll in
+    /// any variant, so it demonstrates neither this branch nor its opposite) — so the fixture cannot
+    /// demonstrate the fix and this test is the only thing standing behind it.
     /// </summary>
     [Fact]
     public void A_canvass_that_finds_nothing_demotes_the_lead_it_was_opened_on()
@@ -225,7 +240,7 @@ public sealed class InvestigationTests
     [InlineData("resentful-tommy")]
     public void An_investigator_who_has_named_a_suspect_puts_it_to_him(string variant)
     {
-        var world = Cast.Build(seed: 42, variant);
+        var world = Cast.Build(seed: AltSeedWhereKaneNamesASuspect, variant);
         Runner.Run(world, Cast.Start.AddDays(90));
 
         var suspicion = world.Get("kane").Cognition.OfKind(ClaimKind.PersonUsedViolence).ToList();
@@ -252,7 +267,7 @@ public sealed class InvestigationTests
     [InlineData("disloyal-vincent")]
     public void The_suspect_answers_the_detective(string variant)
     {
-        var world = Cast.Build(seed: 42, variant);
+        var world = Cast.Build(seed: AltSeedWhereKaneNamesASuspect, variant);
         Runner.Run(world, Cast.Start.AddDays(90));
 
         var answer = world.Reports.Single(r => r.SenderId == "tommy" && r.RecipientId == "kane");
@@ -369,7 +384,7 @@ public sealed class InvestigationTests
     [Fact]
     public void A_player_controlling_the_investigator_is_offered_the_allegation()
     {
-        var session = SimulationSession.Start(42, "baseline", "kane", "kane");
+        var session = SimulationSession.Start(AltSeedWhereKaneNamesASuspect, "baseline", "kane", "kane");
         var offered = new List<string>();
 
         session.AdvanceTo(Cast.Start.AddDays(90));

@@ -368,3 +368,63 @@ above and no residual mutation.
 **Status.** This corrective commit is implemented, tested, and both required mutation checks (findings
 3 and 4) ran and reverted as described above. It is **not accepted** — Matt's confirmation of this
 named commit, after Codex's verification, is what that requires.
+
+## Correction — the seed-42 button sequence superseded, 2026-09-09
+
+**The original `DirectActionChoiceSequence` above stopped matching the live interface, for a reason
+outside this milestone's own scope: the `Rng.ForOccasion` correction
+(`docs/milestones/022-the-street-talks.md`).** That correction fixed a GF(2)-linear finalizer defect
+that used to lock every pair of occasion-keyed observation rolls into one fixed, seed-independent
+relationship. In this fork specifically, Salvatore's own corroboration-seeking about Vincent's
+personally-executed violence now fires immediately — the pause right after "switch to force" resolves
+offers Salvatore's question before Vincent's own "what now" decision, where the old sequence expected
+the reverse (the finding right below the original sequence's own doc comment, `cover it up before
+anyone finds out`, was the *first* post-force choice; it is now the *third*).
+
+**Re-derived from a fresh live run of the interactive path, exactly as the original was — not patched
+around the mismatch.** The re-derivation method is unchanged from this milestone's own: play the fork
+for real, "Next event" only, and record the buttons actually offered. New sequence, same shape (deny,
+then the original "cover it up"/"carry on covering it up" beats, now two pauses later, ending on "ask
+Salvatore Greco for permission" — the same beat the original sequence also ended on):
+
+```
+"persuade Bellini's grocery to pay",
+"carry on getting Bellini's grocery to pay",
+"switch to threats with Bellini's grocery",
+"switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
+"deny it to Salvatore Greco: tell him you did not get violent at Bellini's grocery",
+"tell Salvatore Greco what you know about whether somebody on the street saw you at Bellini's grocery",
+"cover it up before anyone finds out",
+"carry on covering it up",
+"ask Salvatore Greco for permission",
+```
+
+**The three proofs this milestone actually stands on survive unchanged, confirmed against the live
+screen rather than assumed:** cash still reads 6,840 (ownership determines proceeds regardless of
+executor, this correction's entire point untouched); "you got violent at Bellini's grocery" is on
+screen in the second person throughout, from the moment force resolves (`Participant`-sourced,
+unaffected by anything said or concealed afterward); and "Tommy Nardo got violent at Bellini's
+grocery" never appears. The fork-offering check (finding 4's correction, `FindButton` against the live
+scene tree) and the mutation-guard discipline this milestone established are both untouched — this
+correction only replaces the choice-text constants past the fourth entry.
+
+**Scope note.** This correction's own authorization named `src/CrimeEmpire.Simulation/Sim/Rng.cs` as
+the only production file to touch; `Game.cs`'s `DirectActionChoiceSequence` is a second one, reviewed
+and approved by Matt specifically because it is self-test-only scaffolding — a private constant array
+read only by `DirectActionSelfTest`, gated behind the `--selftest-directaction` flag, never reachable
+during normal play, and confirmed not to alter `BuildDecisionPanel`, `PlayerSnapshot`, or any other
+gameplay-facing code. No other line in `Game.cs` changed.
+
+### Verification
+
+- Build: **0 warnings, 0 errors**.
+- `--headless --path src/CrimeEmpire.Godot -- --selftest-directaction` against the final tree: **exit
+  0**, `CE-DIRECTACTION ok`, all three checks (proceeds, executed personally, no Tommy attribution)
+  passing against the live screen.
+- All five Godot self-tests and the two-process restart proof (`SevenChoiceSequence`, this milestone's
+  delegated-path proof, is untouched by this correction) all exit 0.
+
+### Commit
+
+Part of the correction commit covering `docs/milestones/022-the-street-talks.md`'s own correction —
+see that file for the full account of the underlying RNG fix and its verification.

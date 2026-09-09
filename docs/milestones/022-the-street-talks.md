@@ -193,3 +193,207 @@ all seven Godot invocations exit 0. Two mutation checks, each confirmed and reve
 
 One correction commit, test-only. Still unreviewed, like everything this milestone has carried since
 `34cd117` — this correction has not been back to Codex.
+
+## Correction — `Rng.ForOccasion`'s finalizer, 2026-09-09
+
+**The property the previous correction recorded "though out of scope to act on" — Salvatore's,
+Vincent's and Kane's rolls on the same event never landing together across several thousand searched
+seeds — was not a correlation quirk of xorshift32's first draw. It was a proof: under the old
+finalizer, no two occasion keys' streams could ever be made to land together, at any seed, for any
+pair of keys, related or not.** `Rng.ForOccasion` hashed its key with FNV-1a and combined it with the
+world seed by XOR alone, then finalized with a single linear step, `h ^= h >> 15`. XOR and shift are
+both linear over GF(2), and so is FNV-1a's own hash step; the pipeline end to end was GF(2)-linear.
+That meant for any two occasion keys under one seed, the seed's own contribution cancelled out of
+their XOR difference algebraically, leaving a fixed, seed-independent delta between the two streams'
+entire output sequences — no seed could ever change it. Three street-talk observers of the same event
+were found permanently unable to co-succeed not because the odds were long, but because the algebra
+forbade it.
+
+**The fix.** `ForOccasion`'s finalizer is now fmix32 (MurmurHash3's finalizer): multiplication by an
+odd constant is not linear over GF(2), which breaks the cancellation the defect depended on. Nothing
+about a key, a seed, or what a caller does with the resulting stream changed — a given seed and
+occasion key still produce one fixed, reproducible stream, and an occasion key still carries no global
+scheduling identifier, so unrelated event insertion still cannot reroll it. Only the *relationship*
+between two distinct keys' streams is no longer forced into an unbreakable pattern; they are free to
+land the same way, including all succeeding together, at some seed. See `Rng.cs`'s doc comment on
+`ForOccasion` for the complete algebraic argument and `docs/DESIGN_DECISIONS.md`'s "Keyed stochastic
+opportunities can co-succeed" for the durable rule this establishes project-wide. `Rng.ForDecision` has
+the identical linear shape and is confirmed to have the identical defect, but is deliberately left
+unfixed — see `OPEN_CONCERNS.md` #6.
+
+**Authorization and scope.** Two read-only investigations preceded this correction: the first
+reproduced the joint-exclusion defect directly against production `Rng.ForOccasion` over a declared
+seed range and inventoried every production caller; the second traced, at the seed this correction
+settled on, exactly how the corrected mixer changes what each variant's `--compare` run does, and
+confirmed the changes are honest consequences of decoupling the streams rather than a new defect —
+neither altered any repository file. Matt then authorized this bounded correction: replace
+`ForOccasion`'s finalizer only; touch no other RNG method, no occasion-key construction, no
+probability, trait, fixture, or scheduling code; strengthen `StreetTalkTests.cs`; and, since the fix's
+blast radius turned out to reach seven files the original authorization did not name (below), a
+follow-up authorization covering their repair specifically, under the same production-code
+prohibition and the same falsification standard.
+
+### `StreetTalkTests.cs` — the milestone's own tests, strengthened
+
+Four things item 6 of the authorization asked for, all delivered in `StreetTalkTests.cs`:
+
+- **`Three_observers_of_the_same_event_can_succeed_together_at_a_deterministic_seed`** — the bounded
+  existence proof, kept deliberately thin: at seed 222, through the real production loop
+  (`StagedBeating` + `Runner.Run`, nothing hand-rolled), Salvatore, Vincent and Kane all come to hold
+  something about the one event under test — the exact joint outcome the old finalizer made
+  structurally impossible. Mutation-checked: reverting the finalizer to the old single linear step and
+  re-running at this identical seed fails it (confirmed directly, then restored).
+- **`The_street_talk_survives_its_complete_production_path`** — moved from seed 25 (a pre-fix search
+  result, where at most one of the three could ever land) to the same seed 222, and its two boundary
+  assertions strengthened from guards (`is null or Discovery`) to positives: Salvatore's `Cognition`
+  holds the executor's name as `SourceKind.Rumor`, attributed to the harbour, in the same real run
+  where Vincent's `Cognition` holds it as `SourceKind.Discovery` (self-sourced) and Kane's holds the
+  witness claim the same way — not "never as talk," but "as Discovery, specifically, together."
+- **`Identical_seed_and_occasion_key_reproduce_the_same_observation_outcomes`** — two independently
+  built worlds at the same seed reach byte-identical Stance/SourceKind/Confidence for all three
+  observers, proving the corrected mixer is still a pure, reproducible function of (seed, key).
+- **`Unrelated_event_insertion_does_not_reroll_an_observation`** — a causally unrelated `RoleReview`
+  scheduled ahead of everything else (confirmed to actually perturb the run: Nunzio gets a real
+  decision in the disturbed run and none in the undisturbed one) leaves all three observers' outcomes
+  unchanged, since the occasion key never reads global scheduling state.
+
+`StreetTalkTests.cs` now has **9 tests** (6 before this correction + 3 new; `Proximity_is_scheduled_
+as_rumour_and_investigation_as_discovery`, `The_man_who_ordered_it_is_not_learning_it_from_the_street`,
+and the three earlier-milestone tests are all untouched).
+
+### The seed-42 honest non-result — retired, not merely moved
+
+**"No rumour is acquired in any variant at seed 42" is now false, in every variant where the fixture
+produces a violence incident at all.** Under the corrected mixer, at seed 42, Salvatore's rumour roll
+lands in `baseline`, `watchful-boss`, `disloyal-vincent`, `resentful-tommy`, and `capable-angelo` —
+every variant with an incident to hear about. (`cautious-vincent` has none: Vincent's traits there
+never escalate the grocery operation to force, so there is nothing for anyone to hear, exactly as
+before.) This is not the fixture gaining eligible listeners or the discoverability coefficient moving
+— `0.5 × (0.4 + 0.6 × 0.15) ≈ 0.245` is untouched — it is the same roll, at the same seed, no longer
+locked to the outcome three other keys' streams happened to force it into under the old finalizer.
+
+**Vincent's and Kane's own rolls on the identical event still fail in every variant at seed 42** — the
+corrected mixer does not raise anyone's odds, it only frees three independent draws to land however
+they independently land, and at this particular seed they land Salvatore-only. The owner never comes
+to hold his own man's act as Discovery, and the detective never opens a case, at seed 42, in any
+variant. This is the new honest non-result for those two routes specifically, and — per the standing
+practice this correction follows throughout — it retired several other tests' seed-42 history rather
+than the milestone's own mechanism (see "Tests repaired in other files," below).
+
+### Tests repaired in other files
+
+Running the full suite after the fix surfaced 24 failures across seven files, not the one file this
+correction's own scope named — every natural-run test that happened to read Vincent's or Kane's own
+observation roll on this same event. Each was traced to the corrected mixer before being touched, per
+the four-way classification the follow-up authorization required (natural-history assertion / mechanic
+proof / cascaded snapshot / unexpected defect); every one classified as one of the first three. None
+classified as an unexpected defect, so no further stop-and-report was needed and this correction
+proceeds to commit per that authorization's own terms.
+
+- **`ScenarioReachTests.cs`** — `The_delegator_puts_his_question_to_the_man_he_sent` (4 variants) and
+  `And_the_executor_gives_his_delegator_an_account_of_it` moved to seed 199
+  (`AltSeedWhereVincentAsksTommy`, found by search over the unmodified production scenario — the
+  first seed at which Vincent's own discovery roll lands in all four variants together), since both
+  read that exact request. `The_conflict_changes_what_a_later_decision_is_scored_on` moved to the same
+  seed for a subtler reason, traced component-by-component rather than assumed: at seed 42 the first
+  `ReportToSuperior`-to-Salvatore candidate scored after the relevant conflict is now a deceptive one
+  ("tell salvatore it did not happen"), whose relationship math genuinely inverts direction (a lie
+  against a less-trusted man costs less, not more, so lower trust from being contradicted makes it
+  look relatively cheaper) — a correctly-computed answer to a different question than the test asks,
+  not a defect. `Resentment_now_reaches_a_chosen_action_at_seed_42` is renamed
+  `Resentment_no_longer_reaches_a_chosen_action_at_seed_42` and now asserts the retraction directly,
+  per explicit instruction not to relocate a seed-42-named claim to another seed: `baseline` and
+  `resentful-tommy` are now byte-identical in their chosen-action sequences at seed 42 (confirmed
+  officially via `--compare`, not only via the test) — the same already-traced convergence Matt
+  accepted as honest when authorizing this correction.
+- **`CausalFeedbackTests.cs`** — the five "pending vs. declined" tests all read Tommy's own natural
+  first controlled pause answering Vincent's direct question; moved to seed 199 for the identical
+  reason as `ScenarioReachTests` above (confirmed: at that seed, Tommy's first pause is exactly that
+  question, with the identical option wording these tests already assert against).
+- **`ControlledAutonomousParityTests.cs`** — `Tommys_asked_to_account_decision_resolves_automatically_
+  to_the_identical_partial_report` hardcodes `RecipientId == "vincent"`, specifically because it is
+  about milestone 019's cited repro (Vincent asking); moved to seed 199. The other four tests in the
+  file, including the comprehensive-fingerprint sweep across every variant and character, read
+  whichever decision an actor actually reaches rather than assuming who asks, so they are unaffected
+  and remain at seed 42.
+- **`InvestigationTests.cs`** — `An_investigator_who_has_named_a_suspect_puts_it_to_him` (4 variants),
+  `The_suspect_answers_the_detective` (3 variants), and `A_player_controlling_the_investigator_is_
+  offered_the_allegation` all read Kane's own natural investigation reaching a named suspect; moved to
+  seed 199 (`AltSeedWhereKaneNamesASuspect` — the same seed as above, since it also happens to be the
+  first at which Kane's own roll lands in every variant). The file's 23 staged tests, which never run
+  a natural loop, are untouched.
+- **`PronounTests.cs`** — `A_pending_decision_speaks_of_its_actor_as_themselves` needs Kane to reach
+  at least one decision of her own by day 90 when controlled from the start; moved to seed 199 for the
+  identical reason. The file's other four tests, including the five-variant natural sweep
+  `Every_viewpoint_is_described_as_themselves`, do not depend on Kane reaching a decision and are
+  unaffected.
+- **`RelationalConsequenceTests.cs`** — `The_scenario_produces_the_expected_number_of_conflicts`
+  (`watchful-boss`) moves from 3 to 2, traced directly rather than assumed: the redistributed
+  observation outcomes shift the timing of the events upstream of this count (Salvatore's own conflict
+  now lands 1 April rather than 5; the second of two "Vincent hears Salvatore reassert" conflicts no
+  longer fires), a redistribution of the same kind milestone 012's own archive already describes for
+  this exact budget, driven by a different upstream cause. `cautious-vincent` (3), `baseline` (2),
+  `disloyal-vincent` (2) and `resentful-tommy` (2) are unchanged; this file stays at seed 42
+  throughout, since its claim is specifically about seed 42's own conflict count, not a capability.
+
+**One seed, not several, wherever the same underlying fact was the reason.** `AltSeedWhereVincentAsks
+Tommy` and `AltSeedWhereKaneNamesASuspect` are both 199, found once by search over the unmodified
+production scenario (`Cast.Build`/`Runner.Run`, nothing staged) for the first seed satisfying both
+Vincent's and Kane's own discovery rolls landing together across every affected variant, then reused
+by name in each file rather than re-derived — the smallest local repair each test needed, not a shared
+cross-file helper.
+
+### The 27-versus-29 decision-count reconciliation
+
+An earlier read-only causal-trace report estimated `baseline` and `resentful-tommy` converging to
+"exactly 29 decisions each," using a scratch dump script that also emitted two `RUMOR holder=…`
+annotation lines per file (for Salvatore's two rumour-sourced claims) alongside the real `DEC[...]`
+lines, miscounted together by a naive line count. **The correct figure, confirmed against the final
+production run via the accepted `--compare` tool rather than a scratch script, is 27 decisions for
+both `baseline` and `resentful-tommy`** — matching the more precise `grep -c "^DEC"` check the same
+report also ran and did not reconcile against its own headline figure at the time. Recorded here as
+the authoritative reconciliation.
+
+### Hashes, digests, and decision counts — the final production run
+
+`--verify --seed 42 --days 90`, each configuration run twice and compared, all deterministic:
+
+| variant | decisions | trace hash | chosen-action hash |
+|---|---|---|---|
+| `baseline` | 27 | `7832105EC1F24154` | `B52F36558276F8C5` |
+| `cautious-vincent` | 26 | `C957771688740AFE` | `735B8AB6B9E4421D` |
+| `watchful-boss` | 27 | `99D55F9A48DB059D` | `FABF7B1D6130B250` |
+| `disloyal-vincent` | 29 | `6C23284BFD91C48D` | `EC0FD121F65CD24F` |
+| `resentful-tommy` | 27 | `7A43D1AFB4A6E26F` | `B52F36558276F8C5` |
+| `capable-angelo` | 32 | `5CACCFC566364BB7` | `FC7865347105D92F` |
+
+`--compare --seed 42`: **6 configurations, 6 distinct traces, 5 distinct chosen-action sequences** —
+`baseline` and `resentful-tommy` share `B52F36558276F8C5`, confirmed identical rather than merely
+close. Every hash above is necessarily different from every previously accepted figure, in every
+milestone's archive: the finalizer change touches every `ForOccasion`-derived roll in the simulation,
+so a changed hash is the expected signature of this correction, not a red flag to chase.
+
+### Verification
+
+- Build **0 warnings, 0 errors**, both target frameworks.
+- `git diff --stat` against `src/`: only `src/CrimeEmpire.Simulation/Sim/Rng.cs` — no other production
+  file touched, confirmed rather than merely intended.
+- Tests: **663 passed, 0 failed** (660 + 3 new in `StreetTalkTests.cs`). Every one of the 24 tests
+  failing immediately after the fix now passes, having been individually traced and classified above.
+- `--verify` on all four required configurations (table above) — deterministic on every one.
+- `--compare` at seed 42 — table above; the honest non-result the milestone originally recorded is
+  retired for Salvatore's route and holds in its new shape for Vincent's and Kane's.
+- Both required viewpoint runs (`--variant disloyal-vincent --viewpoint salvatore --seed 42 --days 90`,
+  `--variant baseline --viewpoint vincent --seed 42 --days 90`) exit 0.
+- Godot: `--selftest`, `--selftest-goldenpath`, `--selftest-corroboration`, `--selftest-tribute`, and
+  the two-process restart proof all exit 0 unchanged. `--selftest-directaction` — the direct-action
+  fork, where Vincent personally executes rather than delegating — needed its own scripted choice
+  sequence re-derived for the identical underlying reason as the C# tests above; see its own note
+  below.
+- Two required mutation checks on the new `StreetTalkTests.cs` proofs, each run and reverted: the
+  bounded-existence and complete-production-path tests both fail under the restored old linear
+  finalizer, confirming they exercise the fix rather than passing by construction.
+
+### Commit
+
+One correction commit. Still unreviewed pending a Codex round on this correction specifically.

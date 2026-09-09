@@ -26,6 +26,18 @@ namespace CrimeEmpire.Simulation.Tests;
 /// </summary>
 public sealed class ScenarioReachTests
 {
+    /// <summary>
+    /// Found by search over this file's unmodified production scenario (<see cref="Cast.Build"/> /
+    /// <see cref="Runner.Run"/>, nothing staged), 2026-09-09: the first seed at which Vincent's own
+    /// owner's-carve-out discovery roll on Tommy's violence lands in every one of baseline,
+    /// watchful-boss, disloyal-vincent and resentful-tommy together. Seed 42's own history no longer
+    /// reaches this — see the <see cref="Rng.ForOccasion"/> correction note on
+    /// <see cref="The_delegator_puts_his_question_to_the_man_he_sent"/> — so the handful of tests
+    /// whose purpose is proving this exchange is reachable at all, rather than pinning seed 42's own
+    /// history, use this seed instead.
+    /// </summary>
+    private const int AltSeedWhereVincentAsksTommy = 199;
+
     private static World Run(string variant) => Run(variant, 42);
 
     private static World Run(string variant, int seed)
@@ -452,6 +464,18 @@ public sealed class ScenarioReachTests
     /// was only standing in for: Vincent puts the question **to Tommy, about Tommy's own act**. A
     /// generic question that happened to land on Tommy about somebody else's business would pass the
     /// old test's target check and fails this one.
+    ///
+    /// <b>Moved off seed 42, 2026-09-09, by the <see cref="Rng.ForOccasion"/> correction.</b> Vincent
+    /// reaches this question through his own owner's-carve-out discovery roll on Tommy's violence —
+    /// the same kind of occasion-keyed roll <c>StreetTalkTests.cs</c>'s milestone 022 correction fixed
+    /// — and at seed 42, under the corrected mixer, that roll no longer lands in any of these four
+    /// variants: Vincent never comes to hold the belief this decision is about, so he never asks. This
+    /// is a capability proof, not a pin on seed 42's own history (contrast
+    /// <see cref="Resentment_no_longer_reaches_a_chosen_action_at_seed_42"/> below, which is
+    /// deliberately kept at seed 42 because its claim is specifically about that seed), so it moves to
+    /// seed 199 — found by search over this same unmodified production scenario, the first seed at
+    /// which Vincent's discovery roll lands in all four of these variants together, letting one seed
+    /// serve the whole theory rather than four.
     /// </summary>
     [Theory]
     [InlineData("baseline")]
@@ -460,7 +484,7 @@ public sealed class ScenarioReachTests
     [InlineData("resentful-tommy")]
     public void The_delegator_puts_his_question_to_the_man_he_sent(string variant)
     {
-        var world = Run(variant);
+        var world = Run(variant, seed: AltSeedWhereVincentAsksTommy);
 
         Assert.Contains(world.Decisions, d =>
             d.ActorId == "vincent"
@@ -473,11 +497,15 @@ public sealed class ScenarioReachTests
     /// <summary>
     /// And the man answers. This is the first delegator-to-executor exchange the accepted scenario
     /// has ever produced — milestone 006 could prove the path only through a staged test.
+    ///
+    /// <b>Moved off seed 42 alongside the test above, and for the identical reason</b> — this reads
+    /// the request Vincent's own discovery roll produces, so it can only be proven where that roll
+    /// lands.
     /// </summary>
     [Fact]
     public void And_the_executor_gives_his_delegator_an_account_of_it()
     {
-        var world = Run("baseline");
+        var world = Run("baseline", seed: AltSeedWhereVincentAsksTommy);
 
         var question = world.Requests.First(q => q.AskerId == "vincent" && q.AskedId == "tommy");
         var reply = world.Reports.FirstOrDefault(r =>
@@ -501,11 +529,24 @@ public sealed class ScenarioReachTests
     /// This is decision-relevance, and it is deliberately all that is claimed. Whether the difference
     /// is large enough to change which candidate wins is a separate question, measured by
     /// <see cref="The_relationship_change_is_not_large_enough_to_change_a_choice"/> and answered no.
+    ///
+    /// <b>Moved off seed 42, 2026-09-09, by the <see cref="Rng.ForOccasion"/> correction — traced, not
+    /// assumed.</b> At seed 42 under the corrected mixer, the first <c>ReportToSuperior</c>-to-
+    /// Salvatore candidate scored after this same conflict is now a deceptive one — "tell salvatore it
+    /// did not happen" — rather than a candid report. That candidate's relationship math is genuinely
+    /// different in kind: what a lie costs scales with how much trust there is to betray, so *lower*
+    /// trust from being contradicted makes the lie look relatively *cheaper*, not more expensive,
+    /// which inverts this test's direction for a reason that has nothing to do with the conflict
+    /// mechanism being wrong. Confirmed directly (component-by-component) before moving the seed,
+    /// not inferred from the assertion failing. Seed 199 — already in use above for the identical
+    /// underlying reason, Vincent's own discovery roll landing — reaches an honest, undisguised
+    /// candid report at this same decision, which is the case the milestone's own words describe
+    /// ("reports to his boss price standing off loyalty").
     /// </summary>
     [Fact]
     public void The_conflict_changes_what_a_later_decision_is_scored_on()
     {
-        var world = Run("baseline");
+        var world = Run("baseline", seed: AltSeedWhereVincentAsksTommy);
         var vincent = world.Get("vincent");
 
         var conflict = world.AccountConflicts
@@ -617,8 +658,12 @@ public sealed class ScenarioReachTests
     /// action at every decision — the case milestone 007 recorded as an honest convergence. Milestone
     /// 008 broke that convergence at seed 42 by unbundling grievance from the clamped loyalty: Tommy
     /// resents Vincent, the pair floored to zero under the old clamp, and once it stopped flooring,
-    /// what he holds against the man began taking the good out of reporting to him. See
-    /// <see cref="Resentment_now_reaches_a_chosen_action_at_seed_42"/>, which pins the new outcome.
+    /// what he holds against the man began taking the good out of reporting to him.
+    ///
+    /// <b>2026-09-09 — seed 42 converged again</b>, this time for an unrelated reason (the
+    /// <see cref="Rng.ForOccasion"/> correction, not a milestone 008 regression); see
+    /// <see cref="Resentment_no_longer_reaches_a_chosen_action_at_seed_42"/>, which now records that
+    /// honestly rather than the divergence it used to pin.
     ///
     /// The property being tested here is unchanged and still needs a witness: a pair that renders
     /// differently while choosing identically, so that a digest taken from rendered text would call
@@ -640,45 +685,39 @@ public sealed class ScenarioReachTests
     }
 
     /// <summary>
-    /// Milestone 008's behavioural result, pinned where it happens.
+    /// Milestone 008's behavioural result at seed 42 — retracted here, not deleted, by the
+    /// <see cref="Rng.ForOccasion"/> correction of 2026-09-09.
     ///
-    /// At seed 42 `resentful-tommy` now chooses differently from `baseline`, at exactly one decision:
-    /// on 9 April Tommy conceals the incident himself instead of reporting it to Vincent. Nobody
-    /// wrote a rule connecting resentment to concealment. It falls out of the grievance he holds
-    /// against Vincent no longer being clamped away, which takes 0.21 out of what reporting to that
-    /// particular man is worth and lets a concealment candidate that was always there win by 0.03.
+    /// <b>The old claim.</b> At seed 42, `resentful-tommy` used to choose differently from `baseline`
+    /// at exactly one decision: on 9 April Tommy concealed the incident himself instead of reporting
+    /// it to Vincent, because grievance (once milestone 008 stopped clamping it away) took 0.21 out of
+    /// what reporting to a resented man was worth and let a concealment candidate that was always
+    /// there win by a fragile 0.03 margin.
     ///
-    /// <b>Recorded with its fragility.</b> The winning margin is smaller than the ±0.05 per-candidate
-    /// noise, and the divergence holds at seeds 42 and 31337 but not at 1, 7, 99 or 2024. It is a
-    /// real choice change at this seed and it is not a robust one, and the archive says so. Nothing
-    /// was tuned to produce it — milestone 008 changed no coefficient.
+    /// <b>That claim is now false, and is not being relocated to another seed</b> — per the scope of
+    /// this correction, a test whose name and claim are specifically about seed 42 stays about seed
+    /// 42 and reports what is actually true there now, rather than quietly moving to wherever the old
+    /// result can still be reproduced. Confirmed directly: <c>Actions(baseline)</c> and
+    /// <c>Actions(resentful-tommy)</c> are now byte-identical at seed 42, not merely close.
+    ///
+    /// <b>The mechanism did not regress.</b> Milestone 008's rule — unclamped grievance taking value
+    /// out of reporting to a resented man — is untouched; nothing in this correction's authorized
+    /// scope touched traits, coefficients, or <c>Utility.Score</c>. What moved is the causal history
+    /// upstream of 9 April: the corrected finalizer redistributes which of the milestone 022
+    /// observation opportunities land at this seed (see <c>StreetTalkTests.cs</c> and
+    /// <c>docs/milestones/022-the-street-talks.md</c>'s correction section), which changes what Tommy
+    /// and Vincent each believe by the time this decision is reached, in both configurations, before
+    /// the fragile ±0.03 margin from milestone 008 ever gets a chance to matter. This is the same
+    /// already-traced convergence Matt accepted as an honest outcome when authorizing this correction,
+    /// not a new finding raised here.
     /// </summary>
     [Fact]
-    public void Resentment_now_reaches_a_chosen_action_at_seed_42()
+    public void Resentment_no_longer_reaches_a_chosen_action_at_seed_42()
     {
         var baseline = Run("baseline");
         var resentful = Run("resentful-tommy");
 
-        Assert.NotEqual(Actions(baseline), Actions(resentful));
-
-        // The histories fork at one decision and stay forked — eleven of the thirty-eight pairs
-        // differ, which is what a fork looks like when compared position by position, not eleven
-        // independent changes. What is pinned is the fork point.
-        var (before, after) = baseline.Decisions
-            .Zip(resentful.Decisions, (b, r) => (b, r))
-            .First(p => p.b.ChosenActionSignature() != p.r.ChosenActionSignature());
-        Assert.Equal("tommy", after.ActorId);
-        Assert.Equal(ActionKind.ReportToSuperior, before.Chosen!.Candidate.Kind);
-        Assert.Equal(ActionKind.StartStrategy, after.Chosen!.Candidate.Kind);
-        Assert.Equal(StrategyKind.ConcealIncident, after.Chosen!.Candidate.Strategy);
-
-        // And the relationship channel is what decided it: without relationship state the report
-        // he actually declined would have won instead.
-        var counterfactualWinner = after.Scored
-            .OrderByDescending(s => s.TotalWithoutRelationships())
-            .ThenBy(s => s.Candidate.Id, StringComparer.Ordinal)
-            .First();
-        Assert.Equal(ActionKind.ReportToSuperior, counterfactualWinner.Candidate.Kind);
+        Assert.Equal(Actions(baseline), Actions(resentful));
     }
 
     /// <summary>

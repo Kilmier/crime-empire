@@ -524,3 +524,33 @@ for it?**
 - `974a88a` — implementation and archive. `46a5651` — the rulings-provenance correction, whose remedy
   this commit corrects in turn. The closeout commit that records this acceptance is not cited by hash
   here, for the reason milestone 001's archive gives.
+
+## Correction — the delegator-to-executor exchange moved off seed 42, 2026-09-09
+
+**"Vincent now puts the question and Tommy now answers — the first delegator-to-executor exchange the
+accepted scenario has ever produced," above, is no longer true at seed 42, for a reason outside this
+milestone's own mechanism.** The `Rng.ForOccasion` correction (`docs/milestones/022-the-street-talks.md`)
+fixed a defect that used to lock every pair of occasion-keyed observation rolls into one fixed,
+seed-independent relationship; Vincent reaches this exchange through exactly such a roll — his own
+owner's-carve-out discovery of Tommy's violence — and at seed 42, under the corrected mixer, that roll
+no longer lands in any variant. He never comes to hold the belief this exchange is about, so he never
+asks.
+
+**The mechanism this milestone built is unaffected**, and `And_the_executor_gives_his_delegator_an_
+account_of_it` / `The_delegator_puts_his_question_to_the_man_he_sent`
+(`tests/CrimeEmpire.Simulation.Tests/ScenarioReachTests.cs`) now run at seed 199
+(`AltSeedWhereVincentAsksTommy`), found by search over this same unmodified production scenario — the
+same seed `docs/milestones/011-the-detective-has-no-next-move.md`'s correction section uses for the
+identical reason, for Kane's own reach. Nothing in `Strategies.cs`, `Generators.cs`, or `Utility.cs`
+that this milestone touched was touched by this correction.
+
+**"`resentful-tommy` still chooses identically to `baseline`"**, carried forward above, happens to be
+true again at seed 42 as of this correction too — but for an unrelated reason (see
+`docs/milestones/008-relationship-readers.md`'s own correction section, which retracts the divergence
+milestone 008 later found there); this is coincidence, not this milestone's mechanism reasserting
+itself.
+
+### Commit
+
+Part of the correction commit covering `docs/milestones/022-the-street-talks.md`'s own correction —
+see that file for the full account and verification.

@@ -37,6 +37,18 @@ public sealed class ControlledAutonomousParityTests
     private const int Seed = 42;
     private const string Baseline = "baseline";
 
+    /// <summary>
+    /// <see cref="Tommys_asked_to_account_decision_resolves_automatically_to_the_identical_partial_report"/>
+    /// below reads Tommy's report specifically to Vincent, answering Vincent's own question about his
+    /// own violence — milestone 019's cited repro. At seed 42, under the <see cref="Rng.ForOccasion"/>
+    /// correction of 2026-09-09, Vincent's own discovery roll on that violence no longer lands, so the
+    /// question that reaches Tommy first comes from Salvatore instead, and the test's hardcoded
+    /// <c>RecipientId == "vincent"</c> check finds nothing. The other tests in this file read whatever
+    /// Tommy's first decision actually is, whoever it answers, so parity holds for them regardless and
+    /// they are unaffected. Same search, same seed, as <c>ScenarioReachTests</c>' identical constant.
+    /// </summary>
+    private const int AltSeedWhereVincentAsksTommy = 199;
+
     // ================================================================= the exact cited decision
 
     /// <summary>
@@ -84,12 +96,12 @@ public sealed class ControlledAutonomousParityTests
     [Fact]
     public void Tommys_asked_to_account_decision_resolves_automatically_to_the_identical_partial_report()
     {
-        var autoWorld = Cast.Build(Seed, Baseline);
+        var autoWorld = Cast.Build(AltSeedWhereVincentAsksTommy, Baseline);
         Runner.Run(autoWorld, Cast.Start.AddDays(90));
         var autoDecision = autoWorld.Decisions.First(d => d.ActorId == "tommy");
         Assert.Equal(ReportCandor.Partial, autoDecision.Chosen?.Candidate.Candor);
 
-        var session = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        var session = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
         for (int guard = 0; guard < 5000 && session.Status != SessionStatus.AwaitingChoice; guard++)
             session.StepEvent();
         Assert.Equal(SessionStatus.AwaitingChoice, session.Status);

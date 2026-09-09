@@ -580,3 +580,26 @@ compares to a fully autonomous run was never itself tested and turned out to be 
 the permanent regression suite (`ControlledAutonomousParityTests`) that now pins this parity directly,
 including a comparator guard against the exact `AnsweringClaim`-only false assurance that produced
 the original error.
+
+## Correction — Tommy's asked-to-account pause moved off seed 42, 2026-09-09
+
+**Finding 3's "Vincent's natural, unmodified delegation audit... reaches Tommy's own 'asked-to-account'
+pause on 1987-04-04, his very first pause when controlled," is no longer true at seed 42.** The
+`Rng.ForOccasion` correction (`docs/milestones/022-the-street-talks.md`) fixed the defect that used to
+lock every pair of occasion-keyed observation rolls into one fixed, seed-independent relationship;
+Vincent reaches Tommy's own violence through exactly such a roll (his owner's-carve-out discovery), and
+at seed 42, under the corrected mixer, it no longer lands. Vincent never asks, so nobody but Salvatore
+puts this question to Tommy at seed 42, and `CausalFeedbackTests.cs`'s five "pending vs. declined"
+tests below this finding — which all read that exact pause — now run at seed 199
+(`AltSeedWhereVincentAsksTommy`), found by the same search `docs/milestones/007-scenario-reach.md`'s
+own correction section describes for the identical underlying fact.
+
+**Nothing about the pending/declined mechanism this milestone built moved.** `Runner`, `Cognition`,
+`InformationRequest`, and the disposition derivation this milestone's own corrections settled are
+untouched; the five tests assert the identical structural claims they always did, just against the
+seed where Vincent is still the one asking.
+
+### Commit
+
+Part of the correction commit covering `docs/milestones/022-the-street-talks.md`'s own correction —
+see that file for the full account and verification.

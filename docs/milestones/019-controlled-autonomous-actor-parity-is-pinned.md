@@ -526,3 +526,31 @@ pre-milestone baseline, not merely behaviourally unchanged.
 ### Third correction commit
 
 See the commit this correction is part of.
+
+## Correction — the cited repro moved off seed 42, 2026-09-09
+
+**"The exact cited repro" above — `SimulationSession.Start(42, "baseline", "tommy", "vincent")`
+reaching the "asked-to-account" pause on 1987-04-04 — no longer reaches that pause at seed 42.** The
+`Rng.ForOccasion` correction (`docs/milestones/022-the-street-talks.md`) fixed the defect that used to
+lock every pair of occasion-keyed observation rolls into one fixed, seed-independent relationship;
+Vincent's own owner's-carve-out discovery of Tommy's violence is exactly such a roll, and at seed 42,
+under the corrected mixer, it no longer lands. Vincent never asks, so Tommy's first pause at seed 42
+now answers Salvatore instead, and `ControlledAutonomousParityTests.Tommys_asked_to_account_decision_
+resolves_automatically_to_the_identical_partial_report` — which hardcodes `RecipientId == "vincent"`
+because it is specifically about the milestone 019 repro, not about Tommy's first decision whoever it
+answers — found nothing.
+
+**The parity finding this milestone exists to pin is unaffected**, and is not re-derived here: nothing
+about `Runner.Step`, `SimulationSession.ResolveAutomatically`, or `Reporting.Compose` moved. The one
+affected test now runs at seed 199 (`AltSeedWhereVincentAsksTommy`), found by the same search
+`docs/milestones/007-scenario-reach.md`'s and `docs/milestones/018-the-player-can-see-what-their-
+choice-did.md`'s own correction sections describe for the identical underlying fact — Vincent is again
+the one asking, and the same field-by-field comparison this milestone's own investigation performed
+holds at that seed. The other four tests in `ControlledAutonomousParityTests.cs`, including the
+comprehensive-fingerprint sweep across every variant and character, read whatever each actor's first
+decision actually is rather than assuming who asks, so they are unaffected and remain at seed 42.
+
+### Commit
+
+Part of the correction commit covering `docs/milestones/022-the-street-talks.md`'s own correction —
+see that file for the full account and verification.

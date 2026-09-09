@@ -44,6 +44,19 @@ namespace CrimeEmpire.Simulation.Tests;
 public sealed class CausalFeedbackTests
 {
     private const int Seed = 42;
+
+    /// <summary>
+    /// The "pending vs. declined" section below reads Tommy's own natural first pause, controlled,
+    /// answering Vincent's direct question about his own violence — the same exchange
+    /// <c>ScenarioReachTests.The_delegator_puts_his_question_to_the_man_he_sent</c> proves reachable.
+    /// At seed 42, under the <see cref="Rng.ForOccasion"/> correction of 2026-09-09, Vincent's own
+    /// discovery roll on that violence no longer lands, so nobody but Salvatore ever puts this
+    /// question to Tommy — the natural exchange these tests need is reachable, just not at this seed.
+    /// Found by the identical search described on that test, and reused here rather than re-run, since
+    /// it is the same underlying fact.
+    /// </summary>
+    private const int AltSeedWhereVincentAsksTommy = 199;
+
     private const string CautiousVincent = "cautious-vincent";
     private const string Baseline = "baseline";
     private const string Salvatore = "salvatore";
@@ -214,6 +227,10 @@ public sealed class CausalFeedbackTests
     }
 
     // ================================================================= pending vs. declined (correction)
+    //
+    // Every test below reaches Tommy's own natural first pause, controlled, answering Vincent's direct
+    // question about his own violence — moved from seed 42 to AltSeedWhereVincentAsksTommy on
+    // 2026-09-09; see that constant's own doc comment for why.
 
     /// <summary>
     /// The required mutation-checked proof of the private-decision-leak fix itself: two genuinely
@@ -235,10 +252,10 @@ public sealed class CausalFeedbackTests
         const string partialWithholding =
             "say nothing to Vincent Russo about it either way";
 
-        var silent = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        var silent = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
         silent.Choose(AdvanceToPause(silent).Options.Single(o => o.Description == silence).Id);
 
-        var partial = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        var partial = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
         partial.Choose(AdvanceToPause(partial).Options.Single(o => o.Description == partialWithholding).Id);
 
         var silentRequest = Assert.Single(silent.Snapshot().AwaitingAnswers);
@@ -267,7 +284,7 @@ public sealed class CausalFeedbackTests
     {
         const string falseDenial = "deny it to Vincent Russo: tell him you did not get violent at Bellini's grocery";
 
-        var session = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        var session = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
         var pending = AdvanceToPause(session);
         Assert.Equal("tommy", pending.ActorId);
         session.Choose(pending.Options.Single(o => o.Description == falseDenial).Id);
@@ -288,7 +305,7 @@ public sealed class CausalFeedbackTests
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-denial-{Guid.NewGuid():N}.db");
         try
         {
-            var original = PersistentSession.Start(Seed, Baseline, "tommy", "vincent");
+            var original = PersistentSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
             for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
                 original.StepEvent();
             Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
@@ -325,7 +342,7 @@ public sealed class CausalFeedbackTests
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-pending-{Guid.NewGuid():N}.db");
         try
         {
-            var original = PersistentSession.Start(Seed, Baseline, "tommy", "vincent");
+            var original = PersistentSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
             for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
                 original.StepEvent();
             original.Choose(original.Pending!.Options.Single(o => o.Description == partialWithholding).Id);
@@ -361,11 +378,11 @@ public sealed class CausalFeedbackTests
         const string partialWithholding =
             "say nothing to Vincent Russo about it either way";
 
-        var autoResolved = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        var autoResolved = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
         AdvanceToPause(autoResolved);
         autoResolved.ResolveAutomatically();
 
-        var playerChosen = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        var playerChosen = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
         var pending = AdvanceToPause(playerChosen);
         playerChosen.Choose(pending.Options.Single(o => o.Description == partialWithholding).Id);
 

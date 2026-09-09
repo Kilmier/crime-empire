@@ -38,6 +38,32 @@ public sealed class Rng
     /// identifier (ScheduledEvent.Id, WorldEvent.Id, or a Claim.EventId derived from the truth-log
     /// counter) — those shift when anything anywhere is scheduled or recorded, which is the defect
     /// this method exists to avoid repeating.
+    ///
+    /// <b>A correction found reviewing milestone 022, 2026-09-09.</b> The finalizer used to be a
+    /// single linear step, <c>h ^= h &gt;&gt; 15</c>. XOR and shift are both linear over GF(2), and so
+    /// is the rest of this pipeline up to and including this method's
+    /// own combination of the key hash with <paramref name="worldSeed"/> — which meant that for any
+    /// two occasion keys under the same seed, the seed's own contribution cancelled out of their XOR
+    /// difference algebraically, leaving a fixed, seed-independent delta between the two streams'
+    /// entire output sequences. No seed could ever change it. Two street-talk observers of the same
+    /// event were found permanently unable to both succeed, not rarely but for every one of tens of
+    /// thousands of seeds tested — and the same proof holds for any two keys under this method,
+    /// related or not, and for <see cref="ForDecision"/>'s identical pipeline shape (confirmed, not
+    /// fixed here — see <c>OPEN_CONCERNS.md</c>).
+    ///
+    /// The finalizer below is a standard integer-hash avalanche (fmix32, as used in MurmurHash3):
+    /// multiplication by an odd constant is not linear over GF(2), so it breaks the algebra the
+    /// defect depended on. Nothing about the key, the seed, or what a caller does with the resulting
+    /// stream changed — a given <paramref name="worldSeed"/> and <paramref name="occasionKey"/> still
+    /// produce one fixed, reproducible stream, and two unrelated occasion keys still cannot influence
+    /// each other's schedule (the key still carries no global counter) — only the *relationship*
+    /// between any two distinct keys' streams is no longer forced into a fixed, unbreakable pattern.
+    /// This is not a claim that two keys' streams are statistically independent — nothing here proves
+    /// that, and nothing needs it to be true. It is the narrower, load-bearing fact: they are no
+    /// longer structurally locked together by a seed-independent relationship, so two or more distinct
+    /// occasions are free to succeed together at a given seed rather than being algebraically barred
+    /// from it. <c>DESIGN_DECISIONS.md</c>'s "Keyed stochastic opportunities can co-succeed" records
+    /// the durable rule this establishes.
     /// </summary>
     public static Rng ForOccasion(int worldSeed, string occasionKey)
     {
@@ -45,7 +71,13 @@ public sealed class Rng
         unchecked
         {
             h ^= (uint)worldSeed * 0x85EBCA6Bu;
-            h ^= h >> 15;
+            // fmix32 (MurmurHash3's finalizer). Multiplication is not GF(2)-linear, which is what
+            // decouples two occasion keys' streams from each other — see the correction note above.
+            h ^= h >> 16;
+            h *= 0x85EBCA6Bu;
+            h ^= h >> 13;
+            h *= 0xC2B2AE35u;
+            h ^= h >> 16;
         }
         return new Rng(h);
     }

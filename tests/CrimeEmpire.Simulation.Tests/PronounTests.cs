@@ -55,13 +55,23 @@ public sealed class PronounTests
     /// <summary>
     /// And the same over the session boundary, which is what the Godot interface reads. The occasion
     /// and every option are built from a controlled character's own pronouns.
+    ///
+    /// <b>Moved off seed 42, 2026-09-09, by the <see cref="Rng.ForOccasion"/> correction.</b> Kane's
+    /// half needs her to reach at least one decision of her own by day 90 when controlled from the
+    /// start; at seed 42 her own investigation-opening observation roll no longer lands in baseline
+    /// (see <c>StreetTalkTests.cs</c>'s milestone 022 correction), so she never wakes for anything and
+    /// <c>session.Pending</c> stays null — a capability gap, not a pronoun regression. Seed 199 is the
+    /// same seed <c>InvestigationTests.AltSeedWhereKaneNamesASuspect</c> already uses for the identical
+    /// reason.
     /// </summary>
     [Fact]
     public void A_pending_decision_speaks_of_its_actor_as_themselves()
     {
+        const int AltSeedWhereKaneHasADecision = 199;
+
         string HerText(string controlled)
         {
-            var session = SimulationSession.Start(42, "baseline", controlled, controlled);
+            var session = SimulationSession.Start(AltSeedWhereKaneHasADecision, "baseline", controlled, controlled);
             session.AdvanceTo(Cast.Start.AddDays(90));
             var pending = session.Pending;
             return pending is null

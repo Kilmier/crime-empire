@@ -297,6 +297,37 @@ One implementation-and-archive commit. Status is not established by this file �
 `CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a named commit is the only
 thing that counts as acceptance.
 
+## Correction — Kane's own reach at seed 42, 2026-09-09
+
+**"The cold-trail branch is still unreachable in every variant at seed 42. Kane's canvass always turns
+up a name," above, is now false, and the honest replacement is stranger than either alternative.** At
+seed 42, under the `Rng.ForOccasion` correction (see `docs/milestones/022-the-street-talks.md`), Kane's
+own observation roll on the harbour violence no longer lands in *any* of the five variants: she never
+opens a case at all, so this milestone's own headline mechanic — naming a suspect and putting it to
+him — is unreachable from an unstaged run at this seed, in either direction. The cold-trail branch is
+not newly reachable; nothing downstream of the canvass is reached.
+
+This is not a regression in `Strategies.AdvanceInvestigation`, `Generators`, or anything else this
+milestone built — none of it changed, and `InvestigationTests.cs`'s staged proofs (the ones built
+directly against `Generators`/`Commit`, not through a natural run) are all untouched and still pass.
+It is the same kind of redistribution `docs/milestones/022-the-street-talks.md`'s own correction
+describes for Salvatore's rumour: which occasion-keyed rolls land at a given seed moved, because the
+old finalizer's defect that used to correlate them is gone.
+
+**Reachability is preserved, not retired**, at a declared alternate seed rather than by staging what
+this milestone always intended to prove naturally. `InvestigationTests.cs`'s three natural-run tests —
+naming a suspect, the suspect answering, and the player-controlled allegation — now run at seed 199
+(`AltSeedWhereKaneNamesASuspect`), found by search over this same unmodified production scenario, the
+first seed at which Kane's investigation reaches a named suspect in every variant. `PronounTests.cs`'s
+`A_pending_decision_speaks_of_its_actor_as_themselves` moved for the identical reason and to the same
+seed.
+
+### Commit
+
+Part of the correction commit covering `docs/milestones/022-the-street-talks.md`'s own correction —
+see that file for the full account and verification. No production code this milestone touched
+(`Strategies.cs`, `Generators.cs`, `Commit.cs`) was touched by this correction either.
+
 ---
 
 ## Self-review of `6a8a765`, 2026-08-18

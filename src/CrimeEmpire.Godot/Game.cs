@@ -1094,6 +1094,19 @@ public partial class Game : Control
     /// himself — not Tommy — puts hands on Bellini's grocery, conceals it himself, and answers for it
     /// himself. Proceeds still land on Vincent regardless (cash still rises to 6,840) — ownership
     /// determines proceeds, execution is what diverged, exactly the milestone's own distinction.
+    ///
+    /// <b>Re-derived 2026-09-09, after the choices past the fourth stopped matching.</b> The
+    /// `Rng.ForOccasion` correction (`docs/milestones/022-the-street-talks.md`) redistributes which
+    /// observation opportunities land at seed 42; in this fork specifically, Salvatore's own
+    /// corroboration-seeking about Vincent's personally-executed violence now fires immediately — the
+    /// pause right after "switch to force" resolves offers Salvatore's question before Vincent's own
+    /// "what now" decision, where the old sequence expected the reverse. Re-derived from a fresh live
+    /// run of the interactive path exactly as the original was, not patched around the mismatch: a
+    /// denial to Salvatore, then the original "cover it up"/"carry on covering it up" beats (still
+    /// present, two pauses later than before), ending on the same "ask Salvatore Greco for permission"
+    /// beat the original sequence also ended on. Confirmed against the live screen, not assumed: cash
+    /// still reads 6,840, "you got violent at Bellini's grocery" is on screen in the second person
+    /// throughout, and "Tommy Nardo got violent" never appears.
     /// </summary>
     private static readonly string[] DirectActionChoiceSequence =
     {
@@ -1101,10 +1114,11 @@ public partial class Game : Control
         "carry on getting Bellini's grocery to pay",
         "switch to threats with Bellini's grocery",
         "switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
+        "deny it to Salvatore Greco: tell him you did not get violent at Bellini's grocery",
+        "tell Salvatore Greco what you know about whether somebody on the street saw you at Bellini's grocery",
         "cover it up before anyone finds out",
         "carry on covering it up",
         "ask Salvatore Greco for permission",
-        "tell Salvatore Greco what you know about whether Bellini's grocery is not paying its tribute",
     };
 
     private static bool DirectActionRequested()

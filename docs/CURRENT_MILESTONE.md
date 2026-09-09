@@ -23,17 +23,39 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   state moves from `c25129a` to `8e6878e`, now independently confirmed rather than resting on
   self-review alone.
 
-- **Milestone 022's own remaining production-path test gap is now corrected, narrowly.** Matt
-  authorized one bounded addition: a test proving street talk survives its complete production path —
-  the real violence-operation scheduling route, the real simulation loop resolving the queued
-  `ObservationOpportunity`, and the eligible street observer actually coming to hold the executor-
-  naming claim as `SourceKind.Rumor`, attributed to the district. The mechanic is unchanged; the
-  existing boundaries (owner and investigator stay `Discovery`; the district never becomes a known
-  person) are re-checked against the real loop rather than only at the scheduling site. Test-only.
-  Seed 42's honest non-result and every accepted hash are unmoved — the new test uses its own seed,
-  found by search over the same staged scenario rather than by tuning discoverability, since the roll
-  is a genuine Bernoulli draw with no lever to cast toward certainty. Full account:
-  `docs/milestones/022-the-street-talks.md`. **This correction now awaits Codex review.**
+- **Milestone 022 has a second, larger correction: the shared `Rng.ForOccasion` finalizer was
+  GF(2)-linear and is now fixed.** The property the production-path correction above recorded "out of
+  scope to act on" — Salvatore's, Vincent's and Kane's observation rolls on one event never landing
+  together across thousands of searched seeds — was a proof, not a correlation quirk: the old
+  finalizer let the world seed cancel out of any two occasion keys' XOR difference, locking every pair
+  of occasion-keyed streams into one fixed, seed-independent relationship no seed could break. Fixed
+  by replacing the finalizer with fmix32 (MurmurHash3's), which is not linear over GF(2). `ForDecision`
+  has the identical shape and is confirmed, not fixed — `OPEN_CONCERNS.md` #6.
+  Running the full suite afterward surfaced 24 failures across seven files — every natural-run test
+  that happened to read Vincent's or Kane's own observation roll on the same milestone-022 event.
+  Each was individually traced and classified (natural-history claim / mechanic proof / cascaded
+  count) before being touched; none classified as an unexpected defect. Repaired: `StreetTalkTests.cs`
+  strengthened per the original scope (bounded co-success proof, positive end-to-end provenance,
+  insertion stability, deterministic replay, mutation-checked); `ScenarioReachTests.cs`,
+  `CausalFeedbackTests.cs`, `ControlledAutonomousParityTests.cs`, `InvestigationTests.cs` and
+  `PronounTests.cs` moved their affected natural-run tests to a declared alternate seed (199) found by
+  search over the unmodified production scenario; `RelationalConsequenceTests.cs`'s `watchful-boss`
+  conflict count corrected from 3 to 2, traced to the redistribution rather than assumed; the Godot
+  `--selftest-directaction` choice sequence re-derived live for the identical reason (milestone 017's
+  own archive carries this specific correction, since it is that milestone's proof). The seed-42
+  resentment test (`ScenarioReachTests`) is retracted rather than relocated, since its own claim was
+  specifically about seed 42. Milestone archives `007`, `008`, `011`, `012`, `017`, `018`, `019` and
+  `022` itself each carry an append-only correction section recording what moved and why. Full
+  account: `docs/milestones/022-the-street-talks.md`.
+
+  **One deviation from the authorized scope, flagged and approved rather than silently taken:**
+  `src/CrimeEmpire.Godot/Game.cs`'s `DirectActionChoiceSequence` needed re-deriving alongside
+  everything else for `--selftest-directaction` to keep passing — the authorization for this
+  correction named `Rng.cs` as the only production file to touch, and this is a second one. Matt
+  reviewed and approved it specifically as self-test-only scaffolding (a private constant array read
+  only by the self-test, gated behind its own CLI flag, never reachable during normal play; confirmed
+  no other line in `Game.cs` changed) before it was committed. This correction now awaits Codex
+  review, alongside the production-path correction above.
 
 ## Next, per the demo arc
 

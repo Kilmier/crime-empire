@@ -23,7 +23,17 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   state moves from `c25129a` to `8e6878e`, now independently confirmed rather than resting on
   self-review alone.
 
-Milestone 022 has a known open item not yet addressed; scope for closing it is not authorized here.
+- **Milestone 022's own remaining production-path test gap is now corrected, narrowly.** Matt
+  authorized one bounded addition: a test proving street talk survives its complete production path —
+  the real violence-operation scheduling route, the real simulation loop resolving the queued
+  `ObservationOpportunity`, and the eligible street observer actually coming to hold the executor-
+  naming claim as `SourceKind.Rumor`, attributed to the district. The mechanic is unchanged; the
+  existing boundaries (owner and investigator stay `Discovery`; the district never becomes a known
+  person) are re-checked against the real loop rather than only at the scheduling site. Test-only.
+  Seed 42's honest non-result and every accepted hash are unmoved — the new test uses its own seed,
+  found by search over the same staged scenario rather than by tuning discoverability, since the roll
+  is a genuine Bernoulli draw with no lever to cast toward certainty. Full account:
+  `docs/milestones/022-the-street-talks.md`. **This correction now awaits Codex review.**
 
 ## Next, per the demo arc
 

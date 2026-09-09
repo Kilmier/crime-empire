@@ -129,3 +129,67 @@ green suite.
 ## Commit
 
 One implementation-and-archive commit.
+
+## Correction — the production-path test gap, 2026-09-08
+
+**Authorized narrowly, and explicitly not a redesign.** Every proof in `StreetTalkTests.cs` above
+reads the *scheduled payload* directly — `Drain(world)` pulls the queued `ObservationOpportunity`
+events and inspects `EventPayload.AcquiredAs`/`AttributedTo` without ever letting the simulation loop
+resolve them. That pins what the scheduler decided and never proves `Runner.Observe` actually rolls
+against the opportunity and actually lands the claim in the observer's own `Cognition` — the gap the
+archive's own "Where to look and what to distrust" section left unaddressed.
+
+**`The_street_talk_survives_its_complete_production_path`** stages the same real delegated-force
+operation `StagedBeating()` already builds, then calls `Runner.Run` instead of draining the queue by
+hand, so the queued `ObservationOpportunity` is resolved by the production loop exactly as a natural
+run would resolve it. It asserts Salvatore's own `Cognition` — not the scheduler's payload — holds the
+executor-naming claim as `SourceKind.Rumor`, attributed to the harbour rather than to himself; that the
+owner and the investigator, read the same way, never come to hold it as talk; and that the harbour
+still names nobody `Acquaintance.KnownTo` can find.
+
+**The observation roll is a genuine Bernoulli draw, and the test says so rather than hiding it.**
+Discoverability × attentiveness ≈ 0.35 × 0.49 ≈ 0.17 for Salvatore in this staged scenario — the same
+figure the original archive computed for the natural fixture, differing only because the boss's
+better-access route (discoverability 0.5) does not fire here: `StagedBeating()` constructs its
+`Candidate`s directly rather than through the generator pipeline that would set `BreachesPolicyId`, so
+`StrategyInstance.BreachedPolicyId` stays null and Salvatore — who is `Organization.BossId` — is scored
+on the plain per-district-worker rate like anyone else in earshot. No character stat pushes 0.17 to
+certainty without raising discoverability itself, which this correction does not touch. The occasion
+key (`"obs|{owner}|{localSequence}|{ordinal}|violence|{observerId}"`) is built entirely from strategy
+bookkeeping that never touches the RNG, so it is identical at every seed; only the seed moves the roll.
+Seed 25 is a search over which seed lands this already-scheduled roll — found by computing
+`Rng.ForOccasion(seed, key).Chance(...)` directly against the real scheduled payload for a range of
+seeds, then confirmed by running the real loop — not a search over the mechanism, and it leaves seed
+42's own honest non-result, and its accepted state, untouched.
+
+**A property worth recording though out of scope to act on:** Salvatore's, Vincent's, and Kane's rolls
+on this same event never landed together, in any pairing, across several thousand seeds searched —
+individually each fired at its expected rate (~17%, ~16%, ~49%), but the joint case was not found. The
+three occasion keys differ only in their trailing observer id, and `Rng.ForOccasion`'s xorshift32
+stream is known to correlate poorly across closely related seeds on its first draw, which is what each
+of these rolls consumes. This is not a defect this milestone's design depends on being independent —
+nothing here claims three people's chances of noticing the same event are drawn independently of each
+other — and changing the RNG scheme is explicitly out of this correction's authorization. Recorded so a
+future reader does not re-derive it as a surprise, and so nobody assumes a positive joint demonstration
+was simply not searched for hard enough.
+
+**Preserved exactly:** `Runner.Observe` and the scheduler's route selection in `Strategies.cs` are
+byte-for-byte unchanged — confirmed by `git diff` against `src/` being empty for this commit, not
+merely asserted. Both required mutations were run and reverted: hardcoding `Runner.Observe` to
+`SourceKind.Discovery`/the observer failed the new test while the other five `StreetTalkTests` (which
+never resolve the loop) kept passing; reverting the scheduler's street route to `SourceKind.Discovery`
+unconditionally failed the new test alongside the two pre-existing scheduling-level tests it shares the
+claim with.
+
+**Verification.** Build 0 warnings / 0 errors on both target frameworks; `src/` diff empty. Tests
+**660** (659 + 1). `--verify` on all four required configurations, byte-identical to every prior
+accepted figure — `baseline` `83D59F6D099B840A`, `disloyal-vincent` `33F3C92F3DB9250C`,
+`resentful-tommy` `2899736537AF3BE3`, `capable-angelo` `34E6AF60C2673B95`. `--compare` at seed 42: 6
+configurations, 6 distinct traces, 6 distinct chosen-action sequences, every digest unmoved — seed 42's
+own honest non-result stands exactly as this milestone recorded it. Both required viewpoint runs and
+all seven Godot invocations exit 0. Two mutation checks, each confirmed and reverted.
+
+### Commit
+
+One correction commit, test-only. Still unreviewed, like everything this milestone has carried since
+`34cd117` — this correction has not been back to Codex.

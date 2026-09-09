@@ -176,6 +176,79 @@ public sealed class StreetTalkTests
         Assert.DoesNotContain(".", rendered.Replace("...", ""), StringComparison.Ordinal);
     }
 
+    // ================================================================= complete production path
+
+    /// <summary>
+    /// Milestone 022's own archive named this the thing most worth checking and left it undone: every
+    /// proof above reads the <em>scheduled payload</em> directly, which pins what the scheduler
+    /// decided and never proves the real loop carries it through — that <see cref="Runner.Observe"/>
+    /// actually resolves the queued <see cref="EventKind.ObservationOpportunity"/>, actually rolls
+    /// against it, and actually lands the claim in the observer's own <see cref="Cognition"/> as
+    /// <see cref="SourceKind.Rumor"/>, attributed to the district rather than to him. Authorized
+    /// 2026-09-08, narrowly: this proves the existing distinction survives its complete production
+    /// path, and changes nothing about the mechanism itself.
+    ///
+    /// <b>Why a different seed from every other test in this file.</b> The observation roll is a
+    /// genuine, irreducible Bernoulli draw — discoverability × attentiveness ≈ 0.35 × 0.49 ≈ 0.17 for
+    /// Salvatore here — and no character stat can be cast toward certainty without raising the
+    /// discoverability coefficient itself, which this correction is explicitly forbidden from
+    /// touching (`SourceKind.Rumor` at 0.35 is provisional tuning nobody has re-opened). The occasion
+    /// key the roll is seeded from is built entirely from strategy bookkeeping — owner, local
+    /// sequence, advance ordinal, observer id — none of which touches the RNG, so it is identical
+    /// whatever the world seed is; only the seed moves the roll. Seed 25 is therefore a search over
+    /// which seed lands this specific, already-scheduled roll, not a search over the mechanism, and
+    /// it changes nothing about seed 42's own honest non-result, which this correction does not touch,
+    /// re-derive, or depend on.
+    /// </summary>
+    [Fact]
+    public void The_street_talk_survives_its_complete_production_path()
+    {
+        // Found by search, not by casting — see the summary above. Salvatore's roll lands here;
+        // Vincent's and Kane's do not, at this seed, which the boundary assertions below account for
+        // rather than paper over.
+        const int SeedWhereTheRollLands = 25;
+        var world = StagedBeating(SeedWhereTheRollLands);
+
+        var executor = world.Get("tommy");
+        var salvatore = world.Get("salvatore");
+        var vincent = world.Get("vincent");
+        var kane = world.Get("kane");
+
+        var violenceEvent = world.TruthLog.Single(e => e.Kind == "violence");
+        var violenceClaim = new Claim(ClaimKind.PersonUsedViolence, executor.Id, Cast.Grocery, violenceEvent.Id);
+        var witnessClaim = new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, executor.Id, violenceEvent.Id);
+
+        // The real loop, not a hand inspection of the queue: drains and resolves every scheduled
+        // event up to and past the observation opportunities, exactly as a natural run would.
+        Runner.Run(world, world.Now.AddDays(2));
+
+        // The point of the milestone, proven end to end: the street worker actually comes to hold
+        // the executor's name, as talk, attributed to where he heard it rather than to himself.
+        var heard = salvatore.Cognition.Find(violenceClaim);
+        Assert.NotNull(heard);
+        Assert.Equal(SourceKind.Rumor, heard!.SourceKind);
+        Assert.Equal(Cast.Harbour, heard.SourceId);
+        Assert.NotEqual(salvatore.Id, heard.SourceId);
+
+        // The two boundaries the milestone drew survive the same real loop. Both are independent
+        // Bernoulli draws that did not land at this particular seed (confirmed: both reads below are
+        // null), so this is a structural guard against the mechanism regressing rather than a second
+        // positive demonstration — the positive case for both is already pinned at the scheduling
+        // level by Proximity_is_scheduled_as_rumour_and_investigation_as_discovery and
+        // The_man_who_ordered_it_is_not_learning_it_from_the_street above.
+        var ownerRead = vincent.Cognition.Find(violenceClaim);
+        Assert.True(ownerRead is null or { SourceKind: SourceKind.Discovery },
+            "the man who ordered it must never come to hold this as talk");
+
+        var investigatorRead = kane.Cognition.Find(witnessClaim);
+        Assert.True(investigatorRead is null or { SourceKind: SourceKind.Discovery },
+            "the detective must never come to hold this as talk");
+
+        // A rumour still names no man he could go and find — Hearing_talk_makes_nobody_nameable's
+        // claim, re-checked against a belief the real loop produced rather than one staged directly.
+        Assert.DoesNotContain(Cast.Harbour, Acquaintance.KnownTo(world, salvatore));
+    }
+
     // ================================================================= helpers
 
     /// <summary>
@@ -184,9 +257,9 @@ public sealed class StreetTalkTests
     /// <c>ExecutorSuitabilityTests</c>' staging idiom rather than sharing it, per this project's
     /// practice of not sharing helpers across milestone-specific files.
     /// </summary>
-    private static World StagedBeating()
+    private static World StagedBeating(int seed = Seed)
     {
-        var world = Cast.Build(Seed, "baseline");
+        var world = Cast.Build(seed, "baseline");
         var owner = world.Get("vincent");
         var executor = world.Get("tommy");
 

@@ -62,6 +62,14 @@ consequence for the next milestone is not a rule change; it is that **`34cd117` 
 unreviewed commit in the repository and everything built after it inherits whatever a review of it
 would find.** See the milestone 020 baseline section for the full accounting.
 
+**Updated 2026-09-08: that backlog has since been reviewed, oldest first, and Codex is active again.**
+`34cd117`, `c25129a`, `826b1e2` and `8e6878e` are no longer unreviewed — see the milestone 020 section's
+own 2026-09-08 update for the outcome, which moves milestone 020's accepted state from `c25129a` to
+`8e6878e`. Milestones 021 and 026 have each since gone through full correction-and-review cycles and
+been accepted at their final commits; see their own sections. The claim above is left standing rather
+than edited: it was true when written, and the record of the gap it describes is part of what this
+update explains closing.
+
 **Updated 2026-08-18: Codex is intermittent rather than withdrawn.** Matt intends a Codex round on
 `6a8a765` — milestone 011 — at a later date. So the standing arrangement is not "no adversary" but
 **an adversary that arrives long after the work**, which is a different problem and a worse one to
@@ -275,7 +283,7 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
-### Measured — milestone 026 correction 5, `ab235b1` reviewed, one P2 test gap, corrected once, still unaccepted
+### Measured — milestone 026 correction 5, `ab235b1` reviewed, one P2 test gap, corrected once, accepted
 
 **Codex reviewed correction 4 (`ab235b1`) and confirmed the runtime fix — the explicit `ReportId`
 linkage and both replay comparators — as correct.** One P2 remained, a test-integrity gap rather than
@@ -299,8 +307,12 @@ on all four required configurations, byte-identical to correction 4's figures. `
 required viewpoint runs and all seven Godot invocations exit 0. One mutation check, confirmed and
 reverted.
 
-**Still unreviewed and unaccepted.** This correction has not been back to Codex. Full account:
-`docs/milestones/026-in-person-things-come-back.md`, "Fifth correction".
+**Codex reviewed `abcffd5` and returned no findings. Matt accepted it on 2026-09-08 and closed
+milestone 026.** Milestone 026's accepted state is `abcffd5` and nothing before it — the implementation
+commit and each of the four corrections ahead of this one were each reviewed and each returned at
+least one finding; every FAIL is what produced the correction that follows it, exactly as the standing
+rules describe. Full account: `docs/milestones/026-in-person-things-come-back.md`, all five
+corrections.
 
 ### Measured — milestone 026 correction 4, `c644b30` reviewed, one further P1, corrected once, still unaccepted
 
@@ -505,7 +517,7 @@ chosen action, so correcting a diagnostic-only field was expected, and measured,
 **Still unreviewed and unaccepted at that point.** That correction had not been back to Codex, and
 neither had milestones 022–026.
 
-### Measured — milestone 021 correction 3, `b02b003` reviewed, one further P1, corrected once, still unaccepted
+### Measured — milestone 021 correction 3, `b02b003` reviewed, one further P1, corrected once, accepted
 
 **Codex reviewed correction 2 (`b02b003`) and confirmed all three of its fixes correct, returning one
 further P1:** the same timestamp/cause pairing invariant, unaddressed in the one writer neither
@@ -536,8 +548,11 @@ No hash moved, despite `Learn` being called with far more `SourceKind`s across f
 simulation than `Receive` — every one of those call sites now runs through this fix on every accepted
 variant, and none of them render `Reconsidered` into anything hashed.
 
-**Still unreviewed and unaccepted.** This correction has not been back to Codex, and neither have
-milestones 022–026. Status is `CURRENT_MILESTONE.md`'s to state, not this file's.
+**Codex reviewed `9fed181` and returned no findings. Matt accepted it and closed milestone 021.**
+Milestone 021's accepted state is `9fed181` and nothing before it — `e65f0cd`, `ab737e1` and `b02b003`
+were each reviewed and each returned at least one finding; every FAIL is what produced the correction
+that follows it. Status of milestones 022–026 remains `CURRENT_MILESTONE.md`'s to state, not this
+file's, except where reconciled elsewhere in this file.
 
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
@@ -675,6 +690,24 @@ accepted state, in the ordinary way a defect found after acceptance is corrected
 unreviewed for the same reason everything since `34cd117` is. It does sharpen the caution above: two
 Codex rounds found a P1 each, and the first thing that looked hard at the result afterwards found a
 third. Nothing here should be read as the sequence having converged.
+
+**Update, 2026-09-08 — the backlog reviewed, oldest first, and the accepted state moves.** Codex
+reviewed `34cd117`, `c25129a`, `826b1e2` and `8e6878e` in commit order. `34cd117` returned **FAIL, one
+P1** — the same `RelationshipFacet.None` defect "Post-acceptance correction 3" above already found and
+fixed by scoping the next milestone rather than by a review round; Matt accepted the finding as
+historically real and authorized no further fix, since `8e6878e` already contains the correct repair.
+`c25129a` and `826b1e2` returned **no findings** — `826b1e2`'s own text, which records Matt accepting
+milestone 020 at `c25129a` without a Codex round, was itself checked and found to disclose that
+honestly rather than overclaim a review that had not happened. `8e6878e` returned **no findings**, and
+Matt accepted it.
+
+**Milestone 020's accepted state is therefore `8e6878e`, superseding `c25129a`.** This is a genuine
+change of standing, not a formality: `c25129a` was accepted on self-review alone, the "weaker basis
+than milestone 019" the caution above exists to flag, and everything built on it since has carried
+that caveat forward. `8e6878e` — self-found in the first place, exactly like the P1 it fixes — is now
+independently confirmed by Codex, which the "third-layer defect" paragraph above says nothing had
+established until this review. The three mutation checks, 579 tests and every hash and digest already
+recorded above stand as they were measured; only the standing behind them has changed.
 
 ### Measured — milestone 019, controlled/autonomous actor parity is pinned, corrected three times, accepted
 

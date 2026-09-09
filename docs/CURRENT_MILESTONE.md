@@ -7,45 +7,23 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Milestone 026 — In Person, Things Come Back — is implemented, tested and
-committed, and **Matt is playtesting**. Milestone 021 now has a third correction. Codex reviewed
-correction 2 (`b02b003`), confirmed its three fixes, and found one further P1: `Cognition.Learn`'s
-overriding branch built its replacement from a brand-new `InformationRecord`, which defaults
-`Reconsidered` to null, and then advanced `LastReconsideredAt` without ever naming a cause — the same
-timestamp/cause pairing invariant correction 2 closed for `Revise` and `Receive`, left open in the one
-writer neither had touched. `ReconsiderCause` gains `AcquiredAgain`, carrying the overriding call's own
-source channel and identity; one regression test, mutation-checked. 655 tests, full verification green,
-no hash moved. Full account in `docs/milestones/021-capability-is-a-belief-not-a-stat.md`'s
-"Correction 3". **This third correction now awaits Codex re-review.** Milestones 021 through 026 are
-all **unreviewed and unaccepted**.
+**Nothing is active.** Codex is reviewing again, and three milestones' standing changed on 2026-09-08
+as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
 
-**Milestone 026** came out of the playtest of 025 rather than the arc: a man asked about something he
-holds nothing on now says so, and a man told something or threatened to his face shows something the
-speaker reads — correctly, wrongly, or not at all — as an impression on his own relationship, never as
-the other man's state. Every hash moved, as scoped. Corrected twice from play the same day: he knows
-what he is good at, in words; and a pause says what hangs over him, in his own terms. Corrected a third
-time from Codex's review of those two: `Reactions.Landed` inferred "news" from a timestamp coincidence,
-and `PlayerSnapshot.Exposure`'s per-recipient reaction lookup was never tied to the specific report it
-described, so a withheld-only report could borrow an older reaction to a different incident. Now
-corrected a fourth time, from Codex's review of the third: the third correction's own match — recipient,
-timestamp, claim — was still not unique, since nothing forbids two distinct reports to the same
-recipient, about the same claim, at the same instant, and `Impression` carried no reference back to the
-report that produced it. `Impression` gains `ReportId`, set from `Reactions.AfterReport`;
-`Exposure` matches it exactly; the comprehensive replay comparator carries it and the narrower one
-deliberately does not, for the same reason it already excludes every other `Report.Id`-derived field.
-Codex confirmed that runtime fix and found one further gap, test-only this time: the fourth
-correction's own regression test staged its impressions by hand with `ReportId` set directly, proving
-`Exposure`'s reader but never proving `Reactions.AfterReport`, the actual writer, sets the field at
-all — a mutation removing it from that writer passed every one of 658 tests. A fifth correction adds
-`AfterReport_stamps_the_impression_with_its_own_report_id`, delivered through the real pipeline and
-mutation-checked against that exact writer; the hand-staged test is kept, since it independently proves
-the reader's exact-id selection. No production file touched. 659 tests; all seven Godot invocations
-green. Full account, with the five rulings as taken and all five corrections:
-`docs/milestones/026-in-person-things-come-back.md`. **This fifth correction now awaits Codex
-re-review.**
+- **Milestone 021 — Capability Is a Belief, Not a Stat — is closed.** Two corrections beyond its
+  implementation, each answering a Codex review; the third (`9fed181`) returned no findings and Matt
+  accepted it. Accepted state: `9fed181`. Full account:
+  `docs/milestones/021-capability-is-a-belief-not-a-stat.md`.
+- **Milestone 026 — In Person, Things Come Back — is closed.** Two corrections from the same-day
+  playtests, then three more answering successive Codex reviews of those corrections and of each
+  other; the fifth (`abcffd5`) returned no findings and Matt accepted it. Accepted state: `abcffd5`.
+  Full account: `docs/milestones/026-in-person-things-come-back.md`.
+- **Milestone 020's own outstanding backlog has been reviewed, oldest first.** `34cd117` returned one
+  P1 — already superseded by `8e6878e`, which Codex separately confirmed. Milestone 020's accepted
+  state moves from `c25129a` to `8e6878e`, now independently confirmed rather than resting on
+  self-review alone.
 
-**Everything from `34cd117` onward is unreviewed.** Codex ran out of usage during milestone 020's
-correction chain. `REVIEW_LEDGER.md` calls this *cleared to build on*, not *accepted*.
+Milestone 022 has a known open item not yet addressed; scope for closing it is not authorized here.
 
 ## Next, per the demo arc
 

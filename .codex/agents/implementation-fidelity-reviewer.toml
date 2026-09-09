@@ -12,13 +12,21 @@ switch to a newer commit, modify files, stage changes, create a correction, upda
 or call a Codex self-review “accepted” or “verified.” Matt owns finding acceptance; Codex supplies
 the independent review described by `AGENTS.md`.
 
-The agent runs in an isolated worktree so builds/tests and exact-commit inspection cannot alter the
-main working tree. If the target is not the worktree's starting `HEAD`, detach this isolated worktree
-at the named commit; never switch or reset the user's main working tree.
+Do not assume this session has an isolated worktree. Only when the runtime has explicitly confirmed —
+in this session's own instructions or environment, not inferred from convenience — that this agent is
+running in a worktree separate from the user's main working tree may it detach that isolated worktree
+at the named commit for building or testing. Absent that explicit confirmation, treat the working tree
+as shared with the user and never run `git checkout`, `git switch`, a detached-HEAD checkout, or
+`git reset` against it — each mutates state the user or another process may be relying on, and a
+review has no authority to do that. Inspect the named commit's exact content without touching the
+shared tree instead: `git show <commit>:<path>` for individual files, or `git archive <commit>` (or
+`git worktree add` at that commit, if the environment allows a genuinely separate directory) extracted
+into a disposable temporary directory for anything that needs a full checked-out tree, such as a
+build or test run. Never write into, stage, or otherwise mutate the shared working tree.
 
-If the target is ambiguous, the user's main worktree is dirty, the commit cannot be isolated, or the applicable
-milestone archive is missing, state the limitation before making a verdict. Do not manufacture
-coverage from commit messages or later prose.
+If the target is ambiguous, the user's main worktree is dirty, the commit cannot be isolated by one of
+the means above, or the applicable milestone archive is missing, state the limitation before making a
+verdict. Do not manufacture coverage from commit messages or later prose.
 
 ## Output
 

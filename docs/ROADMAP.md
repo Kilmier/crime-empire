@@ -616,9 +616,17 @@ So it goes first, ahead of content that would otherwise look more urgent.
 
 ### The four layers
 
-Each layer ends in a playtest. **The playtest is the review** — Codex is unavailable, and a person
-playing the game has the one property `REVIEW_LEDGER.md` says an adversary supplies: priors that are
-not the author's.
+Each layer ends in a playtest. **The playtest is a usability gate, not a substitute for review or
+acceptance.** A person playing the game has the one property `REVIEW_LEDGER.md` says an adversary
+supplies: priors that are not the author's — but that is a different question from the ones Codex's
+review and Matt's acceptance answer. A playtest can find that a mechanic reads as nothing happening,
+or that a screen makes no sense, without ever touching whether the code is actor-neutral, respects
+information boundaries, or matches what was authorized; the reverse holds too, and milestone 026 is the
+standing proof — two same-day playtest corrections closed what a person playing found, and it still
+took several further rounds of Codex review afterward, each returning a real finding, before the
+milestone was accepted. Where Codex is available, `AGENTS.md`'s review workflow still gates a milestone
+exactly as written; the playtest is a second, orthogonal gate this arc adds on top of it, not a
+replacement for it.
 
 1. **Make one day playable and legible.** Look at your men, give an order, advance time, understand
    what came back — with only the three operations that already exist. *Gate: does the existing depth
@@ -639,8 +647,10 @@ not the author's.
   gate. *Interlocking* work changes the decision pipeline, the belief model or scoring — where all
   three of milestone 020's P1s lived — and waits for a gate. **Layer 2 is almost entirely additive**,
   which is what makes it the natural long code-ahead run.
-- **Every milestone must be visible in play.** If the playtest is the review, invisible work cannot be
-  reviewed. This disqualifies the recent pattern — a diagnostic facet, a storage location — which
+- **Every milestone must be visible in play.** The playtest is one of this arc's two gates, alongside
+  Codex's review and Matt's acceptance, and invisible work cannot be playtested — a diagnostic facet or
+  a storage location can pass the other gate cleanly while never proving it reads as anything to a
+  player. This disqualifies the recent pattern — a diagnostic facet, a storage location — which
   becomes maintenance rather than a milestone.
 - **Fixture growth is a first-class item.** The most repeated finding in this project, five times now
   including milestone 022, is *"the mechanism works and the scenario cannot show it."* Six characters,

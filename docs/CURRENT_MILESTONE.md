@@ -10,7 +10,7 @@ do not create a separate handoff document.
 **Nothing is active.** Codex is reviewing again, and three milestones' standing changed on 2026-09-08
 as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
 
-- **Milestone 021 — Capability Is a Belief, Not a Stat — is closed.** Two corrections beyond its
+- **Milestone 021 — Capability Is a Belief, Not a Stat — is closed.** Three corrections beyond its
   implementation, each answering a Codex review; the third (`9fed181`) returned no findings and Matt
   accepted it. Accepted state: `9fed181`. Full account:
   `docs/milestones/021-capability-is-a-belief-not-a-stat.md`.

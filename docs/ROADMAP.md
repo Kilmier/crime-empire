@@ -679,7 +679,8 @@ field, and — widened by Matt mid-milestone, reversing his own ruling 3 — eve
 rewritten into plain English and put in the second person for the character being played. See the
 archive.
 
-**026 — In person, things come back.** *Interlocking (new channels).* **Built 2026-09-05, unreviewed.**
+**026 — In person, things come back.** *Interlocking (new channels).* **Closed and accepted 2026-09-08
+at `abcffd5`.**
 Not in the arc as planned: the playtest of 025 found it, and the arc's own rule is that what the
 playtest finds goes first. A man asked about something he holds nothing on says so; a man told
 something or threatened to his face shows something the speaker can read, wrongly or not at all.

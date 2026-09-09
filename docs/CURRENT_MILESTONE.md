@@ -33,9 +33,15 @@ recipient, about the same claim, at the same instant, and `Impression` carried n
 report that produced it. `Impression` gains `ReportId`, set from `Reactions.AfterReport`;
 `Exposure` matches it exactly; the comprehensive replay comparator carries it and the narrower one
 deliberately does not, for the same reason it already excludes every other `Report.Id`-derived field.
-One regression test, one mutation check, no hash moved. 658 tests; all seven Godot invocations green.
-Full account, with the five rulings as taken and all four corrections:
-`docs/milestones/026-in-person-things-come-back.md`. **This fourth correction now awaits Codex
+Codex confirmed that runtime fix and found one further gap, test-only this time: the fourth
+correction's own regression test staged its impressions by hand with `ReportId` set directly, proving
+`Exposure`'s reader but never proving `Reactions.AfterReport`, the actual writer, sets the field at
+all — a mutation removing it from that writer passed every one of 658 tests. A fifth correction adds
+`AfterReport_stamps_the_impression_with_its_own_report_id`, delivered through the real pipeline and
+mutation-checked against that exact writer; the hand-staged test is kept, since it independently proves
+the reader's exact-id selection. No production file touched. 659 tests; all seven Godot invocations
+green. Full account, with the five rulings as taken and all five corrections:
+`docs/milestones/026-in-person-things-come-back.md`. **This fifth correction now awaits Codex
 re-review.**
 
 **Everything from `34cd117` onward is unreviewed.** Codex ran out of usage during milestone 020's

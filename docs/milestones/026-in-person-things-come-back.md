@@ -401,3 +401,48 @@ reverted.
 ### Commit
 
 One correction commit. Still unreviewed and unaccepted — this correction has not been back to Codex.
+
+## Fifth correction — Codex's review of `ab235b1`
+
+**Appended, not rewritten.** Everything above stands; Codex confirmed the runtime correction — the
+explicit `ReportId` linkage and both replay comparators — as correct. One P2 remained: a test-integrity
+gap, not a runtime defect.
+
+### The regression test proved the reader, never the writer
+
+`Two_reports_at_the_same_instant_do_not_share_a_reaction` (the fourth correction's own test) stages
+its two impressions by hand, passing `ReportId` directly to the `Impression` constructor. That proves
+`Exposure`'s consumer-side match is exact — it does not, and structurally cannot, prove that
+`Reactions.AfterReport`, the one production writer that is supposed to populate the field, actually
+does. Codex mutated `AfterReport` to omit `report.Id` from the `Impression` it records; every one of
+the 658 tests then passing, all sixteen `InPersonTests` included, is what proving the gap looks like —
+a green suite that could not have caught the writer regressing.
+
+One further regression test, `AfterReport_stamps_the_impression_with_its_own_report_id`: delivers a
+report through the real pipeline (`Reporting.Deliver`, not staged) and asserts the resulting
+`Impression.ReportId` equals the report's own `Id`. Mutation-checked against exactly the production
+call Codex named — reverting `Reactions.AfterReport`'s `new Impression(read, about, report.At,
+report.Id)` back to the three-argument form fails the new test while the other sixteen `InPersonTests`,
+including the hand-staged same-instant test, keep passing: the two tests now cover consumer and writer
+independently, and neither alone would have caught both directions.
+
+The hand-staged same-instant test is kept rather than replaced — it independently proves the consumer
+side's exact-id selection among impressions that share every other field, a claim the new writer-side
+test does not make and is not staged to make.
+
+### What did not move
+
+Test-only. No production file touched; no scoring, chosen action, hash, or fixture moved.
+
+### Verification
+
+Build 0 warnings / 0 errors on both target frameworks. Tests **659** (658 + 1). `--verify` on all four
+required configurations, byte-identical to the fourth correction's figures. `--compare` at seed 42: 6
+configurations, 6 distinct traces, 6 distinct chosen-action sequences, every digest unmoved. Both
+required viewpoint runs and all seven Godot invocations exit 0. One mutation check — reverting
+`AfterReport`'s `report.Id` argument — confirmed and reverted.
+
+### Commit
+
+One correction commit, test-only. Still unreviewed and unaccepted — this correction has not been back
+to Codex.

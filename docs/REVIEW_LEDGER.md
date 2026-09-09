@@ -275,6 +275,33 @@ Hashes are regression evidence for a snapshot, not permanent game-design require
 behaviour change may legitimately move them if tests and milestone documentation are updated
 coherently.
 
+### Measured — milestone 026 correction 5, `ab235b1` reviewed, one P2 test gap, corrected once, still unaccepted
+
+**Codex reviewed correction 4 (`ab235b1`) and confirmed the runtime fix — the explicit `ReportId`
+linkage and both replay comparators — as correct.** One P2 remained, a test-integrity gap rather than
+a runtime defect: `Two_reports_at_the_same_instant_do_not_share_a_reaction` stages its two impressions
+by hand, passing `ReportId` directly, so it proves `Exposure`'s reader matches exactly but never
+proves `Reactions.AfterReport` — the one production writer meant to populate the field — actually does.
+Codex mutated `AfterReport` to omit `report.Id`; all 658 tests, all sixteen `InPersonTests` included,
+still passed.
+
+One further regression test, `AfterReport_stamps_the_impression_with_its_own_report_id`: delivers a
+report through the real pipeline (`Reporting.Deliver`) and asserts the resulting `Impression.ReportId`
+equals the report's own `Id`. Mutation-checked against the exact production call Codex named — reverting
+`AfterReport`'s fourth constructor argument fails the new test while the other sixteen `InPersonTests`,
+the hand-staged same-instant test included, keep passing. That test is kept rather than replaced: it
+independently proves the consumer side's exact-id selection, a claim the new writer-side test does not
+make.
+
+**Verification.** Test-only; no production file touched. Build 0/0; tests **659** (658 + 1). `--verify`
+on all four required configurations, byte-identical to correction 4's figures. `--compare` at seed 42:
+6 configurations, 6 distinct traces, 6 distinct chosen-action sequences, every digest unmoved. Both
+required viewpoint runs and all seven Godot invocations exit 0. One mutation check, confirmed and
+reverted.
+
+**Still unreviewed and unaccepted.** This correction has not been back to Codex. Full account:
+`docs/milestones/026-in-person-things-come-back.md`, "Fifth correction".
+
 ### Measured — milestone 026 correction 4, `c644b30` reviewed, one further P1, corrected once, still unaccepted
 
 **Codex reviewed correction 3 (`c644b30`) and confirmed the `Receipt.IsNews` fix and the

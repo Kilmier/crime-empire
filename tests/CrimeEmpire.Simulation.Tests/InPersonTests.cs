@@ -468,6 +468,34 @@ public sealed class InPersonTests
         Assert.DoesNotContain("Salvatore Greco seemed to believe you", toSalvatore, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Correction found by Codex reviewing `ab235b1` (a P2). The test above stages its impressions by
+    /// hand, with `ReportId` set directly — it proves <c>Exposure</c>'s reader matches on the field
+    /// exactly, but nothing proves <c>Reactions.AfterReport</c>, the actual writer, ever sets it.
+    /// Codex mutated <c>AfterReport</c> to omit `report.Id` and every existing test, all 658 of them,
+    /// including all sixteen <c>InPersonTests</c>, still passed — the field was untested on the
+    /// production path that is supposed to populate it.
+    ///
+    /// Delivered through the real pipeline, not staged: the resulting <see cref="Impression"/> must
+    /// carry the id of the report that actually produced it.
+    /// </summary>
+    [Fact]
+    public void AfterReport_stamps_the_impression_with_its_own_report_id()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var salvatore = world.Get("salvatore");
+        var vincent = world.Get("vincent");
+
+        var incident = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery);
+        var report = new Report(7, "vincent", "salvatore", Cast.Start.AddDays(3), ReportCandor.Candid,
+            new[] { ReportedClaim.Honest(incident, Stance.Believes, 0.7, SourceKind.Discovery) },
+            Array.Empty<Claim>(), "staged");
+        Reporting.Deliver(world, report, salvatore);
+
+        var impression = Assert.Single(vincent.Social.Toward("salvatore").Impressions);
+        Assert.Equal(report.Id, impression.ReportId);
+    }
+
     // ================================================================= first correction
 
     /// <summary>

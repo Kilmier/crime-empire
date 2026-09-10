@@ -126,8 +126,26 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   commit are recorded as historical in the archive rather than corrected here, since this file has
   long since moved past them. 671 tests passing (667 + 4 new); `git diff --stat` against `src/` is
   empty; all accepted hashes, both viewpoints, and all seven Godot invocations unchanged. Full
-  account: `docs/milestones/023-the-roster-reads.md`'s fourth correction section. Awaits its own
-  Codex re-review.
+  account: `docs/milestones/023-the-roster-reads.md`'s fourth correction section.
+
+- **Codex reviewed `53694a2` and returned two P2s, both accepted by Matt.** First:
+  `TakenFor_reaches_the_runners_viewpoint_render`'s `Assert.Contains("hard man", rendered)` was
+  false assurance — the unrelated belief-list section already contains those words regardless of
+  whether `TakenFor` renders anything. Fixed by locating the `HOW HE TAKES THEM` header and
+  asserting only against what follows it, with the risk demonstrated (the phrase does appear before
+  the header too) rather than assumed. Mutation-checked by removing `IntelligenceWriter`'s
+  `TakenFor` lines: failed, reverted. Second: nothing drove `TakenFor` through the live Godot
+  screen — answered with a new sixth self-test, `--selftest-capability`, against the real
+  `capable-angelo` fixture, isolating the roster's own attitude-panel section the identical way;
+  mutation-checked by removing `Game.cs`'s `TakenFor` lines: failed, reverted. Also corrected in the
+  same commit: the prior correction's own miscounted test tally (one new `.About` test plus three
+  new `TakenFor` tests, four total — the arithmetic was already right, the prose was not) and a test
+  doc comment claiming "the same day" for two contradictions actually staged three days apart —
+  restaged at the identical instant, which production permits. 671 tests unchanged (both corrected
+  tests rewritten, not added to); `git diff --stat` against `src/` shows only the new, additive
+  self-test; all accepted hashes, both viewpoints, and all eight Godot invocations (seven plus the
+  new one) unchanged. Full account: `docs/milestones/023-the-roster-reads.md`'s fifth correction
+  section. Awaits its own Codex re-review.
 
 **Paused before milestone 027, on Matt's word, while Codex works through the remaining milestone
 023–025 backlog in order: `6738200`, `4da1e66` and `15d7c92` (all corrected above), `f993386`,

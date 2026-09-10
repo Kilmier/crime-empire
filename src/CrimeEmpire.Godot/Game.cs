@@ -98,6 +98,21 @@ public partial class Game : Control
     private const string TributeFlag = "--selftest-tribute";
 
     /// <summary>
+    /// Command-line switch for the correction to `53694a2`'s `TakenFor` coverage: proves the
+    /// "what he takes a man for" line — milestones 023/024 — actually reaches the live rendered
+    /// roster panel, which the equivalent xunit-level check cannot: the belief-list panel
+    /// (`WHAT ... KNOWS`) already contains the same words ("hard man") independently of whether the
+    /// attitude panel (`WHAT ... THINKS OF PEOPLE`) renders anything at all, so a check against the
+    /// whole screen would pass even with the attitude line removed. This isolates the attitude
+    /// panel's own section of the screen before asserting.
+    ///
+    /// <c>capable-angelo</c> specifically: the one variant whose own <c>Cast.Build</c> seeds
+    /// Vincent's belief that Angelo clears both capability bars, so this reaches the line naturally
+    /// rather than by staging one.
+    /// </summary>
+    private const string CapabilityFlag = "--selftest-capability";
+
+    /// <summary>
     /// Command-line switch for milestone 015's restart proof, process A: plays the golden path's
     /// first three choices (start, carry on, delegate to Tommy) through real buttons, saves to
     /// <see cref="SelfTestRestartSavePath"/> (never the production slot — see the type header), and
@@ -220,6 +235,12 @@ public partial class Game : Control
         if (FlagRequested(TributeFlag))
         {
             RunTributeSelfTest();
+            return;
+        }
+
+        if (FlagRequested(CapabilityFlag))
+        {
+            RunCapabilitySelfTest();
             return;
         }
 
@@ -1394,6 +1415,82 @@ public partial class Game : Control
         GD.PrintErr(
             "CE-TRIBUTE FAILED — acknowledged=" + acknowledged + " businessStatusShown=" + businessStatusShown +
             " noInventedRetaliation=" + noInventedRetaliation);
+        GetTree().Quit(1);
+    }
+
+    // ================================================================= what he takes a man for (milestones 023/024)
+
+    private void RunCapabilitySelfTest()
+    {
+        try
+        {
+            CapabilitySelfTest();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-CAPABILITY FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    /// <summary>
+    /// Proves the "what he takes a man for" line — <see cref="PlayerAttitude.TakenFor"/> — reaches
+    /// the live rendered roster panel, against the real screen rather than the snapshot behind it.
+    ///
+    /// <b>Why this needs the live screen and not only a `PlayerView`-level check.</b> Codex's review
+    /// of `53694a2` found the equivalent xunit test asserting `rendered.Contains("hard man")` against
+    /// the whole console render — false assurance, because <c>WHAT VINCENT HAS</c> (the belief list)
+    /// already contains "Angelo Conti is a hard man" independently of whether the attitude panel
+    /// renders anything at all; that assertion would pass even with `TakenFor` removed entirely. The
+    /// same risk exists here: the Godot roster's own belief panel, <c>WHAT VINCENT KNOWS</c>, carries
+    /// the identical words. This isolates the attitude panel specifically — <c>WHAT ... THINKS OF
+    /// PEOPLE</c> — by locating that section header in the flattened screen text and asserting only
+    /// against what follows it, the same technique the corrected xunit test now uses against
+    /// <c>IntelligenceWriter</c>'s own section.
+    ///
+    /// <c>capable-angelo</c>, not <c>baseline</c>: the one variant whose own <c>Cast.Build</c> seeds
+    /// Vincent's belief that Angelo clears both capability bars, so the line is reached naturally
+    /// rather than staged. No fixture, capability rule, or scoring changed to make this reachable —
+    /// the belief was already seeded there for milestone 020's own purposes.
+    /// </summary>
+    private void CapabilitySelfTest()
+    {
+        GD.Print("CE-CAPABILITY begin");
+
+        StartSession(seed: 42, variant: "capable-angelo", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
+
+        string screen = Screen();
+
+        GD.Print("== CE-CAPABILITY-SCREEN-BEGIN ==");
+        GD.Print(screen);
+        GD.Print("== CE-CAPABILITY-SCREEN-END ==");
+
+        // "OF PEOPLE" rather than "THINKS OF PEOPLE": the panel header is second person for the
+        // character being played ("WHAT YOU THINK OF PEOPLE") and third person otherwise ("WHAT
+        // VINCENT RUSSO THINKS OF PEOPLE") — Vincent is both here, since he is controlled and the
+        // viewpoint, so the second-person form is what is actually on screen.
+        int attitudeSection = screen.IndexOf("OF PEOPLE", StringComparison.Ordinal);
+        bool sectionFound = attitudeSection >= 0;
+        string afterHeader = sectionFound ? screen[attitudeSection..] : "";
+        bool takenForShown = afterHeader.Contains("hard man", StringComparison.Ordinal);
+
+        // The false-assurance risk this test exists to close, confirmed rather than assumed: the
+        // words appear earlier on the same screen, in the belief panel, before the attitude section
+        // even starts — so a check against the whole screen would never have caught the mutation
+        // below.
+        bool wordsAlsoAppearEarlier = sectionFound && screen[..attitudeSection].Contains("hard man", StringComparison.Ordinal);
+
+        if (sectionFound && takenForShown && wordsAlsoAppearEarlier)
+        {
+            GD.Print("CE-CAPABILITY ok");
+            GetTree().Quit();
+            return;
+        }
+
+        GD.PrintErr(
+            "CE-CAPABILITY FAILED — sectionFound=" + sectionFound + " takenForShown=" + takenForShown +
+            " wordsAlsoAppearEarlier=" + wordsAlsoAppearEarlier +
+            " — the attitude panel does not show what Vincent takes Angelo for, so it proves nothing");
         GetTree().Quit(1);
     }
 

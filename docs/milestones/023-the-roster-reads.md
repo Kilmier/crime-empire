@@ -414,3 +414,74 @@ has been reset and rewritten many times since; there is no live statement left t
 ### Commit
 
 One correction commit, test-and-documentation-only. Awaits Codex re-review.
+
+## Correction — two P2s on `53694a2`, and the correction's own count and date claims fixed, 2026-09-10
+
+**Codex reviewed `53694a2` and returned two P2s, both accepted by Matt.**
+
+**First: `TakenFor_reaches_the_runners_viewpoint_render`'s `Assert.Contains("hard man", rendered)`
+was false assurance.** `WHAT VINCENT HAS` — the unrelated belief-list section, rendering the
+underlying `PersonIsCapable` claim itself — already contains "Angelo Conti is a hard man"
+independently of whether `HOW HE TAKES THEM` renders anything at all, so the assertion would have
+passed with `IntelligenceWriter`'s `TakenFor` line removed entirely. **Fixed by locating the `HOW HE
+TAKES THEM` header and asserting only against what follows it**, and the risk is demonstrated rather
+than assumed: the corrected test also asserts "hard man" *does* appear before that header, proving
+the false-assurance path was real and not hypothetical. Mutation-checked: removing
+`IntelligenceWriter.Render`'s two `TakenFor` lines made the corrected test fail (`Assert.Contains()
+Failure: Sub-string not found`), confirmed, then reverted.
+
+**Second: nothing drove `TakenFor` through the live Godot screen — the honest structural-only
+argument the previous correction section made was a real gap, not merely a stated limitation.**
+Added `--selftest-capability` (`Game.cs`), a sixth self-test following the identical structure as
+the other five: starts the real `capable-angelo` session as Vincent (the one variant whose own
+`Cast.Build` already seeds his belief that Angelo clears both capability bars), reads the live
+screen, locates the roster's own attitude-panel header (`OF PEOPLE` — second person, "WHAT YOU
+THINK OF PEOPLE", since Vincent is both the controlled character and the viewpoint here) and asserts
+"hard man" appears after it — and, as a stated, confirmed precondition rather than an assumption,
+that the same words also appear *before* that header, in the belief panel, proving the same
+false-assurance risk exists on this surface and that isolating the section is what actually matters.
+Mutation-checked: removing `Game.cs`'s two `TakenFor` lines from `BuildAttitudes` made the self-test
+fail (`CE-CAPABILITY FAILED — takenForShown=False`), confirmed, then reverted. No fixture,
+capability rule, or scoring changed to make this reachable — Vincent's belief about Angelo was
+already seeded there for milestone 020's own purposes, confirmed by reading `Scenario/Variants.cs`.
+
+**Also corrected: this archive's own count and date claims from the previous correction section,
+in place with the errors, superseded here rather than rewritten.** "Three new tests, plus one reach
+proof" for `TakenFor`, and "two wholly new ones for `.About`'s distinguishability" in the
+Verification bullet below it, both miscounted what `53694a2` actually added. **The accurate count:
+one new test for `.About`'s distinguishability
+(`Two_contradictions_about_different_claims_read_as_different_lines_on_the_roster`) and three new
+tests for `TakenFor` (`TakenFor_reflects_the_viewpoints_own_belief_and_not_another_actors`,
+`No_view_and_a_rejected_view_are_different_states_on_the_roster`, and
+`TakenFor_reaches_the_runners_viewpoint_render` — this last one *is* the reach proof, not a fourth
+test in addition to it) — four new tests total, matching the arithmetic (`667 + 4 = 671`) that was
+already correct even though the prose describing it was not.**
+
+**And: `Two_contradictions_about_different_claims_read_as_different_lines_on_the_roster`'s own doc
+comment claimed the two staged contradictions were "on the same day," while the code staged them
+`At.AddDays(1)` and `At.AddDays(3)` — three calendar days apart.** Production permits staging both
+at the identical instant, which is the sharper form of the case `15d7c92`'s own commit message
+actually names (three corroborations *on one day*, not spread across several), so this correction
+restages both contradictions at the exact same `DateTime` rather than merely correcting the prose to
+match the weaker version — confirmed by an added assertion, `Assert.Equal(moments[0].At,
+moments[1].At)`, that the two rendered moments share one instant, not only two nearby ones.
+
+### Verification
+
+- Build 0 warnings / 0 errors.
+- Tests: **671 passed** — unchanged count; the two corrected tests were rewritten, not added to,
+  and the new Godot self-test is not part of the xunit suite.
+- `git diff --stat` against `src/`: shows only the new, additive `--selftest-capability` self-test
+  in `Game.cs` (one new flag constant, one new dispatch branch, two new methods — no existing method
+  body changed) — confirmed rather than merely intended. `IntelligenceWriter.cs` is byte-identical
+  to before this correction.
+- Two mutation checks, each confirmed and reverted: `IntelligenceWriter.Render`'s `TakenFor` lines
+  removed (the corrected xunit test failed), and `Game.cs`'s `BuildAttitudes` `TakenFor` lines
+  removed separately (the new self-test failed).
+- `--verify` on all four required configurations and `--compare` at seed 42, byte-identical to
+  every prior accepted figure. Both required viewpoint runs and all eight Godot invocations
+  (the original seven plus `--selftest-capability`) exit 0.
+
+### Commit
+
+One correction commit, test-and-documentation-only. Awaits Codex re-review.

@@ -191,11 +191,15 @@ public sealed class RosterHistoryTests
 
     /// <summary>
     /// The reason `StandingChange` carries a claim at all — Codex's review of `15d7c92` found no
-    /// test proving it end to end. Two genuinely different contradictions, from the same speaker to
-    /// the same listener on the same day, read as one sentence repeated until `.About` distinguished
-    /// them; this drives both through the real production path and reads the result off
-    /// <see cref="PlayerView.Build"/>, not off the domain, so a rendering regression that dropped
-    /// `.About` again would be caught where a player would actually notice it.
+    /// test proving it end to end, and `15d7c92`'s own commit message names the actual motivating
+    /// case precisely: three genuinely different corroborations *on one day*, which milestone 016's
+    /// freshness rule both permits and requires, rendering as the same sentence repeated. Staged at
+    /// the identical instant here, not merely the same calendar day, to pin the sharpest form of the
+    /// case rather than a weaker multi-day approximation of it — corrected 2026-09-10 after an
+    /// earlier version of this test claimed "the same day" while actually staging the two
+    /// contradictions three days apart. This drives both through the real production path and reads
+    /// the result off <see cref="PlayerView.Build"/>, not off the domain, so a rendering regression
+    /// that dropped `.About` again would be caught where a player would actually notice it.
     /// </summary>
     [Fact]
     public void Two_contradictions_about_different_claims_read_as_different_lines_on_the_roster()
@@ -208,18 +212,19 @@ public sealed class RosterHistoryTests
 
         salvatore.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, salvatore.Id, At);
         var first = salvatore.Cognition.Receive(
-            ReportedClaim.Honest(Beating, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", At.AddDays(1));
-        Relations.RecordAccountConflict(salvatore, first.Conflict!.Value, At.AddDays(1));
+            ReportedClaim.Honest(Beating, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", At);
+        Relations.RecordAccountConflict(salvatore, first.Conflict!.Value, At);
 
-        salvatore.Cognition.Learn(refusing, Stance.Believes, 0.7, SourceKind.Discovery, salvatore.Id, At.AddDays(2));
+        salvatore.Cognition.Learn(refusing, Stance.Believes, 0.7, SourceKind.Discovery, salvatore.Id, At);
         var second = salvatore.Cognition.Receive(
-            ReportedClaim.Honest(refusing, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", At.AddDays(3));
-        Relations.RecordAccountConflict(salvatore, second.Conflict!.Value, At.AddDays(3));
+            ReportedClaim.Honest(refusing, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", At);
+        Relations.RecordAccountConflict(salvatore, second.Conflict!.Value, At);
 
-        var moments = PlayerView.Build(world, "salvatore", At.AddDays(3))
+        var moments = PlayerView.Build(world, "salvatore", At)
             .Attitudes.Single(a => a.PersonId == "tommy").History;
 
         Assert.Equal(2, moments.Count);
+        Assert.Equal(moments[0].At, moments[1].At); // the identical instant, not merely the same day
         Assert.NotEqual(moments[0].Description, moments[1].Description);
     }
 
@@ -447,19 +452,25 @@ public sealed class RosterHistoryTests
     /// would exist for this feature without inventing an opinion — see
     /// <c>Scenario/Variants.cs</c>'s own comment on that seeding.
     ///
-    /// <b>The Godot roster panel is not driven by a live self-test here, and that limitation is
-    /// stated rather than glossed.</b> None of the five existing Godot self-tests use
-    /// <c>capable-angelo</c> — all five are hardcoded to <c>baseline</c>, confirmed by reading
-    /// `Game.cs` before writing this test — so no live self-test screen currently contains a
-    /// <c>TakenFor</c> line to assert against, and this correction does not add one, per its own
-    /// scope (no new capability derivation, no scenario fixture change, no self-test behaviour
-    /// change). What is verified instead, structurally: `Game.cs`'s `BuildAttitudes` renders
-    /// `attitude.TakenFor` unconditionally whenever it is not null, reading the identical
-    /// <see cref="PlayerAttitude.TakenFor"/> field this test already drives through
-    /// <see cref="IntelligenceWriter"/> — the same shared-field argument
-    /// <c>ExecutorSuitabilityTests.The_scorer_never_weighs_one_bar_against_another_on_the_same_man</c>
-    /// already makes for the identical pair of surfaces, and for the identical reason: one resolution,
-    /// two renderings of it, confirmed by reading both call sites rather than assumed.
+    /// <b>Corrected 2026-09-10, after Codex's review of `53694a2` found the original assertion —
+    /// <c>rendered.Contains("hard man")</c> against the whole render — was false assurance.</b>
+    /// <c>WHAT VINCENT HAS</c>, the belief-list section, already renders "Angelo Conti is a hard
+    /// man" from the same underlying <c>PersonIsCapable</c> claim, entirely independently of whether
+    /// <c>HOW HE TAKES THEM</c> renders anything at all — confirmed directly, not assumed: the
+    /// mutation check below proves it. This now locates the <c>HOW HE TAKES THEM</c> header and
+    /// asserts only against what follows it, so removing <see cref="IntelligenceWriter"/>'s
+    /// <c>TakenFor</c> line is what this test actually depends on.
+    ///
+    /// Mutation-checked: removing the two lines in <c>IntelligenceWriter.Render</c> that print
+    /// <c>a.TakenFor</c> makes this test fail (confirmed, then reverted) — and would have left the
+    /// original, uncorrected assertion passing, which is the false assurance this correction closes.
+    ///
+    /// The Godot roster panel's own reach is proven separately and live, not only argued
+    /// structurally: <c>--selftest-capability</c> (`Game.cs`) drives the identical `capable-angelo`
+    /// fixture through the real interface and isolates its own equivalent section, <c>OF PEOPLE</c>,
+    /// the same way. Both are needed because the two surfaces are two independent renderings of the
+    /// one <see cref="PlayerAttitude.TakenFor"/> field, and this correction's own finding is that a
+    /// section-blind check on either one proves nothing.
     /// </summary>
     [Fact]
     public void TakenFor_reaches_the_runners_viewpoint_render()
@@ -468,7 +479,14 @@ public sealed class RosterHistoryTests
 
         string rendered = IntelligenceWriter.Render(world, "vincent");
 
-        Assert.Contains("hard man", rendered, StringComparison.Ordinal);
+        int attitudeSection = rendered.IndexOf("HOW HE TAKES THEM", StringComparison.Ordinal);
+        Assert.True(attitudeSection >= 0, "the render has no \"HOW HE TAKES THEM\" section");
+
+        // The false-assurance risk this test exists to close, demonstrated rather than assumed: the
+        // words already appear before the attitude section starts, in the unrelated belief list.
+        Assert.Contains("hard man", rendered[..attitudeSection], StringComparison.Ordinal);
+
+        Assert.Contains("hard man", rendered[attitudeSection..], StringComparison.Ordinal);
     }
 
     // ================================================================= helpers

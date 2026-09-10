@@ -637,6 +637,26 @@ corrected in the live file, which has long since moved past them. 671 tests pass
 viewpoints, and all seven Godot invocations unchanged. Full account: `docs/milestones/023-the-
 roster-reads.md`'s fourth correction section.
 
+**Codex reviewed `53694a2` and returned two P2s, both accepted by Matt.** First:
+`TakenFor_reaches_the_runners_viewpoint_render`'s `Assert.Contains("hard man", rendered)` was false
+assurance — the unrelated belief-list section already contains those words regardless of whether
+`TakenFor` renders anything, confirmed by asserting the phrase's presence there too. Fixed by
+locating the `HOW HE TAKES THEM` header and asserting only against what follows it; mutation-checked
+by removing `IntelligenceWriter`'s `TakenFor` lines, confirmed to fail, reverted. Second: nothing
+drove `TakenFor` through the live Godot screen — answered with a new sixth self-test,
+`--selftest-capability`, against the real `capable-angelo` fixture, isolating the roster's own
+attitude-panel section the identical way; mutation-checked by removing `Game.cs`'s `TakenFor` lines,
+confirmed to fail, reverted. Also corrected in the same commit: the prior correction's own test
+count ("three plus one" and "two wholly new" both miscounted `53694a2`'s actual one About test plus
+three `TakenFor` tests, four total — the arithmetic was already right, the prose was not), and
+`Two_contradictions_about_different_claims_read_as_different_lines_on_the_roster`'s doc comment,
+which claimed "the same day" while the code staged the two contradictions three days apart —
+restaged at the identical instant, which production permits and which is the sharper case
+`15d7c92`'s own commit message actually names. 671 tests unchanged (both corrected tests rewritten,
+not added to); `git diff --stat` against `src/` shows only the new, additive self-test; all accepted
+hashes, both viewpoints, and all eight Godot invocations (seven plus the new one) unchanged. Full
+account: `docs/milestones/023-the-roster-reads.md`'s fifth correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

@@ -2,6 +2,7 @@ using CrimeSim.Domain;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using CrimeSim.Sim;
+using CrimeSim.Trace;
 
 namespace CrimeEmpire.Simulation.Tests;
 
@@ -50,6 +51,12 @@ public sealed class RosterHistoryTests
         var moment = Assert.Single(rel.StandingHistory);
         Assert.Equal(StandingCause.AccountContradicted, moment.Cause);
         Assert.Equal(At.AddDays(1), moment.At);
+        // The exact originating claim, not merely that some claim rode along — Codex's review of
+        // `15d7c92` found no test proved this. `receipt.Conflict!.Value.Claim` is what
+        // `RecordAccountConflict` was actually handed; asserting equality with the fixture's own
+        // `Beating`, rather than with the receipt's own field, is what keeps this a check on the
+        // writer and not a tautology against its own input.
+        Assert.Equal(Beating, moment.About);
         Assert.Empty(world.TruthLog); // nothing was invented in the world to carry it
     }
 
@@ -102,7 +109,11 @@ public sealed class RosterHistoryTests
 
         var rel = listener.Social.Toward("tommy");
         Assert.True(rel.Trust > 0.40);
-        Assert.Equal(StandingCause.AccountCorroborated, Assert.Single(rel.StandingHistory).Cause);
+        var moment = Assert.Single(rel.StandingHistory);
+        Assert.Equal(StandingCause.AccountCorroborated, moment.Cause);
+        // The exact originating claim — the mirror of the assertion
+        // A_contradiction_costs_trust_and_records_why now makes on the conflict side.
+        Assert.Equal(Beating, moment.About);
     }
 
     /// <summary>
@@ -176,6 +187,40 @@ public sealed class RosterHistoryTests
 
         Assert.Single(salvatore.Social.Toward("tommy").StandingHistory);
         Assert.Empty(tommy.Social.Toward("salvatore").StandingHistory);
+    }
+
+    /// <summary>
+    /// The reason `StandingChange` carries a claim at all — Codex's review of `15d7c92` found no
+    /// test proving it end to end. Two genuinely different contradictions, from the same speaker to
+    /// the same listener on the same day, read as one sentence repeated until `.About` distinguished
+    /// them; this drives both through the real production path and reads the result off
+    /// <see cref="PlayerView.Build"/>, not off the domain, so a rendering regression that dropped
+    /// `.About` again would be caught where a player would actually notice it.
+    /// </summary>
+    [Fact]
+    public void Two_contradictions_about_different_claims_read_as_different_lines_on_the_roster()
+    {
+        var world = Cast.Build(42, "baseline");
+        var salvatore = world.Get("salvatore");
+        var refusing = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
+
+        Relations.Establish(salvatore, "tommy", trust: 0.90);
+
+        salvatore.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, salvatore.Id, At);
+        var first = salvatore.Cognition.Receive(
+            ReportedClaim.Honest(Beating, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", At.AddDays(1));
+        Relations.RecordAccountConflict(salvatore, first.Conflict!.Value, At.AddDays(1));
+
+        salvatore.Cognition.Learn(refusing, Stance.Believes, 0.7, SourceKind.Discovery, salvatore.Id, At.AddDays(2));
+        var second = salvatore.Cognition.Receive(
+            ReportedClaim.Honest(refusing, Stance.Rejects, 0.9, SourceKind.Participant), "tommy", At.AddDays(3));
+        Relations.RecordAccountConflict(salvatore, second.Conflict!.Value, At.AddDays(3));
+
+        var moments = PlayerView.Build(world, "salvatore", At.AddDays(3))
+            .Attitudes.Single(a => a.PersonId == "tommy").History;
+
+        Assert.Equal(2, moments.Count);
+        Assert.NotEqual(moments[0].Description, moments[1].Description);
     }
 
     // ================================================================= what the player is told
@@ -314,6 +359,116 @@ public sealed class RosterHistoryTests
 
             Assert.NotEqual(claim.ToString(), rendered);
         }
+    }
+
+    // ================================================================= what he takes a man for
+
+    /// <summary>
+    /// Bounded end-to-end coverage for <c>PlayerAttitude.TakenFor</c> (`15d7c92`) that Codex's review
+    /// found missing — the roster shows what a viewpoint character believes a man is good for, and
+    /// nothing in that chain existed as a permanent test before this correction.
+    ///
+    /// Two facts, one test: the line is <b>per-viewpoint</b> (Vincent's and Salvatore's own beliefs
+    /// about the identical man diverge, and each roster shows only its own holder's belief), and it
+    /// is <b>never the target's objective <see cref="Capabilities"/></b> — this test never reads,
+    /// sets, or needs Tommy's own <c>Capabilities[Skill.Coercion]</c> to produce either line, which
+    /// is possible only because <see cref="PlayerView.Build"/>'s <c>TakenFor</c>/<c>Position</c> local
+    /// functions read exclusively from the viewpoint's own <c>Cognition.Records</c> — the same
+    /// structural guarantee <see cref="Suitability.RecordDelegatedOutcome"/>'s own doc comment relies
+    /// on ("enforced by the signature rather than by discipline"): nothing in this call graph is ever
+    /// handed a <see cref="Character"/> to read a real stat off.
+    /// </summary>
+    [Fact]
+    public void TakenFor_reflects_the_viewpoints_own_belief_and_not_another_actors()
+    {
+        var world = Cast.Build(42, "baseline");
+        var vincent = world.Get("vincent");
+        var salvatore = world.Get("salvatore");
+
+        vincent.Cognition.Learn(
+            CapabilityBar.About("tommy", CapabilityBar.HardMan), Stance.Believes, 0.9, SourceKind.Inference, "vincent", At);
+        salvatore.Cognition.Learn(
+            CapabilityBar.About("tommy", CapabilityBar.RoughWork), Stance.Rejects, 0.9, SourceKind.Inference, "salvatore", At);
+
+        string? fromVincent = PlayerView.Build(world, "vincent", world.Now)
+            .Attitudes.Single(a => a.PersonId == "tommy").TakenFor;
+        string? fromSalvatore = PlayerView.Build(world, "salvatore", world.Now)
+            .Attitudes.Single(a => a.PersonId == "tommy").TakenFor;
+
+        Assert.NotNull(fromVincent);
+        Assert.Contains("hard man", fromVincent!, StringComparison.Ordinal);
+
+        Assert.NotNull(fromSalvatore);
+        Assert.Contains("would not send", fromSalvatore!, StringComparison.Ordinal);
+        Assert.DoesNotContain("hard man", fromSalvatore!, StringComparison.Ordinal);
+
+        Assert.NotEqual(fromVincent, fromSalvatore);
+    }
+
+    /// <summary>
+    /// Having no view and having settled on a poor one are different states everywhere else this
+    /// project models belief, and the roster is required to keep them apart — <c>PlayerNarration
+    /// .TakenFor</c>'s own doc comment names this explicitly ("having no view and having a poor view
+    /// are different states"). Proven on the roster projection, not only on the narration function in
+    /// isolation, and staged rather than natural for the same reason
+    /// <c>ExecutorSuitabilityTests.Holding_a_bar...</c> stages the identical distinction: the accepted
+    /// fixture never seeds a rejected capability belief, so a natural run cannot exercise this branch
+    /// without inventing an opinion nobody was ever given a reason to hold.
+    /// </summary>
+    [Fact]
+    public void No_view_and_a_rejected_view_are_different_states_on_the_roster()
+    {
+        var world = Cast.Build(42, "baseline");
+        var vincent = world.Get("vincent");
+
+        string? noView = PlayerView.Build(world, "vincent", world.Now)
+            .Attitudes.SingleOrDefault(a => a.PersonId == "tommy")?.TakenFor;
+        Assert.Null(noView);
+
+        vincent.Cognition.Learn(
+            CapabilityBar.About("tommy", CapabilityBar.RoughWork), Stance.Rejects, 0.9, SourceKind.Inference, "vincent", At);
+
+        string? rejected = PlayerView.Build(world, "vincent", world.Now)
+            .Attitudes.Single(a => a.PersonId == "tommy").TakenFor;
+
+        Assert.NotNull(rejected);
+        Assert.Contains("would not send", rejected!, StringComparison.Ordinal);
+        Assert.NotEqual(noView, rejected);
+    }
+
+    /// <summary>
+    /// The runner's own viewpoint render, not only the domain — milestone 023's own archive recorded
+    /// that <see cref="IntelligenceWriter"/> and the Godot roster had already diverged once on exactly
+    /// this feature (the panel gained it, the runner's viewpoint output did not), so a test that
+    /// stopped at <see cref="PlayerView.Build"/> would miss a second such divergence.
+    ///
+    /// Natural, not staged: <c>capable-angelo</c> is the one variant whose own <c>Cast.Build</c>
+    /// seeds Vincent's belief that Angelo clears both capability bars, specifically so a natural proof
+    /// would exist for this feature without inventing an opinion — see
+    /// <c>Scenario/Variants.cs</c>'s own comment on that seeding.
+    ///
+    /// <b>The Godot roster panel is not driven by a live self-test here, and that limitation is
+    /// stated rather than glossed.</b> None of the five existing Godot self-tests use
+    /// <c>capable-angelo</c> — all five are hardcoded to <c>baseline</c>, confirmed by reading
+    /// `Game.cs` before writing this test — so no live self-test screen currently contains a
+    /// <c>TakenFor</c> line to assert against, and this correction does not add one, per its own
+    /// scope (no new capability derivation, no scenario fixture change, no self-test behaviour
+    /// change). What is verified instead, structurally: `Game.cs`'s `BuildAttitudes` renders
+    /// `attitude.TakenFor` unconditionally whenever it is not null, reading the identical
+    /// <see cref="PlayerAttitude.TakenFor"/> field this test already drives through
+    /// <see cref="IntelligenceWriter"/> — the same shared-field argument
+    /// <c>ExecutorSuitabilityTests.The_scorer_never_weighs_one_bar_against_another_on_the_same_man</c>
+    /// already makes for the identical pair of surfaces, and for the identical reason: one resolution,
+    /// two renderings of it, confirmed by reading both call sites rather than assumed.
+    /// </summary>
+    [Fact]
+    public void TakenFor_reaches_the_runners_viewpoint_render()
+    {
+        var world = Cast.Build(42, "capable-angelo");
+
+        string rendered = IntelligenceWriter.Render(world, "vincent");
+
+        Assert.Contains("hard man", rendered, StringComparison.Ordinal);
     }
 
     // ================================================================= helpers

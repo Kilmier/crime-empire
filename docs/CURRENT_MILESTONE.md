@@ -110,10 +110,27 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   Mutation-checked by changing the production arm's resolved subject to the raw `c.Subject`: the
   focused test failed, the exhaustive `ClaimKind` test was unaffected, then reverted — `git diff
   --stat` against `src/` is empty. Full account: `docs/milestones/023-the-roster-reads.md`'s third
-  correction section. Awaits its own Codex re-review.
+  correction section.
+
+- **Codex reviewed `15d7c92` — "Show what he takes a man for on the roster" — and returned two P2s,
+  both accepted by Matt.** First: nothing proved `StandingChange.About` carries the exact
+  originating claim, or that two same-cause entries about different claims stay distinguishable
+  through the roster projection — answered with two assertions on existing tests plus one new test
+  reading `PlayerView.Build`'s own rendered lines, mutation-checked independently for the conflict
+  and agreement writers. Second: `PlayerAttitude.TakenFor` had no dedicated coverage — answered by
+  three new tests (viewpoint-derived and not another actor's; no-view versus rejected-view
+  preserved, staged; natural reach into `IntelligenceWriter` via `capable-angelo`) plus an honestly
+  stated structural argument for the Godot roster panel's reach, since no existing self-test uses
+  that variant and none was added, per scope. The raw ladder reader `15d7c92` introduced was not
+  reopened (superseded by `9fed181`); the stale `CURRENT_MILESTONE.md` statements present at that
+  commit are recorded as historical in the archive rather than corrected here, since this file has
+  long since moved past them. 671 tests passing (667 + 4 new); `git diff --stat` against `src/` is
+  empty; all accepted hashes, both viewpoints, and all seven Godot invocations unchanged. Full
+  account: `docs/milestones/023-the-roster-reads.md`'s fourth correction section. Awaits its own
+  Codex re-review.
 
 **Paused before milestone 027, on Matt's word, while Codex works through the remaining milestone
-023–025 backlog in order: `6738200` and `4da1e66` (both corrected above), `15d7c92`, `f993386`,
+023–025 backlog in order: `6738200`, `4da1e66` and `15d7c92` (all corrected above), `f993386`,
 `1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that backlog is cleared and Matt
 says so.
 

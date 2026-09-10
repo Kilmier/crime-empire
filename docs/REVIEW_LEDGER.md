@@ -617,6 +617,26 @@ internal id, the exhaustive `ClaimKind` test was unaffected, then reverted — `
 against `src/` for the correcting commit is empty. Test count unchanged at 667 (rewritten, not
 added to). Full account: `docs/milestones/023-the-roster-reads.md`'s third correction section.
 
+**Codex reviewed `15d7c92` — "Show what he takes a man for on the roster," which added
+`StandingChange.About` and `PlayerAttitude.TakenFor` — and returned two P2s, both accepted by
+Matt.** First: nothing proved `.About` carries the exact originating claim, or that two same-cause
+entries about different claims stay distinguishable through the roster projection — answered by two
+assertions added to existing tests plus one new test reading `PlayerView.Build`'s own rendered
+lines; mutation-checked independently (the conflict claim dropped, then separately the agreement
+claim), each confirmed to fail only its own expected test, then reverted. Second: `TakenFor` had no
+dedicated coverage — answered by three new tests (viewpoint-derived and not another actor's,
+structurally never the target's own `Capabilities`; no-view versus rejected-view preserved, staged
+for the same reason `ExecutorSuitabilityTests.cs`'s identical-shaped test is staged; natural reach
+into `IntelligenceWriter` via `capable-angelo`, the one variant that seeds this belief naturally)
+plus an explicit, honestly-caveated structural argument for the Godot roster panel's reach, since no
+existing self-test uses that variant and none was added. The raw ladder reader `15d7c92` introduced
+was not reopened — already superseded by the accepted `9fed181` — and the stale
+`CURRENT_MILESTONE.md` statements present at that commit are recorded as historical rather than
+corrected in the live file, which has long since moved past them. 671 tests passing (667 + 4 new);
+`git diff --stat` against `src/` for the correcting commit is empty; all accepted hashes, both
+viewpoints, and all seven Godot invocations unchanged. Full account: `docs/milestones/023-the-
+roster-reads.md`'s fourth correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

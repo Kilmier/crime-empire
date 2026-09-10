@@ -327,3 +327,90 @@ nothing about it depends on subject/name resolution.
 ### Commit
 
 One correction commit, test-only. Awaits Codex re-review.
+
+## Correction — two P2s on `15d7c92`, coverage-only, 2026-09-10
+
+**Codex reviewed `15d7c92` — "Show what he takes a man for on the roster," the second same-day
+follow-on, which added `StandingChange.About` and `PlayerAttitude.TakenFor` — and returned two P2s,
+both accepted by Matt.**
+
+**First: nothing proved `StandingChange.About` actually carries the claim the exchange was about,
+end to end, or that two same-cause entries about different claims stay distinguishable.**
+`A_contradiction_costs_trust_and_records_why` and `A_corroboration_raises_trust_and_records_why`
+each gained one line, `Assert.Equal(Beating, moment.About)`, asserting equality against the
+fixture's own claim rather than against the receipt's own field — a check on the writer, not a
+tautology against its input. A new test,
+`Two_contradictions_about_different_claims_read_as_different_lines_on_the_roster`, drives two real
+conflicts about two different claims through the production path and reads
+`PlayerView.Build`'s own rendered `PlayerStandingMoment.Description` lines, confirming they differ —
+the exact defect `.About` exists to prevent (three genuinely different corroborations rendering as
+the same sentence three times), proven at the surface a player would actually read.
+Mutation-checked independently, per the finding's own instruction: `RecordAccountConflict`'s
+`conflict.Claim` argument was dropped first, confirmed to fail exactly the two tests that read
+`.About` on the conflict side and nothing else, then reverted; `RecordAccountAgreement`'s
+`agreement.Claim` argument was dropped separately, confirmed to fail exactly
+`A_corroboration_raises_trust_and_records_why` and nothing else, then reverted. Neither mutation was
+live at the same time as the other.
+
+**Second: `PlayerAttitude.TakenFor` had no coverage beyond one incidental assertion in
+`ExecutorSuitabilityTests.cs`, scoped to a scoring-consistency concern rather than to `TakenFor`
+itself.** Three new tests, plus one reach proof, added to `RosterHistoryTests.cs`:
+
+- `TakenFor_reflects_the_viewpoints_own_belief_and_not_another_actors` — Vincent and Salvatore hold
+  opposite beliefs about the identical man, and each viewpoint's own roster shows only its own
+  holder's belief. The claim that the line is never the target's own objective `Capabilities` is not
+  separately re-proven at runtime — it is structural, and stated as such: `PlayerView.Build`'s
+  `TakenFor`/`Position` local functions read exclusively from `who.Cognition.Records`, the identical
+  structural guarantee `Suitability.RecordDelegatedOutcome`'s own doc comment already relies on for
+  the identical reason (its signature takes an id, never a `Character`).
+- `No_view_and_a_rejected_view_are_different_states_on_the_roster` — no view renders as an omitted
+  line (`null`); a settled rejection renders as a real, different sentence. Staged, not natural, for
+  the same reason `ExecutorSuitabilityTests.cs`'s own identical-shaped test is staged: the accepted
+  fixture never seeds a rejected capability belief, so proving this naturally would mean inventing an
+  opinion nobody was ever given a reason to hold.
+- `TakenFor_reaches_the_runners_viewpoint_render` — natural, not staged: `capable-angelo` is the one
+  variant whose own `Cast.Build` already seeds Vincent's belief that Angelo clears both capability
+  bars (`Scenario/Variants.cs`'s own comment on that seeding), so this drives `IntelligenceWriter
+  .Render` against the real fixture rather than a staged one.
+- **The Godot roster panel's own reach is stated as a structural claim, not a live self-test
+  result, and that limitation is recorded rather than glossed.** Confirmed by reading `Game.cs`:
+  none of the five existing Godot self-tests use `capable-angelo` — all five are hardcoded to
+  `baseline` — so no live self-test screen currently contains a `TakenFor` line, and this correction
+  adds none, per its own scope (no new capability derivation, no scenario-fixture change, no
+  self-test behaviour change). What is verified: `Game.cs`'s `BuildAttitudes` renders
+  `attitude.TakenFor` unconditionally whenever it is not null, reading the identical
+  `PlayerAttitude.TakenFor` field the tests above already drive through `IntelligenceWriter` — the
+  same shared-field argument `ExecutorSuitabilityTests.cs` already makes for this identical pair of
+  surfaces (one resolution, two renderings of it), confirmed by reading both call sites rather than
+  assumed.
+
+**The raw ladder reader `15d7c92` introduced — a local `Holds` function scanning
+`who.Cognition.Records` directly rather than going through `CapabilityBar.Read` — is not reopened
+here.** It was already superseded by the accepted milestone-021 correction at `9fed181`, which
+replaced it with the shared `CapabilityBar.Read`/`Position` resolution current `PlayerSnapshot.cs`
+still uses, confirmed by reading the live source before writing this correction. Nothing here
+depends on the raw reader ever having existed.
+
+**The stale `CURRENT_MILESTONE.md` statements present at `15d7c92`** — "Milestone 023... is
+implemented, tested and committed" (written before this same-day follow-on landed) and the "Open,
+and Matt's call: Trust from completed work... still does not occur" bullet (which `15d7c92`'s own
+commit answered the same day: it should not, and the example already occurs via
+`Suitability.RecordDelegatedOutcome`) — **are recorded here as historical rather than corrected
+in the live file.** `CURRENT_MILESTONE.md` is explicitly not history (its own header says so) and
+has been reset and rewritten many times since; there is no live statement left to fix.
+
+### Verification
+
+- Build 0 warnings / 0 errors.
+- Tests: **671 passed** (667 + 4 new: two assertions added to existing tests plus two wholly new
+  ones for `.About`'s distinguishability, and three new plus one reach test for `TakenFor`).
+- `git diff --stat` against `src/`: **empty** — coverage-only, confirmed rather than merely
+  intended.
+- `--verify` on all four required configurations and `--compare` at seed 42, byte-identical to
+  every prior accepted figure. Both required viewpoint runs and all seven Godot invocations exit 0.
+- Two mutation checks on `.About` (the conflict claim and the agreement claim, each dropped
+  independently), each confirmed to fail only its own expected tests, then reverted.
+
+### Commit
+
+One correction commit, test-and-documentation-only. Awaits Codex re-review.

@@ -397,3 +397,77 @@ so a changed hash is the expected signature of this correction, not a red flag t
 ### Commit
 
 One correction commit. Still unreviewed pending a Codex round on this correction specifically.
+
+## Correction — the mathematical explanation overstated, and the verification inventory incomplete, 2026-09-09
+
+**Codex reviewed `b4ce907` (the commit containing the correction above) and returned three findings,
+all accepted.** This is a documentation- and comment-only correction answering them — no runtime
+behaviour, test behaviour, RNG method, probability, key, or fixture changes. It supersedes the
+mathematical explanation in the "`Rng.ForOccasion`'s finalizer" section above without rewriting it;
+that section stands as archived history of what was written at the time, not as the current account.
+
+**Finding 1 — `Fnv1a` is not GF(2)-linear, and the argument never needed it to be.** The passage above
+says "FNV-1a's own hash step [is linear]" and calls "the pipeline end to end... GF(2)-linear."
+`Fnv1a` multiplies (`hash *= 16777619u`), which is not linear over GF(2). The corrected argument does
+not require it to be: `Fnv1a(occasionKey)` only needs to be a *fixed* function of the key — some fixed
+32-bit constant for a given key, whatever it is. Everything applied to that constant afterward — the
+XOR-combination with `worldSeed`, the old single-linear-step finalizer, and every subsequent
+`NextUInt` xorshift draw — is linear over GF(2), and it is *that* linearity, composed with a fixed
+per-key starting constant, that lets the identical `seed*constant` term cancel out of two keys' XOR
+difference at every corresponding draw position. `Rng.cs`'s doc comment on `ForOccasion` and
+`docs/DESIGN_DECISIONS.md`'s "Keyed stochastic opportunities can co-succeed" now state this precisely;
+this archive's earlier passage did not.
+
+**Finding 2 — "no two occasion keys' streams could ever be made to land together, at any seed, for
+any pair of keys" overstates what the algebra proves.** A fixed, seed-independent XOR relationship
+between two streams is not by itself a proof that they can never jointly clear a probability
+threshold together — whether it does depends on what the specific fixed delta actually is, which
+depends on the two keys. What the algebra explains is the *demonstrated* case: three street-talk
+observers' occasion-keyed rolls on one event, found unable to co-succeed across tens of thousands of
+searched seeds. It does not license the universal claim that *every* arbitrary pair of keys under the
+old mapping was unable to co-succeed at *every* seed, and the corrected documentation no longer makes
+that claim.
+
+**Finding 3 — the verification inventory's `git diff --stat` line, above, is now incomplete.** It
+reads "only `src/CrimeEmpire.Simulation/Sim/Rng.cs` — no other production file touched." A second
+production file, `src/CrimeEmpire.Godot/Game.cs`, was touched later the same day, after the archived
+verification was written: `DirectActionSelfTest`'s `DirectActionChoiceSequence` needed re-deriving for
+the identical reason as the C# tests above (Salvatore's own corroboration-seeking now reaches Vincent
+immediately after his personally-executed violence, ahead of where the old sequence expected his own
+"what now" decision). Matt reviewed this specifically and approved it as the one exception, before
+`b4ce907` was committed, on the grounds that it is self-test-only scaffolding — a private constant
+array read only by `DirectActionSelfTest`, gated behind `--selftest-directaction`, never reachable
+during normal play, confirmed to be the only line in `Game.cs` that changed. The corrected inventory:
+**two files under `src/` changed — `Rng.cs` for simulation behaviour, and `Game.cs` for the
+explicitly approved self-test-only choice sequence.** `docs/milestones/017-direct-action-vs-
+delegation.md`'s own correction section (2026-09-09) carries the full account of that specific change,
+including its own live re-verification.
+
+**Also corrected, alongside these three.** `OPEN_CONCERNS.md` #6 previously said `ForDecision`
+carries "the same proof... unchanged" and is "confirmed to have the identical defect" — narrowed to
+what is actually shown: the identical *structural shape*, and therefore the identical structural
+*risk*, but not a demonstrated identical failure for any concrete pair of decisions. And
+`StreetTalkTests.cs`'s class-level doc comment, which still read as though "the natural run cannot
+reach this" at seed 42 were the current state, now records what is actually true since the RNG
+correction: Salvatore's route lands at seed 42 in every variant with a violence incident; only
+Vincent's own discovery route and Kane's investigator route remain non-results there.
+
+**What did not change.** `Rng.ForOccasion`'s code — the fmix32 finalizer itself — is byte-identical to
+what `b4ce907` committed; this correction touched no method body, no test assertion, no probability,
+no occasion key, and no fixture. Confirmed by `git diff --stat`, not merely asserted: this commit's
+`src/` diff is empty. Every one of the 663 tests `b4ce907` left passing still passes, unchanged, and
+all seven Godot invocations still exit 0.
+
+### Verification
+
+- Build **0 warnings, 0 errors**, both target frameworks.
+- `git diff --stat` against `src/` for this commit: **empty** — this is a documentation- and
+  comment-only correction, confirmed rather than merely intended.
+- Tests: **663 passed, 0 failed** — identical to `b4ce907`, since no test changed.
+- `docs/PERSONALITY_AND_CHARACTER_PROFILES.md` and `docs/UI_AND_PLAYER_LEGIBILITY.md` untouched.
+  `ForDecision` itself untouched — only its `OPEN_CONCERNS.md` entry's wording. Milestone 027 not
+  begun.
+
+### Commit
+
+One correction commit, documentation- and comment-only. Awaits Codex re-review.

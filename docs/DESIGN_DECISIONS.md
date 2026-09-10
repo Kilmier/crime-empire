@@ -631,32 +631,41 @@ spent moving it, which is the signature of a rule that was never written down.
 `Rng.ForOccasion(worldSeed, occasionKey)` gives distinct, causally local opportunities — a strategy
 instance's Nth advance, a specific observer's chance to notice a specific trace — their own
 deterministic stream, seeded from the key rather than from a shared position in one global sequence.
-**Two or more distinct occasion keys' streams are not locked into any fixed relationship with each
-other, and are free to land the same way — including all succeeding together — at a given seed.**
+**Two or more distinct occasion keys' streams are no longer forced into the specific seed-independent
+relationship that made one demonstrated case — three observers of one event — permanently unable to
+co-succeed, and are free to land the same way, including all succeeding together, at a given seed.**
 
-This was not true before the correction, and not by design: `ForOccasion`'s finalizer used to be a
-single linear step, and the rest of its pipeline (an FNV-1a key hash, then XOR-combined with the
-world seed) is linear over GF(2) throughout. XOR-linearity meant the world seed's own contribution
-cancelled out of any two occasion keys' XOR difference algebraically, leaving a fixed,
-seed-independent delta between their entire output sequences — for every seed, forever, whether the
-two keys were related or not. Milestone 022 found the concrete symptom (three observers of one
-street-talk event, never landing together across several thousand searched seeds) without knowing
-the cause; the correction found and fixed the cause, replacing the finalizer with fmix32 (as used in
-MurmurHash3) — multiplication by an odd constant is not linear over GF(2), which is what breaks the
-algebra the defect depended on. See `Rng.cs`'s doc comment on `ForOccasion` for the full argument, and
-`docs/milestones/022-the-street-talks.md`'s correction section for the fix, its verification, and
-every natural-run test elsewhere in the suite whose seed-42 history moved as a result.
+This was not true before the correction, and not by design. `Fnv1a` is not GF(2)-linear — it
+multiplies — but nothing about the argument needs it to be: it only needs to be a *fixed* function of
+the key, producing some fixed 32-bit constant per key. Everything applied to that constant afterward —
+XOR-combining it with the world seed, the old single-linear-step finalizer (`h ^= h >> 15`), and every
+subsequent `NextUInt` xorshift draw — is linear over GF(2), and linearity is what lets the seed cancel:
+for two occasion keys sharing a seed, a GF(2)-linear map distributes over XOR, so the identical
+`seed*constant` term drops out of the two streams' XOR difference at every corresponding draw
+position, leaving a delta that depends only on the two keys, never on the seed. Milestone 022 found
+the concrete symptom (three observers of one street-talk event, never landing together across several
+thousand searched seeds) without knowing the cause; the correction found and fixed the cause,
+replacing the finalizer with fmix32 (as used in MurmurHash3) — multiplication by an odd constant is
+not linear over GF(2), which is what breaks the algebra the defect depended on. See `Rng.cs`'s doc
+comment on `ForOccasion` for the full argument, and `docs/milestones/022-the-street-talks.md`'s
+correction sections for the fix, its verification, and every natural-run test elsewhere in the suite
+whose seed-42 history moved as a result.
 
-**What this is not a claim of.** Two occasion-keyed streams are no longer *structurally forced apart*
-— that is the load-bearing, proven fact. Nothing here claims they are statistically independent in
-the rigorous sense, and no code should rely on that stronger claim; fmix32 is a strong integer-hash
-avalanche, not a proof of independence. Design and test against "distinct keyed opportunities may
-succeed together, at some seed" — not against any assumption of how often, or that their outcomes
-never correlate at all.
+**What this is not a claim of.** A fixed, seed-independent XOR relationship between two streams does
+not by itself prove they can never jointly clear a probability threshold — whether it does depends on
+what the specific fixed delta is. The argument above explains the demonstrated case; it is not a
+theorem that every arbitrary pair of occasion keys was universally unable to co-succeed at every seed
+under the old mapping, and this record does not claim that. Nor are two occasion-keyed streams claimed
+to be statistically independent in the rigorous sense now that the fix is in — fmix32 is a strong
+integer-hash avalanche, not a proof of independence. Design and test against "distinct keyed
+opportunities may succeed together, at some seed" — not against any assumption of how often, or that
+their outcomes never correlate at all.
 
-**Scope of the fix.** `Rng.ForDecision` has the identical GF(2)-linear pipeline shape and was
-deliberately left unfixed — confirmed, not touched, and recorded as deferred risk in
-`OPEN_CONCERNS.md` #6. `Rng.ForWorld`, occasion-key construction, and everything the keys are used
+**Scope of the fix.** `Rng.ForDecision` has the identical GF(2)-linear pipeline shape and therefore
+the same structural correlation *risk* — but sharing the demonstrated failure for any concrete pair of
+decisions has not itself been shown, so it is recorded as a risk, not a proven identical defect, and
+was deliberately left unfixed: confirmed, not touched, in `OPEN_CONCERNS.md` #6. `Rng.ForWorld`,
+occasion-key construction, and everything the keys are used
 for (probabilities, traits, fixtures, scheduling) were untouched by this correction.
 
 ## Factions, if they are ever built — ruled 2026-09-05

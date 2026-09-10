@@ -30,7 +30,8 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   finalizer let the world seed cancel out of any two occasion keys' XOR difference, locking every pair
   of occasion-keyed streams into one fixed, seed-independent relationship no seed could break. Fixed
   by replacing the finalizer with fmix32 (MurmurHash3's), which is not linear over GF(2). `ForDecision`
-  has the identical shape and is confirmed, not fixed — `OPEN_CONCERNS.md` #6.
+  has the identical structural shape and therefore the identical correlation *risk* — not a
+  demonstrated identical failure — recorded as such in `OPEN_CONCERNS.md` #6.
   Running the full suite afterward surfaced 24 failures across seven files — every natural-run test
   that happened to read Vincent's or Kane's own observation roll on the same milestone-022 event.
   Each was individually traced and classified (natural-history claim / mechanic proof / cascaded
@@ -54,8 +55,20 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   correction named `Rng.cs` as the only production file to touch, and this is a second one. Matt
   reviewed and approved it specifically as self-test-only scaffolding (a private constant array read
   only by the self-test, gated behind its own CLI flag, never reachable during normal play; confirmed
-  no other line in `Game.cs` changed) before it was committed. This correction now awaits Codex
-  review, alongside the production-path correction above.
+  no other line in `Game.cs` changed) before it was committed.
+
+- **Codex reviewed `b4ce907` and returned three findings; Matt accepted all three.** All three were
+  about the *explanation*, not the fix: `Fnv1a` was wrongly called GF(2)-linear (it multiplies; the
+  argument only needs it to be a fixed function of the key), the claim that no two occasion keys could
+  ever co-succeed at any seed overstated what the algebra proves (it explains the demonstrated
+  three-observer case, not a universal theorem over every key pair), and the verification inventory's
+  "only `Rng.cs` changed" line was already stale by the time it was written — `Game.cs` had been
+  approved and committed alongside it. A documentation- and comment-only correction answers all three
+  in `Rng.cs`, `DESIGN_DECISIONS.md`, `OPEN_CONCERNS.md`, `StreetTalkTests.cs`'s stale class-level
+  comment, and an appended (not rewritten) correction section in
+  `docs/milestones/022-the-street-talks.md`. No runtime behaviour, test behaviour, RNG method,
+  probability, key, or fixture changed; `git diff --stat` against `src/` for this commit is empty.
+  This correction now awaits its own Codex re-review.
 
 ## Next, per the demo arc
 

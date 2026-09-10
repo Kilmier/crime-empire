@@ -39,17 +39,34 @@ public sealed class Rng
     /// counter) — those shift when anything anywhere is scheduled or recorded, which is the defect
     /// this method exists to avoid repeating.
     ///
-    /// <b>A correction found reviewing milestone 022, 2026-09-09.</b> The finalizer used to be a
-    /// single linear step, <c>h ^= h &gt;&gt; 15</c>. XOR and shift are both linear over GF(2), and so
-    /// is the rest of this pipeline up to and including this method's
-    /// own combination of the key hash with <paramref name="worldSeed"/> — which meant that for any
-    /// two occasion keys under the same seed, the seed's own contribution cancelled out of their XOR
-    /// difference algebraically, leaving a fixed, seed-independent delta between the two streams'
-    /// entire output sequences. No seed could ever change it. Two street-talk observers of the same
-    /// event were found permanently unable to both succeed, not rarely but for every one of tens of
-    /// thousands of seeds tested — and the same proof holds for any two keys under this method,
-    /// related or not, and for <see cref="ForDecision"/>'s identical pipeline shape (confirmed, not
-    /// fixed here — see <c>OPEN_CONCERNS.md</c>).
+    /// <b>A correction found reviewing milestone 022, first 2026-09-09, then corrected again the same
+    /// day after Codex's review overstated the argument below.</b> <see cref="Fnv1a"/> is not
+    /// GF(2)-linear — it multiplies — and nothing here depends on it being linear. What matters is
+    /// only that it is a *fixed* function of the key: <c>Fnv1a(occasionKey)</c> is some fixed 32-bit
+    /// constant for a given key, whatever it is. The finalizer used to be a single linear step,
+    /// <c>h ^= h &gt;&gt; 15</c>, and everything downstream of that fixed constant — the XOR
+    /// combination with <paramref name="worldSeed"/>, that finalizer, and <see cref="NextUInt"/>'s own
+    /// xorshift steps — is linear over GF(2). Linearity is what lets the seed cancel: for two occasion
+    /// keys K1, K2 sharing a seed, their pre-finalizer states are <c>Fnv1a(K1) XOR seed*C</c> and
+    /// <c>Fnv1a(K2) XOR seed*C</c>, and applying a GF(2)-linear map <c>f</c> to both distributes over
+    /// XOR, so <c>f(Fnv1a(K1) XOR seed*C) XOR f(Fnv1a(K2) XOR seed*C) = f(Fnv1a(K1)) XOR f(Fnv1a(K2))</c>
+    /// — the <c>seed*C</c> term cancels regardless of what <paramref name="worldSeed"/> is. Because
+    /// every subsequent <see cref="NextUInt"/> draw is itself another GF(2)-linear map applied to that
+    /// same starting state, this cancellation reproduces at every corresponding draw position: the two
+    /// streams' XOR delta at draw <c>t</c> is a fixed value depending only on K1, K2 and <c>t</c>,
+    /// never on the seed.
+    ///
+    /// <b>What that licenses, precisely, and no further.</b> A fixed, seed-independent XOR relationship
+    /// between two streams is not by itself a proof that they can never both clear a probability
+    /// threshold together — whether it forbids that depends on what the fixed delta actually is. What
+    /// it explains is the demonstrated case: three street-talk observers' occasion-keyed rolls on one
+    /// event, found unable to co-succeed across tens of thousands of seeds searched. This account does
+    /// not extend that to a universal claim that every arbitrary pair of keys under this method was
+    /// unable to co-succeed at every seed — only that the mapping made the specific, tested case
+    /// unreachable, which is what the fix below addresses. <see cref="ForDecision"/> has the identical
+    /// structural shape and therefore the same correlation *risk*, but sharing this outcome for any
+    /// concrete pair of decisions has not been demonstrated the way it was here — recorded as a risk,
+    /// not a proven identical failure, in <c>OPEN_CONCERNS.md</c>.
     ///
     /// The finalizer below is a standard integer-hash avalanche (fmix32, as used in MurmurHash3):
     /// multiplication by an odd constant is not linear over GF(2), so it breaks the algebra the

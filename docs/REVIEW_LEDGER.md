@@ -554,6 +554,20 @@ were each reviewed and each returned at least one finding; every FAIL is what pr
 that follows it. Status of milestones 022–026 remains `CURRENT_MILESTONE.md`'s to state, not this
 file's, except where reconciled elsewhere in this file.
 
+### Measured — milestone 022, the street talks, the `Rng.ForOccasion` correction's first real review
+
+**Codex reviewed `b4ce907` — the correction replacing `Rng.ForOccasion`'s GF(2)-linear finalizer and
+repairing every natural-run test the fix moved — and returned three findings, all about the written
+explanation rather than the fix itself. Matt accepted all three.** `Fnv1a` was wrongly called
+GF(2)-linear in the archive and doc comments (it multiplies; the argument only needs it to be a fixed
+function of the key); the claim that no two occasion keys could ever co-succeed at any seed overstated
+what the algebra proves (it explains the demonstrated three-observer case, not a universal theorem
+over every key pair); and the verification inventory's "only `Rng.cs` changed" line was stale by the
+time it was written, since `Game.cs`'s self-test-only choice sequence had already been approved and
+committed alongside it. Corrected by the commit that carries this row — documentation and comments
+only, `git diff --stat` against `src/` empty, all 663 tests and all seven Godot invocations unchanged.
+Full account: `docs/milestones/022-the-street-talks.md`'s final correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

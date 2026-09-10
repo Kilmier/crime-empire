@@ -135,25 +135,31 @@ an oversight — a boss who notices that two men's stories cover different groun
 the model currently cannot represent. Surfaced by `milestones/003-information-transmission.md`.
 
 ### 6. `Rng.ForDecision` has the same GF(2)-linear finalizer shape `ForOccasion` was fixed for
-Confirmed, not fixed, by the `Rng.ForOccasion` correction of 2026-09-09 (`docs/milestones/022-the-
-street-talks.md`). `ForOccasion`'s old finalizer was a single linear step, `h ^= h >> 15`, and the
-rest of its pipeline — hashing the key with FNV-1a, then XOR-combining with the world seed — is
-linear over GF(2) throughout. That meant the seed's own contribution cancelled out of any two
-occasion keys' XOR difference algebraically, locking every pair of streams into one fixed,
-seed-independent relationship no seed could break: two observers of the same event could never both
-succeed, for any seed, ever. `ForDecision` combines its inputs (`characterId`, `worldSeed`,
-`decisionIndex`) the identical way and finalizes with the identical single linear step — the same
-proof applies to it unchanged. It seeds `Utility.Score`'s per-decision noise, so the same defect
-shape means two characters' (or two decisions') noise draws are not free to co-vary the way a
-genuine independent draw would be; they are locked into a fixed relationship by the world seed
-cancelling out, for the same algebraic reason.
+Corrected 2026-09-09 (`docs/milestones/022-the-street-talks.md`'s second correction) after Codex's
+review found the first write-up of this item overstated the argument. `ForOccasion`'s old finalizer
+was a single linear step, `h ^= h >> 15`. `Fnv1a` itself is not GF(2)-linear — it multiplies — but the
+argument does not need it to be: it only needs to be a *fixed* function of the key. Everything applied
+to that fixed value afterward — XOR-combining it with the world seed, that finalizer, and every
+subsequent `NextUInt` xorshift draw — is linear over GF(2), and linearity is what lets the seed cancel
+out of two keys' XOR difference at every corresponding draw position, leaving a delta that depends
+only on the two keys, never the seed. That relationship is what made the *demonstrated* case — three
+street-talk observers of one event — unable to co-succeed across tens of thousands of searched seeds;
+it is not a proof that every arbitrary pair of keys under this shape was universally unable to
+co-succeed at every seed, and this item does not claim that. `ForDecision` combines its inputs
+(`characterId`, `worldSeed`, `decisionIndex`) the identical way and finalizes with the identical
+single linear step, so it carries the identical *structural risk* — the same seed-cancelling relationship
+would arise between any two `ForDecision` streams sharing a seed — but no concrete pair of decisions
+has been shown to actually fail to co-vary the way milestone 022's three observers were shown to.
+It seeds `Utility.Score`'s per-decision noise, so if the risk is ever realized, two characters' (or two
+decisions') noise draws would not be free to co-vary the way a genuine independent draw would be.
 
 **Why this correction did not fix it.** Authorization was explicit and narrow: replace
 `ForOccasion`'s finalizer only, and record `ForDecision`'s identical shape as deferred rather than
 fold a second RNG change into one correction. `ForDecision` has no known concrete symptom the way
 `ForOccasion` did (the milestone 022 joint-observation exclusion, found by exhaustive seed search) —
-this is a structural risk confirmed by the same proof, not a demonstrated behavioral defect, which is
-exactly why it belongs here rather than in a second correction commit.
+this is a structural risk carrying the same shape as a demonstrated defect elsewhere, not itself a
+demonstrated behavioral defect, which is exactly why it belongs here rather than in a second
+correction commit.
 
 **What would surface it.** Two characters' (or two decisions') scored candidates that should be able
 to win together under some seed, provably never doing so across a wide seed search — the same shape

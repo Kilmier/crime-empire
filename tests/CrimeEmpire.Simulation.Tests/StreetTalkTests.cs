@@ -24,17 +24,28 @@ namespace CrimeEmpire.Simulation.Tests;
 /// upgrade — and, the load-bearing one, **ineligibility for corroboration**, since you can only
 /// check what you were told.
 ///
-/// <b>THE NATURAL RUN CANNOT REACH THIS, AND THAT IS RECORDED RATHER THAN ENGINEERED AWAY.</b>
-/// After the scope review rejected civilians (a civilian holding a violence rumour has no reader —
-/// `Fear` moves only through coercion resolution), the eligible population is nearly empty: the
-/// executor is excluded, the detective goes the discovery route because she went looking, and the
+/// <b>Originally: the natural run could not reach this, and that was recorded rather than engineered
+/// away.</b> After the scope review rejected civilians (a civilian holding a violence rumour has no
+/// reader — `Fear` moves only through coercion resolution), the eligible population is nearly empty:
+/// the executor is excluded, the detective goes the discovery route because she went looking, and the
 /// man who ordered it keeps discovery for the reason in
 /// <see cref="The_man_who_ordered_it_is_not_learning_it_from_the_street"/>. That leaves one man in
-/// the accepted fixture — Salvatore — whose roll is `0.5 × (0.4 + 0.6 × 0.15) ≈ 0.245`, and he
-/// fails it at seed 42. **Every variant's trace hash and chosen-action digest is therefore unmoved
-/// by this milestone**, which is the honest measure of an inert mechanism rather than a claim that
-/// nothing changed. The proofs below are staged for that reason, and the scope named this outcome
-/// in advance as acceptable — explicitly forbidding a raised discoverability until it fired.
+/// the accepted fixture — Salvatore — whose roll is `0.5 × (0.4 + 0.6 × 0.15) ≈ 0.245`. At this
+/// milestone's own original commit, he failed it at seed 42, and every variant's trace hash and
+/// chosen-action digest was unmoved by the milestone — the honest measure of an inert mechanism, not
+/// a claim that nothing would ever change. The proofs below were staged for that reason, and the
+/// scope named this outcome in advance as acceptable, explicitly forbidding a raised discoverability
+/// until it fired.
+///
+/// <b>No longer the state at seed 42, since the `Rng.ForOccasion` correction of 2026-09-09</b> (see
+/// `docs/milestones/022-the-street-talks.md`'s correction sections). Salvatore's roll now lands at
+/// seed 42 in every variant that reaches a violence incident (`baseline`, `watchful-boss`,
+/// `disloyal-vincent`, `resentful-tommy`, `capable-angelo`) — the mechanism this milestone built is no
+/// longer inert there. **Only Vincent's own owner's-carve-out discovery route and Kane's investigator
+/// route remain non-results at seed 42**; neither the owner nor the investigator comes to hold the
+/// claim in any variant at that seed. The staged proofs below are unaffected — they never depended on
+/// seed 42's own natural-run outcome — and the bounded-seed and complete-production-path tests further
+/// down this file are what now demonstrate the mechanism against a real run, at seeds found by search.
 /// </summary>
 public sealed class StreetTalkTests
 {
@@ -251,9 +262,10 @@ public sealed class StreetTalkTests
     /// <b>The roll is still a genuine, irreducible Bernoulli draw, and the seed is still found by
     /// search, not by casting.</b> No character stat is pushed toward certainty and no discoverability
     /// coefficient is touched — the occasion key is built entirely from strategy bookkeeping the RNG
-    /// never reads, so it is identical at every seed; only the seed moves the three rolls. This still
-    /// changes nothing about seed 42's own honest non-result, which neither this test nor the search
-    /// that found its seed touches, re-derives, or depends on.
+    /// never reads, so it is identical at every seed; only the seed moves the three rolls. This test
+    /// neither touches, re-derives, nor depends on what seed 42 itself now does — see the class doc
+    /// comment above for what seed 42's own outcome is since the `Rng.ForOccasion` correction
+    /// (Salvatore's route now lands there; the owner's and the investigator's still do not).
     /// </summary>
     [Fact]
     public void The_street_talk_survives_its_complete_production_path()

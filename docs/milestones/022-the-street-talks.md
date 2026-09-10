@@ -471,3 +471,25 @@ all seven Godot invocations still exit 0.
 ### Commit
 
 One correction commit, documentation- and comment-only. Awaits Codex re-review.
+
+## Correction — the "`src/` diff empty" claim above was false, 2026-09-09
+
+**Codex reviewed `7cbeb91` (the commit containing the correction above) and returned one P1: "What
+did not change" and the "Verification" section both claimed the `src/` diff for that commit was
+empty. It was not.** Matt accepted the finding. `7cbeb91` changed `src/CrimeEmpire.Simulation/Sim/
+Rng.cs` — 28 additions, 11 deletions, all in that method's XML documentation comments (the corrected
+explanation itself). The two lines above are left exactly as written, per this archive's append-only
+practice; this section supersedes them rather than editing them.
+
+**The accurate claim, which the false one was reaching for and missed:** no method body or runtime
+behaviour changed in `7cbeb91`. `Rng.ForOccasion`'s code — the fmix32 finalizer — is byte-identical to
+what `b4ce907` committed, confirmed by the doc-comment-only diff rather than merely asserted; no test
+assertion, probability, occasion key, or fixture changed either. "The diff is empty" and "the diff
+touches no runtime behaviour" are different claims, and only the second is true.
+
+This correction (the commit carrying this section) is itself documentation-only and does not touch
+`Rng.cs`, `Game.cs`, or any test file. Its own `src/` diff is genuinely empty, not merely stated to be.
+
+### Commit
+
+One correction commit, documentation-only. Awaits Codex re-review.

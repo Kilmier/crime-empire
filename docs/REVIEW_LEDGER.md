@@ -568,6 +568,16 @@ committed alongside it. Corrected by the commit that carries this row — docume
 only, `git diff --stat` against `src/` empty, all 663 tests and all seven Godot invocations unchanged.
 Full account: `docs/milestones/022-the-street-talks.md`'s final correction section.
 
+**Correction: the row above is itself wrong about one thing.** "`git diff --stat` against `src/`
+empty" describes this ledger's own commit at the time, but that commit was `7cbeb91`, and `7cbeb91`'s
+`src/` diff is not empty — it is 28 additions and 11 deletions in `Rng.cs`'s XML documentation
+comments, the corrected explanation itself. Codex found this as a P1 on `7cbeb91` and Matt accepted
+it. The row above stands as written, per this file's practice of correcting rather than rewriting; the
+accurate claim is that `7cbeb91` changed no method body and no runtime behaviour — the diff is real
+and is entirely documentation. Corrected by the commit that carries this paragraph, which is itself
+documentation-only and whose own `src/` diff is genuinely empty. Full account:
+`docs/milestones/022-the-street-talks.md`'s own correction section for this same finding.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

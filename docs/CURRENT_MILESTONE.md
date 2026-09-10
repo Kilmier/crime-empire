@@ -67,8 +67,17 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   in `Rng.cs`, `DESIGN_DECISIONS.md`, `OPEN_CONCERNS.md`, `StreetTalkTests.cs`'s stale class-level
   comment, and an appended (not rewritten) correction section in
   `docs/milestones/022-the-street-talks.md`. No runtime behaviour, test behaviour, RNG method,
-  probability, key, or fixture changed; `git diff --stat` against `src/` for this commit is empty.
-  This correction now awaits its own Codex re-review.
+  probability, key, or fixture changed. **This commit's `src/` diff is not empty** — it is 28
+  additions and 11 deletions in `Rng.cs`'s XML documentation comments, the corrected explanation
+  itself; no method body changed.
+
+- **Codex found a P1 on `7cbeb91`: the claim above ("`git diff --stat` against `src/` for this
+  commit is empty") was false, and Matt accepted the finding.** The accurate claim, now stated
+  correctly, is that no method body or runtime behaviour changed — the diff is real and is entirely
+  documentation comments. Corrected in `docs/milestones/022-the-street-talks.md` (appended, not
+  rewritten) and in `docs/REVIEW_LEDGER.md`, per that file's own convention for a false claim already
+  on the record. This correction is itself documentation-only — `Rng.cs`, tests, and every other
+  milestone archive are untouched — and now awaits its own Codex re-review.
 
 ## Next, per the demo arc
 

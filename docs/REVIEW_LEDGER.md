@@ -578,6 +578,21 @@ and is entirely documentation. Corrected by the commit that carries this paragra
 documentation-only and whose own `src/` diff is genuinely empty. Full account:
 `docs/milestones/022-the-street-talks.md`'s own correction section for this same finding.
 
+### Measured — milestone 023, the roster reads, a history entry with no movement behind it
+
+**Codex reviewed `6738200` — milestone 023's implementation — and returned one P1, accepted by
+Matt: `Relations.RecordAccountConflict` and `RecordAccountAgreement` remembered a `StandingChange`
+unconditionally, even when the clamped `Trust` value did not actually move at the floor or ceiling.**
+`Relations.Frighten`, in the same file, was already written to guard against exactly this for fear;
+these two newer call sites did not carry the same guard. Fixed the identical way: capture `Trust`
+before the clamp, remember only when the clamped value differs from it. Two new production-path
+tests added (`A_contradiction_at_the_trust_floor_is_not_remembered`,
+`A_corroboration_at_the_trust_ceiling_is_not_remembered`), both mutation-checked and reverted.
+Nothing in the accepted fixture reaches either clamp, so no accepted hash moved. Corrected by the
+commit that carries this row — production code plus tests, 665 tests passing (663 + 2 new), all
+seven Godot invocations unchanged. Full account: `docs/milestones/023-the-roster-reads.md`'s
+correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

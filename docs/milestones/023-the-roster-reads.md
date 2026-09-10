@@ -190,3 +190,49 @@ Build 0/0; **599 tests**; all six variant hashes unmoved on trace and chosen act
 self-tests exit 0. `IntelligenceWriter` and the Godot roster now agree about what "how he takes them"
 means — they had diverged, with the panel gaining both additions and the runner's viewpoint showing
 neither.
+
+## Correction — a history entry with no movement behind it, 2026-09-09
+
+**Codex reviewed `6738200` and returned one P1, accepted by Matt: `RecordAccountConflict` and
+`RecordAccountAgreement` remembered a `StandingChange` unconditionally, even when the clamped `Trust`
+value did not actually move.** A man already floored at zero trust who is contradicted again, or
+already ceilinged at full trust who is corroborated again, still acquired a fresh roster entry —
+exactly the defect `Relations.Frighten` was already written to avoid for fear (`Being_frightened_is_
+remembered_only_when_it_actually_moved`, this milestone's own test), and this milestone's two newer
+`Remember` call sites did not carry the same guard.
+
+**Fixed the same way `Frighten` already does it.** Both methods now capture `Trust` before applying
+the clamp and remember only when the clamped value actually differs from it —
+`if (rel.Trust < before)` for the conflict cost, `if (rel.Trust > before)` for the agreement gain.
+Nothing about the movement itself, the clamp range, or `ConflictTrustCost`/`AccountAgreementTrustGain`
+changed; only whether a null movement gets a memory.
+
+**Two new production-path tests, mirroring the existing floor/ceiling proof for fear.**
+`A_contradiction_at_the_trust_floor_is_not_remembered` establishes trust at 0.0, drives a genuine
+conflict through `Cognition.Receive` (not a hand-built `AccountConflict`), and asserts
+`StandingHistory` stays empty since trust never moves off the floor.
+`A_corroboration_at_the_trust_ceiling_is_not_remembered` mirrors it at trust 1.0 for the agreement
+side. Both mutation-checked: reverting either guard to an unconditional `Remember` makes its test fail
+with a single stray `StandingChange` despite trust staying exactly at the clamp; both confirmed and
+reverted before this commit.
+
+**Nothing in the accepted fixture reaches either clamp**, so no accepted hash moved — the same
+"inert in the natural run, provable only by construction" shape this milestone's own tests already
+established for `Frighten`'s identical guard.
+
+### Verification
+
+- Build 0 warnings / 0 errors.
+- Tests: **665 passed** (663 + 2 new in `RosterHistoryTests.cs`).
+- `--verify` on all four required configurations, byte-identical to every prior accepted figure —
+  `baseline` `7832105EC1F24154`, `disloyal-vincent` `6C23284BFD91C48D`, `resentful-tommy`
+  `7A43D1AFB4A6E26F`, `capable-angelo` `5CACCFC566364BB7`.
+- `--compare` at seed 42: 6 configurations, 6 distinct traces, 5 distinct chosen-action sequences
+  (`baseline`/`resentful-tommy` converge, as recorded in milestone 022's own correction) — every
+  digest unmoved.
+- Both required viewpoint runs and all seven Godot invocations exit 0.
+- Two mutation checks, each confirmed and reverted, as described above.
+
+### Commit
+
+One correction commit, production code plus tests. Awaits Codex re-review.

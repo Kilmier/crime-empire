@@ -54,6 +54,37 @@ public sealed class RosterHistoryTests
     }
 
     /// <summary>
+    /// The boundary this shares with <see cref="Being_frightened_is_remembered_only_when_it_actually_moved"/>:
+    /// a man already floored at zero trust does not acquire a fresh memory of being contradicted
+    /// again, because nothing about his state changed to match it. Through the real production path
+    /// — <c>Cognition.Receive</c> produces the conflict, not a hand-built <c>AccountConflict</c> — so
+    /// this proves the guard against a genuine contradiction, not a synthetic one.
+    ///
+    /// Corrected 2026-09-09, after Codex's review of milestone 023's `6738200` found
+    /// <see cref="Relations.RecordAccountConflict"/> remembering unconditionally, even at the clamp —
+    /// a history entry with no movement behind it, exactly the defect
+    /// <see cref="Being_frightened_is_remembered_only_when_it_actually_moved"/> already guards against
+    /// for fear. Mutation-checked: reverting the guard makes this test fail with a single
+    /// <c>AccountContradicted</c> entry in <c>StandingHistory</c> despite trust staying at 0.
+    /// </summary>
+    [Fact]
+    public void A_contradiction_at_the_trust_floor_is_not_remembered()
+    {
+        var listener = Salvatore(out _);
+        Relations.Establish(listener, "tommy", trust: 0.0);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.7, SourceKind.Discovery, listener.Id, At);
+
+        var receipt = listener.Cognition.Receive(
+            ReportedClaim.Honest(Beating, Stance.Rejects, 0.9, SourceKind.Participant),
+            "tommy", At.AddDays(1));
+        Relations.RecordAccountConflict(listener, receipt.Conflict!.Value, At.AddDays(1));
+
+        var rel = listener.Social.Toward("tommy");
+        Assert.Equal(0.0, rel.Trust, precision: 9);
+        Assert.Empty(rel.StandingHistory);
+    }
+
+    /// <summary>
     /// The upward direction, which grudges could never express: something a man did that improved
     /// how he is regarded, kept as durably as something he did that damaged it.
     /// </summary>
@@ -72,6 +103,33 @@ public sealed class RosterHistoryTests
         var rel = listener.Social.Toward("tommy");
         Assert.True(rel.Trust > 0.40);
         Assert.Equal(StandingCause.AccountCorroborated, Assert.Single(rel.StandingHistory).Cause);
+    }
+
+    /// <summary>
+    /// The mirror of <see cref="A_contradiction_at_the_trust_floor_is_not_remembered"/>: a man already
+    /// as trusted as the scale allows does not acquire a fresh memory of being corroborated again.
+    /// Through the real production path, like its sibling above.
+    ///
+    /// Corrected 2026-09-09, after Codex's review of milestone 023's `6738200` found
+    /// <see cref="Relations.RecordAccountAgreement"/> remembering unconditionally, even at the clamp.
+    /// Mutation-checked: reverting the guard makes this test fail with a single
+    /// <c>AccountCorroborated</c> entry in <c>StandingHistory</c> despite trust staying at 1.
+    /// </summary>
+    [Fact]
+    public void A_corroboration_at_the_trust_ceiling_is_not_remembered()
+    {
+        var listener = Salvatore(out _);
+        Relations.Establish(listener, "tommy", trust: 1.0);
+        listener.Cognition.Learn(Beating, Stance.Believes, 0.6, SourceKind.Discovery, listener.Id, At);
+
+        var receipt = listener.Cognition.Receive(
+            ReportedClaim.Honest(Beating, Stance.Believes, 0.8, SourceKind.Participant),
+            "tommy", At.AddDays(1));
+        Relations.RecordAccountAgreement(listener, receipt.Agreement!.Value, At.AddDays(1));
+
+        var rel = listener.Social.Toward("tommy");
+        Assert.Equal(1.0, rel.Trust, precision: 9);
+        Assert.Empty(rel.StandingHistory);
     }
 
     /// <summary>

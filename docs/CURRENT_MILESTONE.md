@@ -77,7 +77,23 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   documentation comments. Corrected in `docs/milestones/022-the-street-talks.md` (appended, not
   rewritten) and in `docs/REVIEW_LEDGER.md`, per that file's own convention for a false claim already
   on the record. This correction is itself documentation-only — `Rng.cs`, tests, and every other
-  milestone archive are untouched — and now awaits its own Codex re-review.
+  milestone archive are untouched.
+
+- **Matt accepted `4ed58e3`. Milestone 022's `Rng.ForOccasion` correction chain is closed** — the full
+  chain being `b4ce907` (the fix and every repaired natural-run test), `7cbeb91` and `4ed58e3` (two
+  documentation-only corrections answering Codex's review of the written explanation).
+
+- **Milestone 023 — The Roster Reads — has a correction: Codex reviewed `6738200` and returned one
+  P1, accepted by Matt.** `Relations.RecordAccountConflict` and `RecordAccountAgreement` remembered a
+  `StandingChange` unconditionally, even when the clamped `Trust` value did not actually move at the
+  floor or ceiling — the same defect `Relations.Frighten` was already guarded against for fear, in the
+  same file. Fixed the identical way, with two new mutation-checked production-path tests. Nothing in
+  the accepted fixture reaches either clamp, so no accepted hash moved. Full account:
+  `docs/milestones/023-the-roster-reads.md`'s correction section. Awaits its own Codex re-review.
+
+**Paused before milestone 027, on Matt's word, while Codex works through the remaining milestone
+023–025 backlog in order: `6738200` (corrected above), `4da1e66`, `15d7c92`, `f993386`, `1a7bcc6`,
+`95e60b5`.** Nothing here authorizes starting 027 until that backlog is cleared and Matt says so.
 
 ## Next, per the demo arc
 

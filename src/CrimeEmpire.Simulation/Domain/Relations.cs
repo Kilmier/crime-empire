@@ -271,6 +271,7 @@ public static class Relations
     public static void RecordAccountConflict(Character listener, AccountConflict conflict, DateTime at)
     {
         var rel = Writable(listener.Social.Ensure(conflict.SpeakerId));
+        double before = rel.Trust;
         // Scaled by how hard the disagreement was, from the listener's side only: how firmly he held
         // the position, times how firmly it was contradicted. Both are actor-visible.
         rel.Trust = Clamp(rel.Trust - ConflictTrustCost * conflict.Strength);
@@ -279,7 +280,13 @@ public static class Relations
         // afterwards, from the same listener-side evidence the movement itself came from: this method
         // cannot reach the truth log or the speaker's candour, so what it remembers cannot claim to
         // know he was lied to. It records that he was contradicted, which is all the listener has.
-        rel.Remember(new StandingChange(StandingCause.AccountContradicted, at, conflict.Claim));
+        //
+        // Only when the clamped value actually moved — the same guard Frighten already uses. A man
+        // whose trust is already floored at 0 does not acquire a fresh memory of being contradicted
+        // again; recording one regardless would put an entry on the roster that nothing in his state
+        // changed to match. Corrected 2026-09-09 after Codex's review of milestone 023's `6738200`
+        // found this method (and its mirror below) remembering unconditionally.
+        if (rel.Trust < before) rel.Remember(new StandingChange(StandingCause.AccountContradicted, at, conflict.Claim));
     }
 
     // ---------------------------------------------------------------- the agreement consequence
@@ -316,8 +323,13 @@ public static class Relations
     public static void RecordAccountAgreement(Character listener, AccountAgreement agreement, DateTime at)
     {
         var rel = Writable(listener.Social.Ensure(agreement.SpeakerId));
+        double before = rel.Trust;
         rel.Trust = Clamp(rel.Trust + AccountAgreementTrustGain * agreement.Strength);
-        rel.Remember(new StandingChange(StandingCause.AccountCorroborated, at, agreement.Claim));
+
+        // Only when the clamped value actually moved — mirrors RecordAccountConflict's identical
+        // guard, corrected the same day for the same reason: a man already as trusted as the scale
+        // allows does not acquire a fresh memory of being corroborated again.
+        if (rel.Trust > before) rel.Remember(new StandingChange(StandingCause.AccountCorroborated, at, agreement.Claim));
     }
 
     // ---------------------------------------------------------------- ordinary movement

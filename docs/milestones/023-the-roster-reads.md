@@ -236,3 +236,53 @@ established for `Frighten`'s identical guard.
 ### Commit
 
 One correction commit, production code plus tests. Awaits Codex re-review.
+
+## Correction — two P2s on `4da1e66`, test-and-documentation-only, 2026-09-09
+
+**Codex reviewed `4da1e66` — the same-day follow-on above — and returned two P2 findings, both
+accepted by Matt.**
+
+**First: the `PersonIsCapable` narration fix shipped with no regression coverage.** "Also corrected
+here (`4da1e66`)," above, describes the fix (`PersonIsCapable` added to
+`PlayerNarration.Describe`) but no test proved it, so a later edit could remove the arm again and
+nothing would fail — exactly the gap that let the original defect ship in milestone 021 unnoticed.
+Two tests added to `RosterHistoryTests.cs`:
+
+- `PersonIsCapable_claims_render_as_prose_not_as_the_developer_predicate` pins the exact wording for
+  both bars (`"tommy is a hard man"`, `"tommy can handle leaning on somebody"`) and asserts neither
+  matches the raw `Claim.ToString()` predicate the defect actually produced.
+- `Every_defined_claim_kind_has_its_own_narration` is the falsifier for the whole *class* of defect,
+  not only this one instance: it drives every value of `ClaimKind` through `Describe` with a generic
+  claim and asserts none of them falls through to the `_ => c.ToString()` fallback. A future
+  `ClaimKind` added without a narration arm fails this test immediately, rather than reaching a
+  player first and being found by scoping the next milestone the way this one was.
+
+Both mutation-checked by removing the `PersonIsCapable` arm entirely: both tests failed (one on the
+pinned wording, one on the fallback match), confirmed, then reverted — `git diff --stat` against
+`PlayerNarration.cs` for this correction is empty; no production behaviour changed, only test
+coverage was added, per the finding's own scope.
+
+**Second: `4da1e66` left `PlayerNarration.Standing`'s class-level doc comment still arguing the
+position Matt reversed on 2026-09-04** ("Follow-on, same day", above, records that this milestone
+listed rewriting it in its own scope and then did not do it). **No source edit is needed for this
+finding today: `1a7bcc6` (milestone 025's own work) already rewrote it.** `PlayerNarration.Standing`'s
+doc comment at current HEAD reads "Milestone 023 put the cause on the roster beside this phrase... the
+phrase itself still leaks neither the cause nor a number" — the corrected position, not the one Matt
+reversed. Confirmed by reading the live source before writing this section, not assumed from the
+commit message. Recorded here, append-only, as the accurate history: `4da1e66` left it wrong;
+`1a7bcc6` fixed it; this correction did not need to touch it again.
+
+### Verification
+
+- Build 0 warnings / 0 errors.
+- Tests: **667 passed** (665 + 2 new in `RosterHistoryTests.cs`).
+- `git diff --stat` against `src/`: **empty** — this correction is test-and-documentation-only,
+  confirmed rather than merely intended.
+- Two mutation checks (the `PersonIsCapable` arm removed, both new tests confirmed to fail for their
+  respective reasons), each reverted before this commit.
+- `docs/PERSONALITY_AND_CHARACTER_PROFILES.md` and `docs/UI_AND_PLAYER_LEGIBILITY.md` untouched.
+  Milestone 027 not begun.
+
+### Commit
+
+One correction commit, test-and-documentation-only. Awaits Codex re-review.

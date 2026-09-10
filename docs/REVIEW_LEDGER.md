@@ -593,6 +593,19 @@ commit that carries this row — production code plus tests, 665 tests passing (
 seven Godot invocations unchanged. Full account: `docs/milestones/023-the-roster-reads.md`'s
 correction section.
 
+**Codex reviewed `4da1e66` — the same-day follow-on — and returned two P2s, both accepted by Matt.**
+First: the `PersonIsCapable` narration fix shipped with no regression coverage, so a later edit could
+remove it again undetected — answered with two tests, one pinning both bars' exact prose against
+`PlayerNarration.Describe`, one driving every `ClaimKind` through it generically so a future kind
+added without a narration arm fails automatically rather than reaching a player first. Both
+mutation-checked (the `PersonIsCapable` arm removed, both failed for their own reason) and reverted;
+`git diff --stat` against `src/` for the correcting commit is empty — test-and-documentation-only, no
+production behaviour changed. Second: `4da1e66` left `PlayerNarration.Standing`'s class-level doc
+comment still arguing the position Matt reversed on 2026-09-04 — confirmed, by reading the live
+source, that `1a7bcc6` already corrected it, so no source edit was needed, only the accurate history
+recorded append-only. 667 tests passing (665 + 2 new). Full account: `docs/milestones/023-the-
+roster-reads.md`'s second correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

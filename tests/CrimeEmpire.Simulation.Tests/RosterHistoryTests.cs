@@ -242,6 +242,66 @@ public sealed class RosterHistoryTests
         Assert.All(remembered, m => Assert.InRange(m.At, Cast.Start, Cast.Start.AddDays(90)));
     }
 
+    // ================================================================= what a capability claim says
+
+    /// <summary>
+    /// Corrects a gap Codex found in `4da1e66`'s own regression coverage: milestone 021 added
+    /// <c>ClaimKind.PersonIsCapable</c> without adding it to <see cref="PlayerNarration.Describe"/>,
+    /// and nothing caught it — it reached players as a raw
+    /// <c>PersonIsCapable(angelo -&gt; hard-man)</c> dump until it was found while scoping milestone
+    /// 024, per <see cref="PlayerNarration.Describe"/>'s own doc comment. `4da1e66` fixed the arm but
+    /// added no test proving it, so a future edit could remove it again and nothing would fail.
+    ///
+    /// Both bars, both read as prose rather than as the developer predicate.
+    /// </summary>
+    [Fact]
+    public void PersonIsCapable_claims_render_as_prose_not_as_the_developer_predicate()
+    {
+        var hardMan = CapabilityBar.About("tommy", CapabilityBar.HardMan);
+        var roughWork = CapabilityBar.About("tommy", CapabilityBar.RoughWork);
+
+        string hardManProse = PlayerNarration.Describe(hardMan, id => id);
+        string roughWorkProse = PlayerNarration.Describe(roughWork, id => id);
+
+        Assert.Equal("tommy is a hard man", hardManProse);
+        Assert.Equal("tommy can handle leaning on somebody", roughWorkProse);
+
+        // Neither reads as the raw predicate the defect actually produced.
+        Assert.NotEqual(hardMan.ToString(), hardManProse);
+        Assert.NotEqual(roughWork.ToString(), roughWorkProse);
+        Assert.DoesNotContain("PersonIsCapable", hardManProse, StringComparison.Ordinal);
+        Assert.DoesNotContain("PersonIsCapable", roughWorkProse, StringComparison.Ordinal);
+        Assert.DoesNotContain(CapabilityBar.HardMan, hardManProse, StringComparison.Ordinal);
+        Assert.DoesNotContain(CapabilityBar.RoughWork, roughWorkProse, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The falsifier for the whole class of defect `PersonIsCapable` was, not only that one instance:
+    /// a <c>ClaimKind</c> added to the vocabulary and never added to <see cref="PlayerNarration.Describe"/>
+    /// silently falls through to <c>_ =&gt; c.ToString()</c>, the exact raw developer predicate a
+    /// player must never see. This drives every defined <c>ClaimKind</c> through <c>Describe</c> with
+    /// a generic claim and asserts the result is never that fallback — so a future kind added to the
+    /// enum without a narration arm fails this test immediately, rather than reaching a player first
+    /// and being found by scoping the next milestone the way this one was.
+    ///
+    /// The representative claim is deliberately generic (an arbitrary subject and object id, not a
+    /// per-kind fixture) so the test needs no maintenance when a new kind is added — only a narration
+    /// arm for it. <c>PersonIsCapable</c>'s object happens not to match either named
+    /// <see cref="CapabilityBar"/> constant here, which is fine: the arm's ternary still produces
+    /// prose either way, and the dedicated test above pins the exact wording for both real bars.
+    /// </summary>
+    [Fact]
+    public void Every_defined_claim_kind_has_its_own_narration()
+    {
+        foreach (var kind in Enum.GetValues<ClaimKind>())
+        {
+            var claim = new Claim(kind, "subject-id", "object-id");
+            string rendered = PlayerNarration.Describe(claim, id => id);
+
+            Assert.NotEqual(claim.ToString(), rendered);
+        }
+    }
+
     // ================================================================= helpers
 
     private static Character Salvatore(out World world)

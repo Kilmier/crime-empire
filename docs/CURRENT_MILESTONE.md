@@ -89,11 +89,23 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   floor or ceiling — the same defect `Relations.Frighten` was already guarded against for fear, in the
   same file. Fixed the identical way, with two new mutation-checked production-path tests. Nothing in
   the accepted fixture reaches either clamp, so no accepted hash moved. Full account:
-  `docs/milestones/023-the-roster-reads.md`'s correction section. Awaits its own Codex re-review.
+  `docs/milestones/023-the-roster-reads.md`'s correction section.
+
+- **Codex reviewed `4da1e66` — the same-day follow-on — and returned two P2s, both accepted by
+  Matt.** The `PersonIsCapable` narration fix shipped with no regression coverage, answered by two
+  tests: one pinning both bars' exact prose, one driving every `ClaimKind` through
+  `PlayerNarration.Describe` generically so a future kind added without a narration arm fails
+  automatically. Both mutation-checked; `git diff --stat` against `src/` for the correcting commit is
+  empty — test-and-documentation-only. Separately, `4da1e66` left `PlayerNarration.Standing`'s
+  class-level doc comment still arguing the position Matt reversed on 2026-09-04; confirmed by reading
+  the live source that `1a7bcc6` already corrected it, so no source edit was needed, only the accurate
+  history recorded append-only. Full account: `docs/milestones/023-the-roster-reads.md`'s second
+  correction section. Awaits its own Codex re-review.
 
 **Paused before milestone 027, on Matt's word, while Codex works through the remaining milestone
-023–025 backlog in order: `6738200` (corrected above), `4da1e66`, `15d7c92`, `f993386`, `1a7bcc6`,
-`95e60b5`.** Nothing here authorizes starting 027 until that backlog is cleared and Matt says so.
+023–025 backlog in order: `6738200` and `4da1e66` (both corrected above), `15d7c92`, `f993386`,
+`1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that backlog is cleared and Matt
+says so.
 
 ## Next, per the demo arc
 

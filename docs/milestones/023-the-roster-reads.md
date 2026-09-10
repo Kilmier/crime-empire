@@ -286,3 +286,44 @@ commit message. Recorded here, append-only, as the accurate history: `4da1e66` l
 ### Commit
 
 One correction commit, test-and-documentation-only. Awaits Codex re-review.
+
+## Correction — a false-assurance subject id in the focused test, 2026-09-09
+
+**Codex reviewed `2dec7ff` and returned one P2, accepted by Matt:
+`PersonIsCapable_claims_render_as_prose_not_as_the_developer_predicate` used `"tommy"` as the
+subject id with an identity resolver (`id => id`), so it could not tell "the production arm called
+the name resolver" from "the production arm printed the raw internal id" — `"tommy"` already reads
+as a plausible display fragment either way. This is the exact false-assurance shape this project's
+own ledger names as recurring: a test that passes whether or not the thing it claims to check
+actually happened.
+
+**Fixed by making the two facts distinguishable.** The subject is now an unmistakably internal id
+(`"char-000e7f"`) resolved by a real (if minimal) lookup function to a genuine display name
+(`"Tommy Nardo"`), and the test asserts both rendered sentences contain the display name and do not
+contain the internal id, in addition to the exact wording it already pinned. If the production arm
+ever stopped calling the resolver and printed `c.Subject` directly, the internal id would now leak
+into the sentence and the test would catch it — which the prior version structurally could not.
+
+**Mutation-checked exactly that way.** The `PersonIsCapable` arm's two `Subject()` calls were
+temporarily changed to `c.Subject`, bypassing the resolver. The focused test failed
+(`"char-000e7f is a hard man"` where `"Tommy Nardo is a hard man"` was expected); the exhaustive
+`Every_defined_claim_kind_has_its_own_narration` test, which does not depend on subject/name
+resolution at all, was unaffected — confirming the mutation was caught by the test built to catch
+it and nothing else. Reverted before this commit; `git diff --stat` against
+`PlayerNarration.cs` is empty.
+
+**The exhaustive `ClaimKind` test is unchanged** — it was never the subject of this finding, and
+nothing about it depends on subject/name resolution.
+
+### Verification
+
+- Build 0 warnings / 0 errors.
+- Tests: **667 passed** — unchanged count, since the existing test was rewritten rather than added
+  to.
+- `git diff --stat` against `src/`: **empty** — test-only, confirmed rather than merely intended.
+- One mutation check (the `PersonIsCapable` arm's resolved subject reverted to `c.Subject`),
+  confirmed to fail only the focused test, then reverted.
+
+### Commit
+
+One correction commit, test-only. Awaits Codex re-review.

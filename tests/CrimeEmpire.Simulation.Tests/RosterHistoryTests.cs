@@ -257,14 +257,28 @@ public sealed class RosterHistoryTests
     [Fact]
     public void PersonIsCapable_claims_render_as_prose_not_as_the_developer_predicate()
     {
-        var hardMan = CapabilityBar.About("tommy", CapabilityBar.HardMan);
-        var roughWork = CapabilityBar.About("tommy", CapabilityBar.RoughWork);
+        // An unmistakably internal id, resolved to a different display name — "tommy" would have let
+        // this test pass whether or not the production arm actually called the resolver, since an
+        // identity resolver leaves an already name-shaped id unchanged either way. Codex's review of
+        // `2dec7ff` found exactly that gap.
+        const string internalId = "char-000e7f";
+        const string displayName = "Tommy Nardo";
+        string Resolve(string id) => id == internalId ? displayName : id;
 
-        string hardManProse = PlayerNarration.Describe(hardMan, id => id);
-        string roughWorkProse = PlayerNarration.Describe(roughWork, id => id);
+        var hardMan = CapabilityBar.About(internalId, CapabilityBar.HardMan);
+        var roughWork = CapabilityBar.About(internalId, CapabilityBar.RoughWork);
 
-        Assert.Equal("tommy is a hard man", hardManProse);
-        Assert.Equal("tommy can handle leaning on somebody", roughWorkProse);
+        string hardManProse = PlayerNarration.Describe(hardMan, Resolve);
+        string roughWorkProse = PlayerNarration.Describe(roughWork, Resolve);
+
+        Assert.Equal("Tommy Nardo is a hard man", hardManProse);
+        Assert.Equal("Tommy Nardo can handle leaning on somebody", roughWorkProse);
+
+        // The resolved display name is what a player sees, never the internal id it came from.
+        Assert.Contains(displayName, hardManProse, StringComparison.Ordinal);
+        Assert.Contains(displayName, roughWorkProse, StringComparison.Ordinal);
+        Assert.DoesNotContain(internalId, hardManProse, StringComparison.Ordinal);
+        Assert.DoesNotContain(internalId, roughWorkProse, StringComparison.Ordinal);
 
         // Neither reads as the raw predicate the defect actually produced.
         Assert.NotEqual(hardMan.ToString(), hardManProse);

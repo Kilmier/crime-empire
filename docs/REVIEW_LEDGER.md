@@ -606,6 +606,17 @@ source, that `1a7bcc6` already corrected it, so no source edit was needed, only 
 recorded append-only. 667 tests passing (665 + 2 new). Full account: `docs/milestones/023-the-
 roster-reads.md`'s second correction section.
 
+**Codex reviewed `2dec7ff` and returned one P2, accepted by Matt: the focused `PersonIsCapable`
+test used `"tommy"` as its subject id with an identity resolver, so it could not distinguish "the
+resolver was called" from "the raw internal id was printed" — the recurring false-assurance shape,
+since `"tommy"` reads as plausible either way.** Fixed by using an unmistakably internal id
+(`"char-000e7f"`) resolved to a genuine display name (`"Tommy Nardo"`) and asserting the display
+name appears while the internal id does not. Mutation-checked by changing the production arm's two
+`Subject()` calls to `c.Subject`, bypassing the resolver: the focused test failed on the leaked
+internal id, the exhaustive `ClaimKind` test was unaffected, then reverted — `git diff --stat`
+against `src/` for the correcting commit is empty. Test count unchanged at 667 (rewritten, not
+added to). Full account: `docs/milestones/023-the-roster-reads.md`'s third correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

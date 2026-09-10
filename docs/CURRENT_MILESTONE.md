@@ -100,6 +100,16 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   class-level doc comment still arguing the position Matt reversed on 2026-09-04; confirmed by reading
   the live source that `1a7bcc6` already corrected it, so no source edit was needed, only the accurate
   history recorded append-only. Full account: `docs/milestones/023-the-roster-reads.md`'s second
+  correction section.
+
+- **Codex reviewed `2dec7ff` and returned one P2, accepted by Matt: the focused `PersonIsCapable`
+  test used `"tommy"` as its subject id with an identity resolver, so it could not distinguish "the
+  resolver was called" from "the raw internal id leaked through" — the recurring false-assurance
+  shape.** Fixed by using an unmistakably internal id resolved to a genuine display name
+  (`"Tommy Nardo"`) and asserting the display name appears while the internal id does not.
+  Mutation-checked by changing the production arm's resolved subject to the raw `c.Subject`: the
+  focused test failed, the exhaustive `ClaimKind` test was unaffected, then reverted — `git diff
+  --stat` against `src/` is empty. Full account: `docs/milestones/023-the-roster-reads.md`'s third
   correction section. Awaits its own Codex re-review.
 
 **Paused before milestone 027, on Matt's word, while Codex works through the remaining milestone

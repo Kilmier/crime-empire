@@ -403,3 +403,40 @@ the failure output, not assumed), the positive control still passed as it must, 
 
 One correction commit: `DESIGN_DECISIONS.md`, four new `Pipeline.Prepare`-driven tests, and this
 review-record correction. Awaits Codex re-review.
+
+## Correction — the review-record misstated what Codex's review of `00613ca` returned, on `dd59a1b`, 2026-09-11
+
+**Codex reviewed `dd59a1b` — the correction immediately above — and returned one P2, accepted by
+Matt: this correction's own opening sentence, "Codex reviewed `00613ca`... and accepted the broader
+mechanic as already correctly implemented," misstates the review it describes.** The review of
+`00613ca` **returned FAIL**. What is true, and what the sentence above collapsed into an unconditional
+acceptance, is narrower: Codex confirmed the broader mechanic's implementation was already
+correct, and separately found the three documentation-and-coverage gaps this correction's own second
+and third paragraphs describe — the confirmation and the FAIL verdict are not in tension, but they
+are not the same claim, and reporting only the confirmation lets a reader miss that a FAIL was on
+the record at all.
+
+**The accurate sequence:** Codex confirmed the mechanic's implementation was correct while returning
+FAIL on the three findings; Matt then accepted those findings and **explicitly authorized the
+broader rule as stated** — the rule's own wording above ("a character may be involved in at most one
+active operation at a time, either as its owner or as its delegated executor") is Matt's ruling,
+carried by this correction, not a fact Codex certified on its own authority.
+
+**No mechanic, test, or production code changed.** This is a documentation-only correction:
+`docs/CURRENT_MILESTONE.md`'s matching text fixed in place, since that file is explicitly mutable
+rather than history; this archive's own sentence above and `docs/REVIEW_LEDGER.md`'s matching row
+left standing, per this project's append-only practice, each followed by a correction naming the
+error rather than rewritten silently.
+
+### Verification
+
+- No build, test, or fixture verification applies — no `.cs` file changed. `git diff --stat` against
+  `src/` and `tests/` for this commit is empty.
+- `docs/DESIGN_DECISIONS.md` untouched, as authorized.
+- `docs/PERSONALITY_AND_CHARACTER_PROFILES.md`, `docs/UI_AND_PLAYER_LEGIBILITY.md`, milestone 027,
+  and the remaining 023–025 backlog untouched.
+
+### Commit
+
+One documentation-only correction commit, touching only `docs/CURRENT_MILESTONE.md`,
+`docs/REVIEW_LEDGER.md`, and this archive. Awaits Codex re-review.

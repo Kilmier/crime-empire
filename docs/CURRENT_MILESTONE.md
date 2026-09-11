@@ -189,11 +189,12 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   Godot self-tests re-run against the live render, and the restart proof unchanged. Full account:
   `docs/milestones/024-the-operation-reads.md`'s second correction section.
 
-- **Codex reviewed `00613ca` — the second correction above — and accepted the broader mechanic as
-  already correctly implemented: a character may be involved in at most one active operation at a
-  time, either as its owner or as its delegated executor.** No production behaviour changed. Three
-  findings, all accepted by Matt, all about the record. First: the rule had never been written down
-  in `docs/DESIGN_DECISIONS.md` — recorded in a new "Operation staffing" section, alongside the
+- **Codex reviewed `00613ca` — the second correction above — and returned FAIL.** It confirmed the
+  broader mechanic's implementation was already correct — a character may be involved in at most one
+  active operation at a time, either as its owner or as its delegated executor — but found three
+  documentation and coverage gaps. **Matt accepted those three findings and explicitly authorized
+  the broader rule as stated.** No production behaviour changed. First: the rule had never been
+  written down in `docs/DESIGN_DECISIONS.md` — recorded in a new "Operation staffing" section, alongside the
   related point that availability is authoritative organisational state for eligibility while
   identity/nameability remains the separate question `Acquaintance.KnownTo` already settles.
   Second: every existing test proved the rule against a hand-built `GeneratorContext`, never through

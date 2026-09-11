@@ -780,6 +780,32 @@ six-configuration `--compare` figure, both required viewpoints, all seven Godot 
 two-process restart proof unchanged. Full account: `docs/milestones/024-the-operation-reads.md`'s
 third correction section.
 
+**Correction: the row above misstates what Codex's review of `00613ca` actually returned.** "Accepted
+the broader mechanic as already correctly implemented" reads as an unconditional pass; the review in
+fact **returned FAIL** — it confirmed the mechanic's implementation was already correct, and separately
+found the three documentation-and-coverage gaps the row goes on to describe. Confirming an
+implementation while still failing the commit for what surrounds it are not the same outcome, and the
+row's opening clause collapsed them into one. The accurate sequence: Codex confirmed the
+implementation was correct and returned FAIL on the three findings; Matt accepted those findings and
+**explicitly authorized the broader rule as stated** — the row's own text of the rule was not new
+information to Matt, it was his ruling, put into words by the correction that carried it. Codex
+accepted this correction on its own re-review; see the fourth-review row below.
+
+### Measured — milestone 024, the operation reads, fourth review
+
+**Codex reviewed `dd59a1b` — the third correction — and returned one P2, accepted by Matt: this
+file's own row above, and `docs/CURRENT_MILESTONE.md`'s and `docs/milestones/024-the-operation-reads.md`'s
+matching text, said Codex "accepted the broader mechanic" on `00613ca`'s review, when the review had in
+fact returned FAIL.** The mechanic's implementation being confirmed correct and the commit being
+accepted are different claims — the second follows from Matt's ruling on the findings, not from
+Codex's own verdict on that round, and the row's phrasing let a reader miss that a FAIL was on the
+record at all. Corrected: `docs/CURRENT_MILESTONE.md`'s wording fixed in place (mutable, not
+history); this file's and the milestone archive's own text left standing, each followed by a
+correction paragraph naming the error and stating the accurate sequence — Codex confirmed the
+mechanic, returned FAIL on three findings, Matt accepted the findings and authorized the rule. No
+`DESIGN_DECISIONS.md`, test, or production-code change; the mechanic is exactly as `00613ca` left it.
+Full account: `docs/milestones/024-the-operation-reads.md`'s fourth correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

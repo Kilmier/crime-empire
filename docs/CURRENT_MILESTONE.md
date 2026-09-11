@@ -176,20 +176,45 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   `GeneratorContext.AvailableSubordinateIds`), and `Commit.Apply` refuses, fail-closed, calling the
   identical `Pipeline.AvailableToExecute` directly. Third: `Operating`'s own fallback scan now reads
   as `SingleOrDefault` rather than taking the first match, since uniqueness is genuinely enforced
-  elsewhere now rather than merely assumed. Six new/strengthened tests, four mutation checks, all
-  confirmed and reverted — one of which caught a genuine gap in a new test's own setup (Vincent's own
-  strategy never staged, so the assertion passed vacuously regardless of the filter under test) and
-  was fixed before the mutation check was re-run and accepted. Also corrected in the same commit:
-  this file's own prior entry above overstated its mutation-check count — recorded accurately in
+  elsewhere now rather than merely assumed. Six new/strengthened tests, three mutation checks (the
+  commit guard removed, the availability filter removed, `Operating`'s condition weakened — not
+  four; this file's own count was corrected once by hand, since it is mutable rather than history,
+  and once more below after Codex caught the same overstatement again), all confirmed and reverted
+  — one of which caught a genuine gap in a new test's own setup (Vincent's own strategy never
+  staged, so the assertion passed vacuously regardless of the filter under test) and was fixed
+  before the mutation check was re-run and accepted. Also corrected in the same commit: this file's
+  own prior entry above overstated its mutation-check count — recorded accurately in
   `REVIEW_LEDGER.md` rather than silently fixed here. 678 tests passing (674 + 4 new); all four
   required hashes, the six-configuration `--compare` figure, both required viewpoints, all seven
   Godot self-tests re-run against the live render, and the restart proof unchanged. Full account:
-  `docs/milestones/024-the-operation-reads.md`'s second correction section. Awaits its own Codex
+  `docs/milestones/024-the-operation-reads.md`'s second correction section.
+
+- **Codex reviewed `00613ca` — the second correction above — and accepted the broader mechanic as
+  already correctly implemented: a character may be involved in at most one active operation at a
+  time, either as its owner or as its delegated executor.** No production behaviour changed. Three
+  findings, all accepted by Matt, all about the record. First: the rule had never been written down
+  in `docs/DESIGN_DECISIONS.md` — recorded in a new "Operation staffing" section, alongside the
+  related point that availability is authoritative organisational state for eligibility while
+  identity/nameability remains the separate question `Acquaintance.KnownTo` already settles.
+  Second: every existing test proved the rule against a hand-built `GeneratorContext`, never through
+  `Pipeline.Prepare` itself — closed with four new tests driving Vincent through the real pipeline
+  to his own delegation fork: a free subordinate offered, one owning an undelegated operation not
+  offered, one carrying delegated work not offered, and one who owns an operation already delegated
+  onward to a third man still not offered (pinning the broader involvement rule, not only "not
+  currently a live delegate"). Mutation-checked against the shared `Pipeline.Prepare` wiring: all
+  three negative tests failed, the positive control still passed, reverted. Third: the entry above
+  overstated its own mutation-check count a second time ("four," immediately followed by a list of
+  three) and overstated "no simulation behaviour changed" against what was actually verified — both
+  corrected in place above, since this file is mutable, and recorded accurately (append-only) in
+  `REVIEW_LEDGER.md` and the milestone archive. 682 tests passing (678 + 4 new); all four required
+  hashes, the six-configuration `--compare` figure, both required viewpoints, all seven Godot
+  self-tests, and the restart proof unchanged. Full account:
+  `docs/milestones/024-the-operation-reads.md`'s third correction section. Awaits its own Codex
   re-review.
 
 **Paused before milestone 027, on Matt's word, while Codex works through the remaining milestone
 023–025 backlog in order: `6738200`, `4da1e66` and `15d7c92` (all corrected above), `f993386` (now
-corrected twice above), `1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that
+corrected three times above), `1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that
 backlog is cleared and Matt says so.
 
 ## Next, per the demo arc

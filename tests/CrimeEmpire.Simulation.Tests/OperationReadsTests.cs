@@ -312,6 +312,88 @@ public sealed class OperationReadsTests
             Commit.Apply(world, vincent, delegateCandidate, ctx.Agenda, ctx, new List<string>()));
     }
 
+    // ================================================================= through Pipeline.Prepare
+    //
+    // Milestone 024's third correction. The four tests above prove the rule against a hand-built
+    // `GeneratorContext`, which exercises `Generators`/`Commit` directly but never `Pipeline.Prepare`
+    // itself — the one place `AvailableSubordinateIds` is actually computed and wired onto the
+    // context a real deliberation uses. These four drive Vincent through the genuine pipeline
+    // (`Runner.Step`, which calls `Pipeline.Prepare` for the controlled character) to his own
+    // delegation fork, and read `PreparedDecision.Available` — the same surface
+    // `ExecutorSuitabilityTests.Both_subordinates_are_independently_eligible_at_the_fork` reads.
+
+    /// <summary>
+    /// The positive control every negative case below depends on: with nothing making him busy,
+    /// Tommy is genuinely offered. Without this, the three negative tests would be unfalsifiable —
+    /// Tommy being absent could as easily mean the pipeline never offers him at all.
+    /// </summary>
+    [Fact]
+    public void A_free_nameable_subordinate_is_offered_through_pipeline_prepare()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var prepared = AdvanceVincentToDelegationFork(world);
+
+        var delegateCandidates = prepared.Available.Where(c => c.Kind == ActionKind.DelegateStrategy).ToList();
+        Assert.Contains(delegateCandidates, c => c.TargetId == "tommy");
+    }
+
+    /// <summary>Tommy owns an undelegated operation of his own before Vincent ever reaches his fork.</summary>
+    [Fact]
+    public void A_subordinate_owning_an_undelegated_operation_is_not_offered_through_pipeline_prepare()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var tommy = world.Get("tommy");
+        tommy.Execution.Strategy = NewStrategy(tommy, Cast.Bakery, tommy.StrategyCount++);
+
+        var prepared = AdvanceVincentToDelegationFork(world);
+
+        var delegateCandidates = prepared.Available.Where(c => c.Kind == ActionKind.DelegateStrategy).ToList();
+        Assert.DoesNotContain(delegateCandidates, c => c.TargetId == "tommy");
+        Assert.DoesNotContain(prepared.Rejected,
+            r => r.Candidate.Kind == ActionKind.DelegateStrategy && r.Candidate.TargetId == "tommy");
+    }
+
+    /// <summary>Tommy is already carrying work Salvatore delegated to him, through the real commit path.</summary>
+    [Fact]
+    public void A_subordinate_carrying_delegated_work_is_not_offered_through_pipeline_prepare()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var salvatore = world.Get("salvatore");
+        DelegateThroughCommit(world, salvatore, Cast.Bakery, "tommy");
+
+        var prepared = AdvanceVincentToDelegationFork(world);
+
+        var delegateCandidates = prepared.Available.Where(c => c.Kind == ActionKind.DelegateStrategy).ToList();
+        Assert.DoesNotContain(delegateCandidates, c => c.TargetId == "tommy");
+        Assert.DoesNotContain(prepared.Rejected,
+            r => r.Candidate.Kind == ActionKind.DelegateStrategy && r.Candidate.TargetId == "tommy");
+    }
+
+    /// <summary>
+    /// The broader rule, pinned rather than merely implied: Tommy owns a strategy of his own and has
+    /// already handed it onward to a third man (Kane) — he is neither running it himself nor free,
+    /// he is the <em>owner</em> of a delegated instance. <c>AvailableToExecute</c>'s own check is
+    /// "owns a strategy," full stop, not "owns an undelegated one," so this must exclude him too, and
+    /// is the one case among the four that a narrower "not currently delegated to" reading would
+    /// wrongly pass.
+    /// </summary>
+    [Fact]
+    public void A_subordinate_who_delegated_his_own_operation_onward_is_still_not_offered_through_pipeline_prepare()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var tommy = world.Get("tommy");
+        DelegateThroughCommit(world, tommy, Cast.Bakery, "kane");
+        Assert.NotNull(tommy.Execution.Strategy);
+        Assert.Equal("kane", tommy.Execution.Strategy!.DelegatedToId);
+
+        var prepared = AdvanceVincentToDelegationFork(world);
+
+        var delegateCandidates = prepared.Available.Where(c => c.Kind == ActionKind.DelegateStrategy).ToList();
+        Assert.DoesNotContain(delegateCandidates, c => c.TargetId == "tommy");
+        Assert.DoesNotContain(prepared.Rejected,
+            r => r.Candidate.Kind == ActionKind.DelegateStrategy && r.Candidate.TargetId == "tommy");
+    }
+
     // ================================================================= helpers
 
     private static void CheckOperationSection(string rendered, string mustContain, string mustNotContain)
@@ -412,6 +494,41 @@ public sealed class OperationReadsTests
         Commit.Apply(world, owner, start, ctx.Agenda, ctx, new List<string>());
         Commit.Apply(
             world, owner, DelegateCandidate(owner.Execution.Strategy, executorId), ctx.Agenda, ctx, new List<string>());
+    }
+
+    /// <summary>
+    /// Drives Vincent through the real pipeline (<see cref="Runner.Step"/>, which calls
+    /// <see cref="Pipeline.Prepare"/> for the controlled character) to his own first pause, mirroring
+    /// <c>ExecutorSuitabilityTests.AdvanceToVincentsNextPause</c> — a private copy, per this project's
+    /// practice of not sharing test-local helpers across files that check the same assumption.
+    /// </summary>
+    private static PreparedDecision AdvanceVincentToFirstPause(World world)
+    {
+        for (int guard = 0; guard < 5000; guard++)
+        {
+            var step = Runner.Step(world, DateTime.MaxValue, "vincent");
+            if (step.Status == StepStatus.AwaitingChoice) return step.Awaiting!;
+            if (step.Status == StepStatus.Exhausted)
+                throw new InvalidOperationException("queue exhausted before Vincent ever paused");
+        }
+        throw new InvalidOperationException("guard exceeded before Vincent ever paused");
+    }
+
+    /// <summary>
+    /// Starts Vincent's own SecureTribute against Bellini's grocery, then advances to his next
+    /// pause — the same fork <c>ExecutorSuitabilityTests.AdvanceToVincentsFork</c> reaches, reproduced
+    /// locally so this file's own coverage of the delegation-eligibility rule does not depend on
+    /// that file's helper.
+    /// </summary>
+    private static PreparedDecision AdvanceVincentToDelegationFork(World world)
+    {
+        var first = AdvanceVincentToFirstPause(world);
+        var startCandidate = first.Available.Single(c =>
+            c.Kind == ActionKind.StartStrategy && c.Strategy == StrategyKind.SecureTribute
+            && c.TargetId == Cast.Grocery && c.Method == CoercionMethod.Persuade);
+        Pipeline.Resolve(first, startCandidate.Id);
+
+        return AdvanceVincentToFirstPause(world);
     }
 
     /// <summary>

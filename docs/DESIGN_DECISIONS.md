@@ -791,6 +791,34 @@ true, and records a scope boundary Matt confirmed in chat rather than in a miles
   — the runner and the tests are on `net10.0` exactly as before, and the simulation library adds
   `net8.0` alongside it rather than leaving .NET 10.
 
+## Operation staffing — settled by milestone 024's second and third corrections, 2026-09-11
+
+- **A character may be involved in at most one active operation at a time, either as its owner or
+  as its delegated executor.** Not "not currently the delegate of a second job" — owning a strategy
+  he has never delegated, owning one he has since handed onward to somebody else, and carrying work
+  delegated to him by somebody else are all the same disqualifying state: involvement, not merely
+  execution. `Pipeline.AvailableToExecute(World, string)` is the one definition — a candidate is
+  available only when he owns no `StrategyInstance` of his own (delegated onward or not) and no
+  other character's own instance names him as `DelegatedToId`. Enforced at both places a delegation
+  is created: `Generators.FromRelationship` never offers a busy subordinate as a delegate candidate
+  at all, and `Commit.Apply`'s `DelegateStrategy` case refuses, fail-closed, calling the identical
+  check directly against `World` — so a hand-built candidate that skipped filtering, or a future
+  caller generating one outside this pipeline, cannot bypass the rule. — milestone 024's second
+  correction (`00613ca`), closing a gap Codex found in the milestone's own implementation (`f993386`):
+  nothing had ever enforced the uniqueness `PlayerSnapshot.Operating`'s own delegate-lookup scan was
+  quietly assuming.
+- **Operation staffing availability is authoritative organisational state, read for eligibility —
+  not a belief, and not bounded by what the delegating character could perceive.** Who is currently
+  free to staff is read directly off `World` (`AvailableToExecute` above), the same footing
+  `Pipeline.SubordinatesOf`/`OrgMembersOf` already stand on for "who reports to whom" — a fact about
+  the organisation's own bookkeeping, not something a character holds a belief about and could be
+  wrong on. This is a distinct question from **identity/nameability**, which stays exactly where
+  milestone 009's second correction settled it: a target must also appear in
+  `Acquaintance.KnownTo` (`GeneratorContext.AcquaintedIds`) before a character can name him as a
+  delegate at all, organisationally subordinate or not. `Generators.FromRelationship` applies both
+  filters independently — a subordinate can be nameable but busy, or available but unacquainted, and
+  either alone is enough to keep him off the offered list.
+
 ## Concerns resolved since `design-doc-concerns_1.md` was written
 
 The concerns doc was never updated after later doc revisions addressed several of its own

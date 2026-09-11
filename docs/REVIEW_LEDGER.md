@@ -739,6 +739,47 @@ delegates exactly once), both required viewpoints, all seven Godot self-tests re
 render, and the two-process restart proof unchanged. Full account:
 `docs/milestones/024-the-operation-reads.md`'s second correction section.
 
+**Correction: the row above overstated its own mutation-check count, again.** "Four mutation checks"
+is followed by a list of exactly three — the commit guard, the availability filter, and `Operating`'s
+condition — with no fourth ever named. The accurate count is three; the availability-filter check
+being re-run once, after a bug in the new test's own setup was fixed, is one mutation checked twice
+in the course of getting the test right, not a second independent mutation. Also corrected: "no
+simulation behaviour... changed" (the correcting commit's own archive entry, not reproduced verbatim
+here) overstated what was verified — the correction adds a real refusal path to `Commit.Apply` and
+narrows what `Generators.FromRelationship` offers, which is a change to the simulation's decision
+machinery; what was actually verified is that no *accepted fixture's* behaviour, trace hash, or
+chosen-action sequence moved. Both found by Codex on `00613ca`; closed by this same correction,
+which also records the count accurately going forward rather than repeating the error a third time.
+See the correction below and `docs/milestones/024-the-operation-reads.md`'s third correction section
+for the full accounting.
+
+### Measured — milestone 024, the operation reads, third review
+
+**Codex reviewed `00613ca` — the second correction — and accepted the broader mechanic as already
+correctly implemented: a character may be involved in at most one active operation at a time, either
+as its owner or as its delegated executor.** No production behaviour changed by this review's
+correction. Three findings, all accepted by Matt, all about the record rather than the mechanic.
+
+First: the rule had never been written down in `docs/DESIGN_DECISIONS.md` — recorded in a new
+"Operation staffing" section, alongside the related settled point that availability is read as
+authoritative organisational state for eligibility while identity/nameability remains the separate
+question `Acquaintance.KnownTo` already settles. Second: every existing test proved the rule against
+a hand-built `GeneratorContext`, never through `Pipeline.Prepare` itself, the one place
+`AvailableSubordinateIds` is actually computed and wired on — closed with four new tests driving
+Vincent through the real pipeline (`Runner.Step` → `Pipeline.Prepare`) to his own delegation fork: a
+free subordinate offered (the positive control), a subordinate owning an undelegated operation not
+offered, one carrying delegated work not offered, and — pinning the broader involvement rule rather
+than only the narrower "not currently a live delegate" reading — one who owns an operation already
+delegated onward to a third man still not offered. Mutation-checked as one check against the shared
+`Pipeline.Prepare` wiring (`AvailableSubordinateIds` replaced with the unfiltered subordinate list):
+all three negative tests failed, the positive control still passed, reverted. Third: this file's own
+prior entry, immediately above, overstated its mutation-check count a second time and overstated "no
+simulation behaviour changed" against what was actually verified — both corrected in the paragraph
+above rather than rewritten in place. 682 tests passing (678 + 4 new); all four required hashes, the
+six-configuration `--compare` figure, both required viewpoints, all seven Godot self-tests, and the
+two-process restart proof unchanged. Full account: `docs/milestones/024-the-operation-reads.md`'s
+third correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

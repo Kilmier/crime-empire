@@ -326,3 +326,80 @@ only one appended argument rather than a reordering. No test's own intent change
 ### Commit
 
 One correction commit. Awaits Codex re-review.
+
+## Correction — record the rule, close the Pipeline.Prepare gap, fix the review record, on `00613ca`, 2026-09-11
+
+**Codex reviewed `00613ca` — the second correction above — and accepted the broader mechanic as
+already correctly implemented: a character may be involved in at most one active operation at a
+time, either as its owner or as its delegated executor.** No production behaviour changed by this
+correction. Three findings, all accepted by Matt, none of them about the mechanic itself.
+
+**First: the rule had never been written down in `docs/DESIGN_DECISIONS.md`.** It existed only in
+`Pipeline.AvailableToExecute`'s own doc comment and this archive's prose. Added a new section,
+"Operation staffing," recording the rule itself and a second, related settled point: operation
+staffing availability is read as authoritative organisational state for eligibility —
+`AvailableToExecute` reads `World` directly, the same footing `SubordinatesOf`/`OrgMembersOf` stand
+on — while identity/nameability remains the separate, distinct question `Acquaintance.KnownTo`
+settles (milestone 009's second correction). The two filters in
+`Generators.FromRelationship` — acquaintance and availability — are independent; either alone is
+enough to keep a subordinate off the offered list, and neither implies the other.
+
+**Second: every test proving the rule exercised `Generators`/`Commit` directly against a hand-built
+`GeneratorContext`, never `Pipeline.Prepare` — the one place `AvailableSubordinateIds` is actually
+computed and wired onto a context a real deliberation uses.** Four new tests drive Vincent through
+the genuine pipeline (`Runner.Step`, which calls `Pipeline.Prepare` for the controlled character) to
+his own delegation fork and read `PreparedDecision.Available`: a free, nameable subordinate is
+offered (the positive control every negative case depends on, since Tommy's absence could otherwise
+mean either "correctly excluded" or "the pipeline never offers him at all"); a subordinate owning an
+undelegated operation is not; a subordinate carrying delegated work (staged through a real
+`Commit.Apply` delegation from Salvatore) is not; and — pinning the broader involvement rule rather
+than merely the narrower "not currently a live delegate" reading — a subordinate who owns an
+operation and has already delegated it onward to a third man (Tommy hands his own job to Kane) is
+still not offered, since `AvailableToExecute` excludes on ownership alone, delegated onward or not.
+Mutation-checked as one check against the shared wiring: `Pipeline.Prepare`'s
+`subordinates.Where(id => AvailableToExecute(world, id)).ToList()` replaced with the unfiltered
+`subordinates`, all three negative tests failed (Tommy wrongly offered in each — confirmed by reading
+the failure output, not assumed), the positive control still passed as it must, reverted.
+
+**Third: the review record itself needed two corrections, not the code.**
+
+- **The mutation-check count was overstated.** The prior "### Verification" section above claims
+  "Four mutation checks"; the prose immediately before it describes exactly three distinct
+  production mutations (`Commit.Apply`'s guard removed; `Generators.FromRelationship`'s availability
+  filter removed, run twice because the first run exposed a bug in the *test's own setup* rather
+  than in production code, which is a re-run of one mutation after a test fix, not a second,
+  independent one; `Operating`'s `SingleOrDefault` condition weakened). No fourth mutation is
+  documented anywhere in that section. The accurate count is three. Left in place above rather than
+  rewritten, per this file's own practice — this paragraph is the correction.
+- **"No simulation behaviour, scoring, RNG, fixture, or accepted hash changed" overstated what was
+  actually verified.** The correction added a real new refusal path (`Commit.Apply`'s guard) and
+  narrowed what `Generators.FromRelationship` offers — that is a change in the simulation's decision
+  machinery, even though it never fires against any accepted fixture. What was actually verified,
+  and is the true claim: **no accepted fixture's behaviour, trace hash, or chosen-action sequence
+  changed** — the four required `--verify` hashes, the `--compare` figure, and both required
+  viewpoints stayed byte-identical, which is what "a no-op against every accepted fixture" (the line
+  immediately above it in that same section) already correctly says. Also left in place above.
+
+### Verification
+
+- Build 0 warnings / 0 errors.
+- Tests: **682 passed** — 678 + 4 new, all driven through `Pipeline.Prepare` via `Runner.Step`.
+- `--verify` on all four required configurations, byte-identical to every prior accepted hash:
+  `baseline` `7832105EC1F24154`, `disloyal-vincent` `6C23284BFD91C48D`, `resentful-tommy`
+  `7A43D1AFB4A6E26F`, `capable-angelo` `5CACCFC566364BB7`.
+- `--compare` at seed 42: 6 configurations, 6 distinct traces, 5 distinct chosen-action sequences —
+  unmoved.
+- Both required viewpoint runs (`disloyal-vincent`/`salvatore`, `baseline`/`vincent`) exit clean.
+- All seven Godot self-tests and the two-process restart proof exit 0.
+- One mutation check, against the shared `Pipeline.Prepare` wiring, confirmed and reverted: detailed
+  above.
+- No accepted fixture's behaviour, trace hash, or chosen-action sequence changed — the correction
+  adds a new eligibility rule to the decision pipeline and a design-decision record; it does not
+  touch scoring, RNG, or any fixture.
+- `docs/PERSONALITY_AND_CHARACTER_PROFILES.md` and `docs/UI_AND_PLAYER_LEGIBILITY.md` untouched;
+  milestone 027 and the remaining 023–025 backlog untouched.
+
+### Commit
+
+One correction commit: `DESIGN_DECISIONS.md`, four new `Pipeline.Prepare`-driven tests, and this
+review-record correction. Awaits Codex re-review.

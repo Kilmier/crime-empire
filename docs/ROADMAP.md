@@ -375,8 +375,39 @@ worth anything once it is shown" to **which readers are worth strengthening, and
   `SourceKind.Rumor` remains in the vocabulary; no path produces it.
 - Media and public-information channels, the case-board investigation model, prosecution, broader
   organizations, diplomacy, careers, corruption, and surveillance.
+- **Cooperation and flipping after arrest.** Canon already requires an arrested or pressured
+  character to decide from their own beliefs, relationships, exposure, likely consequences, family
+  pressure and the offer, and to reveal only what they actually know or plausibly believe
+  (`GAME_VISION.md`, "Arrests, Pleas, and Cooperation"). This is not implemented. A future arrest
+  slice that only removes a character from play must record cooperation as unbuilt rather than imply
+  the canonical aftermath has been satisfied.
 - Attribution on a corroborated belief credits only the first source; the full picture lives in
   testimony. A `SourceChain` is the eventual answer `INFORMATION_AND_LEGIBILITY.md` gestures at.
+
+## Unscoped design proposal pool
+
+These are preserved design candidates, not roadmap commitments, milestone order, or authorization.
+Their status and the 2026-09-11 conversation-consolidation mapping live in
+`docs/proposals/README.md`. Read only the relevant focused proposal when Matt chooses to evaluate one:
+
+- `docs/proposals/PERSONALITY_AND_CHARACTER_PROFILES.md` — major/minor personality profiles and a
+  small proposed trait extension;
+- `docs/proposals/UI_AND_PLAYER_LEGIBILITY.md` — strategic UI, news, conversations, chronicle, and
+  viewpoint-relative hierarchy;
+- `docs/proposals/ORGANIZATIONS_ALLIANCES_AND_CULTURE.md` — organization archetypes, culture and
+  subcultures, alliances, rivalries, client/protector relations, cross-institutional ties, and
+  territory delegated to subordinates;
+- `docs/proposals/INSTITUTIONS_INVESTIGATIONS_AND_COOPERATION.md` — fragmented institutional
+  knowledge, authorization requests, old observations gaining later significance, and the canonical
+  cooperation behavior those proposals must preserve;
+- `docs/proposals/CRIME_AND_LOCATION_OPERATIONS.md` — expanded crime vocabulary, strategic function,
+  shared operation direction, and the criterion for top-down operation maps;
+- `docs/proposals/WORLD_ERAS_AND_DYNASTY.md` — the proposed 1910s start, multi-generation continuity,
+  and technology/surveillance changing across decades.
+
+A proposal becomes a candidate milestone only after Matt selects a falsifiable slice. Durable design
+rulings then go to the appropriate canonical document, and active implementation scope goes to
+`CURRENT_MILESTONE.md`.
 
 ## Candidate scopes
 

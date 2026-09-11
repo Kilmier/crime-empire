@@ -38,6 +38,10 @@ Not part of the universal list above — read these when the task calls for them
 - `docs/ROADMAP.md` — **read only when selecting or proposing future scope.** Technical debt,
   unbuilt work, and candidate milestones. Nothing on it authorizes anything; scope comes from Matt
   and goes into `docs/CURRENT_MILESTONE.md` first.
+- `docs/proposals/README.md` — **read only when evaluating future design ideas or checking whether an
+  idea has been preserved.** It is a noncanonical intake index that routes to focused proposal files.
+  Do not read every proposal by default, treat a proposal as a roadmap commitment, or implement one
+  without a human ruling and scope in `docs/CURRENT_MILESTONE.md`.
 
 ### When documents conflict
 
@@ -48,6 +52,8 @@ Not part of the universal list above — read these when the task calls for them
    stated. Do not infer status from prose anywhere else.
 5. `milestones/NNN-*.md` for completed work and appended corrections.
 6. `REVIEW_LEDGER.md` for review coverage and verification baselines.
+7. `proposals/` carries no authority. When a proposal conflicts with anything above, the proposal
+   loses until Matt explicitly rules and the authoritative source is updated.
 
 New durable decisions go to `DESIGN_DECISIONS.md`; new unresolved risks to `OPEN_CONCERNS.md`. Do
 not originate authority in a summary — update the source first.
@@ -106,7 +112,8 @@ milestone) and `docs/OPEN_CONCERNS.md` (durable, unresolved risks).
 
 ## Repository boundaries
 
-- `docs/` is the canonical design record.
+- `docs/` is the canonical design record, except `docs/proposals/`, which is explicitly noncanonical
+  intake material and cannot authorize implementation.
 - `src/CrimeEmpire.Simulation/` is the deterministic, engine-independent simulation library.
 - `src/CrimeEmpire.Runner/` is the command-line behavioral-spike host and trace presentation.
 - `tests/CrimeEmpire.Simulation.Tests/` verifies simulation invariants and deterministic behavior.

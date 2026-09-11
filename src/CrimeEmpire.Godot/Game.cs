@@ -705,11 +705,12 @@ public partial class Game : Control
         if (snapshot.Operation is { } op)
         {
             yield return Plain(op.Description);
-            // The date is when the *operation* started, not when it was handed over — nothing
-            // records a handover time, and "Tommy has had it since 2 Mar" would be a false
-            // statement whenever the job was delegated later than it began. Said as the operation's
-            // own age, with who holds it stated separately.
-            yield return Faint($"    running since {op.Since.ToString("d MMM", CultureInfo.InvariantCulture)}");
+            // Second correction: Since is the owner's own age for the operation, not a handover time
+            // — nothing records when it was delegated — and is null for the executor for the same
+            // reason "Tommy has had it since 2 Mar" would be a false statement whenever the job was
+            // delegated later than it began. Omitted for him rather than rendered wrong.
+            if (op.Since is { } since)
+                yield return Faint($"    running since {since.ToString("d MMM", CultureInfo.InvariantCulture)}");
             if (op.ExecutorName is { } executor)
                 yield return Faint($"    {executor} is handling it");
             yield return Faint($"    {op.Progress ?? "no word back yet"}");

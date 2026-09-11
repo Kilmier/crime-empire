@@ -58,7 +58,15 @@ public sealed record GeneratorContext(
     IReadOnlyList<InformationRequest> RequestsMade,
     // VisibleTargets: entities whose *existence* is public — a storefront can be seen from the
     // street. What is happening inside it is not public, and still requires a held claim.
-    IReadOnlyList<string> VisibleTargets);
+    IReadOnlyList<string> VisibleTargets,
+    // Which of SubordinateIds could actually take on a new delegated operation right now —
+    // milestone 024's second correction. Computed by Pipeline.AvailableToExecute, the one
+    // definition Commit.Apply's own fail-closed guard also calls; a subordinate already running a
+    // strategy of his own, or already carrying delegated work for somebody else, is excluded.
+    // Organisational bookkeeping, on the same authoritative footing as SubordinateIds itself, not
+    // something belief-limited — the acquaintance boundary below is the separate, genuine belief
+    // question of whether the actor could even name him.
+    IReadOnlyList<string> AvailableSubordinateIds);
 
 /// <summary>
 /// The bounded set of proposers. The shared action vocabulary never becomes a universal menu:
@@ -387,7 +395,16 @@ public static class Generators
             // SocialState.Others — so this filter is a no-op for every accepted trace hash, and only
             // bites a subordinate nobody has ever actually put in front of the actor.
             var acquainted = new HashSet<string>(ctx.AcquaintedIds, StringComparer.Ordinal);
-            var nameableSubordinates = ctx.SubordinateIds.Where(acquainted.Contains).ToList();
+            // Milestone 024's second correction, same shape as the acquaintance guard just above:
+            // a subordinate already busy — running a strategy of his own, or already carrying
+            // delegated work for somebody else — is not offered at all, never generated-then-
+            // rejected. AvailableSubordinateIds is Pipeline.AvailableToExecute's own output; see that
+            // method for the one shared rule and Commit.Apply's matching fail-closed guard.
+            var available = new HashSet<string>(ctx.AvailableSubordinateIds, StringComparer.Ordinal);
+            var nameableSubordinates = ctx.SubordinateIds
+                .Where(acquainted.Contains)
+                .Where(available.Contains)
+                .ToList();
 
             // One candidate per nameable subordinate, not the single highest-trust pick. With
             // exactly one — every existing accepted variant — this loop produces exactly the one

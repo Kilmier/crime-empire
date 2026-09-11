@@ -664,5 +664,6 @@ public sealed class InvestigationTests
             AcquaintedIds: acquainted,
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: requestsMade,
-            VisibleTargets: Array.Empty<string>());
+            VisibleTargets: Array.Empty<string>(),
+            AvailableSubordinateIds: Array.Empty<string>());
 }

@@ -763,6 +763,7 @@ public sealed class ScenarioReachTests
             Acquaintance.KnownTo(world, actor),
             sent,
             Array.Empty<InformationRequest>(),
-            new[] { Cast.Grocery });
+            new[] { Cast.Grocery },
+            Pipeline.SubordinatesOf(world, actor).Where(id => Pipeline.AvailableToExecute(world, id)).ToList());
     }
 }

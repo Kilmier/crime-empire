@@ -103,15 +103,18 @@ public static class IntelligenceWriter
         // ---------------------------------------------------------------- how he takes them
         //
         // Milestone 024. What he has out, and — for work he handed to somebody — deliberately no
-        // more than that: who has it and since when. How far a delegate has got is that man's state.
+        // more than that: who has it. How far a delegate has got is that man's state.
         if (view.Operation is { } op)
         {
             sb.AppendLine("WHAT HE HAS OUT");
             sb.AppendLine();
             sb.AppendLine($"  {op.Description}");
-            // The operation's own age, not a handover time — nothing records when it was delegated,
-            // so "X has had it since" would be false whenever the handover came later than the start.
-            sb.AppendLine($"     running since {op.Since:d MMM}");
+            // Second correction: Since is the owner's own age for the operation, not a handover time
+            // — nothing records when it was delegated — and is null for the executor for the same
+            // reason "X has had it since" would be false whenever the handover came later than the
+            // start. Omitted rather than rendered wrong.
+            if (op.Since is { } since)
+                sb.AppendLine($"     running since {since:d MMM}");
             if (op.ExecutorName is { } executor)
                 sb.AppendLine($"     {executor} is handling it");
             if (op.Progress is { } progress)

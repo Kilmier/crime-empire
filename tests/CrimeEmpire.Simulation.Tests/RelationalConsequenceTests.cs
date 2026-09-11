@@ -1167,7 +1167,8 @@ public sealed class RelationalConsequenceTests
             Pipeline.SuperiorOf(world, actor), Pipeline.SubordinatesOf(world, actor),
             Pipeline.OrgMembersOf(world, actor),
             Acquaintance.KnownTo(world, actor),
-            Array.Empty<Report>(), Array.Empty<InformationRequest>(), new[] { Cast.Grocery });
+            Array.Empty<Report>(), Array.Empty<InformationRequest>(), new[] { Cast.Grocery },
+            Pipeline.SubordinatesOf(world, actor).Where(id => Pipeline.AvailableToExecute(world, id)).ToList());
     }
 
     /// <summary>

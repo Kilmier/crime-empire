@@ -132,11 +132,19 @@ public sealed record PlayerCommittedAction(DateTime At, string Description);
 /// So a delegated operation reads as what he ordered, of whom, and silence — and the silence is
 /// honest. What breaks it is a report, a rumour, or the takings arriving, all of which reach him
 /// through channels that already exist and already surface in his beliefs.
+///
+/// <b><see cref="Since"/> is null for the executor, for the identical reason — milestone 024's second
+/// correction.</b> `StrategyInstance.StartedAt` records when the *owner* started the operation, not
+/// when it was handed over: nothing anywhere records a handover time, and rendering the owner's own
+/// start date to the man it was delegated to would tell him "you have had this since 2 Mar" when he
+/// may have been handed it on the 14th — the owner's own fact, not his. The owner still sees it,
+/// because it is when he began something he is still watching, exactly as he still sees what he
+/// ordered and who is carrying it.
 /// </summary>
 public sealed record PlayerOperation(
     string Description,
     string? ExecutorName,
-    DateTime Since,
+    DateTime? Since,
     string? Progress);
 
 /// <summary>
@@ -736,9 +744,21 @@ public static class PlayerView
     /// <c>Execution.Strategy</c> for one naming <paramref name="who"/> as
     /// <see cref="StrategyInstance.DelegatedToId"/>. The scan is the only way to find it: a delegated
     /// instance is never indexed anywhere else, and <c>World.Characters</c> is bounded by the cast,
-    /// not by anything this milestone grows. Nobody carries two running strategies at once in this
-    /// model, so at most one match exists either way — not a new invariant, the one
-    /// <c>Filters.cs</c> already enforces at commitment.
+    /// not by anything this milestone grows.
+    ///
+    /// <b>At most one match, and now genuinely so — milestone 024's second correction.</b> The first
+    /// version of this scan took whichever match it found first (a plain loop with a <c>break</c>),
+    /// which was silently correct only because nothing actually stopped a subordinate from being
+    /// handed a second operation while still carrying a first, or from running one of his own at the
+    /// same time — Codex found this as the same review's second finding. The fix lives at the two
+    /// places a delegation is created, not here: <c>Generators.FromRelationship</c> no longer offers a
+    /// subordinate who is unavailable, and <c>Commit.Apply</c> refuses to delegate to one even if a
+    /// candidate reaches it some other way — see <see cref="Decision.Pipeline.AvailableToExecute"/>,
+    /// the one definition both enforce. With uniqueness actually held rather than assumed, this reads
+    /// as <c>SingleOrDefault</c> rather than <c>FirstOrDefault</c>: a second match now throws instead
+    /// of being silently and arbitrarily resolved, which is what should happen if that invariant is
+    /// ever broken again — a wrong answer picked quietly here would hide the exact defect this
+    /// correction exists to make loud.
     ///
     /// Wording comes from <see cref="PlayerOption.Work"/> rather than a second phrasing of the same
     /// thing. That method exists, and is `internal` for this exact purpose, because
@@ -750,14 +770,17 @@ public static class PlayerView
     /// </summary>
     private static PlayerOperation? Operating(World world, Character who, Func<string, string> name, Pronouns self)
     {
-        StrategyInstance? s = who.Execution.Strategy;
-        if (s is null)
-            foreach (var other in world.Characters.Values)
-                if (other.Execution.Strategy is { DelegatedToId: { } executorId } candidate && executorId == who.Id)
-                {
-                    s = candidate;
-                    break;
-                }
+        // Milestone 024's second correction. The fallback scan used to take the first match it found
+        // (foreach + break) — silently correct only because nothing enforced that at most one could
+        // exist. Now that a subordinate already busy is refused as a delegation target both at
+        // candidate generation (Generators.FromRelationship) and, fail-closed, at Commit.Apply, this
+        // may rely on that uniqueness rather than defend against its absence: SingleOrDefault throws
+        // if it is ever violated, which is what should happen — a silently-picked wrong answer here
+        // would hide exactly the invariant break this correction exists to prevent.
+        StrategyInstance? s = who.Execution.Strategy
+            ?? world.Characters.Values
+                .Select(other => other.Execution.Strategy)
+                .SingleOrDefault(candidate => candidate is not null && candidate.DelegatedToId == who.Id);
         if (s is null) return null;
 
         // StepIndex is the *next* step to run, so the last one completed is the one before it. Null
@@ -776,7 +799,10 @@ public static class PlayerView
         return new PlayerOperation(
             PlayerOption.Work(s.Kind, s.TargetId, name, self),
             s.DelegatedToId is { } executor && executor != who.Id ? name(executor) : null,
-            s.StartedAt,
+            // The owner's own act, known to him regardless of who is carrying it now. Not the
+            // executor's: StartedAt is when the operation began, which for a man it was later handed
+            // to is not when he came to hold it — see PlayerOperation.Since's own comment.
+            who.Id == s.OwnerId ? s.StartedAt : null,
             doingItHimself ? PlayerNarration.OwnProgress(lastDone, s.FailedAttempts, self) : null);
     }
 

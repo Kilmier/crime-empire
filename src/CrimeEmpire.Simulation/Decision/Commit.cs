@@ -130,6 +130,18 @@ public static class Commit
             case ActionKind.DelegateStrategy:
             {
                 var s = actor.Execution.Strategy!;
+
+                // Fail closed, mirroring the ConcealIncident guard above: Filters/Generators is
+                // expected to have already refused a candidate targeting a busy subordinate — see
+                // Pipeline.AvailableToExecute, the one definition both enforce — but this is the
+                // second layer for a hand-built candidate, or one a future caller generates outside
+                // this pipeline, that reached Commit some other way.
+                if (!Pipeline.AvailableToExecute(world, c.TargetId!))
+                    throw new SimulationInvariantException(
+                        $"'{c.TargetId}' cannot be delegated {s.Label}; he already owns a running " +
+                        "strategy or is already carrying delegated work for somebody else. The " +
+                        "one-operation-per-executor rule must be enforced before Commit, not here.");
+
                 s.DelegatedToId = c.TargetId;
                 var sub = world.Get(c.TargetId!);
 

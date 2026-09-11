@@ -579,6 +579,7 @@ public sealed class StrategyLifecycleTests
             AcquaintedIds: Array.Empty<string>(),
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
-            VisibleTargets: Array.Empty<string>());
+            VisibleTargets: Array.Empty<string>(),
+            AvailableSubordinateIds: Array.Empty<string>());
     }
 }

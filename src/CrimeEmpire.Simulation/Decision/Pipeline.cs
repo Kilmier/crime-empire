@@ -173,7 +173,8 @@ public static class Pipeline
             Acquaintance.KnownTo(world, actor),
             world.Reports.Where(r => r.SenderId == actor.Id).ToList(),
             world.Requests.Where(r => r.AskerId == actor.Id).ToList(),
-            VisibleTargets(world, domain));
+            VisibleTargets(world, domain),
+            subordinates.Where(id => AvailableToExecute(world, id)).ToList());
 
         // 4-5. Bounded generation, then salience/knowledge/capability/access rejection.
         var generated = Generators.GenerateAll(ctx);
@@ -312,4 +313,31 @@ public static class Pipeline
         => domain is null
             ? Array.Empty<string>()
             : world.BusinessesIn(domain).Select(b => b.Id).ToList();
+
+    /// <summary>
+    /// Whether <paramref name="candidateId"/> could take on a new delegated operation right now —
+    /// milestone 024's second correction, closing the one-operation-per-executor rule the projection
+    /// had been quietly assuming rather than enforcing.
+    ///
+    /// A man already running a strategy of his own has no hands free, and a man already carrying
+    /// delegated work for somebody else is in exactly the same position — <see
+    /// cref="StrategyInstance.DelegatedToId"/> on another character's own instance is where that
+    /// lives, since delegation never copies the instance onto the executor. Read directly off <see
+    /// cref="World"/> rather than through anyone's beliefs: who is free to staff is organisational
+    /// bookkeeping, not something a character could be wrong about, the same footing
+    /// <see cref="SubordinatesOf"/> and <see cref="OrgMembersOf"/> already stand on.
+    ///
+    /// <b>The one definition, called from both enforcement points.</b> <see cref="Prepare"/> uses it
+    /// to build <see cref="GeneratorContext.AvailableSubordinateIds"/>, which
+    /// <c>Generators.FromRelationship</c> reads to decide who it offers as a delegate; <see
+    /// cref="Commit.Apply"/> calls it again, directly against <see cref="World"/>, as the fail-closed
+    /// guard for a candidate that reaches it some other way — a hand-built one, or one a future
+    /// caller generates outside this pipeline. One rule, so the two checks cannot drift apart.
+    /// </summary>
+    public static bool AvailableToExecute(World world, string candidateId)
+    {
+        if (world.Get(candidateId).Execution.Strategy is not null) return false;
+        return !world.Characters.Values.Any(
+            other => other.Execution.Strategy?.DelegatedToId == candidateId);
+    }
 }

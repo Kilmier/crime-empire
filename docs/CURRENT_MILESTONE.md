@@ -164,12 +164,33 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   lookup fails exactly the new executor-view test. 674 tests passing (671 + 3 new); all four
   required hashes, the six-configuration `--compare` figure, both required viewpoints, all seven
   Godot self-tests, and the restart proof unchanged. Full account:
-  `docs/milestones/024-the-operation-reads.md`'s correction section. Awaits its own Codex re-review.
+  `docs/milestones/024-the-operation-reads.md`'s correction section.
+
+- **Codex reviewed `9ac569b` — the first correction above — and returned three findings, all
+  accepted by Matt.** First: the executor inherited the owner's pre-delegation `StartedAt` — Tommy,
+  delegated on 14 March, read "running since 2 Mar" from Vincent's own act of starting it. Fixed by
+  making `PlayerOperation.Since` nullable, populated only for the owner, with both renderers changed
+  to omit the line rather than print one wrongly. Second: nothing enforced the one-operation-per-
+  executor rule the projection had been silently assuming. Fixed at both places a delegation is
+  created — `Generators.FromRelationship` no longer offers a busy subordinate (reading a new
+  `GeneratorContext.AvailableSubordinateIds`), and `Commit.Apply` refuses, fail-closed, calling the
+  identical `Pipeline.AvailableToExecute` directly. Third: `Operating`'s own fallback scan now reads
+  as `SingleOrDefault` rather than taking the first match, since uniqueness is genuinely enforced
+  elsewhere now rather than merely assumed. Six new/strengthened tests, four mutation checks, all
+  confirmed and reverted — one of which caught a genuine gap in a new test's own setup (Vincent's own
+  strategy never staged, so the assertion passed vacuously regardless of the filter under test) and
+  was fixed before the mutation check was re-run and accepted. Also corrected in the same commit:
+  this file's own prior entry above overstated its mutation-check count — recorded accurately in
+  `REVIEW_LEDGER.md` rather than silently fixed here. 678 tests passing (674 + 4 new); all four
+  required hashes, the six-configuration `--compare` figure, both required viewpoints, all seven
+  Godot self-tests re-run against the live render, and the restart proof unchanged. Full account:
+  `docs/milestones/024-the-operation-reads.md`'s second correction section. Awaits its own Codex
+  re-review.
 
 **Paused before milestone 027, on Matt's word, while Codex works through the remaining milestone
 023–025 backlog in order: `6738200`, `4da1e66` and `15d7c92` (all corrected above), `f993386` (now
-corrected above), `1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that backlog is
-cleared and Matt says so.
+corrected twice above), `1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that
+backlog is cleared and Matt says so.
 
 ## Next, per the demo arc
 

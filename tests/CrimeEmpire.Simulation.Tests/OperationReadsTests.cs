@@ -1,4 +1,6 @@
+using CrimeSim.Decision;
 using CrimeSim.Domain;
+using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using CrimeSim.Sim;
@@ -124,6 +126,13 @@ public sealed class OperationReadsTests
     /// <summary>
     /// It populates in an unmodified run, read through the real projection — and the delegated case
     /// is the one the accepted fixture actually produces, which is the case the boundary protects.
+    ///
+    /// <c>Since</c> is his own act — when he started the operation he is still watching — and stays
+    /// true whether or not he later handed it off, milestone 024's second correction's own half of
+    /// this boundary. The natural fixture starts the operation on 2 March and hands it to Tommy on
+    /// the 14th, so this is a genuine, not a vacuous, proof: a delegation date being wrongly used as
+    /// the start date would happen to read correctly for Vincent regardless (he holds the start
+    /// either way), which is exactly why the executor's own half below is the one that falsifies it.
     /// </summary>
     [Fact]
     public void The_panel_is_populated_during_a_natural_run()
@@ -136,6 +145,10 @@ public sealed class OperationReadsTests
         Assert.NotNull(op);
         Assert.Equal("Tommy Nardo", op!.ExecutorName);
         Assert.Null(op.Progress);
+        // The date, not the exact instant — the same precision the rendered "running since 2 Mar"
+        // ever carries; the operation actually starts partway through 2 March, not at Cast.Start's
+        // own midnight-adjacent instant.
+        Assert.Equal(Cast.Start.Date, op.Since!.Value.Date);
     }
 
     /// <summary>
@@ -145,6 +158,10 @@ public sealed class OperationReadsTests
     /// actually carrying out the identical operation the previous test reads from Vincent's side —
     /// saw nothing running at all. Same run, same operation, the other man's view of it: his own
     /// progress is his own experience, so it is shown, unlike the previous test's null.
+    ///
+    /// <c>Since</c> is null for him — milestone 024's second correction. He was delegated on 14
+    /// March, not 2 March; showing him <c>StartedAt</c> (the owner's own act) would read as "you have
+    /// had this since the 2nd," which he did not.
     /// </summary>
     [Fact]
     public void The_executor_sees_the_operation_he_is_carrying_with_his_own_progress()
@@ -157,6 +174,7 @@ public sealed class OperationReadsTests
         Assert.NotNull(op);
         Assert.Contains("Bellini's grocery", op!.Description, StringComparison.Ordinal);
         Assert.NotNull(op.Progress);
+        Assert.Null(op.Since);
     }
 
     /// <summary>
@@ -191,6 +209,107 @@ public sealed class OperationReadsTests
 
         string tommyRendered = IntelligenceWriter.Render(world, "tommy");
         CheckOperationSection(tommyRendered, mustContain: "made his demand", mustNotContain: "is handling it");
+    }
+
+    // ================================================================= one operation per executor
+    //
+    // Milestone 024's second correction. `Operating`'s own fallback scan assumed at most one match
+    // could ever exist without anything enforcing it — a subordinate could be handed a second
+    // operation while still carrying a first, or be running one of his own at the same time nobody
+    // had checked. The rule is enforced twice: never offered as a delegate
+    // (`Generators.FromRelationship`, reading `GeneratorContext.AvailableSubordinateIds`) and refused
+    // if a candidate reaches commitment anyway (`Commit.Apply`, fail-closed) — both calling the one
+    // shared definition, `Pipeline.AvailableToExecute`.
+
+    /// <summary>
+    /// A subordinate who already owns a strategy of his own is not offered as another operation's
+    /// executor — through the candidate/filter path, the same way an unacquainted stranger is not
+    /// offered (`An_organisationally_subordinate_but_unacquainted_stranger_is_not_offered_as_a_delegate`,
+    /// `ExecutorSuitabilityTests.cs`): never generated, not generated-then-rejected.
+    /// </summary>
+    [Fact]
+    public void A_subordinate_who_owns_a_strategy_is_not_offered_as_another_operations_executor()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+
+        vincent.Execution.Strategy = NewStrategy(vincent, Cast.Grocery, vincent.StrategyCount++);
+        tommy.Execution.Strategy = NewStrategy(tommy, Cast.Bakery, tommy.StrategyCount++);
+
+        var ctx = Context(world, vincent, subordinateIds: new[] { "tommy" }, acquainted: "tommy");
+
+        var delegateCandidates = Generators.GenerateAll(ctx)
+            .Where(c => c.Kind == ActionKind.DelegateStrategy)
+            .ToList();
+        Assert.DoesNotContain(delegateCandidates, c => c.TargetId == "tommy");
+    }
+
+    /// <summary>
+    /// The other way to already be busy: not owning a strategy at all, but carrying one delegated by
+    /// somebody else. Salvatore delegates first (through the real `Commit.Apply` path, so the world
+    /// state this reads is genuinely produced rather than hand-assembled); Vincent's own attempt to
+    /// name Tommy as a second executor must not be offered.
+    /// </summary>
+    [Fact]
+    public void A_subordinate_already_executing_delegated_work_is_not_offered_a_second_delegation()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+        var salvatore = world.Get("salvatore");
+
+        DelegateThroughCommit(world, salvatore, Cast.Bakery, "tommy");
+        Assert.Equal("tommy", salvatore.Execution.Strategy!.DelegatedToId);
+
+        // Vincent needs an undelegated strategy of his own, or FromRelationship's whole branch never
+        // runs and the assertion below would pass vacuously regardless of availability.
+        vincent.Execution.Strategy = NewStrategy(vincent, Cast.Grocery, vincent.StrategyCount++);
+        var ctx = Context(world, vincent, subordinateIds: new[] { "tommy" }, acquainted: "tommy");
+
+        var delegateCandidates = Generators.GenerateAll(ctx)
+            .Where(c => c.Kind == ActionKind.DelegateStrategy)
+            .ToList();
+        Assert.DoesNotContain(delegateCandidates, c => c.TargetId == "tommy");
+    }
+
+    /// <summary>
+    /// The fail-closed half: a hand-built <see cref="ActionKind.DelegateStrategy"/> candidate that
+    /// skipped filtering — the same shape <c>Commit.StartStrategy</c>'s own <c>ConcealIncident</c>
+    /// guard exists for — is refused at commitment, not merely left unoffered.
+    /// </summary>
+    [Fact]
+    public void Commit_refuses_to_delegate_to_a_subordinate_who_owns_a_strategy()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+
+        tommy.Execution.Strategy = NewStrategy(tommy, Cast.Bakery, tommy.StrategyCount++);
+        vincent.Execution.Strategy = NewStrategy(vincent, Cast.Grocery, vincent.StrategyCount++);
+
+        var ctx = Context(world, vincent);
+        var delegateCandidate = DelegateCandidate(vincent.Execution.Strategy, "tommy");
+
+        Assert.Throws<SimulationInvariantException>(() =>
+            Commit.Apply(world, vincent, delegateCandidate, ctx.Agenda, ctx, new List<string>()));
+    }
+
+    /// <summary>The fail-closed half of the already-executing-elsewhere case above.</summary>
+    [Fact]
+    public void Commit_refuses_to_delegate_to_a_subordinate_already_executing_delegated_work()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+        var salvatore = world.Get("salvatore");
+
+        DelegateThroughCommit(world, salvatore, Cast.Bakery, "tommy");
+        vincent.Execution.Strategy = NewStrategy(vincent, Cast.Grocery, vincent.StrategyCount++);
+
+        var ctx = Context(world, vincent);
+        var delegateCandidate = DelegateCandidate(vincent.Execution.Strategy, "tommy");
+
+        Assert.Throws<SimulationInvariantException>(() =>
+            Commit.Apply(world, vincent, delegateCandidate, ctx.Agenda, ctx, new List<string>()));
     }
 
     // ================================================================= helpers
@@ -247,4 +366,86 @@ public sealed class OperationReadsTests
         var op = Snapshot(world).Operation;
         return op is null ? "" : $"{op.Description}|{op.ExecutorName}|{op.Since:O}|{op.Progress}";
     }
+
+    // ================================================================= helpers — one operation per executor
+
+    /// <summary>An undelegated SecureTribute instance, staged rather than driven through the pipeline.</summary>
+    private static StrategyInstance NewStrategy(Character owner, string targetId, int localSequence)
+        => new()
+        {
+            OwnerId = owner.Id,
+            LocalSequence = localSequence,
+            Kind = StrategyKind.SecureTribute,
+            Domain = Cast.Harbour,
+            TargetId = targetId,
+            Method = CoercionMethod.Persuade,
+            StartedAt = Cast.Start,
+            Deadline = Cast.Start.AddDays(30),
+        };
+
+    private static Candidate DelegateCandidate(StrategyInstance? s, string executorId)
+        => new($"delegate:{s!.Kind}:{executorId}", ActionKind.DelegateStrategy, "test", $"have {executorId} take it on")
+        {
+            TargetId = executorId,
+            Strategy = s.Kind,
+            Method = s.Method,
+            Domain = s.Domain,
+            RequiredCrew = 1,
+        };
+
+    /// <summary>
+    /// Starts a strategy for <paramref name="owner"/> and hands it to <paramref name="executorId"/>,
+    /// both through the real <see cref="Commit.Apply"/> path — mirroring
+    /// <c>DirectActionVsDelegationTests.OpenTributeCase</c> — so the executor's busy state this
+    /// stages is genuinely produced rather than hand-assembled.
+    /// </summary>
+    private static void DelegateThroughCommit(World world, Character owner, string targetId, string executorId)
+    {
+        var ctx = Context(world, owner);
+        var start = new Candidate($"start:tribute:{targetId}", ActionKind.StartStrategy, "test", $"lean on {targetId}")
+        {
+            TargetId = targetId,
+            Strategy = StrategyKind.SecureTribute,
+            Domain = Cast.Harbour,
+            Method = CoercionMethod.Persuade,
+        };
+        Commit.Apply(world, owner, start, ctx.Agenda, ctx, new List<string>());
+        Commit.Apply(
+            world, owner, DelegateCandidate(owner.Execution.Strategy, executorId), ctx.Agenda, ctx, new List<string>());
+    }
+
+    /// <summary>
+    /// Mirrors the <c>Context</c> helper every other Decision-layer test file carries its own copy
+    /// of (per this project's practice of not sharing the same test-local constant or helper across
+    /// files that check the same assumption). <c>AvailableSubordinateIds</c> is computed through
+    /// <see cref="Pipeline.AvailableToExecute"/> itself, the one production definition, rather than
+    /// re-derived by hand — so a test staging a busy subordinate exercises the real rule.
+    /// </summary>
+    private static GeneratorContext Context(
+        World world, Character actor, IReadOnlyList<string>? subordinateIds = null, params string[] acquainted)
+        => new(
+            actor.View,
+            Salience.Perceive(actor, world.Now),
+            new Agenda(AgendaKind.DischargeResponsibility, "clear the family's business", "test", Cast.Harbour),
+            world.Now,
+            new ScheduledEvent
+            {
+                Id = 0,
+                Time = world.Now,
+                Kind = EventKind.RoleReview,
+                OwnerId = actor.Id,
+                Cause = "test",
+            },
+            MyOffice: null,
+            MyAssignment: null,
+            KnownPolicies: Array.Empty<Policy>(),
+            SuperiorId: null,
+            SubordinateIds: subordinateIds ?? Array.Empty<string>(),
+            OrgMemberIds: Array.Empty<string>(),
+            AcquaintedIds: acquainted,
+            ReportsSent: Array.Empty<Report>(),
+            RequestsMade: Array.Empty<InformationRequest>(),
+            VisibleTargets: Array.Empty<string>(),
+            AvailableSubordinateIds: (subordinateIds ?? Array.Empty<string>())
+                .Where(id => Pipeline.AvailableToExecute(world, id)).ToList());
 }

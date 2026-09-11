@@ -1585,7 +1585,14 @@ public sealed class ExecutorSuitabilityTests
             AcquaintedIds: acquainted,
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
-            VisibleTargets: Array.Empty<string>());
+            VisibleTargets: Array.Empty<string>(),
+            // world.Characters.ContainsKey guards a stray test id (a stranger who is never actually
+            // in the roster, used elsewhere in this file to prove the separate acquaintance filter) —
+            // AvailableToExecute itself assumes a real character, same as Pipeline.SuperiorOf and
+            // every other World-reading helper in this file.
+            AvailableSubordinateIds: (subordinateIds ?? Array.Empty<string>())
+                .Where(id => world.Characters.ContainsKey(id) && Pipeline.AvailableToExecute(world, id))
+                .ToList());
 
     // ================================================================= helpers — save/load (Section C idiom)
 

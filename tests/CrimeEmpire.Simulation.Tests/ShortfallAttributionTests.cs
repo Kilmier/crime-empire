@@ -389,6 +389,7 @@ public sealed class ShortfallAttributionTests
             AcquaintedIds: Array.Empty<string>(),
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
-            VisibleTargets: world.BusinessesIn(Cast.Harbour).Select(b => b.Id).ToList());
+            VisibleTargets: world.BusinessesIn(Cast.Harbour).Select(b => b.Id).ToList(),
+            AvailableSubordinateIds: Array.Empty<string>());
     }
 }

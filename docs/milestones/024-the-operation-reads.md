@@ -217,3 +217,112 @@ by reading the actual rendered output before writing either test, not assumed.
 
 One correction commit, covering the behavioral fix, its production-path and presentation-surface
 tests, and this record. Awaits Codex re-review.
+
+## Correction — the delegation-time leak and one operation per executor, on `9ac569b`, 2026-09-11
+
+**Codex reviewed `9ac569b` and returned three findings, all accepted by Matt.**
+
+**First: the executor inherited the owner's pre-delegation `StartedAt`.** The first correction fixed
+*whether* Tommy could see the operation at all; it left `Since` reading `s.StartedAt` unconditionally
+for whoever asked, which is the owner's own act — when *he* began it, not when it was handed over.
+Nothing records a handover time (the milestone's own "A false line" section above already explains
+why not), so showing Tommy "running since 2 Mar" would read as *his* tenure on the job when he was
+actually delegated on the 14th — a different, still-false version of the exact line this milestone
+was built to avoid. **Fixed by making `PlayerOperation.Since` nullable and populating it only for the
+owner** (`who.Id == s.OwnerId`), never the executor, with both renderers changed to omit the
+"running since" line entirely rather than print an empty one. Confirmed against the live Godot
+render: Vincent's panel still reads "running since 2 Mar / Tommy Nardo is handling it"; Tommy's now
+reads "getting Bellini's grocery to pay / he has made his demand, and been refused again and again"
+with no date line at all.
+
+**Second: nothing enforced that a subordinate could carry only one operation.** `Operating`'s own
+fallback scan (added by the first correction) took whichever delegated instance it found first —
+silently correct only because nothing stopped a subordinate from being handed a second job while
+still carrying a first, or from running one of his own at the same time nobody had checked against.
+**Fixed at both places a delegation is created**, not in the projection:
+
+- `Pipeline.AvailableToExecute(World, string)` — one new definition: a candidate is available to
+  execute when he owns no strategy of his own and no other character's own instance already names
+  him as `DelegatedToId`. Read directly off `World`, the same authoritative footing
+  `Pipeline.SubordinatesOf`/`OrgMembersOf` already stand on — who is free to staff is organisational
+  bookkeeping, not a character's belief.
+- `Generators.FromRelationship` never offers a busy subordinate as a delegate at all — the identical
+  shape the acquaintance-boundary correction already established for an unacquainted stranger, now
+  reading a new `GeneratorContext.AvailableSubordinateIds`, which `Pipeline.Prepare` populates by
+  calling `AvailableToExecute` over `SubordinateIds`.
+- `Commit.Apply`'s `DelegateStrategy` case refuses, fail-closed, with the identical check called
+  directly against `World` — mirroring the `ConcealIncident` guard already in `StartStrategy` — so a
+  hand-built candidate that skipped filtering, or one a future caller generates outside this
+  pipeline, cannot bypass the rule.
+
+**Third, and downstream of the second: `Operating`'s own scan now relies on uniqueness instead of
+defending against its absence.** With at most one delegated match now genuinely guaranteed, the
+scan was rewritten from a `foreach` that took the first hit to `SingleOrDefault`, which throws if
+that invariant is ever violated again rather than silently picking one — a wrong answer chosen
+quietly here would hide the exact defect this correction exists to make loud.
+
+**Tests, through the production path where the claim is about the natural run and staged where the
+claim is about the rule in isolation.** Both existing natural-run tests
+(`The_panel_is_populated_during_a_natural_run`, `The_executor_sees_the_operation_he_is_carrying_with_his_own_progress`)
+gained a `Since` assertion — Vincent's equal to `Cast.Start`'s date (the exact instant is later the
+same day, since the operation starts partway through 2 March rather than at the fixture's own
+midnight-adjacent constant; the date is all the rendered text ever carries), Tommy's null. Four new
+tests: a subordinate who owns his own strategy is not offered as another operation's executor
+(`A_subordinate_who_owns_a_strategy_is_not_offered_as_another_operations_executor`, staged directly
+against `Generators.GenerateAll`); a subordinate already carrying somebody else's delegated work is
+not offered a second one (`A_subordinate_already_executing_delegated_work_is_not_offered_a_second_delegation`,
+staging the first delegation through real `Commit.Apply` calls so the busy state it reads is
+genuinely produced); and the fail-closed counterpart of each
+(`Commit_refuses_to_delegate_to_a_subordinate_who_owns_a_strategy`,
+`Commit_refuses_to_delegate_to_a_subordinate_already_executing_delegated_work`), both asserting
+`Assert.Throws<SimulationInvariantException>` against a hand-built candidate.
+
+**Four mutation checks, each confirmed and reverted; the second exposed a genuine gap in the new
+test itself, not only in production code.** The fail-closed guard removed from `Commit.Apply`: both
+`Commit_refuses_to_delegate...` tests failed with "no exception was thrown," confirmed, reverted.
+The `.Where(available.Contains)` clause removed from `Generators.FromRelationship`: the *first*
+not-offered test failed as expected, but the second did not — because it never gave Vincent his own
+`Execution.Strategy`, so `FromRelationship`'s whole delegate-candidate branch never ran and the
+assertion passed vacuously regardless of the filter. **Fixed the test**, not the mutation-check
+result: added the missing `vincent.Execution.Strategy = NewStrategy(...)`, re-ran the same mutation,
+confirmed both tests now fail for the stated reason, then reverted the mutation. `Operating`'s
+`SingleOrDefault` predicate weakened (the `&& candidate.DelegatedToId == who.Id` clause dropped):
+`An_unrelated_character_sees_no_operation_in_the_same_natural_run` failed —
+`PlayerOperation { Description = getting Bellini's grocery to pay, ExecutorName = Tommy Nardo, ... }`
+where `null` was expected, Salvatore wrongly inheriting Vincent's own operation — confirmed, reverted.
+This is the mutation check the first correction's own review found missing (see the `REVIEW_LEDGER.md`
+correction alongside this one): the earlier claim that all three new production tests were
+"independently mutation-checked" was true only of
+`The_executor_sees_the_operation_he_is_carrying_with_his_own_progress`; the unrelated-viewer test had
+never actually been shown to fail under any mutation before now.
+
+**`GeneratorContext` gained one field, mechanically threaded through every construction site.**
+`AvailableSubordinateIds`, added as the record's last parameter specifically so every existing
+positional and named construction (`Pipeline.Prepare` plus nine test-local `Context` helpers) needed
+only one appended argument rather than a reordering. No test's own intent changed — most pass
+`Array.Empty<string>()` (no subordinates modelled in that file at all) or re-derive it from
+`SubordinateIds` through `Pipeline.AvailableToExecute` itself, never a hand-rolled copy of the rule.
+
+### Verification
+
+- Build 0 warnings / 0 errors.
+- Tests: **678 passed** — 674 + 4 new (two existing tests strengthened with a `Since` assertion
+  rather than counted as additions).
+- `--verify` on all four required configurations, byte-identical to every prior accepted hash:
+  `baseline` `7832105EC1F24154`, `disloyal-vincent` `6C23284BFD91C48D`, `resentful-tommy`
+  `7A43D1AFB4A6E26F`, `capable-angelo` `5CACCFC566364BB7`. The availability rule is a no-op against
+  every accepted fixture — each delegates exactly once, to a subordinate nothing else has touched —
+  so this is the expected result, not merely a hoped-for one.
+- `--compare` at seed 42: 6 configurations, 6 distinct traces, 5 distinct chosen-action sequences —
+  unmoved.
+- Both required viewpoint runs (`disloyal-vincent`/`salvatore`, `baseline`/`vincent`) exit clean.
+- All seven Godot self-tests, including `--selftest-operation` re-run against the live render (Tommy's
+  panel confirmed to carry no date line at all), and the two-process restart proof exit 0.
+- Four mutation checks, each confirmed and reverted, detailed above.
+- No simulation behaviour, scoring, RNG, fixture, or accepted hash changed — only the projection
+  (`PlayerSnapshot.cs`), the delegation eligibility path (`Generators.cs`, `Pipeline.cs`,
+  `Commit.cs`), both renderers, and tests.
+
+### Commit
+
+One correction commit. Awaits Codex re-review.

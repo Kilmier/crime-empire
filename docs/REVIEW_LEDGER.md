@@ -687,6 +687,58 @@ six-configuration `--compare` figure, both required viewpoints, all seven Godot 
 two-process restart proof unchanged. Full account: `docs/milestones/024-the-operation-reads.md`'s
 correction section.
 
+**Correction: the row above overstated its own mutation-check count.** "All three new production
+tests... were independently mutation-checked" is false as written — only one mutation was ever
+performed against the production-path tests (`Operating` reverted to the owner-only lookup), and it
+falsified exactly one of the two, `The_executor_sees_the_operation_he_is_carrying_with_his_own_progress`.
+`An_unrelated_character_sees_no_operation_in_the_same_natural_run` was never shown to fail under any
+mutation: Salvatore's own `Execution.Strategy` was null in both the buggy and the corrected code, so
+that test passed against either version and proved nothing about which was running. The "fourth
+mutation check" language additionally miscounted against "all three... and both... independently
+mutation-checked" (five claimed) plus a fourth — arithmetic that was already wrong on its own terms.
+Codex found the missing check as a finding on `9ac569b`; closed by weakening `Operating`'s own
+`DelegatedToId == who.Id` condition and confirming
+`An_unrelated_character_sees_no_operation_in_the_same_natural_run` now fails for the stated reason —
+see the correction below. The accurate count for the row above: two mutation checks
+(`IntelligenceWriter.Render`'s and `Game.cs`'s operation blocks, each independently), plus one
+against `Operating`'s owner-only-lookup reversion, which validated one of the two new production
+tests — three total, not four, and not five.
+
+### Measured — milestone 024, the operation reads, second review
+
+**Codex reviewed `9ac569b` — the first correction — and returned three findings, all accepted by
+Matt.** First: the executor inherited the owner's pre-delegation `StartedAt` — Tommy, delegated on
+14 March, read "running since 2 Mar" from Vincent's own act of starting the operation, a different
+false line than the one this milestone's own archive already records catching once. Fixed by making
+`PlayerOperation.Since` nullable, populated only for the owner (`who.Id == s.OwnerId`), with both
+renderers changed to omit the line rather than print an empty one. Second: nothing enforced the
+one-operation-per-executor rule the projection had been silently assuming — a subordinate could be
+handed a second job while carrying a first, or run one of his own at the same time, with nothing
+checking. Fixed at the two places a delegation is created: `Generators.FromRelationship` no longer
+offers a busy subordinate (reading a new `GeneratorContext.AvailableSubordinateIds`, computed by
+`Pipeline.Prepare`), and `Commit.Apply`'s `DelegateStrategy` case refuses, fail-closed, calling the
+identical `Pipeline.AvailableToExecute(World, string)` directly — one definition, both enforcement
+points. Third, downstream of the second: `Operating`'s own fallback scan, which used to take the
+first delegated match it found, now reads as `SingleOrDefault` — with uniqueness genuinely enforced
+elsewhere, a second match should throw rather than be silently and arbitrarily resolved.
+
+Six new/strengthened tests: `Since` assertions added to both existing natural-run tests; two new
+tests proving a busy subordinate (owns his own strategy; already executing somebody else's delegated
+work) is never offered, staged against `Generators.GenerateAll`; two fail-closed counterparts against
+`Commit.Apply`, each asserting `SimulationInvariantException`. Four mutation checks, each confirmed
+and reverted — the commit guard removed, the availability filter removed, and `Operating`'s
+`DelegatedToId == who.Id` condition weakened, closing exactly the gap the correction above records.
+**The second mutation check caught a genuine defect in the new test itself, not only in production
+code**: the availability-filter removal correctly failed the first not-offered test but not the
+second, because the second never gave Vincent his own `Execution.Strategy`, so the candidate-
+generating branch never ran and the assertion passed vacuously regardless of the filter under test.
+Fixed the test, re-ran the same mutation, confirmed both now fail, reverted. 678 tests passing
+(674 + 4 new — two strengthened rather than added); all four required hashes, the six-configuration
+`--compare` figure (the availability rule is a no-op against every accepted fixture, each of which
+delegates exactly once), both required viewpoints, all seven Godot self-tests re-run against the live
+render, and the two-process restart proof unchanged. Full account:
+`docs/milestones/024-the-operation-reads.md`'s second correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

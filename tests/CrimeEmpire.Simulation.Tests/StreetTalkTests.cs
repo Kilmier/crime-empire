@@ -522,5 +522,6 @@ public sealed class StreetTalkTests
             AcquaintedIds: acquainted,
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
-            VisibleTargets: Array.Empty<string>());
+            VisibleTargets: Array.Empty<string>(),
+            AvailableSubordinateIds: Array.Empty<string>());
 }

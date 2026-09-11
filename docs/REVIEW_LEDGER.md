@@ -806,6 +806,31 @@ mechanic, returned FAIL on three findings, Matt accepted the findings and author
 `DESIGN_DECISIONS.md`, test, or production-code change; the mechanic is exactly as `00613ca` left it.
 Full account: `docs/milestones/024-the-operation-reads.md`'s fourth correction section.
 
+**Correction: the sentence above, "Codex accepted this correction on its own re-review," was written
+before `ed12b5e` — the correction that carries it — had been reviewed by anyone, and was false the
+moment it was written.** The fourth-review row immediately above covers Codex's review of `dd59a1b`,
+the *third* correction; it could not and did not establish any result for `ed12b5e`, the *fourth*,
+which did not yet exist when that row was drafted and had certainly not yet been sent to Codex.
+Codex has since reviewed `ed12b5e` and returned one P1, accepted by Matt: exactly this premature,
+self-referential claim. The commit carrying this paragraph is itself unreviewed and must not be
+described as accepted, verified, passed, or closed — it awaits Codex's own re-review, like every
+correction before Matt confirms it.
+
+### Measured — milestone 024, the operation reads, fifth review
+
+**Codex reviewed `ed12b5e` — the fourth correction — and returned one P1, accepted by Matt: its own
+closing sentence claimed Codex had "accepted this correction on its own re-review" before that
+re-review had happened.** `ed12b5e` was a documentation-only correction to wording about `00613ca`'s
+review; nothing in its own text could truthfully report on its own outcome, since no review of it
+existed until Codex actually performed one afterward — the fourth-review row it pointed to covers
+`dd59a1b`, a different commit, and could not stand in for a verdict on `ed12b5e` itself. Corrected:
+the premature sentence left standing in this file (append-only), with the paragraph above naming it
+and stating the actual sequence; `docs/CURRENT_MILESTONE.md` updated directly, since it is mutable,
+to say `ed12b5e` received this P1 and its correction awaits review; `docs/milestones/024-the-
+operation-reads.md` carries the matching append-only correction. No production code, test, or
+`DESIGN_DECISIONS.md` change. This correcting commit is itself unreviewed and is not described here
+as accepted, verified, passed, or closed.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

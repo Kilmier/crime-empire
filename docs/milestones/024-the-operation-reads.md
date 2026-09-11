@@ -440,3 +440,34 @@ error rather than rewritten silently.
 
 One documentation-only correction commit, touching only `docs/CURRENT_MILESTONE.md`,
 `docs/REVIEW_LEDGER.md`, and this archive. Awaits Codex re-review.
+
+## Correction — a premature, self-referential claim in `ed12b5e`, on `ed12b5e`, 2026-09-11
+
+**Codex reviewed `ed12b5e` — the correction immediately above — and returned one P1, accepted by
+Matt: `docs/REVIEW_LEDGER.md`'s own text, written as part of that commit, closed with "Codex accepted
+this correction on its own re-review" before any such re-review had occurred.** `ed12b5e` was itself
+the correction; nothing in its own text could truthfully report Codex's verdict on it, since no
+review of it existed until Codex performed one afterward. The row it pointed to as evidence — the
+fourth-review section — covers `dd59a1b`, a different, earlier commit, and could not establish a
+result for `ed12b5e`.
+
+**No mechanic, test, or production code changed.** Documentation-only: the premature sentence left
+standing in `docs/REVIEW_LEDGER.md` (append-only), followed there by a correction naming it and
+stating the true sequence; `docs/CURRENT_MILESTONE.md` updated directly, since it is mutable, to
+record that `ed12b5e` received this P1 and that this correction awaits its own review.
+
+**This commit is not described as accepted, verified, passed, or closed anywhere in this record.**
+It awaits Codex's own re-review, the same as every correction before Matt confirms it.
+
+### Verification
+
+- No build, test, or fixture verification applies — no `.cs` file changed. `git diff --stat` against
+  `src/` and `tests/` for this commit is empty.
+- `docs/DESIGN_DECISIONS.md` untouched, as authorized.
+- `docs/PERSONALITY_AND_CHARACTER_PROFILES.md`, `docs/UI_AND_PLAYER_LEGIBILITY.md`, milestone 027,
+  and the remaining 023–025 backlog untouched.
+
+### Commit
+
+One documentation-only correction commit, touching only `docs/CURRENT_MILESTONE.md`,
+`docs/REVIEW_LEDGER.md`, and this archive. Awaits Codex re-review.

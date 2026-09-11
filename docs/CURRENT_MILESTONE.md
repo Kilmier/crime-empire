@@ -210,8 +210,19 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   `REVIEW_LEDGER.md` and the milestone archive. 682 tests passing (678 + 4 new); all four required
   hashes, the six-configuration `--compare` figure, both required viewpoints, all seven Godot
   self-tests, and the restart proof unchanged. Full account:
-  `docs/milestones/024-the-operation-reads.md`'s third correction section. Awaits its own Codex
-  re-review.
+  `docs/milestones/024-the-operation-reads.md`'s third correction section.
+
+- **Codex reviewed the documentation-only correction to the bullet above (`ed12b5e`) and returned
+  one P1, accepted by Matt: that correction's own closing sentence in `REVIEW_LEDGER.md` claimed
+  "Codex accepted this correction on its own re-review" before any such re-review had taken place.**
+  `ed12b5e` was itself the correction; nothing in its own text could truthfully report Codex's
+  verdict on it, since no review of it existed until Codex performed one afterward, and the
+  fourth-review row it pointed to as evidence covers `dd59a1b`, a different, earlier commit. No
+  mechanic, test, or production code changed. Corrected: the false sentence left standing
+  (append-only) in `REVIEW_LEDGER.md` and the milestone archive, each followed by a correction
+  naming it; fixed directly here, since this file is mutable. Full account:
+  `docs/milestones/024-the-operation-reads.md`'s fifth correction section. **This correction itself
+  awaits its own Codex re-review** — it is not accepted, verified, passed, or closed.
 
 **Paused before milestone 027, on Matt's word, while Codex works through the remaining milestone
 023–025 backlog in order: `6738200`, `4da1e66` and `15d7c92` (all corrected above), `f993386` (now

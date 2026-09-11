@@ -147,10 +147,29 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
   new one) unchanged. Full account: `docs/milestones/023-the-roster-reads.md`'s fifth correction
   section. Awaits its own Codex re-review.
 
+- **Codex reviewed `f993386` — milestone 024's implementation — and returned three findings, all
+  accepted by Matt.** First, the behavioural one: `Operating` read only the viewpoint's own
+  `Execution.Strategy`, the owner's field, so an executor carrying work delegated to him saw no
+  operation at all — the milestone's own leak, facing the other way. Fixed by scanning for the one
+  other character whose own instance names the viewpoint as `DelegatedToId`, then deriving
+  executor name and progress by who is actually doing the work rather than by which field held the
+  instance. Second and third were documentation claims (a delegation-time claim in
+  `PlayerSnapshot.cs`; a stale step-phrase count in `PlayerNarration.cs`) that, on reading the live
+  source, were already correct — the first was never present in `f993386`, the second was brought
+  current by milestones 025 and 026 extending the same table — recorded as verified rather than
+  fixed. Two production-path tests added against the natural day-20 baseline, plus a focused
+  `IntelligenceWriter` test and a new Godot self-test (`--selftest-operation`) each isolating the
+  operation section from the unrelated belief list before asserting within it. All new tests
+  mutation-checked and reverted, including a check that reverting `Operating` to the owner-only
+  lookup fails exactly the new executor-view test. 674 tests passing (671 + 3 new); all four
+  required hashes, the six-configuration `--compare` figure, both required viewpoints, all seven
+  Godot self-tests, and the restart proof unchanged. Full account:
+  `docs/milestones/024-the-operation-reads.md`'s correction section. Awaits its own Codex re-review.
+
 **Paused before milestone 027, on Matt's word, while Codex works through the remaining milestone
-023–025 backlog in order: `6738200`, `4da1e66` and `15d7c92` (all corrected above), `f993386`,
-`1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that backlog is cleared and Matt
-says so.
+023–025 backlog in order: `6738200`, `4da1e66` and `15d7c92` (all corrected above), `f993386` (now
+corrected above), `1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that backlog is
+cleared and Matt says so.
 
 ## Next, per the demo arc
 

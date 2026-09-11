@@ -657,6 +657,36 @@ not added to); `git diff --stat` against `src/` shows only the new, additive sel
 hashes, both viewpoints, and all eight Godot invocations (seven plus the new one) unchanged. Full
 account: `docs/milestones/023-the-roster-reads.md`'s fifth correction section.
 
+### Measured — milestone 024, the operation reads, first review
+
+**Codex reviewed `f993386` — milestone 024's implementation, adding the operation projection — and
+returned three findings, all accepted by Matt.** First, and the only behavioural one: `Operating`
+read only the viewpoint character's own `Execution.Strategy`, which is the owner's field alone —
+`StrategyInstance` is never copied onto the executor, only pointed to from the owner's record via
+`DelegatedToId` — so a man actually carrying work delegated to him read his own field as null and
+saw no operation at all, the identical information-rule failure this milestone exists to prevent,
+facing the other way. Fixed by scanning `world.Characters` for the one other character, if any,
+whose own instance names the viewpoint as `DelegatedToId`, then deriving `ExecutorName`/`Progress`
+by "who is actually doing the work" (`who.Id == (s.DelegatedToId ?? s.OwnerId)`) rather than by
+which field held the instance. Second and third were documentation claims that turned out to need
+verification rather than a fix: neither `PlayerSnapshot.cs` claiming `Since` as a delegation time
+nor `PlayerNarration.cs`'s step-phrase count were actually wrong by the time this correction was
+made — the first was never present in `f993386` (the milestone's own archive already records that
+false rendering was caught and fixed before that commit), and the second (`f993386`'s accurate
+"seven" against a seven-entry table) was independently brought current to "nine" by milestones 025
+and 026 extending the same table without disturbing the count beside it — both confirmed by reading
+the live source rather than assumed. Two production-path tests added against the natural day-20
+baseline (Tommy's own view of the operation Vincent delegated to him; an unrelated character's null
+view of the same run), plus one focused test isolating `IntelligenceWriter`'s "WHAT HE HAS OUT"
+section from the unrelated belief list before asserting within it, plus a new Godot self-test
+(`--selftest-operation`) doing the same against the live `DOING` panel. All three new production
+tests and both new presentation-surface tests were independently mutation-checked and reverted; a
+fourth mutation check confirmed reverting `Operating` to the owner-only lookup fails exactly the new
+executor-view test and nothing else. 674 tests passing (671 + 3 new); all four required hashes, the
+six-configuration `--compare` figure, both required viewpoints, all seven Godot self-tests, and the
+two-process restart proof unchanged. Full account: `docs/milestones/024-the-operation-reads.md`'s
+correction section.
+
 ### Measured — milestone 020, the right person for the job, corrected twice, accepted on a weaker basis than 019
 
 **What it built.** A second organisational subordinate for Vincent, in one bounded variant

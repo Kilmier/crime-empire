@@ -113,6 +113,21 @@ public partial class Game : Control
     private const string CapabilityFlag = "--selftest-capability";
 
     /// <summary>
+    /// Command-line switch for the correction to `f993386`'s operation panel: proves the delegated
+    /// operation line — milestone 024 — actually reaches the live "WHAT ... DOING" panel, for both
+    /// the owner's silent-progress view and the executor's own-progress view, against the real
+    /// screen rather than the snapshot behind it. `Bellini's grocery` already appears in the
+    /// `WHAT ... KNOWS` panel independently of whether this one renders anything at all, so a check
+    /// against the whole screen would pass even with the operation block removed — this isolates the
+    /// `DOING` panel's own section, between its header and `WHAT JUST HAPPENED`, before asserting.
+    ///
+    /// The natural day-20 baseline: nobody controlled, run autonomously to the same point
+    /// `OperationReadsTests.The_panel_is_populated_during_a_natural_run` reads, so this is the
+    /// identical operation seen from the live interface rather than a staged one.
+    /// </summary>
+    private const string OperationFlag = "--selftest-operation";
+
+    /// <summary>
     /// Command-line switch for milestone 015's restart proof, process A: plays the golden path's
     /// first three choices (start, carry on, delegate to Tommy) through real buttons, saves to
     /// <see cref="SelfTestRestartSavePath"/> (never the production slot — see the type header), and
@@ -241,6 +256,12 @@ public partial class Game : Control
         if (FlagRequested(CapabilityFlag))
         {
             RunCapabilitySelfTest();
+            return;
+        }
+
+        if (FlagRequested(OperationFlag))
+        {
+            RunOperationSelfTest();
             return;
         }
 
@@ -1492,6 +1513,109 @@ public partial class Game : Control
             " wordsAlsoAppearEarlier=" + wordsAlsoAppearEarlier +
             " — the attitude panel does not show what Vincent takes Angelo for, so it proves nothing");
         GetTree().Quit(1);
+    }
+
+    // ================================================================= the operation panel (milestone 024)
+
+    private void RunOperationSelfTest()
+    {
+        try
+        {
+            OperationSelfTest();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-OPERATION FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    /// <summary>
+    /// Proves the delegated operation line — <see cref="PlayerSnapshot.Operation"/> — reaches the
+    /// live rendered <c>DOING</c> panel, from both sides of the same delegation, against the real
+    /// screen rather than the snapshot behind it.
+    ///
+    /// <b>Why this needs the live screen and not only a `PlayerView`-level check.</b> Codex's review
+    /// of `f993386` found no coverage on either final presentation surface at all. The same
+    /// false-assurance risk `--selftest-capability` closed on the attitude panel exists here too:
+    /// `Bellini's grocery` already appears in `WHAT ... KNOWS`, the belief panel, independently of
+    /// whether the `DOING` panel renders the operation at all — confirmed below, not assumed. This
+    /// isolates the `DOING` panel's own section — between its header (`DOING`, matching either the
+    /// second- or third-person form) and the next block it always prints, `WHAT JUST HAPPENED` —
+    /// before asserting against it.
+    ///
+    /// Nobody is controlled here — the natural day-20 baseline runs autonomously, the identical
+    /// fixture <c>OperationReadsTests.The_panel_is_populated_during_a_natural_run</c> reads via
+    /// <c>Runner.Run</c> directly — so this proves the live interface, not a staged screen.
+    /// </summary>
+    private void OperationSelfTest()
+    {
+        GD.Print("CE-OPERATION begin");
+
+        StartSession(seed: 42, variant: "baseline", controlled: null, viewpoint: "vincent");
+        _session!.AdvanceDays(20);
+        Refresh();
+        string vincentScreen = Screen();
+
+        GD.Print("== CE-OPERATION-VINCENT-BEGIN ==");
+        GD.Print(vincentScreen);
+        GD.Print("== CE-OPERATION-VINCENT-END ==");
+
+        (bool ok, string why) vincentResult = CheckOperationSection(
+            vincentScreen, mustContain: "Tommy Nardo is handling it", mustNotContain: "made his demand");
+
+        StartSession(seed: 42, variant: "baseline", controlled: null, viewpoint: "tommy");
+        _session!.AdvanceDays(20);
+        Refresh();
+        string tommyScreen = Screen();
+
+        GD.Print("== CE-OPERATION-TOMMY-BEGIN ==");
+        GD.Print(tommyScreen);
+        GD.Print("== CE-OPERATION-TOMMY-END ==");
+
+        (bool ok, string why) tommyResult = CheckOperationSection(
+            tommyScreen, mustContain: "made his demand", mustNotContain: "is handling it");
+
+        if (vincentResult.ok && tommyResult.ok)
+        {
+            GD.Print("CE-OPERATION ok");
+            GetTree().Quit();
+            return;
+        }
+
+        GD.PrintErr(
+            "CE-OPERATION FAILED — vincent: " + vincentResult.why + " — tommy: " + tommyResult.why);
+        GetTree().Quit(1);
+    }
+
+    /// <summary>
+    /// Isolates the <c>DOING</c> panel's own section of a flattened screen (between its header and
+    /// the <c>WHAT JUST HAPPENED</c> block it always prints next) and checks it against exactly one
+    /// expected phrase and one phrase that must not be there — plus, as a demonstrated precondition
+    /// rather than an assumed one, that the expected phrase's key noun phrase ("Bellini's grocery")
+    /// already appears earlier on the same screen, in the unrelated belief panel, proving the
+    /// false-assurance risk a whole-screen check would have missed is real.
+    /// </summary>
+    private static (bool Ok, string Why) CheckOperationSection(string screen, string mustContain, string mustNotContain)
+    {
+        int doingStart = screen.IndexOf("DOING", StringComparison.Ordinal);
+        if (doingStart < 0) return (false, "no DOING panel header found");
+
+        int doingEnd = screen.IndexOf("WHAT JUST HAPPENED", doingStart, StringComparison.Ordinal);
+        if (doingEnd < 0) return (false, "no WHAT JUST HAPPENED marker found after DOING");
+
+        string section = screen[doingStart..doingEnd];
+
+        bool wordsAppearEarlier = screen[..doingStart].Contains("Bellini's grocery", StringComparison.Ordinal);
+        if (!wordsAppearEarlier)
+            return (false, "the false-assurance precondition did not hold — nothing to prove by isolating the section");
+
+        if (!section.Contains(mustContain, StringComparison.Ordinal))
+            return (false, $"DOING section does not contain \"{mustContain}\"");
+        if (section.Contains(mustNotContain, StringComparison.Ordinal))
+            return (false, $"DOING section wrongly contains \"{mustNotContain}\"");
+
+        return (true, "");
     }
 
     // ================================================================= restart proof (milestone 015)

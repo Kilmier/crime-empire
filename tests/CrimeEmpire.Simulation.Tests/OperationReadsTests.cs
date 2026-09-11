@@ -2,6 +2,7 @@ using CrimeSim.Domain;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using CrimeSim.Sim;
+using CrimeSim.Trace;
 
 namespace CrimeEmpire.Simulation.Tests;
 
@@ -137,7 +138,78 @@ public sealed class OperationReadsTests
         Assert.Null(op.Progress);
     }
 
+    /// <summary>
+    /// The other half of the natural proof above, and the reason `Operating` was corrected — Codex's
+    /// review of `f993386` found it read only the viewpoint's own <c>Execution.Strategy</c>, which is
+    /// the owner's record and stays null on a delegate for the instance's entire life, so Tommy —
+    /// actually carrying out the identical operation the previous test reads from Vincent's side —
+    /// saw nothing running at all. Same run, same operation, the other man's view of it: his own
+    /// progress is his own experience, so it is shown, unlike the previous test's null.
+    /// </summary>
+    [Fact]
+    public void The_executor_sees_the_operation_he_is_carrying_with_his_own_progress()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        Runner.Run(world, Cast.Start.AddDays(20));
+
+        var op = PlayerView.Build(world, "tommy", world.Now).Operation;
+
+        Assert.NotNull(op);
+        Assert.Contains("Bellini's grocery", op!.Description, StringComparison.Ordinal);
+        Assert.NotNull(op.Progress);
+    }
+
+    /// <summary>
+    /// Actor-neutral in the other direction too: a man who is neither the owner nor the one carrying
+    /// it out sees no operation at all, in the identical natural run the two tests above read.
+    /// </summary>
+    [Fact]
+    public void An_unrelated_character_sees_no_operation_in_the_same_natural_run()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        Runner.Run(world, Cast.Start.AddDays(20));
+
+        Assert.Null(PlayerView.Build(world, "salvatore", world.Now).Operation);
+    }
+
+    /// <summary>
+    /// The <see cref="IntelligenceWriter"/> counterpart to the panel proof above, read from its actual
+    /// rendered text rather than the snapshot — the same discipline the TakenFor correction (`53694a2`)
+    /// established for the roster surface. "Bellini's grocery" already appears in the unrelated
+    /// "WHAT HE HAS" belief list for both men, so a check that did not isolate "WHAT HE HAS OUT" from
+    /// "HOW HE TAKES THEM" would pass even if the operation section rendered nothing at all —
+    /// demonstrated, not assumed, by the first assertion inside the helper below.
+    /// </summary>
+    [Fact]
+    public void The_operation_section_is_isolated_in_the_runners_render_for_both_men()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        Runner.Run(world, Cast.Start.AddDays(20));
+
+        string vincentRendered = IntelligenceWriter.Render(world, "vincent");
+        CheckOperationSection(vincentRendered, mustContain: "Tommy Nardo is handling it", mustNotContain: "made his demand");
+
+        string tommyRendered = IntelligenceWriter.Render(world, "tommy");
+        CheckOperationSection(tommyRendered, mustContain: "made his demand", mustNotContain: "is handling it");
+    }
+
     // ================================================================= helpers
+
+    private static void CheckOperationSection(string rendered, string mustContain, string mustNotContain)
+    {
+        int opStart = rendered.IndexOf("WHAT HE HAS OUT", StringComparison.Ordinal);
+        Assert.True(opStart >= 0, "the render has no \"WHAT HE HAS OUT\" section");
+
+        int nextSection = rendered.IndexOf("HOW HE TAKES THEM", opStart, StringComparison.Ordinal);
+        Assert.True(nextSection >= 0, "no \"HOW HE TAKES THEM\" marker found after the operation section");
+
+        string section = rendered[opStart..nextSection];
+
+        Assert.Contains("Bellini's grocery", rendered[..opStart], StringComparison.Ordinal);
+
+        Assert.Contains(mustContain, section, StringComparison.Ordinal);
+        Assert.DoesNotContain(mustNotContain, section, StringComparison.Ordinal);
+    }
 
     /// <summary>
     /// A world with one operation running, optionally handed to Tommy, advanced to a given step.

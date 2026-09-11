@@ -119,3 +119,101 @@ argument from having looked, which is the weaker half.
 ## Commit
 
 One implementation-and-archive commit.
+
+## Correction — actor-neutrality on `f993386`, 2026-09-11
+
+**Codex reviewed `f993386` and returned three findings, all accepted by Matt.**
+
+**First, and the behavioral one: `Operating` read only the viewpoint character's own
+`Execution.Strategy`, which is the owner's field.** `StrategyInstance` is never copied onto the
+executor — `DelegatedToId` on the owner's own instance is the only record of who is carrying a
+delegated job — so a man actually doing work handed to him by somebody else read his own
+`Execution.Strategy` as null and saw nothing running at all, for the entire life of the instance.
+The boundary this milestone protects (an owner sees no progress on delegated work) was intact; its
+mirror (an executor sees his own progress on work he is carrying) did not exist. **Fixed by adding a
+fallback scan**: when `who.Execution.Strategy` is null, `Operating` now scans `world.Characters`
+for the one other character, if any, whose own `Execution.Strategy.DelegatedToId` names `who` — the
+only place a delegated instance is indexed, since delegation is a pointer on the owner's record, not
+a second copy. `ExecutorName`, `Since` and `Progress` are then derived the same way the codebase
+already names "the one doing the work" elsewhere (`Strategies.cs`'s own
+`actor.Id != (s.DelegatedToId ?? s.OwnerId)`): progress shown only to `who.Id == (s.DelegatedToId ??
+s.OwnerId)`, unconditionally on which of the two characters is asking.
+
+**Second and third, both documentation claims, both already false only in `f993386` itself and
+already corrected by unrelated later work — verified rather than re-fixed.** `PlayerSnapshot.cs`
+does not, in the current tree or in `f993386`, contain any comment claiming `Since` is a delegation
+or handover time; the one place that risk existed was the *rendered wording*, and this milestone's
+own "A false line" section above already records that it was caught and fixed before `f993386` was
+committed. `PlayerNarration.cs`'s `Past` table comment read "there are seven of them in the whole
+game" as of `f993386`, which was accurate for the seven-entry switch at the time; milestone 025 and
+026 each added a step phrase to the table without touching the count comment beside it, and by the
+current tree the comment already reads "nine" against a nine-entry table (confirmed by counting the
+`switch` arms) — so both claims are correct as committed here and needed no code change, only this
+record that they were checked rather than assumed.
+
+**Production-path tests, added rather than relying on the staged-world tests above,** because those
+vary `StepIndex` by hand-constructing a `StrategyInstance` and cannot by themselves prove the real
+pipeline produces a delegated instance an executor can read. `Cast.Build` at day 20 is the fixture
+that already does: `The_executor_sees_the_operation_he_is_carrying_with_his_own_progress` reads
+Tommy's own view of the operation Vincent delegated to him and asserts his progress is non-null;
+`An_unrelated_character_sees_no_operation_in_the_same_natural_run` reads Salvatore's view of the
+same run and asserts null. Vincent's side of the same natural run was already covered by
+`The_panel_is_populated_during_a_natural_run`. Mutation-checked: reverting `Operating` to the
+owner-only lookup made exactly `The_executor_sees_the_operation_he_is_carrying_with_his_own_progress`
+fail (`Assert.NotNull() Failure: Value is null`) and no other test in the file, confirmed, then
+reverted.
+
+**Both final presentation surfaces protected, each against the section-blind assertion the
+`53694a2`/`7036f0d` corrections found missing on the roster panel.** "Bellini's grocery" already
+appears in the unrelated belief-list section ("WHAT HE HAS" / "WHAT ... KNOWS") independently of
+whether the operation section renders anything, on both surfaces and for both viewpoints — confirmed
+by reading the actual rendered output before writing either test, not assumed.
+
+- `IntelligenceWriter`: `The_operation_section_is_isolated_in_the_runners_render_for_both_men`
+  (`OperationReadsTests.cs`) locates `WHAT HE HAS OUT`, isolates everything up to the next `HOW HE
+  TAKES THEM` header, asserts the false-assurance precondition holds (the target words appear before
+  the section starts) and then asserts within the isolated section only, for both Vincent's and
+  Tommy's render of the identical day-20 run. Mutation-checked: short-circuiting the operation
+  `if` block in `IntelligenceWriter.Render` made this test fail (`the render has no "WHAT HE HAS
+  OUT" section`), confirmed, then reverted — `git diff --stat` against `IntelligenceWriter.cs` shows
+  no output.
+- Godot: `--selftest-operation` (`Game.cs`) starts the real `baseline` session at seed 42 twice —
+  once viewpoint Vincent, once viewpoint Tommy — advances each 20 days, calls `Refresh()` explicitly
+  (`AdvanceDays` does not trigger the screen rebuild that a button press does; the self-test's first
+  run before this fix showed the unchanged start date because of exactly this), reads the live
+  `Screen()`, isolates the `DOING` panel from the `WHAT JUST HAPPENED` marker that follows it the
+  same way, and checks the same false-assurance precondition before asserting inside the section.
+  Mutation-checked: short-circuiting `BuildDoing`'s operation `if` block made the self-test fail
+  (`CE-OPERATION FAILED — vincent: DOING section does not contain "Tommy Nardo is handling it" —
+  tommy: DOING section does not contain "made his demand"`), confirmed, then reverted — `git diff
+  --stat` against `Game.cs` shows no output beyond the additive self-test itself.
+
+### Verification
+
+- Build 0 warnings / 0 errors.
+- Tests: **674 passed** — 671 + 3 new (`The_executor_sees_the_operation_he_is_carrying_with_his_own_progress`,
+  `An_unrelated_character_sees_no_operation_in_the_same_natural_run`,
+  `The_operation_section_is_isolated_in_the_runners_render_for_both_men`).
+- `--verify` on all four required configurations, byte-identical to every prior accepted hash:
+  `baseline` `7832105EC1F24154`, `disloyal-vincent` `6C23284BFD91C48D`, `resentful-tommy`
+  `7A43D1AFB4A6E26F`, `capable-angelo` `5CACCFC566364BB7`.
+- `--compare` at seed 42: 6 configurations, 6 distinct traces, 5 distinct chosen-action sequences —
+  unmoved from `023-the-roster-reads.md`'s accepted figure.
+- Both required viewpoint runs (`disloyal-vincent`/`salvatore`, `baseline`/`vincent`) exit clean.
+- All seven Godot self-tests, including the new `--selftest-operation`, and the two-process restart
+  proof (`--selftest-restart-save` then `--selftest-restart-load`, genuinely separate invocations)
+  exit 0.
+- Two mutation checks, each confirmed and reverted: `IntelligenceWriter.Render`'s operation block
+  short-circuited (the new xunit test failed for the stated reason), and `Game.cs`'s `BuildDoing`
+  operation block short-circuited separately (the new self-test failed for the stated reason). A
+  third mutation check — `Operating` reverted to the owner-only lookup — is recorded above, against
+  the production-path tests rather than the presentation-surface ones.
+- `git diff --stat` against `src/`: `PlayerSnapshot.cs` (the `Operating` rewrite and its doc
+  comment), `Game.cs` (additive only — one flag, one dispatch branch, two new methods, no existing
+  method body changed), and the two new test files' additions. `PlayerNarration.cs` is untouched, as
+  the verification above records.
+
+### Commit
+
+One correction commit, covering the behavioral fix, its production-path and presentation-surface
+tests, and this record. Awaits Codex re-review.

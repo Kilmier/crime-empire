@@ -594,7 +594,7 @@ public static class PlayerView
             Exposure(world, who, heldRecords, name, self, Statement),
             lastAction,
             myBusiness,
-            Operating(who, name, self),
+            Operating(world, who, name, self),
             awaitingAnswers);
     }
 
@@ -713,23 +713,52 @@ public static class PlayerView
     }
 
     /// <summary>
-    /// The order he currently has out, or null when he has nothing running — milestone 024.
+    /// The order he currently has out, or null when he has nothing running — milestone 024,
+    /// corrected 2026-09-11 for actor neutrality after Codex's review of `f993386` found this method
+    /// read only <c>who.Execution.Strategy</c>, which is the <em>owner's</em> record and stays null
+    /// on a delegate for the instance's entire life — <c>StrategyInstance</c>'s own doc comment says
+    /// so: delegation is never copied onto the executor, only pointed to from the owner's own field.
+    /// The man actually carrying a delegated job therefore saw nothing running at all, which is the
+    /// identical information-rule failure this milestone exists to fix, just facing the other way.
     ///
-    /// <b>The whole of the information rule lives in one branch here</b>, and it is the milestone:
-    /// progress is reported for work he is doing himself and withheld for work he handed to somebody.
-    /// The step a delegate has reached is that man's state; the owner learns whether the job was
-    /// carried out through a report, a rumour or the takings arriving, exactly as milestones 017 and
-    /// 022 settled. Reading `StepIndex` off a delegated instance would hand it to him for free,
-    /// through a panel rather than through a belief, which makes it no less a leak.
+    /// <b>The whole of the information rule still lives in one branch here</b>, and it is still the
+    /// milestone: progress is reported for work he is doing himself — whether he owns it and never
+    /// delegated, or it was handed to him — and withheld for work somebody else is doing on his
+    /// order. The step a delegate has reached is that man's own state; the owner learns whether the
+    /// job was carried out through a report, a rumour or the takings arriving, exactly as milestones
+    /// 017 and 022 settled. Reading `StepIndex` off a delegated instance would hand it to whichever
+    /// of the two is not the one who reached it, for free, through a panel rather than through a
+    /// belief, which makes it no less a leak either direction.
+    ///
+    /// <b>Search order, and why it stays cheap.</b> <paramref name="who"/>'s own
+    /// <c>Execution.Strategy</c> is checked first — true for every owner, whether or not he
+    /// delegated, and for a man working alone — before scanning every other character's own
+    /// <c>Execution.Strategy</c> for one naming <paramref name="who"/> as
+    /// <see cref="StrategyInstance.DelegatedToId"/>. The scan is the only way to find it: a delegated
+    /// instance is never indexed anywhere else, and <c>World.Characters</c> is bounded by the cast,
+    /// not by anything this milestone grows. Nobody carries two running strategies at once in this
+    /// model, so at most one match exists either way — not a new invariant, the one
+    /// <c>Filters.cs</c> already enforces at commitment.
     ///
     /// Wording comes from <see cref="PlayerOption.Work"/> rather than a second phrasing of the same
     /// thing. That method exists, and is `internal` for this exact purpose, because
     /// `StrategyInstance.Label` — a developer string carrying raw ids — once reached the player as a
-    /// decision's focus, and the fix was one shared vocabulary rather than two that drift.
+    /// decision's focus, and the fix was one shared vocabulary rather than two that drift. Nothing
+    /// read here reaches beyond what the instance itself carries — its kind, target, method, start
+    /// date and step progress — all operational fact the executor holds simply by being the one
+    /// doing the work; no belief, relationship, or other character's private state is consulted.
     /// </summary>
-    private static PlayerOperation? Operating(Character who, Func<string, string> name, Pronouns self)
+    private static PlayerOperation? Operating(World world, Character who, Func<string, string> name, Pronouns self)
     {
-        if (who.Execution.Strategy is not { } s) return null;
+        StrategyInstance? s = who.Execution.Strategy;
+        if (s is null)
+            foreach (var other in world.Characters.Values)
+                if (other.Execution.Strategy is { DelegatedToId: { } executorId } candidate && executorId == who.Id)
+                {
+                    s = candidate;
+                    break;
+                }
+        if (s is null) return null;
 
         // StepIndex is the *next* step to run, so the last one completed is the one before it. Null
         // before anything has run, which reads as not having started in earnest rather than as a
@@ -739,13 +768,16 @@ public static class PlayerView
             ? steps[s.StepIndex - 1]
             : null;
 
+        // The one man actually doing the work — the delegate if there is one, the owner himself
+        // otherwise. Progress is shown only to him; everyone else who can see this operation at all
+        // (the owner, watching a delegate) learns the outcome the way milestones 017 and 022 settled.
+        bool doingItHimself = who.Id == (s.DelegatedToId ?? s.OwnerId);
+
         return new PlayerOperation(
             PlayerOption.Work(s.Kind, s.TargetId, name, self),
-            s.DelegatedToId is { } executor ? name(executor) : null,
+            s.DelegatedToId is { } executor && executor != who.Id ? name(executor) : null,
             s.StartedAt,
-            s.DelegatedToId is null
-                ? PlayerNarration.OwnProgress(lastDone, s.FailedAttempts, self)
-                : null);
+            doingItHimself ? PlayerNarration.OwnProgress(lastDone, s.FailedAttempts, self) : null);
     }
 
     /// <summary>

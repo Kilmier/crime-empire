@@ -40,22 +40,23 @@ does not turn them into defects.
 
 ## Coverage boundary and queue
 
-**Reconciled checkpoint: `0482dfc`.** Every commit through that hash appears below, either alone or in
+**Reconciled checkpoint: `891368d`.** Every commit through that hash appears below, either alone or in
 an exact group. Coverage through `c7dd34b` preserves the pre-cleanup ledger and milestone evidence;
-the subsequent rows record the cleanup and its reviewed correction chain. Recording these outcomes
-does not perform new reviews.
+the subsequent rows record the cleanup, correction chain, and 2026-09-12 historical audit.
 
 The previous authoritative checkpoint was `824f3fc`. Rows at or before it marked
 `STATUS NOT ESTABLISHED` are preserved legacy uncertainty and do not reopen closed milestones unless
-Matt explicitly asks. The **active ordered range begins after `824f3fc`**. Its oldest unresolved row
-is now **`40f0ded` / `520924b` / `3004d2f` / `c7ae3d6`**, preserved as one grouped target, following
-Matt's acceptance of the preceding group's correction at `0482dfc`. Later established outcomes
-remain valid, but they do not let review jump over earlier unresolved rows.
+Matt explicitly asks. The **active ordered range begins after `824f3fc`**. Astra's independent static
+audit at `891368d` established the outcomes of its 29 requested rows (38 unique commits), while
+preserving every grouped row. The audit did not include `891368d`, so that closeout is now the oldest
+unresolved exact commit. Later correction commits remain behind it in chronological order.
 
-The normalization commit `d6af1a6` still requires its own independent exact-commit review in queue
-order; its pre-commit review does not substitute for that review. This ledger cannot establish an
-independent outcome for the closeout commit containing this update. Matt explicitly authorized this
-closeout update and GitHub push on 2026-09-12; this bounded authorization does not waive its review.
+The audit was an independent exact-diff review by Astra/Codex, who authored none of the inspected
+commits. It was static: Astra did not run builds, tests, Runner verification, Godot, restart, or
+mutation checks. Matt accepted the audit findings on 2026-09-12. Its overall verdict was FAIL because
+three defects remained live at audited HEAD `891368d`; their focused corrections are `dfefbc1`,
+`bdcaab1`, and `8fdf2e5`, all pending independent review. Historical FAIL outcomes remain FAIL even
+where a later commit corrected the defect.
 
 ## Legacy coverage through `824f3fc`
 
@@ -132,88 +133,92 @@ its A/B/C class only after opening the exact diff.
 |---|---|
 | `bec0370`, `22e73d1`, `925611a` | Astra independently reviewed all three together (Class B): FAIL, three P2s; Matt accepted the findings. False claims: only two added numeric literals (six additional occurrences actually exist); milestone 010 first to need no corrective round (milestone 002, `7032981`, is a counterexample); every row from `c0bb60f` onward accepted and self-reviewed (the same diff labels `12d1054` status not established). No existing scoring coefficient was retuned. Corrections `da43fbb` and `bad7ad4` each received independent Class B FAIL; `0482dfc` received independent Class B PASS, accepted by Matt on 2026-09-12, closing this correction chain. Original FAIL remains the outcome for these three hashes. Preserve as one grouped review. Full append-only history: [milestone 010](milestones/010-a-denial-that-can-win.md). |
 | `6a8a765` | Claude self-reviewed; later Codex FAIL. Corrected by `3c86ba4`; Matt accepted the correction (`milestones/011`). |
-| `40f0ded`, `520924b`, `3004d2f`, `c7ae3d6` | **UNRESOLVED — explicitly not reviewed.** Preserve as one grouped planning/premise row. |
-| `3871d23`, `58016e8`, `10c42c3` | **UNRESOLVED — STATUS NOT ESTABLISHED.** |
+| `40f0ded`, `520924b`, `3004d2f`, `c7ae3d6` | Astra independent historical audit (Class B): **FAIL**. The claim that `e83dacf` was permanently skipped contradicted its later recorded review and correction; normalized by `d6af1a6`. Preserve as one grouped review (`milestones/011`, `milestones/012`). |
+| `3871d23`, `58016e8`, `10c42c3` | Astra independent historical audit (Class A): **FAIL**. Repeated the same false permanent-skip history; no separate blocking defect found in the added test logic. Preserve as one grouped review (`milestones/012`). |
 | `c637092` | Delayed Codex review returned milestone-012 findings; corrected by `3c86ba4`; Matt accepted the correction (`milestones/012`). |
-| `f6d3c91`, `52e3252`, `6af2b5f` | **UNRESOLVED — STATUS NOT ESTABLISHED.** |
+| `f6d3c91`, `52e3252`, `6af2b5f` | Astra independent historical audit (Class B): **PASS WITH NOTES**. Design and scope stayed within authority; historical measurements were not rerun. Preserve as one grouped review (`milestones/013`). |
 | `3c86ba4` | Codex PASS; Matt accepted corrections to milestones 011–012. |
-| `0ec0c95`, `1046704` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Agent/skill and milestone-scope documentation. |
+| `0ec0c95`, `1046704` | Astra independent historical audit (Class B): **PASS**. Agent/skill instructions and narrowed milestone-013 accounting authorization preserved deferred mutation scope. Preserve as one grouped review (`milestones/013`). |
 | `a0c6be8` | Codex FAIL, four findings; corrected by `af6e90e` (`milestones/013`). |
 | `af6e90e` | Codex FAIL, one further P2; corrected by `a75a54e`. |
 | `a75a54e` | Codex PASS; Matt accepted milestone 013. |
 | `712a125` | Codex FAIL, four findings; corrected by `556f2b2` (`milestones/014`). |
 | `556f2b2` | Codex FAIL, two further P2s; corrected by `ff4213a`. |
-| `ff4213a` | Matt accepted milestone 014; an independent exact-commit review is not preserved. **UNRESOLVED for review coverage.** |
+| `ff4213a` | Astra independent historical audit (Class A): **PASS WITH NOTES**. Cash and rendered-information corrections inspected statically; runtime verification was not rerun (`milestones/014`). |
 | `9537b38` | Codex FAIL, four findings; corrected by `af7d34f` (`milestones/015`). |
 | `af7d34f` | Codex FAIL, one residual P1; corrected by `bc79425`. |
-| `bc79425` | Matt accepted milestone 015; an independent exact-commit review is not preserved. **UNRESOLVED for review coverage.** |
+| `bc79425` | Astra independent historical audit (Class A): **PASS WITH NOTES**. The reflection-based persistence fingerprint fixes the omission. Non-blocking archive count wording remains inaccurate (`milestones/015`). |
 | `66917c7` | Codex FAIL, four findings; corrected by `380a241` (`milestones/016`). |
 | `380a241` | Codex FAIL, one new P1; corrected by `809fe60`. |
 | `809fe60` | Claude self-reviewed, then Codex PASS; Matt accepted milestone 016. |
-| `4c65f34` | Later reconciliation established that this was a false, premature acceptance record; superseded by `9364869`. That correction does not establish an independent exact-commit review. **UNRESOLVED — STATUS NOT ESTABLISHED.** |
-| `9364869` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Corrected the acceptance history. |
+| `4c65f34` | Astra independent historical audit (Class B): **FAIL**. It falsely recorded owner acceptance and reviewer independence; corrected by `9364869`. Original FAIL remains (`milestones/016`). |
+| `9364869` | Astra independent historical audit (Class B): **PASS**. Correctly retracts the premature closeout and distinguishes self-review, independent review, and owner acceptance (`milestones/016`). |
 | `9de2c75` | Codex FAIL, four findings; corrected by `0f56f1e` (`milestones/017`). |
 | `0f56f1e` | Codex PASS; Matt accepted milestone 017. |
-| `8ce2893` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Documentation closeout. |
+| `8ce2893` | Astra independent historical audit (Class B): **PASS**. Milestone-017 closeout matches the accepted correction history (`milestones/017`). |
 | `ae06f61` | Codex FAIL; corrected by `b9dfa49` (`milestones/018`). |
 | `b9dfa49` | Codex FAIL; corrected by `f5246c0`. |
 | `f5246c0` | Codex FAIL; corrected by `43379e0`. |
 | `43379e0` | Codex PASS; Matt accepted milestone 018. |
-| `b2d7779` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Documentation closeout. |
+| `b2d7779` | Astra independent historical audit (Class B): **PASS**. Milestone-018 closeout preserves its failed correction rounds and accepted state (`milestones/018`). |
 | `99db4de` | Codex FAIL, three P2s; corrected by `c9af6b6` (`milestones/019`). |
 | `c9af6b6` | Codex FAIL, two P2s; corrected by `c335d7c`. |
 | `c335d7c` | Codex FAIL, two P2s; corrected by `8b5e70f`. |
 | `8b5e70f` | Codex PASS; Matt accepted milestone 019. |
-| `223c670` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Documentation closeout. |
+| `223c670` | Astra independent historical audit (Class B): **PASS**. Milestone-019 closeout matches its accepted parity-assurance history (`milestones/019`). |
 | `f468e19` | Codex FAIL, one P1; corrected by `436f6c7` (`milestones/020`). |
 | `436f6c7` | Codex FAIL, one P1 and two P2s; corrected by `34cd117`. |
 | `34cd117` | Later Codex FAIL, one P1 already corrected by `8e6878e`. |
 | `c25129a`, `826b1e2` | Later Codex PASS on both documentation commits; earlier weaker acceptance disclosed accurately. |
 | `8e6878e` | Codex PASS; Matt accepted it as milestone 020's independently confirmed state. |
-| `9ea0c9d` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Milestone-021 scope. |
+| `9ea0c9d` | Astra independent historical audit (Class B): **PASS**. Proposal scope preserves settled boundaries and does not authorize implementation (`milestones/021`). |
 | `e65f0cd` | Codex FAIL, three defects and two documentation requirements; corrected by `ab737e1` (`milestones/021`). |
-| `ccc1c26` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Milestone-022 implementation. |
-| `867922d` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Demo-arc documentation. |
+| `ccc1c26` | Astra independent historical audit (Class A): **FAIL**. Street-talk tests stopped before the consumer, later fixed by `4a5bacc`/`b4ce907`, and queued parity omitted provenance. The live provenance defect is corrected by `dfefbc1`, pending review. Original FAIL remains (`milestones/022`). |
+| `867922d` | Astra independent historical audit (Class B): **FAIL**. Roadmap prose granted unsupported review-gate bypasses. The playtest claim was later corrected; the surviving additive-work exception is corrected by `bdcaab1`, pending review. Original FAIL remains (`milestones/025`). |
 | `6738200` | Codex FAIL, one P1; corrected by `ba83b12` (`milestones/023`). |
 | `4da1e66` | Codex FAIL, two P2s; corrected by `2dec7ff`. |
 | `15d7c92` | Codex FAIL, two P2s; corrected by `53694a2`. |
 | `f993386` | Codex FAIL, three findings; corrected by the milestone-024 chain (`milestones/024`). |
-| `1a7bcc6` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Milestone-025 implementation. |
-| `a74bda7` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Roadmap candidate documentation. |
+| `1a7bcc6` | Astra independent historical audit (Class A): **FAIL**. Findings covered the roadmap bypass, a projected-claim collision that could crash the knowledge screen, and misleading partial-answer wording. Later commits corrected the wording; `bdcaab1` and `8fdf2e5` correct the live defects, pending review. Original FAIL remains (`milestones/025`). |
+| `a74bda7` | Astra independent historical audit (Class B): **PASS**. Reaction-channel candidate preserves pending rulings and information boundaries. |
 | `ab737e1` | Codex FAIL, two P1s and one P2; corrected by `b02b003`. |
-| `95e60b5` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Milestone-025 playtest correction. |
-| `e58dbcc` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Milestone-026 implementation. Later correction reviews do not substitute for it. |
-| `57e4759`, `f476939` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Design notes and agent/skill tracking. |
+| `95e60b5` | Astra independent historical audit (Class A): **PASS WITH NOTES**. Correctly distinguishes admission, silence, and denial without reading private state (`milestones/025`). |
+| `e58dbcc` | Astra independent historical audit (Class A): **PASS WITH NOTES**. Implementation met its authorized scope. Non-blocking note: `WrongReadChance` prose describes a conditional share although the interval is over all draws; no tuning change prescribed (`milestones/026`). |
+| `57e4759`, `f476939` | Astra independent historical audit (Class B): **FAIL**. Reviewer instructions assumed worktree isolation without establishing it; corrected by `14ce1f5`. Preserve as one grouped review. |
 | `3a45a27`, `e4df2ff` | Codex reviewed together and returned two P1s; corrected by `c644b30` (`milestones/026`). |
 | `b02b003` | Codex FAIL, one further P1; corrected by `9fed181`. |
 | `9fed181` | Codex PASS; Matt accepted milestone 021. |
 | `c644b30` | Codex FAIL, one P1; corrected by `ab235b1`. |
 | `ab235b1` | Codex confirmed runtime fix and returned one P2 test gap; corrected by `abcffd5`. |
 | `abcffd5` | Codex PASS; Matt accepted milestone 026. This does not establish `e58dbcc`'s exact-diff status. |
-| `14ce1f5` | Later reconciliation found two stale review-status claims; corrected by `68a6c32`. That correction does not establish an independent exact-commit review. **UNRESOLVED — STATUS NOT ESTABLISHED.** |
-| `68a6c32` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Documentation correction. |
-| `4a5bacc` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Milestone-022 production-path test correction. |
+| `14ce1f5` | Astra independent historical audit (Class B): **FAIL**. Worktree-safety correction was sound, but review-history claims were stale and the roadmap bypass survived. History was corrected by `68a6c32`; the bypass is corrected by `bdcaab1`, pending review. Original FAIL remains. |
+| `68a6c32` | Astra independent historical audit (Class B): **PASS**. Narrow status and correction-count records match milestones 021 and 026. |
+| `4a5bacc` | Astra independent historical audit (Class A): **FAIL**. Its owner/investigator boundary assertions were vacuous at the chosen seed; corrected by `b4ce907`. Original FAIL remains (`milestones/022`). |
 | `b4ce907` | Codex FAIL, three explanation/inventory findings; corrected by `7cbeb91`. |
 | `7cbeb91` | Codex FAIL, one P1 false-diff claim; corrected by `4ed58e3`. |
-| `4ed58e3` | Matt accepted and closed the RNG correction chain; independent exact-commit review is not recorded. **UNRESOLVED for review coverage.** |
-| `ba83b12` | **UNRESOLVED — correction awaits exact-commit review.** |
+| `4ed58e3` | Astra independent historical audit (Class B): **PASS**. Append-only correction accurately distinguishes the real source-comment diff from unchanged runtime method bodies. |
+| `ba83b12` | Astra independent historical audit (Class A): **PASS WITH NOTES**. Trust-clamp history guard and production-path tests inspected statically (`milestones/023`). |
 | `2dec7ff` | Codex FAIL, one P2 false-assurance test; corrected by `beff9ba`. |
-| `beff9ba` | **UNRESOLVED — correction awaits exact-commit review.** |
+| `beff9ba` | Astra independent historical audit (Class A): **PASS WITH NOTES**. Capability narration tests distinguish internal IDs from displayed names and exercise both bars (`milestones/024`). |
 | `53694a2` | Codex FAIL, two P2s; corrected by `7036f0d`. |
-| `7036f0d` | **UNRESOLVED — correction awaits exact-commit review.** |
+| `7036f0d` | Astra independent historical audit (Class A): **PASS WITH NOTES**. Capability checks isolate the intended roster surface. Archive method-body and elapsed-day wording remains non-blockingly inaccurate (`milestones/024`). |
 | `9ac569b` | Codex FAIL, three findings; corrected by `00613ca`. |
 | `00613ca` | Codex FAIL, three findings; corrected by `dd59a1b`. |
 | `dd59a1b` | Codex FAIL, one P2 record finding; corrected by `ed12b5e`. |
 | `ed12b5e` | Codex FAIL, one P1 premature-review claim; corrected by `4137303`. |
-| `4137303` | **UNRESOLVED — correction awaits exact-commit review.** |
-| `a17c8b6` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Noncanonical proposal preservation. |
+| `4137303` | Astra independent historical audit (Class B): **PASS**. Correctly retracts the premature `ed12b5e` review claim without manufacturing acceptance. |
+| `a17c8b6` | Astra independent historical audit (Class B): **PASS WITH NOTES**. Proposal intake remains noncanonical; external conversation completeness was not independently verified. |
 | `ed7d38a` | Codex FAIL, five findings; corrected by `344f1e0`. |
 | `344f1e0`, `762210f` | Claude independently reviewed both Codex-authored commits together: PASS with one P2 documentation finding; Matt accepted and closed milestone 024 at `762210f`. Preserve as one grouped review. |
 | `c7dd34b` | Matt explicitly exempted this bookkeeping-only closeout from another immediate round. Closed by owner exception, not an independent review. |
-| `d6af1a6` | **UNRESOLVED — independent exact-commit review pending.** Codex-authored review-process cleanup; pre-commit review is not an independent review of this exact commit. |
+| `d6af1a6` | Astra independent historical audit (Class B): **PASS**. Exact three-file cleanup preserves coverage, review distinctions, authorization boundaries, and proportional-review rules. Matt accepted the audit findings on 2026-09-12. |
 | `da43fbb` | Astra independently reviewed this Claude-authored correction (Class B): FAIL, two P2s; omitted two original findings and undercounted six additional numeric occurrences as five. Matt accepted; correction continued at `bad7ad4` (`milestones/010`). |
 | `bad7ad4` | Astra independently reviewed this Claude-authored correction (Class B): FAIL, two P2s; misidentified the original P2-2 and P2-3. Matt accepted; corrected at `0482dfc` (`milestones/010`). |
 | `0482dfc` | Astra independently reviewed this Claude-authored correction (Class B): PASS, no blocking findings. Matt accepted on 2026-09-12, closing the grouped `bec0370`/`22e73d1`/`925611a` correction chain. Prior FAIL outcomes remain intact (`milestones/010`). |
+| `891368d` | **UNRESOLVED — independent exact-commit review pending.** Documentation closeout excluded from Astra's audit at this same HEAD. |
+| `dfefbc1` | **UNRESOLVED — correction awaits independent exact-commit review.** Accepted historical-audit L1: queued provenance comparison (`milestones/022`). |
+| `bdcaab1` | **UNRESOLVED — correction awaits independent exact-commit review.** Accepted historical-audit L2: roadmap review bypass (`milestones/025`). |
+| `8fdf2e5` | **UNRESOLVED — correction awaits independent exact-commit review.** Accepted historical-audit L3: projected-claim collision (`milestones/025`). |
 
 ## Current verification baseline
 

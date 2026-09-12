@@ -8,11 +8,11 @@ namespace CrimeEmpire.Persistence.Session;
 ///
 /// <b>What this adds over the session it wraps: recording and replay, nothing else.</b> Every public
 /// member below either passes straight through to an inner <see cref="SimulationSession"/> or logs
-/// one <see cref="SessionCommand"/> after a passthrough call returns normally. No new decision
-/// surface, no new information channel — an interface driving this type sees exactly
-/// <see cref="Snapshot"/> and <see cref="Pending"/>, the same two things <see cref="SimulationSession"/>
-/// itself allows out, and nothing about <c>World</c> is reachable from here either: the inner session
-/// is exposed only <c>internal</c>, to the test assembly, the same treatment
+/// one <see cref="SessionCommand"/> after a passthrough call returns normally. No new decision or
+/// information channel is added: in-fiction state still comes only through <see cref="Snapshot"/>
+/// and <see cref="Pending"/>, while <see cref="Objective"/> and <see cref="Result"/> pass through the
+/// session's separate out-of-fiction metadata. Nothing about <c>World</c> is reachable from here:
+/// the inner session is exposed only <c>internal</c>, to the test assembly, the same treatment
 /// <see cref="SimulationSession.World"/> already gets.
 ///
 /// <b>Loading replays rather than restores.</b> <see cref="Load"/> starts a genuinely fresh
@@ -51,6 +51,8 @@ public sealed class PersistentSession
     public DateTime Date => _session.Date;
     public SessionStatus Status => _session.Status;
     public PendingDecision? Pending => _session.Pending;
+    public SessionObjective Objective => _session.Objective;
+    public SessionResult? Result => _session.Result;
 
     public PlayerSnapshot Snapshot() => _session.Snapshot();
 
@@ -74,10 +76,10 @@ public sealed class PersistentSession
 
     /// <summary>
     /// Writes the complete history of this session — meta plus every successful input so far — to
-    /// <paramref name="path"/>. Works in either <see cref="SessionStatus.Ready"/> or
-    /// <see cref="SessionStatus.AwaitingChoice"/> (ruling 6): saving records inputs already made, not
-    /// the decision still open, and <see cref="Load"/> reaching the identical pause is a consequence
-    /// of replaying those same inputs, not of anything saved about the pause itself.
+    /// <paramref name="path"/>. Works while ready, awaiting a choice, or resolved (milestone 027
+    /// ruling 6): saving records inputs already made, not a copy of transient world state, and
+    /// <see cref="Load"/> reaching the identical pause or terminal result is a consequence of
+    /// replaying those same inputs.
     /// </summary>
     public void Save(string path)
     {

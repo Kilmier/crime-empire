@@ -5,7 +5,7 @@ using CrimeSim.Domain;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
 
-/// <summary>Whether the session can be advanced, or is waiting on the person controlling somebody.</summary>
+/// <summary>Whether the session can advance, is waiting on a choice, or has resolved.</summary>
 public enum SessionStatus
 {
     /// <summary>Time can be advanced.</summary>
@@ -18,23 +18,27 @@ public enum SessionStatus
     /// one would make the history depend on how long a person took to answer.
     /// </summary>
     AwaitingChoice,
+
+    /// <summary>The fixed scenario deadline has been drained and its objective evaluated.</summary>
+    Resolved,
 }
 
 /// <summary>
 /// The boundary an interface talks to. Engine-neutral by construction: nothing in this file, or
 /// anything it returns, names a Godot type, a console type, or a file.
 ///
-/// <b>What it is for.</b> A player needs three things the batch runner never had to provide — a
+/// <b>What it is for.</b> A player needs four things the batch runner never had to provide — a
 /// clock he can move in the increments he chooses, a stopping point when the character he controls
-/// has a decision to make, and a picture of the world limited to what that character could know.
-/// This supplies exactly those three and nothing else.
+/// has a decision to make, a picture of the world limited to what that character could know, and an
+/// out-of-fiction beginning and end for this bounded scenario.
 ///
 /// <b>What it deliberately does not supply.</b> <see cref="World"/> is <c>internal</c>, so a UI
 /// cannot reach the truth log, the decision records, the report log, the organisation's conditions,
 /// or anybody else's cognition through this object at all — not by discipline but because the type
-/// system will not name it. The only things that come out are <see cref="PlayerSnapshot"/> and
+/// system will not name it. In-fiction state comes out only through <see cref="PlayerSnapshot"/> and
 /// <see cref="PendingDecision"/>, both immutable and both built from the viewpoint or controlled
-/// character's own state.
+/// character's own state. <see cref="SessionObjective"/> and <see cref="SessionResult"/> are separate,
+/// immutable scenario metadata: the former is always public and the latter is only a one-bit outcome.
 ///
 /// <b>Time.</b> There is no tick. Advancing raises a horizon and drains the existing scheduled-event
 /// queue up to it, exactly as <see cref="Runner.Run"/> always did; empty days still cost nothing and
@@ -49,6 +53,7 @@ public sealed class SimulationSession
 
     private PreparedDecision? _prepared;
     private PendingDecision? _pending;
+    private SessionResult? _result;
 
     /// <summary>
     /// Opaque option token to candidate id, for the decision currently in front of the player.
@@ -86,6 +91,9 @@ public sealed class SimulationSession
         ViewpointCharacterId = viewpointId;
         _clock = world.Now;
         StartedOn = world.Now;
+        Objective = new SessionObjective(
+            "Bring the harbour shortfall under control",
+            Cast.Start.AddDays(90));
     }
 
     /// <summary>
@@ -145,10 +153,25 @@ public sealed class SimulationSession
     /// anything about the fixture.</summary>
     public DateTime StartedOn { get; }
 
+    /// <summary>
+    /// The scenario's out-of-fiction objective, available before time advances. It is not part of
+    /// <see cref="PlayerSnapshot"/> because seeing the demo's brief does not put it into a character's
+    /// cognition.
+    /// </summary>
+    public SessionObjective Objective { get; }
+
     /// <summary>The player-facing date.</summary>
     public DateTime Date => _clock;
 
-    public SessionStatus Status => _pending is null ? SessionStatus.Ready : SessionStatus.AwaitingChoice;
+    public SessionStatus Status => _result is not null
+        ? SessionStatus.Resolved
+        : _pending is null ? SessionStatus.Ready : SessionStatus.AwaitingChoice;
+
+    /// <summary>
+    /// The one-bit scenario result after resolution, or null while the session is still running.
+    /// No live revenue condition or progress measure crosses this boundary.
+    /// </summary>
+    public SessionResult? Result => _result;
 
     /// <summary>The decision waiting on the player, or null.</summary>
     public PendingDecision? Pending => _pending;
@@ -171,25 +194,29 @@ public sealed class SimulationSession
 
     // ---------------------------------------------------------------- advancing time
     /// <summary>
-    /// Handles the next scheduled event, whenever it is.
+    /// Handles the next scheduled event within the bounded scenario.
     ///
-    /// Deliberately unbounded: the point of a discrete-event calendar is that the next thing to
-    /// happen is the next thing to happen, and a "next event" control that refused to cross midnight
-    /// would be a tick with extra steps. It clears any outstanding fast-forward, so a choice made
-    /// after a single step does not resume a week the player is no longer asking for.
+    /// It remains event-driven rather than day-bounded — the next thing can be weeks away — but the
+    /// fixed scenario deadline is its maximum horizon. It clears any outstanding fast-forward, so a
+    /// choice made after a single step does not resume a week the player is no longer asking for.
     /// </summary>
     public void StepEvent()
     {
         RequireReady();
         _runUntil = null;
-        Pump(DateTime.MaxValue, oneEventOnly: true);
+        Pump(Objective.Deadline, oneEventOnly: true);
     }
 
     /// <summary>Runs the calendar forward by whole days from the current date.</summary>
     public void AdvanceDays(int days)
     {
+        RequireUnresolved();
         if (days < 1) throw new ArgumentOutOfRangeException(nameof(days), days, "advance at least one day");
-        AdvanceTo(_clock.AddDays(days));
+
+        // Clamp before DateTime arithmetic so even an intentionally huge fast-forward reaches the
+        // scenario boundary instead of overflowing on a date the session is not allowed to reach.
+        double daysRemaining = (Objective.Deadline - _clock).TotalDays;
+        AdvanceTo(days >= daysRemaining ? Objective.Deadline : _clock.AddDays(days));
     }
 
     /// <summary>
@@ -203,8 +230,8 @@ public sealed class SimulationSession
     {
         RequireReady();
         if (horizon <= _clock) return;
-        _runUntil = horizon;
-        Pump(horizon, oneEventOnly: false);
+        _runUntil = horizon > Objective.Deadline ? Objective.Deadline : horizon;
+        Pump(_runUntil.Value, oneEventOnly: false);
     }
 
     // ---------------------------------------------------------------- choosing
@@ -228,6 +255,7 @@ public sealed class SimulationSession
     /// </summary>
     public void Choose(string optionId)
     {
+        RequireUnresolved();
         if (_prepared is not { } prepared)
             throw new InvalidOperationException(
                 "nothing is waiting on a choice; the controlled character is not mid-deliberation.");
@@ -256,6 +284,7 @@ public sealed class SimulationSession
     /// </summary>
     internal void ResolveAutomatically()
     {
+        RequireUnresolved();
         if (_prepared is not { } prepared)
             throw new InvalidOperationException(
                 "nothing is waiting on a choice; the controlled character is not mid-deliberation.");
@@ -288,13 +317,20 @@ public sealed class SimulationSession
                     step.Awaiting!, _optionIds, PlayerView.NameIn(_world), PronounsIn(_world), PlayerView.You,
                     id => _world.Org.Assignments.FirstOrDefault(a => a.Id == id));
                 Reached(_world.Now);
+
+                // A single-step call normally has no outstanding horizon. At the deadline the
+                // choice is nevertheless part of draining that inclusive boundary, so remember it:
+                // after the answer, Resume must process every same-instant consequence before the
+                // result can be evaluated.
+                if (_world.Now == Objective.Deadline && _runUntil is null)
+                    _runUntil = Objective.Deadline;
                 return;
             }
 
             if (step.Status == StepStatus.Exhausted) break;
 
             Reached(_world.Now);
-            if (oneEventOnly) return;
+            if (oneEventOnly && _world.Now < Objective.Deadline) return;
         }
 
         // Nothing left before the horizon. The remaining days are genuinely empty, so the calendar
@@ -303,6 +339,14 @@ public sealed class SimulationSession
         {
             Reached(horizon);
             _runUntil = null;
+        }
+
+        // StepEvent has no run-until value, but when no event remains at or before the deadline its
+        // bounded "next" is the boundary itself. Advance the player calendar there and resolve.
+        if (until == Objective.Deadline)
+        {
+            Reached(Objective.Deadline);
+            ResolveAtDeadline();
         }
     }
 
@@ -318,11 +362,38 @@ public sealed class SimulationSession
 
     private void RequireReady()
     {
+        RequireUnresolved();
         if (_pending is not null)
             throw new InvalidOperationException(
                 $"{_pending.ActorName} is mid-decision. Time cannot move until the choice is made — " +
                 "resolving later events around a half-handled one would make the history depend on " +
                 "how long somebody took to answer.");
+    }
+
+    private void RequireUnresolved()
+    {
+        if (_result is not null)
+            throw new InvalidOperationException(
+                "the session has resolved; no further simulation input is allowed.");
+    }
+
+    /// <summary>
+    /// Evaluates the one scenario objective only after <see cref="Pump"/> has established that no
+    /// event remains at or before the inclusive deadline. Reading authoritative organization state
+    /// here determines the out-of-fiction result; it writes nothing back into the world or anybody's
+    /// cognition.
+    /// </summary>
+    private void ResolveAtDeadline()
+    {
+        if (_result is not null || _pending is not null || _clock < Objective.Deadline) return;
+
+        var outcome = _world.Org.Condition(Org.OrgCondition.RevenueLoss)
+            < Org.Organization.SignificantRevenueLoss
+            ? ObjectiveOutcome.ObjectiveMet
+            : ObjectiveOutcome.ObjectiveUnmet;
+
+        _runUntil = null;
+        _result = new SessionResult(outcome, Objective.Deadline);
     }
 
     private void ClearPending()

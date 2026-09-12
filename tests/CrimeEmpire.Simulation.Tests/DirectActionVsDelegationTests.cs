@@ -236,19 +236,16 @@ public sealed class DirectActionVsDelegationTests
     /// Pause/fast-forward equivalence per branch (requirement 10, first half).
     ///
     /// <b>Corrected per Codex's review of `9de2c75`.</b> The original version only asserted
-    /// <see cref="SessionStatus.Ready"/> and the ending date, which is compatible with two
+    /// <see cref="SessionStatus.Resolved"/> and the ending date, which is compatible with two
     /// completely different histories reaching the same status and date. This drives two sessions
     /// from the identical fork, making the identical fork choice, one advanced entirely through
     /// <see cref="SimulationSession.AdvanceTo"/> (bulk fast-forward) and one advanced through real
     /// single-event <see cref="SimulationSession.StepEvent"/> calls for its own early activity before
     /// a single bounded <c>AdvanceTo(End)</c> sweep — the exact "event by event, then fast forward"
     /// shape <c>PlayerSessionTests.Stepping_and_fast_forward_patterns_agree</c> already proves correct
-    /// in general, reused here rather than re-derived. A raw, unbounded loop of
-    /// <c>while (Date &lt; End) StepEvent()</c> was deliberately avoided: <c>StepEvent</c> is
-    /// documented as unbounded (<c>Pump(DateTime.MaxValue, oneEventOnly: true)</c>), so such a loop can
-    /// process one event past <c>End</c> that a horizon-bounded <c>AdvanceTo(End)</c> would never touch,
-    /// which would make the two patterns genuinely disagree for a reason having nothing to do with this
-    /// milestone's fork.
+    /// in general, reused here rather than re-derived. Milestone 027 bounds <c>StepEvent</c> at this
+    /// same scenario end; the explicit early-event limit remains useful because it keeps the two
+    /// reading patterns materially different before their shared final sweep.
     ///
     /// Both runs resolve every pause after the fork choice with the same real, visible, deterministic
     /// policy <c>PlayerSessionTests.Settle</c> already established — the last offered option — rather
@@ -299,8 +296,8 @@ public sealed class DirectActionVsDelegationTests
         stepped.AdvanceTo(End);
         Settle(stepped);
 
-        Assert.Equal(SessionStatus.Ready, fastForwarded.Status);
-        Assert.Equal(SessionStatus.Ready, stepped.Status);
+        Assert.Equal(SessionStatus.Resolved, fastForwarded.Status);
+        Assert.Equal(SessionStatus.Resolved, stepped.Status);
 
         Assert.Equal(
             TraceWriter.Render(fastForwarded.World, Variant, false),

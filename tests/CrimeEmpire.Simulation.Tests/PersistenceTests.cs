@@ -119,6 +119,115 @@ public sealed class PersistenceTests
         }
     }
 
+    // ================================================================= terminal-boundary replay (milestone 027)
+
+    [Fact]
+    public void Save_and_load_immediately_before_the_deadline_reproduce_the_session_exactly()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var original = PersistentSession.Start(Seed, Variant, controlledCharacterId: null, viewpointCharacterId: Controlled);
+            original.AdvanceDays(89);
+            Assert.Equal(Cast.Start.AddDays(89), original.Date);
+            Assert.Equal(SessionStatus.Ready, original.Status);
+
+            original.Save(path);
+            var loaded = PersistentSession.Load(path);
+
+            AssertExactInternalIdentity(original, loaded);
+
+            original.AdvanceDays(1);
+            loaded.AdvanceDays(1);
+            Assert.Equal(SessionStatus.Resolved, original.Status);
+            AssertExactInternalIdentity(original, loaded);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    /// <summary>
+    /// A fast-forward to the terminal boundary can stop at a controlled choice on the way. Its
+    /// private <c>_runUntil</c> remains the deadline so answering carries on to the same terminal
+    /// path; the whole-wrapper fingerprint proves replay restored that pending boundary instruction,
+    /// not only the visible pause. The separate session-level proof stages the harder inclusive case
+    /// of a choice at the exact terminal instant.
+    /// </summary>
+    [Fact]
+    public void Save_and_load_while_the_deadline_advance_awaits_a_choice_reproduce_and_finish_identically()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var original = PersistentSession.Start(Seed, Variant, Controlled);
+            original.AdvanceDays(90);
+            Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
+
+            original.Save(path);
+            var loaded = PersistentSession.Load(path);
+
+            AssertExactInternalIdentity(original, loaded);
+            FinishWithFirstVisibleOption(original);
+            FinishWithFirstVisibleOption(loaded);
+
+            Assert.Equal(SessionStatus.Resolved, original.Status);
+            AssertExactInternalIdentity(original, loaded);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    [Fact]
+    public void Save_and_load_after_resolution_reproduce_the_terminal_result_exactly()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var original = PersistentSession.Start(Seed, Variant, controlledCharacterId: null, viewpointCharacterId: Controlled);
+            original.AdvanceDays(90);
+            Assert.Equal(SessionStatus.Resolved, original.Status);
+            Assert.Equal(ObjectiveOutcome.ObjectiveUnmet, original.Result!.Outcome);
+
+            original.Save(path);
+            var loaded = PersistentSession.Load(path);
+
+            AssertExactInternalIdentity(original, loaded);
+            Assert.Equal(original.Objective, loaded.Objective);
+            Assert.Equal(original.Result, loaded.Result);
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    [Fact]
+    public void Rejected_persistent_inputs_after_resolution_do_not_enter_the_replay_log()
+    {
+        var session = PersistentSession.Start(
+            Seed, Variant, controlledCharacterId: null, viewpointCharacterId: Controlled);
+        session.AdvanceDays(90);
+        var before = DeepFingerprint(
+            session, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList();
+
+        foreach (Action input in new Action[]
+        {
+            session.StepEvent,
+            () => session.AdvanceDays(1),
+            () => session.Choose("not-an-option"),
+        })
+        {
+            Assert.Throws<InvalidOperationException>(input);
+            Assert.Equal(
+                before,
+                DeepFingerprint(session, new HashSet<object>(ReferenceEqualityComparer.Instance)).ToList());
+        }
+    }
+
     // ================================================================= golden-path equivalence
 
     /// <summary>
@@ -585,6 +694,19 @@ public sealed class PersistenceTests
     private static void PlayChoices(PersistentSession session, IEnumerable<string> descriptions)
     {
         foreach (string description in descriptions) ChooseByDescription(session, description);
+    }
+
+    private static void FinishWithFirstVisibleOption(PersistentSession session)
+    {
+        for (int guard = 0; guard < 20000 && session.Status != SessionStatus.Resolved; guard++)
+        {
+            if (session.Status == SessionStatus.AwaitingChoice)
+                session.Choose(session.Pending!.Options[0].Id);
+            else
+                session.StepEvent();
+        }
+
+        Assert.Equal(SessionStatus.Resolved, session.Status);
     }
 
     /// <summary>

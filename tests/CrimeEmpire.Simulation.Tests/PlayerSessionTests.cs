@@ -55,7 +55,7 @@ public sealed class PlayerSessionTests
         var session = SimulationSession.Start(Seed, variant, controlledCharacterId: null, viewpointCharacterId: Controlled);
         session.AdvanceTo(End);
 
-        Assert.Equal(SessionStatus.Ready, session.Status);
+        Assert.Equal(SessionStatus.Resolved, session.Status);
         Assert.Equal(TraceWriter.Render(batch, variant, false), TraceWriter.Render(session.World, variant, false));
     }
 

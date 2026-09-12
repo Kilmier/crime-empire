@@ -888,11 +888,13 @@ public sealed class CausalFeedbackTests
     /// </summary>
     private static void AdvanceDaysThroughOwnPauses(SimulationSession session, int days)
     {
-        var horizon = session.Date.AddDays(days);
-        while (session.Date < horizon)
+        var requested = session.Date.AddDays(days);
+        var horizon = requested > session.Objective.Deadline ? session.Objective.Deadline : requested;
+        while (session.Date < horizon && session.Status != SessionStatus.Resolved)
         {
             while (session.Status == SessionStatus.AwaitingChoice)
                 session.ResolveAutomatically();
+            if (session.Status == SessionStatus.Resolved) break;
             int remaining = (horizon - session.Date).Days;
             if (remaining <= 0) break;
             session.AdvanceDays(remaining);

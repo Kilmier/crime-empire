@@ -15,9 +15,10 @@ namespace CrimeEmpire.GodotShell;
 /// <summary>
 /// The whole interface.
 ///
-/// <b>What it is allowed to know.</b> One <see cref="SimulationSession"/>, and through it exactly
-/// two things: a <see cref="PlayerSnapshot"/> and a <see cref="PendingDecision"/>, which is the
-/// controlled character's own options. Ruling 1 (milestone 014) states the snapshot's contract
+/// <b>What it is allowed to know.</b> One <see cref="SimulationSession"/>. Its in-fiction state comes
+/// through a <see cref="PlayerSnapshot"/> and a <see cref="PendingDecision"/>, which is the controlled
+/// character's own options; milestone 027's objective and one-bit result are explicitly separate,
+/// out-of-fiction session metadata. Ruling 1 (milestone 014) states the snapshot's contract
 /// precisely: it may expose the viewpoint character's own private state, cognition, and legitimately
 /// known information — his own cash among it — but no other character's private state, no world
 /// truth, no utility score, and no reference or path back to mutable simulation state. It cannot
@@ -45,8 +46,8 @@ namespace CrimeEmpire.GodotShell;
 ///
 /// <b>Save and load (milestone 015).</b> One fixed slot, <see cref="ProductionSavePath"/> — no file
 /// picker, no slot management, no autosave. <see cref="PersistentSession"/> is the only new thing
-/// this file knows about beyond milestone 014's boundary: it still hands out nothing but
-/// <see cref="PlayerSnapshot"/> and <see cref="PendingDecision"/>, and never <c>World</c>.
+/// this file knows about beyond milestone 014's boundary: it passes through the same player
+/// projection plus milestone 027's bounded scenario metadata, and never <c>World</c>.
 ///
 /// <b>The restart self-tests never touch the production slot.</b> Corrected per Codex's review of
 /// `9537b38`, which found `--selftest-restart-save` deleting and overwriting
@@ -62,6 +63,12 @@ public partial class Game : Control
 {
     /// <summary>Command-line switch that drives the real interface headlessly and dumps what it built.</summary>
     private const string SelfTestFlag = "--selftest";
+
+    /// <summary>
+    /// Command-line switch for milestone 027's complete rendered proof: opening objective, both
+    /// natural terminal outcomes, disabled terminal controls, and load of a resolved session.
+    /// </summary>
+    private const string EndingFlag = "--selftest-ending";
 
     /// <summary>
     /// Command-line switch for milestone 014's golden path: Vincent's existing seed-42
@@ -219,13 +226,19 @@ public partial class Game : Control
         _cast = Roster.Characters("baseline");
         _variants = Roster.Variants();
 
-        _activeSavePath = FlagRequested(RestartSaveFlag) || FlagRequested(RestartLoadFlag)
+        _activeSavePath = FlagRequested(RestartSaveFlag) || FlagRequested(RestartLoadFlag) || FlagRequested(EndingFlag)
             ? SelfTestRestartSavePath
             : ProductionSavePath;
 
         if (SelfTestRequested())
         {
             RunSelfTest();
+            return;
+        }
+
+        if (FlagRequested(EndingFlag))
+        {
+            RunEndingSelfTest();
             return;
         }
 
@@ -460,6 +473,7 @@ public partial class Game : Control
         string who = p.Subject.ToUpperInvariant();
 
         _root.AddChild(BuildToolbar(session, snapshot));
+        _root.AddChild(BuildObjective(session));
 
         var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         columns.AddThemeConstantOverride("separation", 10);
@@ -470,9 +484,43 @@ public partial class Game : Control
         columns.AddChild(Panel($"WHAT {who} {p.Verb("IS", "ARE")} DOING", BuildDoing(snapshot), 1.0f));
         columns.AddChild(Panel($"WHAT {who} {p.Verb("THINKS", "THINK")} OF PEOPLE", BuildAttitudes(snapshot), 1.0f));
         columns.AddChild(Panel(
-            session.ControlledCharacterId is null ? "WATCHING ONLY" : "A DECISION",
+            session.Status == SessionStatus.Resolved
+                ? "SESSION ENDED"
+                : session.ControlledCharacterId is null ? "WATCHING ONLY" : "A DECISION",
             BuildDecision(session, snapshot),
             1.25f));
+    }
+
+    /// <summary>
+    /// Scenario metadata, deliberately outside the character-facing columns. The objective is
+    /// visible from the opening instant; while the session is live this exposes no condition value
+    /// or progress. Once resolved it adds only the authorized one-bit result.
+    /// </summary>
+    private static Control BuildObjective(PersistentSession session)
+    {
+        var panel = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        var margin = new MarginContainer();
+        foreach (string side in new[] { "margin_left", "margin_right", "margin_top", "margin_bottom" })
+            margin.AddThemeConstantOverride(side, 8);
+        panel.AddChild(margin);
+
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 18);
+        margin.AddChild(row);
+
+        string heading = session.Result?.Outcome switch
+        {
+            ObjectiveOutcome.ObjectiveMet => "OBJECTIVE MET",
+            ObjectiveOutcome.ObjectiveUnmet => "OBJECTIVE UNMET",
+            _ => "SESSION OBJECTIVE",
+        };
+        row.AddChild(Heading(heading));
+        row.AddChild(Plain($"{session.Objective.Name} before this 90-day session ends."));
+        row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        row.AddChild(FaintChip(session.Result is null
+            ? $"Ends {session.Objective.Deadline.ToString("d MMMM yyyy 'at' HH:mm 'UTC'", CultureInfo.InvariantCulture)}"
+            : $"Session ended {session.Result.ResolvedAt.ToString("d MMMM yyyy 'at' HH:mm 'UTC'", CultureInfo.InvariantCulture)}"));
+        return panel;
     }
 
     /// <summary>
@@ -511,15 +559,16 @@ public partial class Game : Control
         top.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
 
         bool paused = session.Status == SessionStatus.AwaitingChoice;
+        bool clockDisabled = session.Status != SessionStatus.Ready;
 
-        top.AddChild(Advance("Next event", paused, () => session.StepEvent()));
-        top.AddChild(Advance("Advance a day", paused, () => session.AdvanceDays(1)));
-        top.AddChild(Advance("Advance a week", paused, () => session.AdvanceDays(7)));
+        top.AddChild(Advance("Next event", clockDisabled, () => session.StepEvent()));
+        top.AddChild(Advance("Advance a day", clockDisabled, () => session.AdvanceDays(1)));
+        top.AddChild(Advance("Advance a week", clockDisabled, () => session.AdvanceDays(7)));
 
         top.AddChild(new Control { CustomMinimumSize = new Vector2(12, 0) });
 
-        // Save and load work in either state (ruling 6) — unlike the three clock controls above,
-        // neither is disabled while paused.
+        // Save and load work while ready, paused, or resolved (ruling 6) — unlike the three clock
+        // controls above, neither is disabled by session status.
         var save = new Button { Text = "Save" };
         save.Pressed += () => SaveFixedSlot(session);
         top.AddChild(save);
@@ -532,9 +581,12 @@ public partial class Game : Control
         bottom.AddThemeConstantOverride("separation", 18);
         rows.AddChild(bottom);
 
-        bottom.AddChild(FaintChip(paused
-            ? $"paused — {p.Subject} {p.Verb("has", "have")} something to decide"
-            : "running"));
+        bottom.AddChild(FaintChip(session.Status switch
+        {
+            SessionStatus.AwaitingChoice => $"paused — {p.Subject} {p.Verb("has", "have")} something to decide",
+            SessionStatus.Resolved => "session ended",
+            _ => "running",
+        }));
         if (_statusMessage is { } status) bottom.AddChild(FaintChip($"· {status}"));
         bottom.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         bottom.AddChild(FaintChip($"seed {session.Seed.ToString(CultureInfo.InvariantCulture)} · {session.Variant}"));
@@ -543,15 +595,15 @@ public partial class Game : Control
     }
 
     /// <summary>
-    /// A control that moves the clock, disabled while a decision is outstanding.
+    /// A control that moves the clock, disabled while a decision is outstanding or after resolution.
     ///
     /// Disabled rather than hidden, and the session refuses the call as well: a half-handled event
     /// is not a place time can move through, and the history would otherwise depend on how long
     /// somebody took to answer.
     /// </summary>
-    private Button Advance(string label, bool paused, Action move)
+    private Button Advance(string label, bool disabled, Action move)
     {
-        var button = new Button { Text = label, Disabled = paused };
+        var button = new Button { Text = label, Disabled = disabled };
         button.Pressed += () =>
         {
             move();
@@ -859,6 +911,13 @@ public partial class Game : Control
     {
         var p = snapshot.ViewpointPronouns;
 
+        if (session.Status == SessionStatus.Resolved)
+        {
+            yield return Plain("This bounded session has ended.");
+            yield return Faint("No further decisions or clock advances are available. Save and load remain available.");
+            yield break;
+        }
+
         if (session.ControlledCharacterId is null)
         {
             yield return Plain(
@@ -925,6 +984,110 @@ public partial class Game : Control
     }
 
     // ================================================================= self-test
+
+    private void RunEndingSelfTest()
+    {
+        try
+        {
+            EndingSelfTest();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-ENDING FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
+    /// <summary>
+    /// Milestone 027's rendered proof. Every advance, save, and load uses the actual button handler;
+    /// every assertion reads the compiled live scene tree. The isolated self-test slot is selected in
+    /// <see cref="_Ready"/> before any button exists, so this cannot touch a player's save.
+    /// </summary>
+    private void EndingSelfTest()
+    {
+        CleanupSelfTestRestartSlot();
+        try
+        {
+            StartSession(seed: 42, variant: "baseline", controlled: null, viewpoint: "salvatore");
+            var baseline = _session!;
+            string opening = Screen();
+            if (baseline.Date != Cast.Start
+                || !opening.Contains("SESSION OBJECTIVE", StringComparison.Ordinal)
+                || !opening.Contains(
+                    "Bring the harbour shortfall under control before this 90-day session ends.",
+                    StringComparison.Ordinal)
+                || !opening.Contains("Ends 31 May 1987 at 08:00 UTC", StringComparison.Ordinal))
+                throw new InvalidOperationException("the opening screen does not render the authorized objective and deadline");
+
+            AdvanceToEndingThroughButtons(baseline);
+            string unmet = Screen();
+            if (baseline.Result?.Outcome != ObjectiveOutcome.ObjectiveUnmet
+                || !unmet.Contains("OBJECTIVE UNMET", StringComparison.Ordinal))
+                throw new InvalidOperationException("the natural baseline ending is not rendered as ObjectiveUnmet");
+            AssertTerminalControls();
+
+            if (!Press("Save") || !SaveStore.Exists(_activeSavePath))
+                throw new InvalidOperationException("the resolved baseline session did not save through the live Save button");
+
+            StartSession(seed: 42, variant: "cautious-vincent", controlled: null, viewpoint: "salvatore");
+            var cautious = _session!;
+            AdvanceToEndingThroughButtons(cautious);
+            string met = Screen();
+            if (cautious.Result?.Outcome != ObjectiveOutcome.ObjectiveMet
+                || !met.Contains("OBJECTIVE MET", StringComparison.Ordinal))
+                throw new InvalidOperationException("the natural cautious-vincent ending is not rendered as ObjectiveMet");
+            AssertTerminalControls();
+
+            if (!Press("Load"))
+                throw new InvalidOperationException("the resolved save could not be loaded through the live Load button");
+            string loaded = Screen();
+            if (_session?.Result?.Outcome != ObjectiveOutcome.ObjectiveUnmet
+                || _session.Status != SessionStatus.Resolved
+                || !loaded.Contains("OBJECTIVE UNMET", StringComparison.Ordinal))
+                throw new InvalidOperationException("loading after resolution did not reproduce the saved terminal result");
+            AssertTerminalControls();
+
+            if (loaded.Contains("RevenueLoss", StringComparison.Ordinal)
+                || loaded.Contains("0.90", StringComparison.Ordinal)
+                || loaded.Contains("0.15", StringComparison.Ordinal))
+                throw new InvalidOperationException("the rendered terminal block exposed raw objective progress");
+
+            GD.Print("CE-ENDING opening=ok baseline=ObjectiveUnmet cautious-vincent=ObjectiveMet controls=disabled postload=ok");
+            GD.Print("CE-ENDING ok");
+            GetTree().Quit();
+        }
+        finally
+        {
+            CleanupSelfTestRestartSlot();
+        }
+    }
+
+    private void AdvanceToEndingThroughButtons(PersistentSession session)
+    {
+        for (int guard = 0; guard < 100 && session.Status != SessionStatus.Resolved; guard++)
+            if (!Press("Advance a week"))
+                throw new InvalidOperationException("the live week control vanished before the session resolved");
+
+        if (session.Status != SessionStatus.Resolved)
+            throw new InvalidOperationException("the live clock controls did not reach the terminal boundary");
+    }
+
+    private void AssertTerminalControls()
+    {
+        foreach (string label in new[] { "Next event", "Advance a day", "Advance a week" })
+        {
+            var button = FindAnyButton(this, label);
+            if (button is null || !button.Disabled)
+                throw new InvalidOperationException($"terminal clock control \"{label}\" is absent or enabled");
+        }
+
+        foreach (string label in new[] { "Save", "Load" })
+        {
+            var button = FindAnyButton(this, label);
+            if (button is null || button.Disabled)
+                throw new InvalidOperationException($"terminal persistence control \"{label}\" is absent or disabled");
+        }
+    }
 
     /// <summary>
     /// Drives the real interface headlessly: opens a session, plays it to the end taking the first
@@ -1015,7 +1178,8 @@ public partial class Game : Control
 
         // The exit code is the result. Printing a failure and exiting 0 makes the check unusable
         // from a script, which is what a verification step is for — found by milestone 009's review.
-        bool proved = choices > 0 && decisionScreens > 0 && session.Date >= end;
+        bool proved = choices > 0 && decisionScreens > 0
+            && session.Date == end && session.Status == SessionStatus.Resolved;
         if (proved)
         {
             GD.Print("CE-SELFTEST ok");
@@ -1889,6 +2053,17 @@ public partial class Game : Control
 
         foreach (var child in node.GetChildren())
             if (FindButton(child, text) is { } found)
+                return found;
+
+        return null;
+    }
+
+    private static Button? FindAnyButton(Node node, string text)
+    {
+        if (node is Button b && b.Text == text) return b;
+
+        foreach (var child in node.GetChildren())
+            if (FindAnyButton(child, text) is { } found)
                 return found;
 
         return null;

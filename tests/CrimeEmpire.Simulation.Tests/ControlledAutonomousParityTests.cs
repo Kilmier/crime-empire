@@ -419,20 +419,12 @@ public sealed class ControlledAutonomousParityTests
     /// drive the session.
     ///
     /// Uses <see cref="SimulationSession.AdvanceTo"/>, not repeated <see cref="SimulationSession
-    /// .StepEvent"/>: <c>StepEvent</c> pumps with an unbounded horizon
-    /// (<see cref="DateTime.MaxValue"/>) by design — it is "handle whatever is next," not "handle
-    /// whatever is next before this date" — so a guard loop built on it can process an event
-    /// scheduled after <paramref name="end"/> before the loop's own <c>session.Date &lt; end</c>
-    /// check ever notices. <c>Runner.Run(world, end)</c>, which the fully autonomous reference run
-    /// uses, never crosses <paramref name="end"/> at all, because <c>Queue.Next(until)</c> bounds it.
-    /// The first version of this method used <c>StepEvent</c> and produced exactly that: an extra,
-    /// causally inert event processed past the 90-day horizon on the controlled side only, differing
-    /// from the autonomous reference in <c>World.Now</c> and queue depth alone — a test-harness
-    /// artefact <see cref="SimulationReplayTests.Snapshot"/>'s <c>now</c>/<c>queue</c> lines caught
-    /// immediately, with every other line already identical. <c>AdvanceTo</c> resumes correctly
-    /// through <see cref="SimulationSession.ResolveAutomatically"/> because resolving a pause calls
-    /// the session's own <c>Resume()</c> against the fast-forward horizon it already recorded — the
-    /// same mechanism a real caller fast-forwarding past a choice relies on.
+    /// .StepEvent"/>, because <c>AdvanceTo</c> expresses this helper's exact arbitrary horizon.
+    /// Milestone 027 now bounds <c>StepEvent</c> at the fixed scenario deadline too, but it still does
+    /// not accept an intermediate horizon. <c>AdvanceTo</c> resumes correctly through
+    /// <see cref="SimulationSession.ResolveAutomatically"/> because resolving a pause calls the
+    /// session's own <c>Resume()</c> against the fast-forward horizon it already recorded — the same
+    /// mechanism a real caller fast-forwarding past a choice relies on.
     /// </summary>
     private static void DriveFullyAutoResolved(SimulationSession session, DateTime end)
     {

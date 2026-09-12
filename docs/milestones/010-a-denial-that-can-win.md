@@ -352,3 +352,27 @@ Everything carried into this milestone is still carried, plus the three items ab
 One implementation-and-archive commit; see `REVIEW_LEDGER.md` for its hash once reviewed. Status is not
 established by this file — `CURRENT_MILESTONE.md` says what is active, and Matt's confirmation of a
 named commit is the only thing that counts as acceptance.
+
+## Correction — bec0370's numeric-literal claim, 2026-09-12
+
+**`bec0370`'s probe — "the only numeric literals added anywhere under `src/` are the `0.2` and `0.1`
+the concealment step already applies to `LegalExposure` beside them" — is false.** `824f3fc`'s diff
+under `src/` also adds: `0` twice, in `Commit.cs`'s `EventId: not 0` pattern and `Utility.cs`'s
+`if (s.Claim.EventId == 0) continue`; `0` and `1` together, in `Cognition.cs`'s
+`Math.Clamp(confidence, 0, 1)`; and `1` again, in `Strategies.cs`'s `if (s.StepIndex == 1)`. Five more
+numeric literals the probe did not count, on top of the two it named.
+
+**The narrower conclusion the probe was built to support still holds.** Ruling 3's named coefficients —
+`0.25`, `3.0`, the erosion rates, the discretion threshold — appear in no added or removed line under
+`src/` in `824f3fc`. No existing scoring coefficient was retuned. What was false is the claim that
+`QuietedWitnessesConfidence` and `StirredWitnessesConfidence` were the *only* numeric literals the diff
+introduced, not the claim that none of ruling 3's coefficients moved.
+
+Found by Astra's independent Class B review of the grouped `bec0370`/`22e73d1`/`925611a` commits;
+Matt accepted the P2 on 2026-09-12.
+
+### Commit
+
+Documentation-only. No production code, test, fixture, or other archive changed. See
+`REVIEW_LEDGER.md`'s active-range row for `bec0370`, `22e73d1`, `925611a` for Astra's review, its FAIL
+with this single P2, and Matt's acceptance.

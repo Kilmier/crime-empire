@@ -127,7 +127,7 @@ its A/B/C class only after opening the exact diff.
 
 | Commit(s) | Review evidence and disposition |
 |---|---|
-| `bec0370`, `22e73d1`, `925611a` | **UNRESOLVED — STATUS NOT ESTABLISHED.** Measurement/planning/closeout documentation. |
+| `bec0370`, `22e73d1`, `925611a` | Astra independently reviewed all three grouped commits (Class B): FAIL, one P2 — `bec0370`'s claim that its diff added no `src/` numeric literals beyond `0.2` and `0.1` was false (see `docs/milestones/010-a-denial-that-can-win.md`'s correction). Matt accepted; the narrower conclusion that no existing scoring coefficient was retuned still holds. Preserve as one grouped review. |
 | `6a8a765` | Claude self-reviewed; later Codex FAIL. Corrected by `3c86ba4`; Matt accepted the correction (`milestones/011`). |
 | `40f0ded`, `520924b`, `3004d2f`, `c7ae3d6` | **UNRESOLVED — explicitly not reviewed.** Preserve as one grouped planning/premise row. |
 | `3871d23`, `58016e8`, `10c42c3` | **UNRESOLVED — STATUS NOT ESTABLISHED.** |

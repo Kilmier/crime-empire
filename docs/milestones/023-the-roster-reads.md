@@ -502,3 +502,24 @@ owner ruling, runtime behavior, or baseline changed. `891368d` remains pending i
 and this documentation correction cannot establish its own review outcome. Verification compared
 `61fa056` directly with its parent to identify the three removed facts, checked `d6af1a6`'s commit
 record for the Codex/Astra attribution, resolved both links to this file, and ran `git diff --check`.
+
+## Clarification of the review-ledger correction — which commit fixed which record, 2026-09-12
+
+Astra passed `86eef5e` and independently reviewed the documentation correction `b7344a5`, returning
+one P2 accepted by Matt. The previous entry correctly preserves the restored owner-acceptance facts,
+but its description of the remaining historical-record defect was inaccurate. Astra's finding did
+not concern an omission of Codex authorship.
+
+The actual distinction is between two later documentation fixes to `14ce1f5`. `68a6c32` corrected
+the milestone-021 follow-on count from two to three and changed ROADMAP's stale milestone-026 label
+from unreviewed to closed and accepted. It did not settle the original milestone-026 implementation
+commit's exact-review coverage. `d6af1a6` later corrected that separate overstatement by restoring
+`e58dbcc` to unresolved exact-commit status in the normalized ledger.
+
+The mutable ledger and current handoff now state that division explicitly, preserve the three owner
+acceptances restored by `b7344a5`, and point both `beff9ba` and `7036f0d` to this milestone-023
+archive. No runtime code, test, canon, grouped audit row, historical verdict, owner ruling, or baseline
+changed. `891368d` remains pending independent review, and this documentation correction cannot
+establish its own outcome. Verification inspected the exact `68a6c32`, `d6af1a6`, and `b7344a5`
+diffs; confirmed all four milestone-023 links resolve to this file; checked that every historical
+audit group and restored owner fact remains present; and ran `git diff --check`.

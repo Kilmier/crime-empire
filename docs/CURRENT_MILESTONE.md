@@ -17,12 +17,15 @@ the first two and failed the third:
 - `bdcaab1` — Class B PASS: the roadmap no longer grants additive work a review-gate exception.
 - `8fdf2e5` — Class A FAIL: it stopped projected-claim collisions from throwing and retained every
   named account, but omitted each grouped incident's own position and basis. Matt accepted the P2;
-  `86eef5e` corrects it and awaits Astra's independent review.
+  `86eef5e` corrected it and Astra independently returned Class A PASS.
 
-Astra also reviewed audit-record commit `61fa056` as Class B FAIL. Matt accepted the P2: inserting
-the audit verdicts had replaced three established owner-acceptance facts and omitted that Codex
-authored `d6af1a6` before Astra independently reviewed it. The current ledger correction restores
-those facts, fixes both milestone-023 archive links, and awaits independent review itself.
+Astra reviewed audit-record commit `61fa056` as Class B FAIL because inserting the audit verdicts
+replaced three established owner-acceptance facts. `b7344a5` restored those facts, and they remain
+preserved. Astra then reviewed `b7344a5` as Class B FAIL; Matt accepted its P2. That record conflated
+`68a6c32`'s milestone-021 count and ROADMAP milestone-026 status fixes with `d6af1a6`'s later
+correction of overstated independent-review coverage for `e58dbcc`. It also inaccurately described
+the earlier finding as concern about omitted Codex authorship. The current documentation correction
+fixes that account and the `beff9ba` and `7036f0d` milestone-023 links, and awaits independent review.
 
 Implementer verification after the final runtime correction: build 0 warnings/errors; 691 tests
 passed; Runner hashes remained `92F742E3CB85E54B`, `455A684A29A5F717`, and `ADC3F2DDF1A9D50C`;
@@ -35,8 +38,8 @@ cannot establish its own review outcome.
 
 ## What follows
 
-The next unresolved review target remains `891368d`, followed by `86eef5e` and this ledger correction,
-per `REVIEW_LEDGER.md`. Do not infer the queue from milestone numbers or from this file.
+The next unresolved review target remains `891368d`, followed by this documentation correction, per
+`REVIEW_LEDGER.md`. Do not infer the queue from milestone numbers or from this file.
 
 Milestone 027 — **The session has an ending** — remains a roadmap candidate and is not authorized.
 Carried forward for later scope: a reader of an impression has no resulting action yet; operation

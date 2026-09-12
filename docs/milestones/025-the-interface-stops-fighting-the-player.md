@@ -442,3 +442,35 @@ This is a Class B documentation correction only. No simulation, UI, test, fixtur
 or baseline changed. Verification was the exact ROADMAP and append-only archive diff, a search for the
 surviving gate-bypass language, and `git diff --check`; no runtime suite was rerun for this prose-only
 change. It awaits Astra's independent exact-commit review.
+
+## Historical-audit correction — projected incident collisions no longer crash the knowledge screen, 2026-09-12
+
+Astra independently audited milestone-025 implementation commit `1a7bcc6` and found a valid crash:
+`PlayerView` keeps domain claims distinct by incident id, while `PlayerClaim` deliberately removes
+that truth-log id at the player boundary. Two contested incidents involving the same person and
+business can therefore project to equal `PlayerClaim` values. `Game.BuildKnowledge` passed those
+values to `ToDictionary`, which required uniqueness and threw. Matt accepted the P2 finding, and it
+remained live at audited HEAD `891368d`.
+
+The Godot renderer now groups disagreements at the deliberately lossy `PlayerClaim` boundary. It
+draws one visible predicate for a collision and renders every source account from every underlying
+projected disagreement. Held beliefs sharing the same visible predicate are likewise coalesced to the
+freshest player-facing headline, so the existing no-duplicate-claim invariant still holds. No domain
+`Claim`, incident id, truth-log reference, or mutable simulation object crosses into the UI.
+
+Focused xUnit coverage drives the production `Cognition.Receive` and `PlayerView.Build` path with two
+contested `PersonUsedViolence` claims that differ only by incident id. It proves that the boundary
+still emits two disagreement records carrying the one permitted `PlayerClaim` and retains Vincent's
+denial and Kane's affirmation. The existing Godot `--selftest` now first renders a synthetic snapshot
+of that exact collision through `BuildKnowledge`, requires the visible predicate exactly once, and
+requires both named account rows. A projection mutation that kept only one contested domain claim
+failed the xUnit regression (`expected 2, actual 1`) and was reverted.
+
+Verification after the final edit: build 0 warnings / 0 errors, including the Godot project; **691
+tests passed** (689 + L1 + this regression); `baseline` `92F742E3CB85E54B`, `disloyal-vincent`
+`455A684A29A5F717`, and `resentful-tommy` `ADC3F2DDF1A9D50C`, each deterministic; `--compare --seed
+42` remained 6 distinct traces and 4 distinct chosen-action sequences; both required viewpoint runs
+exited 0. Runtime behavior and the accepted baseline are unchanged. The Godot 4.7.1 executable was
+not present on PATH or either local drive, so the compiled render regression and its render-side
+mutation were not executed in this worktree; that is the disclosed verification limit for Astra.
+The correction awaits Astra's independent exact-commit review.

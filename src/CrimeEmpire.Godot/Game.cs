@@ -588,8 +588,20 @@ public partial class Game : Control
                 $"{p.Verb("has", "have")} seen nothing {p.Reflexive}.");
         }
 
-        var byClaim = snapshot.Disagreements.ToDictionary(d => d.Claim, d => d);
+        // PlayerClaim deliberately drops the incident id. Two distinct incidents can therefore
+        // arrive here under one visible predicate; group at that lossy boundary, render the claim
+        // once, and retain every source account from every projected incident.
+        var byClaim = snapshot.Disagreements
+            .GroupBy(d => d.Claim)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<PlayerDisagreement>)g.ToList());
         var ordered = snapshot.Known
+            .GroupBy(b => b.Claim)
+            // The player-facing vocabulary cannot distinguish same-predicate incidents. Use the
+            // freshest position for the one visible headline; all disagreement accounts survive
+            // through byClaim above instead of one incident overwriting another.
+            .Select(g => g.OrderByDescending(b => b.ReconsideredAt)
+                          .ThenByDescending(b => b.AcquiredAt)
+                          .First())
             .OrderByDescending(b => b.ReconsideredAt)
             .ThenBy(b => b.Claim.ToString(), StringComparer.Ordinal)
             .ToList();
@@ -613,19 +625,27 @@ public partial class Game : Control
 
         // Disagreements with no held belief to sit under.
         var heldClaims = snapshot.Known.Select(b => b.Claim).ToHashSet();
-        var standalone = snapshot.Disagreements.Where(d => !heldClaims.Contains(d.Claim)).ToList();
+        var standalone = snapshot.Disagreements
+            .Where(d => !heldClaims.Contains(d.Claim))
+            .GroupBy(d => d.Claim)
+            .OrderBy(g => g.Key.ToString(), StringComparer.Ordinal)
+            .ToList();
         if (standalone.Count > 0)
         {
             yield return new HSeparator();
             yield return Plain("ACCOUNTS DIFFER");
-            foreach (var d in standalone)
+            foreach (var group in standalone)
             {
+                var d = group.First();
                 yield return ClaimEntry(d.Claim, $"on whether {d.Statement}");
-                if (d.OwnBasis is { } basis)
-                    yield return Faint(
-                        $"        {p.Subject} {p.Verb("thinks", "think")} " +
-                        $"{(d.OwnPositionHeld ? "so" : "otherwise")} ({basis})");
-                foreach (var row in AccountRows(d)) yield return row;
+                foreach (var incident in group)
+                {
+                    if (incident.OwnBasis is { } basis)
+                        yield return Faint(
+                            $"        {p.Subject} {p.Verb("thinks", "think")} " +
+                            $"{(incident.OwnPositionHeld ? "so" : "otherwise")} ({basis})");
+                    foreach (var row in AccountRows(incident)) yield return row;
+                }
             }
         }
 
@@ -653,7 +673,10 @@ public partial class Game : Control
     /// disagree about it — who said what. The only place a <see cref="PlayerBelief"/> is turned into
     /// widgets, which is what makes <see cref="AssertNoClaimDrawnTwice"/> a check by construction.
     /// </summary>
-    private static IEnumerable<Control> BeliefEntry(PlayerBelief belief, PlayerDisagreement? disagreement, Pronouns p)
+    private static IEnumerable<Control> BeliefEntry(
+        PlayerBelief belief,
+        IReadOnlyList<PlayerDisagreement>? disagreements,
+        Pronouns p)
     {
         yield return ClaimEntry(
             belief.Claim,
@@ -669,8 +692,9 @@ public partial class Game : Control
             parts.Add($"first learned {belief.AcquiredAt.ToString("d MMM", CultureInfo.InvariantCulture)}");
         if (parts.Count > 0) yield return Faint($"        {string.Join("; ", parts)}");
 
-        if (disagreement is not null)
-            foreach (var row in AccountRows(disagreement)) yield return row;
+        if (disagreements is not null)
+            foreach (var disagreement in disagreements)
+                foreach (var row in AccountRows(disagreement)) yield return row;
     }
 
     private static IEnumerable<Control> AccountRows(PlayerDisagreement d)
@@ -924,6 +948,8 @@ public partial class Game : Control
     {
         GD.Print("CE-SELFTEST begin");
 
+        ProjectedClaimCollisionSelfTest();
+
         StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId, viewpoint: Roster.DefaultControlledId);
 
         var session = _session!;
@@ -993,6 +1019,66 @@ public partial class Game : Control
             "CE-SELFTEST FAILED — the run did not reach the end of the scenario having rendered and " +
             "answered a decision, so it proves nothing");
         GetTree().Quit(1);
+    }
+
+    /// <summary>
+    /// Astra's accepted historical-audit finding L3, exercised at the rendering boundary. The
+    /// simulation projection may contain two incident-specific disagreements whose truth-log ids
+    /// are deliberately absent from their identical <see cref="PlayerClaim"/> values. The live
+    /// knowledge renderer must draw that visible predicate once and retain both source accounts.
+    /// </summary>
+    private void ProjectedClaimCollisionSelfTest()
+    {
+        var claim = new PlayerClaim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery);
+        const string statement = "Tommy Nardo got violent at Bellini's grocery";
+        DateTime first = Cast.Start.AddDays(1);
+        DateTime second = Cast.Start.AddDays(4);
+
+        var snapshot = new PlayerSnapshot(
+            Date: second,
+            ViewpointId: "salvatore",
+            ViewpointName: "Salvatore Greco",
+            ViewpointRole: "boss",
+            ViewpointPronouns: PlayerView.You,
+            Cash: 0,
+            SelfKnowledge: Array.Empty<string>(),
+            Known: new[]
+            {
+                new PlayerBelief(
+                    claim, statement, first, second, "disputed", "you found out for yourself",
+                    Contested: true, IsHeld: true),
+            },
+            Disagreements: new[]
+            {
+                new PlayerDisagreement(
+                    claim, statement, "what you found out", OwnPositionHeld: true,
+                    new[] { new PlayerAccount("vincent", "Vincent Russo", Affirms: false, first) }),
+                new PlayerDisagreement(
+                    claim, statement, "what you found out", OwnPositionHeld: true,
+                    new[] { new PlayerAccount("kane", "Detective Eileen Kane", Affirms: true, second) }),
+            },
+            Attitudes: Array.Empty<PlayerAttitude>(),
+            Unsettled: Array.Empty<PlayerBelief>(),
+            Silent: Array.Empty<PlayerPerson>(),
+            Disclaimers: Array.Empty<PlayerDisclaimer>(),
+            Exposure: Array.Empty<string>(),
+            LastAction: null,
+            MyBusiness: null,
+            Operation: null,
+            AwaitingAnswers: Array.Empty<PlayerRequest>());
+
+        Clear(_root);
+        _root.AddChild(Panel("WHAT YOU KNOW", BuildKnowledge(snapshot), 1.0f));
+        string screen = Screen();
+
+        int statementCount = screen.Split(statement, StringSplitOptions.None).Length - 1;
+        if (statementCount != 1)
+            throw new InvalidOperationException(
+                $"the projected claim collision rendered its visible predicate {statementCount} times");
+        if (!screen.Contains("Vincent Russo says otherwise", StringComparison.Ordinal)
+            || !screen.Contains("Detective Eileen Kane says so", StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "the projected claim collision did not render every incident's source account");
     }
 
     // ================================================================= golden path (milestone 014)

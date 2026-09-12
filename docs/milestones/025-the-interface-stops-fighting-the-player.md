@@ -499,3 +499,23 @@ warnings/errors and all 691 tests passed. The three verification hashes remained
 traces / 4 action sequences, and both required viewpoint runs completed. The Godot executable
 remains unavailable in this worktree, so the compiled render regression and a renderer-side mutation
 could not be executed here. This correction awaits Astra's independent review.
+
+## Independent review and acceptance of the historical-audit repairs, 2026-09-12
+
+Astra independently reviewed exact commit
+`bdcaab107da1be60c2c6591c05096b75e5b1d39e` as Class B and returned **PASS, no findings**. It
+correctly removes the additive-work review bypass while leaving additive/interlocking as a risk label,
+not an authorization or review class. Matt accepted the PASS on 2026-09-12.
+
+Astra reviewed `8fdf2e5` as Class A and returned FAIL with one P2, accepted by Matt: the first
+projected-claim collision repair retained source accounts but dropped each incident's own position and
+basis. Astra then independently reviewed exact correction
+`86eef5e59158a53a052b7ae77658d390a2d87fa2` as Class A and returned **PASS, no findings**. It preserves
+and renders every grouped incident's position, basis, and accounts. Matt accepted that PASS on
+2026-09-12. Astra authored none of these commits.
+
+These accepted corrections close the two milestone-025 defects that remained live at audited HEAD
+`891368d`. The original `867922d`, `1a7bcc6`, and `8fdf2e5` review outcomes remain FAIL; their later
+corrections do not retroactively turn them into passes. The earlier disclosed limit remains unchanged:
+the Godot executable was unavailable for Astra's `86eef5e` review, so the compiled render self-test
+was not rerun there.

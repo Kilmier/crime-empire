@@ -40,23 +40,29 @@ does not turn them into defects.
 
 ## Coverage boundary and queue
 
-**Reconciled checkpoint: `891368d`.** Every commit through that hash appears below, either alone or in
-an exact group. Coverage through `c7dd34b` preserves the pre-cleanup ledger and milestone evidence;
-the subsequent rows record the cleanup, correction chain, and 2026-09-12 historical audit.
+**Reconciled checkpoint: `8651ecd`.** Every commit through exact
+`8651ecd1c3b34fc30adec98637cedbaf265f8d14` appears below, either alone or in an exact group. Coverage
+through `c7dd34b` preserves the pre-cleanup ledger and milestone evidence; the subsequent rows record
+the cleanup, correction chain, 2026-09-12 historical audit, and its independently reviewed repairs.
 
 The previous authoritative checkpoint was `824f3fc`. Rows at or before it marked
 `STATUS NOT ESTABLISHED` are preserved legacy uncertainty and do not reopen closed milestones unless
 Matt explicitly asks. The **active ordered range begins after `824f3fc`**. Astra's independent static
 audit at `891368d` established the outcomes of its 29 requested rows (38 unique commits), while
-preserving every grouped row. The audit did not include `891368d`, so that closeout is now the oldest
-unresolved exact commit. Later correction commits remain behind it in chronological order.
+preserving every grouped row. Astra subsequently reviewed the remaining exact commits in
+chronological order, including `891368d` itself and the final correction record `8651ecd`. Matt
+accepted both PASS outcomes on 2026-09-12. The historical chronological review gate through
+`8651ecd` is closed. This ledger update cannot establish the review outcome of the transition commit
+that contains it.
 
 The audit was an independent exact-diff review by Astra, who authored none of the inspected commits.
 It was static: Astra did not run builds, tests, Runner verification, Godot, restart, or
 mutation checks. Matt accepted the audit findings on 2026-09-12. Its overall verdict was FAIL because
 three defects remained live at audited HEAD `891368d`; their focused corrections are `dfefbc1`,
-`bdcaab1`, and `8fdf2e5`. Astra later passed the first two and failed the third. Historical FAIL
-outcomes remain FAIL even where a later commit corrected the defect.
+`bdcaab1`, and `8fdf2e5`. Astra passed the first two, failed the third, and then passed its correction
+`86eef5e`; Matt accepted the correction state. The separate audit-record correction chain ended at
+`8651ecd`, which Astra passed and Matt accepted. Historical FAIL outcomes remain FAIL even where a
+later commit corrected the defect.
 
 ## Legacy coverage through `824f3fc`
 
@@ -215,13 +221,14 @@ its A/B/C class only after opening the exact diff.
 | `da43fbb` | Astra independently reviewed this Claude-authored correction (Class B): FAIL, two P2s; omitted two original findings and undercounted six additional numeric occurrences as five. Matt accepted; correction continued at `bad7ad4` (`milestones/010`). |
 | `bad7ad4` | Astra independently reviewed this Claude-authored correction (Class B): FAIL, two P2s; misidentified the original P2-2 and P2-3. Matt accepted; corrected at `0482dfc` (`milestones/010`). |
 | `0482dfc` | Astra independently reviewed this Claude-authored correction (Class B): PASS, no blocking findings. Matt accepted on 2026-09-12, closing the grouped `bec0370`/`22e73d1`/`925611a` correction chain. Prior FAIL outcomes remain intact (`milestones/010`). |
-| `891368d` | **UNRESOLVED — independent exact-commit review pending.** Documentation closeout excluded from Astra's audit at this same HEAD. |
-| `dfefbc1` | Astra independent exact-commit review (Class A): **PASS**. Queued observation provenance comparison correction (`milestones/022`). |
-| `bdcaab1` | Astra independent exact-commit review (Class B): **PASS**. Roadmap review-bypass correction (`milestones/025`). |
-| `8fdf2e5` | Astra independent exact-commit review (Class A): **FAIL**, one P2 accepted by Matt. Grouping retained source accounts but omitted each incident's own position and basis; corrected by `86eef5e`, pending review (`milestones/025`). |
+| `891368d` (exact `891368d8d2dcac59ef817e110c9317319a79e65b`) | Astra independent exact-commit review (Class B): **PASS**, no findings. The closeout accurately records Matt's accepted `0482dfc` PASS, preserves every earlier FAIL, keeps the milestone-010 archive append-only, and does not claim to review itself. `git diff --check` passed; simulation tests were not rerun for this documentation-only diff. Matt accepted on 2026-09-12. |
+| `dfefbc1` | Astra independent exact-commit review (Class A): **PASS**. Queued observation provenance comparison correction. Matt accepted on 2026-09-12 (`milestones/022`). |
+| `bdcaab1` | Astra independent exact-commit review (Class B): **PASS**. Roadmap review-bypass correction. Matt accepted on 2026-09-12 (`milestones/025`). |
+| `8fdf2e5` | Astra independent exact-commit review (Class A): **FAIL**, one P2 accepted by Matt. Grouping retained source accounts but omitted each incident's own position and basis; corrected by `86eef5e`, which later passed independent review and was accepted (`milestones/025`). |
 | `61fa056` | Astra independent exact-commit review (Class B): **FAIL**, one P2 accepted by Matt. Audit verdicts replaced existing owner-acceptance facts; `b7344a5` restored those facts, and they remain preserved. |
-| `86eef5e` | Astra independent exact-commit review (Class A): **PASS**. Every grouped incident retains and renders its own position, basis, and accounts (`milestones/025`). |
-| `b7344a5` | Astra independent exact-commit review (Class B): **FAIL**, one P2 accepted by Matt. It conflated `68a6c32`'s status/count fixes with `d6af1a6`'s correction of overstated independent-review coverage and inaccurately said the prior finding concerned omitted Codex authorship. Corrected in the next ledger update, which cannot record its own outcome. |
+| `86eef5e` | Astra independent exact-commit review (Class A): **PASS**. Every grouped incident retains and renders its own position, basis, and accounts. Matt accepted on 2026-09-12 (`milestones/025`). |
+| `b7344a5` | Astra independent exact-commit review (Class B): **FAIL**, one P2 accepted by Matt. It conflated `68a6c32`'s status/count fixes with `d6af1a6`'s correction of overstated independent-review coverage and inaccurately said the prior finding concerned omitted Codex authorship. Corrected by `8651ecd`. |
+| `8651ecd` (exact `8651ecd1c3b34fc30adec98637cedbaf265f8d14`) | Astra independent exact-commit review (Class B): **PASS**, no findings. The correction accurately separates the `68a6c32` and `d6af1a6` histories, removes the inaccurate authorship account, preserves prior verdicts and owner rulings, repairs all four milestone-023 links, and keeps the archive append-only. `git diff --check` passed; simulation tests were not rerun for this documentation-only diff. Matt accepted on 2026-09-12 (`milestones/023`). |
 
 ## Current verification baseline
 

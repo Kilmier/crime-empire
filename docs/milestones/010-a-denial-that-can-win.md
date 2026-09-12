@@ -491,3 +491,24 @@ pre-existing `ROADMAP.md` change remains excluded. The closeout commit itself ha
 review outcome recorded here. `d6af1a6` also remains pending independent exact-commit review;
 the next unresolved grouped target `40f0ded` / `520924b` / `3004d2f` / `c7ae3d6` was not reviewed
 or started as part of this closeout.
+
+## Independent review of the closeout commit — historical gate cleared, 2026-09-12
+
+Astra independently reviewed exact commit
+`891368d8d2dcac59ef817e110c9317319a79e65b` as a Class B authority/status change and returned
+**PASS, no findings**. Astra did not author the commit. Matt accepted that exact-commit PASS on
+2026-09-12. This supersedes the final paragraph above where it says the closeout itself has no
+independent outcome and where it names older rows as still pending; those statements accurately
+described the moment they were written and remain standing as history.
+
+The review inspected the exact parent-to-commit diff, this complete append-only archive, the
+`bec0370` / `22e73d1` / `925611a` and `da43fbb` / `bad7ad4` / `0482dfc` correction history, the
+milestone-002 `7032981` counterexample, queue chronology, scope, links, and `git diff --check`. It
+confirmed that `891368d` records Matt's accepted `0482dfc` PASS without converting any earlier FAIL,
+skipping an unresolved row, rewriting this archive, or claiming its own review. Simulation tests were
+not rerun because the exact diff is documentation-only.
+
+This acceptance closes `891368d`'s review record. The repository-wide historical chronological gate
+was subsequently cleared through `8651ecd`; its current boundary is recorded in
+`docs/REVIEW_LEDGER.md`. This appendix does not claim a fresh simulation verification or alter any
+earlier exact-commit outcome.

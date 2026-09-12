@@ -517,3 +517,17 @@ Verification after the final edit: build 0 warnings / 0 errors; **690 tests pass
 `ADC3F2DDF1A9D50C`, each deterministic; `--compare --seed 42` remained 6 distinct traces and 4
 distinct chosen-action sequences; both required viewpoint runs exited 0. The correction changes no
 runtime behavior or baseline. It awaits Astra's independent exact-commit review.
+
+## Independent review of the historical-audit correction — accepted, 2026-09-12
+
+Astra independently reviewed exact commit
+`dfefbc123130a85ec07d6d869d07a4292aecb880` as Class A and returned **PASS, no findings**. Astra did
+not author the commit. Matt accepted the PASS on 2026-09-12 as part of closing the three defects that
+remained live at audited HEAD `891368d`. This supersedes the pending-review sentence immediately
+above while preserving it as the historical state at the time.
+
+The exact-commit review confirmed that the comprehensive parity fingerprint retains both
+`EventPayload.AcquiredAs` and `EventPayload.AttributedTo` for queued observations, with independent
+mutation-checked assertions, and that the correction changes test assurance rather than production
+runtime behavior. The original `ccc1c26` historical-audit verdict remains FAIL; passing its focused
+correction does not rewrite that outcome.

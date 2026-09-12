@@ -674,10 +674,13 @@ replacement for it.
   019 discovered its own premise was false; 022 discovered its mechanism was inert in the fixture.
   Writing milestone 12 precisely today mostly makes it harder to abandon when it turns out wrong.
 - **Every milestone is marked additive or interlocking.** *Additive* work adds characters, businesses,
-  organisations, operations or screens without changing shared machinery, and chains safely without a
-  gate. *Interlocking* work changes the decision pipeline, the belief model or scoring — where all
-  three of milestone 020's P1s lived — and waits for a gate. **Layer 2 is almost entirely additive**,
-  which is what makes it the natural long code-ahead run.
+  organisations, operations or screens without changing shared machinery. *Interlocking* work changes
+  the decision pipeline, the belief model or scoring — where all three of milestone 020's P1s lived.
+  The label describes expected integration risk; it neither assigns the review class (which comes from
+  the exact diff) nor grants permission to skip or defer the repository's chronological independent
+  review and Matt-acceptance gate. **Layer 2 is expected to be almost entirely additive**, which may
+  make each bounded milestone cheaper to review, but the next milestone still begins only after the
+  preceding one has passed that gate.
 - **Every milestone must be visible in play.** The playtest is one of this arc's two gates, alongside
   Codex's review and Matt's acceptance, and invisible work cannot be playtested — a diagnostic facet or
   a storage location can pass the other gate cleanly while never proving it reads as anything to a
@@ -726,7 +729,9 @@ Everything in layer 2 is measured against it.
 The rival gang and its crew; more business owners; the police as an organisation with an arrest that
 can remove somebody from play; further operation kinds beyond extort/conceal/investigate; money with a
 sink so accumulation means something; territory worth contesting. Roughly six to eight milestones,
-almost all additive, and the natural place for a long code-ahead run.
+almost all expected to be additive. That expectation may lower integration risk within each bounded
+milestone; it does not authorize a long code-ahead run or let later work substitute for exact-commit
+review and Matt's acceptance of the preceding milestone.
 
 **Two things layer 2 gets for free, worth stating so nobody rebuilds them:** more people on the street
 is exactly the lever milestone 022 named for making rumour live — a mechanism that is correct, tested,

@@ -424,3 +424,21 @@ and `Org/`. Drafted as scope for Matt to authorize; see `CURRENT_MILESTONE.md`.
 deterministic; both viewpoint runs exit 0; all seven Godot invocations exit 0; the rendered briefing
 read on every pause of the general self-test. Pins re-pointed at the same facts: the Tommy-to-Vincent
 partial and false answers in `CausalFeedbackTests`, the refusal counts in `OperationReadsTests`.
+
+## Historical-audit correction — additive work does not bypass review, 2026-09-12
+
+Astra's independent historical audit found that the demo-arc rule introduced by `867922d` and carried
+into milestone 025 described additive work as chaining safely without a gate and called layer 2 a
+natural long code-ahead run. Matt accepted the P2 finding. The separate claim that a playtest could
+stand in for review had already been corrected by `14ce1f5`; the additive-work exception remained live
+at audited HEAD `891368d` and contradicted `AGENTS.md`'s current mandatory implementer/reviewer loop.
+
+`ROADMAP.md` now keeps additive versus interlocking only as a forecast of integration risk. It states
+that the label does not assign Class A/B/C, authorize scope, defer chronological exact-commit review,
+or bypass Matt's acceptance, and it removes the later duplicate invitation to a long code-ahead run.
+Every bounded milestone still waits at the same gate before the next begins.
+
+This is a Class B documentation correction only. No simulation, UI, test, fixture, canon, persistence,
+or baseline changed. Verification was the exact ROADMAP and append-only archive diff, a search for the
+surviving gate-bypass language, and `git diff --check`; no runtime suite was rerun for this prose-only
+change. It awaits Astra's independent exact-commit review.

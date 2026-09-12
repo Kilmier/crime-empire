@@ -2556,3 +2556,40 @@ baseline `92F742E3CB85E54B`, disloyal-vincent `455A684A29A5F717`, resentful-tomm
 plus Tommy clean; all nine Godot checks including the separate restart processes exit 0. The
 pre-existing `docs/ROADMAP.md` change remains unstaged. This is an implementation record only; the
 eighth correction awaits independent review and milestone 024 remains open.
+
+### Accepted — milestone 024, the operation reads, closed on `762210f`
+
+**Claude performed an independent implementation-fidelity review of `344f1e0` and `762210f`,
+since Codex authored both and the second had never had its code examined by anyone but its own
+author.** The reviewer read both diffs directly, re-ran the build and full test suite, and
+re-derived the three required `--verify` hashes and the `--compare` figure at the exact reviewed
+commit rather than trusting the two entries above. It traced the eighth correction's fix to its
+actual mechanism in `Cognition.cs`/`Provenance.cs` and confirmed by `git show`/`git diff --stat`
+that neither commit touched the off-limits design documents, `docs/ROADMAP.md`, or milestone 027,
+and that both commits' edits to the milestone archive are pure end-of-file additions.
+
+**Verdict: PASS, safe to build upon.** All five of the seventh correction's carried-forward
+findings were verified closed against the actual diff. The eighth correction's fix was confirmed
+to sit in the production simulation library, not a presentation-layer patch, and to reveal only
+the owner-observable fact without leaking a delegate's private method or progress. Every reported
+figure reproduced exactly: build 0/0, tests 689/689, hashes `92F742E3CB85E54B` /
+`455A684A29A5F717` / `ADC3F2DDF1A9D50C`, `--compare` 6 traces / 4 distinct action sequences.
+
+One P2 finding, accepted by Matt: `docs/OPEN_CONCERNS.md` item 7 cited a concrete example — a
+request about Bellini's grocery staying unanswered for 90 days — that the eighth correction's own
+confidence fix now falsifies, since `CausalFeedbackTests.cs` proves the identical scenario now
+resolves. Corrected with an append-only note on item 7 that preserves the general design question
+as still open while recording that its one concrete illustration no longer reproduces.
+
+**Disclosed review limits:** the nine Godot self-tests and the two-process restart proof were not
+independently re-run (no Godot binary available to the reviewer) — corroborated instead through
+the equivalent, passing `.NET` production-path tests. The four load-bearing mutation checks Codex
+reports performing were not independently re-run either; the reviewer instead verified the fix's
+correctness analytically, by reading the exact override-threshold logic it depends on. Matt
+accepted the review on this basis.
+
+**Matt accepted the PASS verdict and the P2 finding. Milestone 024 is closed. Its accepted state
+is `762210f`.** This closing correction is documentation-only across `docs/OPEN_CONCERNS.md`,
+`docs/CURRENT_MILESTONE.md`, `docs/REVIEW_LEDGER.md`, and this archive; no simulation code, test,
+or `docs/ROADMAP.md` changed, and milestone 027 was not started. Per Matt's explicit instruction,
+this bookkeeping-only correction does not await a further review round.

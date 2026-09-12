@@ -199,3 +199,18 @@ weigh. Whether a stale, logically-mooted request deserves its own resolution pat
 have to recognize "mooted" without reintroducing the leaks the exact-claim rule was built to close —
 is a real, undecided design question, not an oversight, and needs its own ruling rather than a fix
 folded into whatever correction next happens to trip over it.
+
+**Update, 2026-09-12 (milestone 024's eighth correction, `762210f`).** The concrete illustration
+above no longer reproduces, though the general question it illustrates is still open. Fixing a
+duplicate-payment defect the same playtest surfaced required raising the owner's and executor's
+collection-time belief writes from confidence 0.9 to 1.0 (`Strategies.cs`'s collection branch),
+which now clears `Cognition.Learn`'s override threshold against Vincent's prior 1.0-confidence
+belief that the grocery refuses. One consequence: Vincent's own later, fully autonomous report now
+genuinely asserts `BusinessRefusesTribute` in its resolved (rejected) direction — not merely
+`TributeCollected` — so Salvatore's original request now matches the exact-claim rule and resolves
+instead of sitting in `AwaitingAnswers` for the rest of the run. Confirmed directly:
+`CausalFeedbackTests.cs`'s `The_autonomous_report_of_the_resolved_refusal_answers_the_original_request`
+now asserts the request is answered for this exact scenario. This closes the one concrete case
+recorded above as a side effect of an unrelated fix, not by design — it does not settle whether a
+stale, logically-mooted request should resolve on some other basis when no future report ever
+happens to restate its literal claim. That remains open, and this correction never considered it.

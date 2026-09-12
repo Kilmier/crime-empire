@@ -7,11 +7,16 @@ do not create a separate handoff document.
 
 ## Status
 
-**Milestone 024 remains active after Matt's 2026-09-12 playtest.** Its seventh correction is commit
-`344f1e0`; Matt then reproduced a missing delegated-success explanation and a second payment from the
-same already-paying grocery. Codex implemented an eighth correction at Matt's request because Claude
-was unavailable. It is complete and awaits independent implementation review; milestone 024 is not
-closed. See `REVIEW_LEDGER.md` and the archive for the measured account.
+**Milestone 024 is closed.** Its seventh correction (`344f1e0`) closed Codex's own five findings
+against the sixth correction; Matt's 2026-09-12 playtest of that state then found a missing
+delegated-success explanation and a second payment from the same already-paying grocery, fixed by
+an eighth correction (`762210f`) that Codex implemented at Matt's request because Claude was
+unavailable. Because Codex authored both, Claude then performed an independent implementation-
+fidelity review of both commits together, returning **PASS** with one accepted P2 documentation
+finding (`docs/OPEN_CONCERNS.md` item 7 cited a concrete example that the eighth correction's own
+fix now falsifies). Matt accepted the PASS and the P2 finding in a ninth, documentation-only
+correction. **Milestone 024's accepted state is `762210f`.** See `REVIEW_LEDGER.md` and the archive
+for the measured account.
 
 - **Milestone 021 — Capability Is a Belief, Not a Stat — is closed.** Three corrections beyond its
   implementation, each answering a Codex review; the third (`9fed181`) returned no findings and Matt
@@ -256,6 +261,20 @@ backlog is cleared and Matt says so.
   agreement. The invalid second-cycle golden path was re-derived through real choices. Four
   load-bearing branches plus the collection-state replay fingerprint have focused assurance. **This
   correction was authored by Codex and awaits independent review; it is not accepted or closed.**
+
+- **Claude independently reviewed `344f1e0` and `762210f` and returned PASS with one P2 finding;
+  Matt accepted both and closed milestone 024 in a ninth, documentation-only correction.** The
+  review re-ran the build, full test suite, and all required hashes/`--compare` at the exact
+  reviewed commit rather than trusting the two entries above, and traced the eighth correction's
+  fix to its actual mechanism rather than its commit message. The one finding: `OPEN_CONCERNS.md`
+  item 7's concrete Bellini/Vincent illustration no longer reproduces, since the eighth correction's
+  confidence fix now lets Vincent's autonomous report resolve Salvatore's request — corrected with
+  an append-only note preserving the general design question as still open. Disclosed review
+  limits: the Godot self-tests and restart proof were not independently re-run (no Godot binary
+  available), corroborated instead via the equivalent passing `.NET` tests; the four mutation checks
+  were verified analytically rather than re-run. **Milestone 024's accepted state is `762210f`; it
+  is closed.** No simulation code, test, or `docs/ROADMAP.md` changed in this correction. Full
+  account: `docs/milestones/024-the-operation-reads.md`'s ninth correction section.
 
 ## Next, per the demo arc
 

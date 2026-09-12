@@ -827,3 +827,59 @@ executor viewpoint exit 0; all seven ordinary Godot self-tests and the two-proce
 Authored by Codex at Matt's request while Claude was unavailable. `docs/ROADMAP.md`'s pre-existing
 working-tree change remains untouched and unstaged. Milestone 027 and unrelated backlog were not
 started. This correction awaits independent implementation review and is not accepted or closed.
+
+## Correction — independent review of the seventh and eighth corrections, and closure (the ninth correction, documentation-only), 2026-09-12
+
+The seventh correction (`344f1e0`) closed Codex's own five findings against the sixth correction.
+The eighth correction (`762210f`) fixed the duplicate-payment defect Matt's playtest found — but
+Codex authored both, and the eighth had never had its code looked at by anyone but its own author.
+Matt asked Claude to perform an independent implementation-fidelity review of both commits together
+before either could be accepted.
+
+### What the review did
+
+The reviewer read both commits' diffs directly rather than trusting `REVIEW_LEDGER.md` or
+`CURRENT_MILESTONE.md`'s own prose, re-ran the build and full test suite, and re-derived the three
+required `--verify` hashes and the `--compare` figure at the exact reviewed commit (`762210f`)
+rather than accepting reported figures. It also traced the eighth correction's fix to its actual
+mechanism in `Cognition.cs` and `Provenance.cs` — confirming the 0.9→1.0 confidence change is what
+crosses the override threshold that was blocking Vincent's stale belief from being corrected — and
+confirmed by `git show`/`git diff --stat` that neither commit touched the off-limits design
+documents, `docs/ROADMAP.md`, or milestone 027, and that both commits' edits to this archive are
+pure additions at end-of-file rather than rewrites.
+
+### Verdict
+
+**PASS. Safe to build upon.** All five of the seventh correction's carried-forward findings were
+verified closed against the actual diff, not merely the commit message. The eighth correction's
+fix was verified to sit in the production simulation library (`Strategies.cs`), not a
+presentation-layer patch, and to reveal only the owner-observable fact (money arrived, executor
+name) without leaking a delegate's private method or progress. Every reported number was
+independently reproduced at the exact commit: build 0 warnings/0 errors, 689/689 tests, hashes
+`92F742E3CB85E54B` / `455A684A29A5F717` / `ADC3F2DDF1A9D50C`, and `--compare`'s 6 traces / 4 distinct
+action sequences.
+
+One P2 finding: `docs/OPEN_CONCERNS.md` item 7 cited, as a confirmed fact, a concrete example
+(Salvatore's request about Bellini's grocery staying unanswered for 90 days) that the eighth
+correction's own confidence fix now falsifies — `CausalFeedbackTests.cs` proves the identical
+scenario now resolves. **Matt accepted the PASS verdict and this P2 finding.** The fix is a note
+appended to item 7 in this same commit, preserving the general design question as still open while
+recording that its one concrete illustration no longer reproduces.
+
+### Review limits, disclosed rather than glossed over
+
+The review could not independently re-run the nine Godot self-tests or the two-process restart
+proof — no Godot binary was available in its environment — and corroborated the same golden-path
+behavior instead through the equivalent, passing `.NET` production-path tests. It did not
+independently re-run the four load-bearing mutation checks Codex reports performing; it instead
+verified the fix's correctness analytically, by reading the exact override-threshold logic the fix
+depends on. Matt accepted the review on this basis for a documentation-only bookkeeping closure.
+
+### Commit and closure
+
+**Matt accepts the independent PASS on `344f1e0` and `762210f`, including the P2 finding above.
+Milestone 024 is closed. Its accepted state is `762210f`.** This correction is documentation-only:
+`docs/OPEN_CONCERNS.md` item 7 gained the append-only note above; `docs/CURRENT_MILESTONE.md` and
+`docs/REVIEW_LEDGER.md` record the same acceptance and closure. No simulation code, test, or
+`docs/ROADMAP.md` changed; milestone 027 was not started. Per Matt's explicit instruction, this
+bookkeeping-only correction does not await a further review round.

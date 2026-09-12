@@ -60,31 +60,83 @@ not originate authority in a summary — update the source first.
 
 ## Review workflow
 
-This project uses a two-agent loop: Claude (implementation) and Codex (code review /
-architectural-integrity review). The cycle is:
+This project uses an implementer/reviewer loop. Claude and Codex may exchange those roles, but the
+reviewer must be independent of the commit being reviewed. Agent or model names are recorded as
+reviewer identity, not treated as proof of independence.
 
 ```
-Claude implements
+Implementer completes one authorized change and tests it
       ↓
-Claude tests and commits
+Implementer commits one coherent diff
       ↓
-Codex reviews that commit
+Independent reviewer assigns a review class from that exact diff and reviews it
       ↓
-Owner (Matt) accepts/rejects findings
+Matt accepts or rejects the findings
       ↓
-Claude fixes accepted findings
+Implementer fixes accepted findings in one focused correction
       ↓
-Codex verifies
+Independent reviewer verifies the correction
       ↓
-Next milestone
+Matt accepts the state; only then may the next milestone begin
 ```
 
-- Every commit should be reviewable in isolation — one coherent change, tests passing.
-- Codex reviews against `docs/DESIGN_DECISIONS.md` and the canon docs above, not general
-  best-practice opinion. A Codex finding that conflicts with a settled decision is a signal to
-  surface to Matt, not to silently accept or silently dismiss.
-- Claude should self-review against the constraints below before committing, so Codex's review
-  catches real issues, not basics.
+Review remains chronological: take the oldest commit whose active-range outcome is not established.
+Do not skip a commit because it is documentation-only, and do not let a later commit stand in for an
+earlier one. `docs/REVIEW_LEDGER.md` defines the active range and records the exact queue.
+
+### Proportional review classes
+
+The reviewer assigns the class after inspecting the exact diff. A commit mixing classes receives the
+highest applicable class. If the class is genuinely ambiguous, use **Class B** and state the doubt.
+
+- **Class A — implementation or simulation-risk change.** Runtime code, persistence, fixtures,
+  gameplay/UI behaviour, tests that alter claimed assurance, build configuration, or a change whose
+  correctness depends on simulation behaviour. Review the authorized milestone and canon, trace the
+  production path, run the full relevant verification, inspect information boundaries and persistent
+  state, and mutation-check load-bearing tests where practical.
+- **Class B — authority, status, or process change.** Canon, design decisions, open concerns,
+  `CURRENT_MILESTONE.md`, `ROADMAP.md`, this file, `REVIEW_LEDGER.md`, or any document that can alter
+  what another agent believes is authorized, accepted, unresolved, or required. Review the exact diff
+  against its cited source and repository history. Run targeted commands needed to substantiate its
+  claims; do not run the entire simulation suite merely because prose changed.
+- **Class C — focused non-authoritative change.** Proposal intake, comments, formatting, archive-only
+  additions, or tooling prose that changes neither behaviour nor authority. Check scope, links,
+  append-only history, and false claims. Escalate to A or B if the diff actually crosses either
+  boundary.
+
+All three classes require an exact-commit review. Classes scale depth; they do not waive review.
+
+### Outcomes and findings
+
+- A review records: exact commit, class, reviewer identity, independence from the author, commands or
+  evidence actually checked, findings, limits, and verdict.
+- **PASS** means the reviewer found no blocking defect in the reviewed diff. **FAIL** means at least
+  one accepted correction is required. Neither means Matt accepted the commit until his ruling is
+  recorded separately.
+- P1 and P2 findings enter the correction loop when Matt accepts them. A **NOTE** is non-blocking and
+  does not create a correction cycle. Repeated NOTE-level concerns are surfaced to Matt for a design
+  or process ruling; repetition does not silently promote them into defects.
+- Test-green is evidence, not review. Self-review is useful preflight evidence, never independent
+  acceptance. If the reviewer authored any reviewed commit, another reviewer must inspect it before
+  acceptance unless Matt explicitly records a bounded exception.
+- A finding that conflicts with a settled design decision is surfaced to Matt rather than silently
+  accepted or dismissed. Reviews judge the project against its canon and authorized milestone, not
+  generic best-practice preference.
+
+### Where review information lives
+
+- `CURRENT_MILESTONE.md` holds only active authorization, the present gate, and deliberately carried
+  work. It does not retell completed correction chains.
+- `REVIEW_LEDGER.md` holds the compact coverage table, current verification baseline, checklist, and
+  recurring cross-milestone lessons. It does not duplicate full review reports.
+- `docs/milestones/NNN-*.md` holds the detailed, append-only implementation and correction history.
+  A ledger row links there instead of copying the narrative.
+- Do not create a second handoff, review-process, or consolidated-history document. Update the source
+  with the responsibility above.
+
+Every commit should be reviewable in isolation: one coherent change, with its relevant tests passing.
+The implementer should self-review before committing so the independent round can spend its attention
+on feature fidelity, architecture, information boundaries, persistence, and false assurance.
 
 ## Milestone lifecycle
 

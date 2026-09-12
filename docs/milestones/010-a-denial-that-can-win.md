@@ -376,3 +376,44 @@ Matt accepted the P2 on 2026-09-12.
 Documentation-only. No production code, test, fixture, or other archive changed. See
 `REVIEW_LEDGER.md`'s active-range row for `bec0370`, `22e73d1`, `925611a` for Astra's review, its FAIL
 with this single P2, and Matt's acceptance.
+
+## Correction to the correction — the full grouped-review record, 2026-09-12
+
+Appended, not folded into the section above, per this archive's append-only rule. Astra's independent
+Class B review of the grouped `bec0370`/`22e73d1`/`925611a` commits returned **three** P2 findings, not
+the single one the section above recorded, and that section's own replacement undercounted its own
+claim. Matt accepted all three original findings and both gaps in the first correction, all on
+2026-09-12.
+
+**P2-1 — the numeric-literal claim above, corrected count.** The section above says "five more numeric
+literals the probe did not count." That is itself wrong: the diff adds **six** additional executable
+numeric-literal occurrences beyond the named `0.2` and `0.1`, not five. The missed one is
+`Cognition.cs`'s `if (i < 0) return null;` in `Revise` — a third `0`, alongside `Commit.cs`'s
+`EventId: not 0`, `Utility.cs`'s `EventId == 0`, the `0`/`1` pair in `Cognition.cs`'s
+`Math.Clamp(confidence, 0, 1)`, and `Strategies.cs`'s `if (s.StepIndex == 1)`. The narrower conclusion
+is unaffected either way: none of ruling 3's named coefficients (`0.25`, `3.0`, the erosion rates, the
+discretion threshold) appear in any added or removed line under `src/` in `824f3fc`, so no existing
+scoring coefficient was retuned.
+
+**P2-2 — `925611a`'s false historical superlative.** "Milestone 010 needed no corrective round and is
+**the first** here accepted on a review nobody but its author performed" is false. This ledger's own
+legacy-coverage row for `7ca7819` records milestone 009 as also accepted on self-review only, and
+milestone 009 precedes milestone 010. Milestone 010 is not the first self-review-only acceptance in
+this project's history — it is, at best, the second.
+
+**P2-3 — `925611a`'s overstated acceptance coverage.** "The coverage checkpoint moves to `824f3fc` and
+the two outstanding rows are folded in here" overstated what Matt's 2026-08-18 acceptance actually
+covered. Matt accepted milestone 010 itself, at `824f3fc`; he did not independently review `bec0370`'s
+or `22e73d1`'s own content — the re-verification probes and the milestone 011 plan. "Folded in" is not
+the same claim as "reviewed and accepted," and the ledger's own subsequent history shows the gap: it
+carried this same group as an unresolved row through the entire 2026-09-12 process normalization,
+until Astra's review settled it.
+
+Found by Astra's independent Class B review, covering both the original three commits and the first
+correction above. Matt accepted all three on 2026-09-12.
+
+### Commit
+
+Documentation-only. No production code, test, fixture, or other archive changed. See
+`REVIEW_LEDGER.md`'s active-range row for `bec0370`, `22e73d1`, `925611a` for the full disposition, and
+`CURRENT_MILESTONE.md` for this correction's own pending-review status.

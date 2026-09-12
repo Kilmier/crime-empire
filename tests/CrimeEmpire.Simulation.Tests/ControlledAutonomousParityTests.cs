@@ -293,6 +293,39 @@ public sealed class ControlledAutonomousParityTests
             Array.Empty<string>(), Array.Empty<string>());
     }
 
+    /// <summary>
+    /// Astra's accepted historical-audit finding L1. Observation provenance is future-relevant
+    /// queued state: when the event resolves, these two fields decide whether the same claim lands
+    /// as a rumour or an own discovery, and who or what the observer attributes it to. Each field
+    /// therefore has to distinguish an otherwise-identical world before the event is consumed.
+    /// </summary>
+    [Fact]
+    public void Pending_observation_provenance_fields_each_change_the_comprehensive_fingerprint()
+    {
+        string WithProvenance(SourceKind acquiredAs, string? attributedTo)
+        {
+            var world = Cast.Build(Seed, Baseline);
+            world.Queue.Schedule(
+                Cast.Start.AddYears(1),
+                EventKind.ObservationOpportunity,
+                "salvatore",
+                "staged pending observation",
+                new EventPayload
+                {
+                    Claims = new[] { new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 17) },
+                    Discoverability = 0.5,
+                    AcquiredAs = acquiredAs,
+                    AttributedTo = attributedTo,
+                });
+            return ComprehensiveFingerprint(world);
+        }
+
+        string discovery = WithProvenance(SourceKind.Discovery, attributedTo: null);
+
+        Assert.NotEqual(discovery, WithProvenance(SourceKind.Rumor, attributedTo: null));
+        Assert.NotEqual(discovery, WithProvenance(SourceKind.Discovery, Cast.Harbour));
+    }
+
     // ================================================================= permanent parity sweep
 
     /// <summary>
@@ -493,7 +526,8 @@ public sealed class ControlledAutonomousParityTests
               $"{e.Id}:{e.Time:O}:{e.Kind}:{e.OwnerId}:{e.Cause}:{e.Payload.TargetId}:" +
               $"{e.Payload.AssignmentId}:{e.Payload.RelatedEventId}:{e.Payload.Strategy}:" +
               $"{e.Payload.StepIndex}:{e.Payload.Note}:{string.Join(',', e.Payload.Claims)}:" +
-              $"{e.Payload.Discoverability:0.0000}:{e.Payload.AboutClaim}:{e.Payload.StrategyOwnerId}:" +
+              $"{e.Payload.Discoverability:0.0000}:{e.Payload.AcquiredAs}:{e.Payload.AttributedTo}:" +
+              $"{e.Payload.AboutClaim}:{e.Payload.StrategyOwnerId}:" +
               $"{e.Payload.StrategySequence}:{e.Payload.AdvanceOrdinal}:{e.Payload.OccasionKey}"))
           .Append('\n');
         sb.Append("queue-cancelled|")

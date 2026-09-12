@@ -493,3 +493,27 @@ This correction (the commit carrying this section) is itself documentation-only 
 ### Commit
 
 One correction commit, documentation-only. Awaits Codex re-review.
+
+## Historical-audit correction — pending observation provenance joins the parity fingerprint, 2026-09-12
+
+Astra independently audited the original milestone-022 implementation commit `ccc1c26` and found
+that `ControlledAutonomousParityTests.ComprehensiveFingerprint` serialized each pending event without
+`EventPayload.AcquiredAs` or `EventPayload.AttributedTo`. Matt accepted the P2 finding. The omission
+remained live at audited HEAD `891368d`: two worlds whose queued observation would later enter
+cognition through different provenance or attribution compared equal before consumption.
+
+The comprehensive pending-event formatter now includes both fields beside `Discoverability`. The
+focused regression schedules otherwise-identical observation events and proves that changing
+`AcquiredAs` alone changes the complete fingerprint, and that changing `AttributedTo` alone does the
+same. This is test-only assurance: no production source, fixture, probability, event scheduling,
+simulation behavior, or player-facing boundary changed.
+
+Both load-bearing assertions were mutation-checked independently. Removing `AcquiredAs` from the
+formatter failed the new test on its first assertion; restoring it and removing `AttributedTo` failed
+the second. Both mutations were reverted, and the focused test passed afterward.
+
+Verification after the final edit: build 0 warnings / 0 errors; **690 tests passed** (689 + 1);
+`baseline` `92F742E3CB85E54B`, `disloyal-vincent` `455A684A29A5F717`, and `resentful-tommy`
+`ADC3F2DDF1A9D50C`, each deterministic; `--compare --seed 42` remained 6 distinct traces and 4
+distinct chosen-action sequences; both required viewpoint runs exited 0. The correction changes no
+runtime behavior or baseline. It awaits Astra's independent exact-commit review.

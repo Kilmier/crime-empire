@@ -1,6 +1,9 @@
+using CrimeSim.Decision;
 using CrimeSim.Domain;
+using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 using CrimeSim.Trace;
 
 namespace CrimeEmpire.Simulation.Tests;
@@ -29,13 +32,35 @@ public sealed class ProvenanceTests
     /// Authorship is not a visible property of an event. If witnessing could deliver it there
     /// would be nothing left for a capo to conceal, and the concealment the previous milestone
     /// models would be unfalsifiable in the other direction.
+    ///
+    /// <b>Retargeted 2026-09-11 by milestone 024's sixth correction.</b> No delegate can naturally
+    /// reach Force in the current cast (crew-gated — see the correction's own review record), so no
+    /// natural baseline run produces a policy breach for anybody to author. The claim under test is
+    /// authorship versus witnessing, not natural Force emergence, so only Vincent's choice of method
+    /// is staged — through <see cref="Commit.Apply"/> — and everything downstream (the violence
+    /// resolving, Marco witnessing it, Vincent's own resulting self-knowledge) runs unstaged.
     /// </summary>
     [Fact]
     public void The_author_holds_his_own_order_and_a_witness_does_not_learn_it()
     {
-        var world = Run("baseline");
+        var world = Cast.Build(seed: 42, "baseline");
         var vincent = world.Get("vincent");
         var marco = world.Get("marco");
+
+        var startCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+            { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+            startCtx.Agenda, startCtx, new List<string>());
+        var s = vincent.Execution.Strategy!;
+
+        var alterCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            alterCtx.Agenda, alterCtx, new List<string>());
+
+        Runner.Run(world, world.Now.AddDays(20));
 
         var authored = vincent.Cognition.Records.FirstOrDefault(r =>
             r.Claim.Kind == ClaimKind.PersonBreachedPolicy && r.Claim.Subject == vincent.Id);
@@ -216,4 +241,16 @@ public sealed class ProvenanceTests
         Assert.Contains("Participant", Provenances(straight));
         Assert.Contains("Discovery", Provenances(straight));
     }
+
+    private static GeneratorContext Context(World world, Character actor)
+        => new(
+            actor.View, Salience.Perceive(actor, world.Now),
+            new Agenda(AgendaKind.DischargeResponsibility, "keep the harbour earning", "test", Cast.Harbour),
+            world.Now,
+            new ScheduledEvent { Id = 0, Time = world.Now, Kind = EventKind.RoleReview, OwnerId = actor.Id, Cause = "test" },
+            MyOffice: null, MyAssignment: null, KnownPolicies: Array.Empty<Policy>(),
+            SuperiorId: null, SubordinateIds: Array.Empty<string>(), OrgMemberIds: Array.Empty<string>(),
+            AcquaintedIds: Array.Empty<string>(), ReportsSent: Array.Empty<Report>(),
+            RequestsMade: Array.Empty<InformationRequest>(), VisibleTargets: Array.Empty<string>(),
+            AvailableSubordinateIds: Array.Empty<string>(), CurrentExecution: Strategies.CurrentExecution(world, actor));
 }

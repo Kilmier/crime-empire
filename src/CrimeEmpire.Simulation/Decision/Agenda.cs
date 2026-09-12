@@ -3,6 +3,7 @@ namespace CrimeSim.Decision;
 using CrimeSim.Domain;
 using CrimeSim.Org;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 
 public enum AgendaKind
 {
@@ -38,6 +39,11 @@ public static class AgendaSelection
         PerceivedSituation perceived,
         Assignment? assignment)
     {
+        // Milestone 024's sixth correction: the operation he is presently carrying out, whether he owns
+        // it outright or it was delegated to him — never one he owns but has handed away, which is
+        // no longer his to respond about. See Strategies.CurrentExecution's own doc comment.
+        var currentExecution = Strategies.CurrentExecution(world, c);
+
         // 1. Urgent events demand a direct response.
         if (trigger.Kind is EventKind.Incident or EventKind.StrategyBlocked or EventKind.PressureThreshold)
         {
@@ -48,7 +54,7 @@ public static class AgendaSelection
                 // Falling back to their standing beat matters: without it, someone with no active
                 // strategy (a detective hearing a rumour) responds to an event with no domain and
                 // so generates no role-based options at all.
-                Domain: c.Execution.Strategy?.Domain
+                Domain: currentExecution?.Domain
                         ?? assignment?.Domain
                         ?? c.Motivations.Responsibilities.FirstOrDefault()?.Domain,
                 TargetId: trigger.Payload.TargetId,
@@ -69,8 +75,10 @@ public static class AgendaSelection
                 Weight: 1.0 + urgency * 0.5);
         }
 
-        // 3. An active strategy continues to matter until it resolves.
-        if (c.Execution.Strategy is { } strat)
+        // 3. An active strategy continues to matter until it resolves — the one he is currently
+        // carrying out, per the correction above; an owner who delegated his away no longer has
+        // this as a standing concern of his own, until an outcome legitimately reaches him.
+        if (currentExecution is { } strat)
         {
             return new Agenda(
                 AgendaKind.ContinueCommitment,

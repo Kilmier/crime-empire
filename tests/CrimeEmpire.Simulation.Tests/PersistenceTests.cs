@@ -39,15 +39,23 @@ public sealed class PersistenceTests
 
     // Independently pinned, matching PlayerOwnedOperationTests.cs and Game.cs's own copy — not
     // shared code, so the three cannot all be wrong about the same assumption together.
-    private static readonly string[] SevenChoiceSequence =
+    //
+    // Re-derived 2026-09-11 by milestone 024's sixth correction. The old five-through-seven steps had
+    // Vincent personally alter a delegated operation — exactly the authority this correction removed;
+    // AlterStrategy is executor-only once delegated. Confirmed live, not guessed: with Vincent as the
+    // only controlled character and Tommy's own delegated decisions left to resolve autonomously
+    // (never controlled, never staged), his escalation to Threaten and the operation's own genuine
+    // completion both happen entirely in the background. Vincent's own next two real decisions are an
+    // unrelated question from Salvatore (3/25) and, once the delegated operation has genuinely
+    // completed, starting a fresh collection cycle of his own (4/05) — confirmed the grocery is by
+    // then actually paying, i.e. real collection, not a hand-waved terminus.
+    private static readonly string[] GoldenPathChoiceSequence =
     {
         "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
-        "switch to threats with Bellini's grocery",
-        "switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
-        "carry on getting Bellini's grocery to pay",
-        "report to Salvatore Greco, leaving out your own part",
+        "ask Salvatore Greco for permission",
+        "persuade Bellini's grocery to pay",
     };
 
     private const string LetItLie = "take no action";
@@ -68,7 +76,7 @@ public sealed class PersistenceTests
         try
         {
             var original = PersistentSession.Start(Seed, Variant, Controlled);
-            PlayChoices(original, SevenChoiceSequence.Take(3));
+            PlayChoices(original, GoldenPathChoiceSequence.Take(3));
             Assert.Equal(SessionStatus.Ready, original.Status);
 
             original.Save(path);
@@ -94,7 +102,7 @@ public sealed class PersistenceTests
         try
         {
             var original = PersistentSession.Start(Seed, Variant, Controlled);
-            PlayChoices(original, SevenChoiceSequence.Take(3));
+            PlayChoices(original, GoldenPathChoiceSequence.Take(3));
             AdvanceToNextPause(original);
             Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
 
@@ -120,17 +128,17 @@ public sealed class PersistenceTests
     public void Loaded_and_uninterrupted_golden_path_reach_the_same_outcome()
     {
         var uninterrupted = PersistentSession.Start(Seed, Variant, Controlled);
-        PlayChoices(uninterrupted, SevenChoiceSequence);
+        PlayChoices(uninterrupted, GoldenPathChoiceSequence);
 
         string path = NewSavePath();
         try
         {
             var interrupted = PersistentSession.Start(Seed, Variant, Controlled);
-            PlayChoices(interrupted, SevenChoiceSequence.Take(3));
+            PlayChoices(interrupted, GoldenPathChoiceSequence.Take(3));
             interrupted.Save(path);
 
             var resumed = PersistentSession.Load(path);
-            PlayChoices(resumed, SevenChoiceSequence.Skip(3));
+            PlayChoices(resumed, GoldenPathChoiceSequence.Skip(3));
 
             Assert.Equal(6840, resumed.Snapshot().Cash);
             Assert.Equal(uninterrupted.Snapshot().Cash, resumed.Snapshot().Cash);
@@ -155,7 +163,7 @@ public sealed class PersistenceTests
         try
         {
             var setup = PersistentSession.Start(Seed, Variant, Controlled);
-            PlayChoices(setup, SevenChoiceSequence.Take(3));
+            PlayChoices(setup, GoldenPathChoiceSequence.Take(3));
             setup.Save(path);
 
             var loadedOnce = PersistentSession.Load(path);
@@ -165,8 +173,8 @@ public sealed class PersistenceTests
                 TraceWriter.Render(loadedOnce.InnerSession.World, Variant, false),
                 TraceWriter.Render(loadedTwice.InnerSession.World, Variant, false));
 
-            PlayChoices(loadedOnce, SevenChoiceSequence.Skip(3));
-            PlayChoices(loadedTwice, SevenChoiceSequence.Skip(3));
+            PlayChoices(loadedOnce, GoldenPathChoiceSequence.Skip(3));
+            PlayChoices(loadedTwice, GoldenPathChoiceSequence.Skip(3));
 
             Assert.Equal(
                 TraceWriter.Render(loadedOnce.InnerSession.World, Variant, false),
@@ -197,7 +205,7 @@ public sealed class PersistenceTests
             setup.Save(path);
 
             var golden = PersistentSession.Load(path);
-            PlayChoices(golden, SevenChoiceSequence);
+            PlayChoices(golden, GoldenPathChoiceSequence);
 
             var declined = PersistentSession.Load(path);
             ChooseByDescription(declined, LetItLie);
@@ -279,7 +287,7 @@ public sealed class PersistenceTests
         try
         {
             var setup = PersistentSession.Start(Seed, Variant, Controlled);
-            PlayChoices(setup, SevenChoiceSequence.Take(3));
+            PlayChoices(setup, GoldenPathChoiceSequence.Take(3));
             setup.Save(path);
 
             var loaded = PersistentSession.Load(path);

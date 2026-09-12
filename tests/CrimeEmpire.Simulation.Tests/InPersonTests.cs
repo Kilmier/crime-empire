@@ -282,6 +282,11 @@ public sealed class InPersonTests
     /// A threat is read by the man who made it. When Tommy makes it for Vincent, Tommy reads Marco's
     /// face and Vincent reads nothing — a delegated demand stays silent to the owner, as milestone
     /// 024 settled for progress.
+    ///
+    /// <b>Retargeted 2026-09-11 by milestone 024's sixth correction.</b> Vincent can no longer alter a
+    /// delegated operation — that is the authority this correction moved to the executor — so the
+    /// escalation to Threaten is Tommy's own, left to resolve autonomously (he is never controlled)
+    /// rather than chosen by Vincent.
     /// </summary>
     [Fact]
     public void A_delegated_threat_is_read_by_the_executor_and_not_the_owner()
@@ -290,8 +295,7 @@ public sealed class InPersonTests
         Choose(session, "persuade Bellini's grocery to pay");
         Choose(session, "carry on getting Bellini's grocery to pay");
         Choose(session, "hand it to Tommy Nardo");
-        Choose(session, "switch to threats with Bellini's grocery");
-        session.AdvanceDays(10);
+        session.AdvanceDays(15);
 
         var tommy = session.World.Get("tommy");
         var vincent = session.World.Get("vincent");

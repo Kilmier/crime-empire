@@ -4,6 +4,7 @@ using CrimeSim.Domain;
 using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 using CrimeSim.Trace;
 
 namespace CrimeEmpire.Simulation.Tests;
@@ -456,12 +457,38 @@ public sealed class RelationalConsequenceTests
     /// same kind milestone 012's own note above already describes for this budget, driven by a
     /// different upstream cause; nothing about the conflict mechanism, `Organization.Assignments`
     /// disclosure, or the scoring competition milestone 012 fixed was touched by this correction.
+    ///
+    /// <b>baseline falls from two to one, and cautious-vincent from three to zero, 2026-09-11, by
+    /// milestone 024's sixth correction — driven directly, before against after, not inferred.</b>
+    /// Before this correction, delegating to Tommy on 14 March never actually stopped Vincent from
+    /// personally running the operation: he altered it to Threaten himself on 17 March and to Force on
+    /// 23 March, continued it himself on 28 March, and reported its completion himself (Partial, to
+    /// Salvatore) on 1 April — this is the authority leak the correction closes. That report produced
+    /// baseline's first conflict (Salvatore as listener). The operation's fast, self-run completion
+    /// then triggered a fresh assignment for a *different* business, the bakery, on 6 April, whose
+    /// disclosure carried the stale, already-false `BusinessRefusesTribute` claim back to Vincent —
+    /// baseline's second conflict (Vincent as listener).
+    ///
+    /// After the correction, Tommy is genuinely the one who alters (to Threaten only — Force is
+    /// crew-gated, see the Force-impossibility substantiation in the correction's own review record)
+    /// and completes the operation, and his reports to Salvatore agree with what Salvatore already
+    /// believes rather than contradicting it — the first conflict's source is gone because the man who
+    /// used to generate it is no longer the one doing any of this. The organisation's own next
+    /// assignment, once the delegated operation completes, now reissues on the *same* business rather
+    /// than pivoting to the bakery, so the "reassert a stale claim" mechanism that produced the second
+    /// conflict does not fire at this point in the run; it still exists — the sole remaining conflict
+    /// in every surviving variant is exactly this mechanism, firing later (25 May) once a genuinely new
+    /// assignment finally arrives. cautious-vincent loses its own extra source the identical way: milestone
+    /// 009's "Tommy has already approached Salvatore with a question of his own" chain (the file's own
+    /// note above) depended on Salvatore contradicting Tommy directly, and Salvatore's own competing
+    /// concern (traced in `AccountAgreementTests.Salvatores_generated_answer_to_tommy_raises_tommys_trust_when_chosen`)
+    /// now outranks answering Tommy at all, so no account — agreeing or conflicting — is ever given.
     [Theory]
-    [InlineData("baseline", 2)]
-    [InlineData("cautious-vincent", 3)]
-    [InlineData("watchful-boss", 2)]
-    [InlineData("disloyal-vincent", 2)]
-    [InlineData("resentful-tommy", 2)]
+    [InlineData("baseline", 1)]
+    [InlineData("cautious-vincent", 0)]
+    [InlineData("watchful-boss", 1)]
+    [InlineData("disloyal-vincent", 1)]
+    [InlineData("resentful-tommy", 1)]
     public void The_scenario_produces_the_expected_number_of_conflicts(string variant, int expected)
         => Assert.Equal(expected, Run(variant).AccountConflicts.Count);
 
@@ -480,10 +507,15 @@ public sealed class RelationalConsequenceTests
     /// milestone was for. The staged boss-side cases above (<c>A_denial_of_something_he_holds_is_a_conflict</c>,
     /// <c>Only_the_listener_relationship_moves</c>, and the delegation and assignment path tests)
     /// keep that direction covered at unit level, so retargeting this one loses no rule.
+    ///
+    /// <b>cautious-vincent removed 2026-09-11 by milestone 024's sixth correction — not silently
+    /// dropped, see <see cref="Cautious_vincent_no_longer_produces_a_conflict_to_be_contradicted_by"/>
+    /// for why and what replaces it here.</b> This variant no longer produces any conflict at all (see
+    /// <see cref="The_scenario_produces_the_expected_number_of_conflicts"/>'s own traced explanation),
+    /// so it can no longer honestly claim the premise this test's name states.
     /// </summary>
     [Theory]
     [InlineData("baseline")]
-    [InlineData("cautious-vincent")]
     [InlineData("watchful-boss")]
     [InlineData("disloyal-vincent")]
     [InlineData("resentful-tommy")]
@@ -504,6 +536,24 @@ public sealed class RelationalConsequenceTests
         Assert.True(vincent.Social.Toward("salvatore").Trust < started,
             $"[{variant}] vincent's trust in salvatore is " +
             $"{vincent.Social.Toward("salvatore").Trust:0.000}, not below its starting {started:0.00}");
+    }
+
+    /// <summary>
+    /// The honest negative control ruling 3 asked for. cautious-vincent produces zero conflicts now
+    /// (traced in <see cref="The_scenario_produces_the_expected_number_of_conflicts"/>'s docstring),
+    /// so Vincent's trust in Salvatore must not have moved from contradiction at all — there is nothing
+    /// here for it to have moved from. This is not the same claim as "trust is unchanged for any
+    /// reason"; it pins specifically that the contradiction mechanism this file is about did not fire.
+    /// </summary>
+    [Fact]
+    public void Cautious_vincent_no_longer_produces_a_conflict_to_be_contradicted_by()
+    {
+        var world = Run("cautious-vincent");
+        var vincent = world.Get("vincent");
+
+        Assert.DoesNotContain(world.AccountConflicts,
+            c => c.ListenerId == "vincent" && c.Conflict.SpeakerId == "salvatore");
+        Assert.Equal(0.45, vincent.Social.Toward("salvatore").Trust, 9);
     }
 
     /// <summary>
@@ -726,29 +776,70 @@ public sealed class RelationalConsequenceTests
     }
 
     /// <summary>
-    /// **The end-to-end path, and the proof finding 3 asks for.** An executor contradicts his
-    /// delegator and the delegator's trust in him falls — through production code the whole way:
-    /// the generator offers the question, `Commit` records the request and schedules the executor's
-    /// wake, `Runner` delivers it, the executor's own `Pipeline` deliberation picks what to say,
-    /// `Reporting` composes and delivers it, `Cognition.Receive` recognises the contradiction, and
-    /// `Relations` applies the consequence. Nothing here hand-builds a conflict.
+    /// **The end-to-end path, and the proof finding 3 asks for.** An executor's account of his own act
+    /// reaches his delegator through production code the whole way: the generator offers the question,
+    /// `Commit` records the request and schedules the executor's wake, `Runner` delivers it, the
+    /// executor's own `Pipeline` deliberation picks what to say, `Reporting` composes and delivers it,
+    /// `Cognition.Receive` recognises whether it agrees or conflicts, and `Relations` applies whatever
+    /// consequence follows. Nothing here hand-builds an agreement or a conflict.
     ///
-    /// One thing is staged and it is not a coefficient: this Tommy does not believe anybody saw him.
-    /// In the accepted scenario he does — `ResolveViolence` leaves him inferring witnesses — and
-    /// <see cref="Utility"/> prices a denial almost entirely on that belief, so he conceals instead
-    /// of denying and no contradiction reaches Vincent. That is the model working: a man who thinks
-    /// the street watched him do it does not tell his capo it never happened. Removing that belief
-    /// here is setting up the case where a denial is the rational move, not tuning one into
-    /// existence — and the denial still has to win its own utility competition, which is asserted
-    /// below rather than assumed.
+    /// <b>Rebuilt 2026-09-11 by milestone 024's sixth correction, and its own premise retracted along
+    /// with it.</b> The old fixture hand-built Vincent's `StrategyInstance` with `Method = Force` and
+    /// `DelegatedToId` set simultaneously, outside `Commit.Apply` — which meant it could never populate
+    /// `PolicyBreachDecisionMakerId`, the field this correction added specifically to answer "who chose
+    /// the prohibited method". Rebuilt through the real `Start` → `Alter(Force)` → `Delegate` sequence,
+    /// the same shape `InformationTransmissionTests.StageForceBreach` already uses. Re-examined
+    /// honestly rather than preserved: with the operation's own step now genuinely scheduled (the
+    /// hand-built instance never scheduled one), Tommy's real score components at the question now
+    /// favour <em>Candid</em>, not the old fixture's False — confirmed by reading them directly, not
+    /// assumed. The old title's claim ("denies it, costs himself trust") no longer holds; what the
+    /// production path actually demonstrates now is close to its mirror image, and is renamed to say so
+    /// rather than forced back to a denial the real state no longer produces.
     /// </summary>
     [Fact]
-    public void An_executor_who_denies_it_costs_himself_his_delegators_trust()
+    public void An_executor_who_candidly_confirms_it_is_trusted_more_not_less()
     {
-        var (world, vincent, tommy) = Delegated();
+        var world = Cast.Build(42, "resentful-tommy");
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
 
-        // He has no reason to think he was seen, so a denial is not priced out of the running.
+        var startCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+            { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+            startCtx.Agenda, startCtx, new List<string>());
+        var s = vincent.Execution.Strategy!;
+
+        var alterCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            alterCtx.Agenda, alterCtx, new List<string>());
+
+        var delegateCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"delegate:{s.Kind}:tommy", ActionKind.DelegateStrategy, "test", "hand it to tommy")
+            { TargetId = "tommy", Strategy = s.Kind, Method = s.Method, Domain = s.Domain, RequiredCrew = 1 },
+            delegateCtx.Agenda, delegateCtx, new List<string>());
+
+        Assert.Equal("vincent", s.PolicyBreachDecisionMakerId);
+
+        // Only the violence itself is run to resolution — not far enough for the separate
+        // observation-opportunity mechanic to give Tommy a WitnessSawIncident inference, which is
+        // what makes a denial the rational move rather than concealment. Confirmed directly below,
+        // not assumed.
+        Runner.Run(world, world.Now.AddDays(6));
+        Assert.Contains(world.TruthLog, e => e.Kind == "violence");
         Assert.False(tommy.Cognition.Holds(new Claim(ClaimKind.WitnessSawIncident, Cast.Grocery, "tommy")));
+
+        // Vincent's own reason to ask: he found traces afterwards, which is what Discovery means and
+        // why it does not put him at the scene — staged, since nothing in this window gives him this
+        // on its own. The exact real claim, not the file's generic Beating constant (EventId 0) —
+        // Tommy's own held claim carries the real violence event's id, and a mismatched EventId would
+        // make Vincent's question about a technically different claim Tommy has no position on.
+        var violenceEventId = world.TruthLog.First(e => e.Kind == "violence").Id;
+        var realBeating = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, violenceEventId);
+        vincent.Cognition.Learn(realBeating, Stance.Believes, 0.6, SourceKind.Discovery, vincent.Id, world.Now);
 
         double before = vincent.Social.Toward("tommy").Trust;
         Assert.True(before > 0, "the fixture needs a real relationship for the movement to be visible");
@@ -757,24 +848,30 @@ public sealed class RelationalConsequenceTests
         // comes back. Everything downstream is the simulation's.
         var ask = Generators.GenerateAll(Context(world, vincent))
             .Single(c => c.Kind == ActionKind.SeekCorroboration && c.TargetId == "tommy");
-        var ctx = Context(world, vincent);
-        Commit.Apply(world, vincent, ask, ctx.Agenda, ctx, new List<string>());
+        var askCtx = Context(world, vincent);
+        Commit.Apply(world, vincent, ask, askCtx.Agenda, askCtx, new List<string>());
 
         Runner.Run(world, world.Now.AddDays(5));
 
-        // Tommy decided for himself to deny it, and it reached Vincent as a denial.
-        var denial = Assert.Single(world.Reports,
-            r => r.SenderId == "tommy" && r.RecipientId == "vincent" && r.Candor == ReportCandor.False);
-        Assert.Contains(denial.Asserted, a => a.Claim.Equals(Beating) && a.AssertedStance == Stance.Rejects);
+        // Read off Tommy's real chosen candor rather than assuming the old fixture's False: rebuilt
+        // through Commit.Apply, his actual score components now favour Candid — he owns it rather
+        // than denying it. Accepted honestly rather than forced back to False (Matt's ruling).
+        var answer = Assert.Single(world.Reports,
+            r => r.SenderId == "tommy" && r.RecipientId == "vincent"
+                 && r.AnsweringClaim is { } ac && ac.Equals(realBeating));
+        Assert.Equal(ReportCandor.Candid, answer.Candor);
+        Assert.Contains(answer.Asserted, a => a.Claim.Equals(realBeating)
+            && a.AssertedStance is Stance.Knows or Stance.Believes);
 
-        // The delegator registered it as a conflict and it cost the executor his trust.
-        var conflict = Assert.Single(world.AccountConflicts,
+        // A candid account confirming exactly what Vincent already suspected is a corroboration, not
+        // a conflict — the mirror image of the retired claim: honesty here costs Tommy nothing, and
+        // may raise Vincent's trust in him rather than lowering it.
+        Assert.DoesNotContain(world.AccountConflicts,
             c => c.ListenerId == "vincent" && c.Conflict.SpeakerId == "tommy");
-        Assert.Equal(Beating, conflict.Conflict.Claim);
-        Assert.True(vincent.Social.Toward("tommy").Trust < before);
-
-        // Directional, still: Tommy's own view of Vincent is untouched by having lied to him.
-        Assert.Equal(0.10, tommy.Social.Toward("vincent").Trust, 9);
+        Assert.Contains(world.AccountAgreements,
+            a => a.ListenerId == "vincent" && a.Agreement.SpeakerId == "tommy" && a.Agreement.Claim.Equals(realBeating));
+        Assert.True(vincent.Social.Toward("tommy").Trust > before,
+            $"an honest confirmation should raise trust, not lower it: {vincent.Social.Toward("tommy").Trust:0.000} was not above {before:0.000}");
     }
 
     // ---------------------------------------------------------------- the question is scored on its subject
@@ -1115,7 +1212,7 @@ public sealed class RelationalConsequenceTests
 
         var ctx = Context(world, vincent);
         return Utility.Score(ask, vincent.View, vincent.Psychology, ctx.Perceived, ctx.Agenda,
-            Rng.ForOccasion(world.Seed, "test|fixed"));
+            Rng.ForOccasion(world.Seed, "test|fixed"), ctx.CurrentExecution);
     }
 
     private static World Run(string variant)
@@ -1168,7 +1265,8 @@ public sealed class RelationalConsequenceTests
             Pipeline.OrgMembersOf(world, actor),
             Acquaintance.KnownTo(world, actor),
             Array.Empty<Report>(), Array.Empty<InformationRequest>(), new[] { Cast.Grocery },
-            Pipeline.SubordinatesOf(world, actor).Where(id => Pipeline.AvailableToExecute(world, id)).ToList());
+            Pipeline.SubordinatesOf(world, actor).Where(id => Pipeline.AvailableToExecute(world, id)).ToList(),
+            Strategies.CurrentExecution(world, actor));
     }
 
     /// <summary>
@@ -1197,7 +1295,7 @@ public sealed class RelationalConsequenceTests
         // Milestone 008: read through the facet rather than the component name. See the note on the
         // same migration in ScenarioReachTests — a third of the components carrying that name read
         // no relationship state, and the name also swept in the Belonging share of loyalty.
-        return Utility.Score(candidate, vincent.View, vincent.Psychology, ctx.Perceived, ctx.Agenda, rng)
+        return Utility.Score(candidate, vincent.View, vincent.Psychology, ctx.Perceived, ctx.Agenda, rng, ctx.CurrentExecution)
             .RelationshipNet();
     }
 
@@ -1233,7 +1331,7 @@ public sealed class RelationalConsequenceTests
         // by the score rather than by which one was scored first.
         double Score(Candidate c) => Utility.Score(
             c, vincent.View, vincent.Psychology, ctx.Perceived, ctx.Agenda,
-            Rng.ForOccasion(world.Seed, "test|fixed")).Total;
+            Rng.ForOccasion(world.Seed, "test|fixed"), ctx.CurrentExecution).Total;
 
         return Score(retaliate) > Score(hold) ? "retaliate" : "hold";
     }

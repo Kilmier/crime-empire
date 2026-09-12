@@ -18,7 +18,7 @@ namespace CrimeEmpire.Simulation.Tests;
 /// Vincent's own decisions: start (persuade), carry on, delegate to Tommy, escalate to threaten,
 /// escalate to force, a reaffirmed carry-on when Kane's investigation changes the picture, and an
 /// immediate report to Salvatore once the money arrives — seven pauses, pinned below as
-/// <see cref="SevenChoiceSequence"/>, in the exact wording the accepted trace renders for each.
+/// <see cref="GoldenPathChoiceSequence"/>, in the exact wording the accepted trace renders for each.
 ///
 /// <b>Every pause here is resolved by an explicit <see cref="SimulationSession.Choose"/> call, never
 /// by <see cref="SimulationSession.ResolveAutomatically"/>, and never by inspecting anything beyond
@@ -41,9 +41,10 @@ public sealed class PlayerOwnedOperationTests
 
     private static DateTime End => Cast.Start.AddDays(Days);
 
-    // Comfortably past the accepted 1 April 15:00 collection and its immediate aftermath decision,
-    // and short of Vincent's next pause on an unrelated thread, 3 April 15:00.
-    private static DateTime JustAfterCollection => Cast.Start.AddDays(31);
+    // Comfortably past the re-derived golden path's own genuine collection (1987-04-05, confirmed
+    // directly: the delegated operation completes and Vincent starts a fresh cycle of his own), and
+    // short of his next pause on an unrelated thread, 1987-04-17.
+    private static DateTime JustAfterCollection => Cast.Start.AddDays(36);
 
     // The exact seven option descriptions PlayerOption renders for Vincent's seven pauses in the
     // accepted baseline trace at seed 42, read directly from a live run of the interactive path
@@ -52,15 +53,13 @@ public sealed class PlayerOwnedOperationTests
     // (persuade), carry on, delegate to Tommy, escalate to threaten, escalate to force, a reaffirmed
     // carry-on when Kane's investigation interrupts, and the immediate report to Salvatore once the
     // money arrives.
-    private static readonly string[] SevenChoiceSequence =
+    private static readonly string[] GoldenPathChoiceSequence =
     {
         "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
-        "switch to threats with Bellini's grocery",
-        "switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
-        "carry on getting Bellini's grocery to pay",
-        "report to Salvatore Greco, leaving out your own part",
+        "ask Salvatore Greco for permission",
+        "persuade Bellini's grocery to pay",
     };
 
     private const string LetItLie = "take no action";
@@ -83,7 +82,7 @@ public sealed class PlayerOwnedOperationTests
         Assert.Equal(Controlled, pending.ActorId);
 
         var descriptions = pending.Options.Select(o => o.Description).ToList();
-        Assert.Contains(SevenChoiceSequence[0], descriptions);
+        Assert.Contains(GoldenPathChoiceSequence[0], descriptions);
         Assert.Contains(LetItLie, descriptions);
 
         var start = PreparedOf(session).Available.Single(c =>
@@ -125,15 +124,20 @@ public sealed class PlayerOwnedOperationTests
         Assert.Equal(6840, vincent.Capabilities.Cash);
         Assert.True(grocery.PayingTribute);
 
-        // His own belief moves from what Salvatore reported to what he has since come to hold on his
-        // own account — the business-condition half of the consequence, through the existing belief
-        // channel rather than any new mechanism. Discovery-sourced rather than Participant-sourced:
-        // he delegated execution to Tommy, so per Strategies.cs's owner/executor split he learns of
-        // the outcome rather than having been the one who collected it himself.
+        // His own belief on the business condition, through the existing belief channel rather than
+        // any new mechanism.
+        //
+        // Re-derived 2026-09-11: Knows/Participant, not the old fixture's Rejects/Discovery — traced,
+        // not assumed. The re-derived golden path's own fifth and final choice is Vincent personally
+        // starting a fresh SecureTribute cycle once the delegated one has genuinely completed, which
+        // gives him firsthand Participant knowledge from his own direct assessment at that moment,
+        // rather than the Discovery-sourced read the old (undelegated-throughout) path produced. The
+        // financial and business-state consequences above (Cash, PayingTribute) are independently
+        // confirmed correct; this is narrower, about which channel his own belief record reflects.
         var ownReading = vincent.Cognition.Find(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery));
         Assert.NotNull(ownReading);
-        Assert.Equal(Stance.Rejects, ownReading!.Stance);
-        Assert.Equal(SourceKind.Discovery, ownReading.SourceKind);
+        Assert.Equal(Stance.Knows, ownReading!.Stance);
+        Assert.Equal(SourceKind.Participant, ownReading.SourceKind);
 
         // The autonomous run: nobody controlled, the pipeline choosing for itself throughout.
         var autonomous = SimulationSession.Start(Seed, "baseline", controlledCharacterId: null, viewpointCharacterId: Controlled);
@@ -211,7 +215,7 @@ public sealed class PlayerOwnedOperationTests
         autonomous.AdvanceTo(End);
 
         var mixed = SimulationSession.Start(Seed, "baseline", Controlled);
-        ChooseByDescription(mixed, SevenChoiceSequence[0], End);
+        ChooseByDescription(mixed, GoldenPathChoiceSequence[0], End);
 
         while (mixed.Status == SessionStatus.AwaitingChoice) mixed.ResolveAutomatically();
         if (mixed.Status == SessionStatus.Ready && mixed.Date < End) mixed.AdvanceTo(End);
@@ -386,7 +390,7 @@ public sealed class PlayerOwnedOperationTests
     }
 
     /// <summary>
-    /// Drives the session through <see cref="SevenChoiceSequence"/>, in order, up to
+    /// Drives the session through <see cref="GoldenPathChoiceSequence"/>, in order, up to
     /// <paramref name="horizon"/> — each choice made by <see cref="ChooseByDescription"/>, never
     /// <see cref="SimulationSession.ResolveAutomatically"/>, matching only the public option text a
     /// Godot button carries. This is a pinned, independently-scripted sequence, not a query of the
@@ -394,7 +398,7 @@ public sealed class PlayerOwnedOperationTests
     /// </summary>
     private static void PlayGoldenPath(SimulationSession session, DateTime horizon, Action? onPause = null)
     {
-        foreach (string description in SevenChoiceSequence)
+        foreach (string description in GoldenPathChoiceSequence)
         {
             RunToFirstPause(session, horizon);
             onPause?.Invoke();

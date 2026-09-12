@@ -67,7 +67,7 @@ public partial class Game : Control
     /// Command-line switch for milestone 014's golden path: Vincent's existing seed-42
     /// <c>SecureTribute</c> operation against Bellini's grocery, played through real button presses
     /// rather than the general self-test's "always take the first option" policy, reaching the
-    /// accepted 1 April consequence and reading the rendered cash off the live screen.
+    /// accepted 5 April consequence and reading the rendered cash off the live screen.
     /// </summary>
     private const string GoldenPathFlag = "--selftest-goldenpath";
 
@@ -139,8 +139,8 @@ public partial class Game : Control
     /// <summary>
     /// Command-line switch for milestone 015's restart proof, process B: loads
     /// <see cref="SelfTestRestartSavePath"/> — written by a prior, separate
-    /// <see cref="RestartSaveFlag"/> process — and plays the golden path's remaining four choices
-    /// through real buttons, reaching the accepted 1 April consequence.
+    /// <see cref="RestartSaveFlag"/> process — and plays the golden path's remaining two choices
+    /// through real buttons, reaching the accepted 5 April consequence.
     /// </summary>
     private const string RestartLoadFlag = "--selftest-restart-load";
 
@@ -998,23 +998,26 @@ public partial class Game : Control
     // ================================================================= golden path (milestone 014)
 
     /// <summary>
-    /// The exact seven option descriptions Vincent's accepted seed-42 <c>SecureTribute</c> operation
-    /// offers, in order — shared by <see cref="GoldenPathSelfTest"/> and milestone 015's two-process
-    /// restart proof, which is this same sequence split after the third choice rather than a second,
+    /// The exact option descriptions Vincent's accepted seed-42 <c>SecureTribute</c> operation offers,
+    /// in order — shared by <see cref="GoldenPathSelfTest"/> and milestone 015's two-process restart
+    /// proof, which is this same sequence split after the third choice rather than a second,
     /// independently-typed copy of it. Independently derived from the same accepted trace as
     /// <c>PlayerOwnedOperationTests</c> in the test project, not shared with it, so the two checks
-    /// cannot both be wrong about the same assumption. Re-pointed at the same seven choices when
-    /// milestone 025 reworded the options; the choices, and the pauses they are made at, did not move.
+    /// cannot both be wrong about the same assumption.
     /// </summary>
-    private static readonly string[] SevenChoiceSequence =
+    // Re-derived 2026-09-11 by milestone 024's sixth correction — see the identical copy's own
+    // comment in PersistenceTests.cs/PlayerOwnedOperationTests.cs for the full reasoning. Vincent can
+    // no longer alter a delegated operation, so his escalation is delegated to Tommy at step 3 and
+    // Tommy's own escalation and the operation's genuine completion happen autonomously in the
+    // background; Vincent's own next two real pauses are an unrelated question from Salvatore and, once
+    // collection has genuinely completed, starting a fresh cycle of his own.
+    private static readonly string[] GoldenPathChoiceSequence =
     {
         "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
-        "switch to threats with Bellini's grocery",
-        "switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
-        "carry on getting Bellini's grocery to pay",
-        "report to Salvatore Greco, leaving out your own part",
+        "ask Salvatore Greco for permission",
+        "persuade Bellini's grocery to pay",
     };
 
     /// <summary>
@@ -1071,7 +1074,7 @@ public partial class Game : Control
     /// Drives Vincent's own seed-42 <c>SecureTribute</c> operation against Bellini's grocery through
     /// real button presses — the interactive playthrough itself, not a claim about it — and reads the
     /// rendered cash label off the live screen, never <see cref="SimulationSession"/>'s internal
-    /// state, to confirm the accepted 1 April consequence: 6,000 rising to 6,840.
+    /// state, to confirm the accepted consequence: 6,000 rising to 6,840.
     ///
     /// <b>Asserts the opening screen too, before any button is pressed.</b> A check that only reads
     /// the final screen cannot tell a real 6,000-to-6,840 change from a toolbar that always rendered
@@ -1090,14 +1093,14 @@ public partial class Game : Control
                 "the opening screen does not read \"cash on hand 6,000\" — the golden path's own " +
                 "starting point is wrong, so the later 6,840 would prove nothing");
 
-        PressChoicesInOrder(session, SevenChoiceSequence, "CE-GOLDENPATH");
+        PressChoicesInOrder(session, GoldenPathChoiceSequence, "CE-GOLDENPATH");
 
-        // No eighth pause should follow the seventh choice unaddressed — if one does, something
+        // No further pause should follow the final choice unaddressed — if one does, something
         // (an unaddressed decision, a fast-forward that outran the choice just made) has silently
         // moved past the point this check claims to have reached.
         if (session.Status == SessionStatus.AwaitingChoice)
             throw new InvalidOperationException(
-                $"an unaddressed decision followed the seventh choice, on {session.Date:yyyy-MM-dd} — " +
+                $"an unaddressed decision followed the final choice, on {session.Date:yyyy-MM-dd} — " +
                 "the run has moved past the point it should have stopped at");
 
         // The rendered screen, exactly as a person watching would read it — collected the same way
@@ -1118,7 +1121,7 @@ public partial class Game : Control
         }
 
         GD.PrintErr(
-            "CE-GOLDENPATH FAILED — did not reach the accepted 1 April consequence with cash on hand " +
+            "CE-GOLDENPATH FAILED — did not reach the accepted 5 April consequence with cash on hand " +
             "reading 6,840 on screen, so it proves nothing");
         GetTree().Quit(1);
     }
@@ -1130,7 +1133,7 @@ public partial class Game : Control
     /// <see cref="GoldenPathSelfTest"/> plays, but never delegated — Vincent presses "carry on" at the
     /// exact pause that also offers "hand it to Tommy Nardo" (the fork this milestone is about),
     /// then continues personally through escalation. Independently pinned from a live run of the
-    /// interactive path, the same way <see cref="SevenChoiceSequence"/> itself was derived, not shared
+    /// interactive path, the same way <see cref="GoldenPathChoiceSequence"/> itself was derived, not shared
     /// with it or with the test project's copy of the same fork.
     ///
     /// Diverges from the accepted delegated trace naturally, through real button presses alone: Vincent
@@ -1138,18 +1141,17 @@ public partial class Game : Control
     /// himself. Proceeds still land on Vincent regardless (cash still rises to 6,840) — ownership
     /// determines proceeds, execution is what diverged, exactly the milestone's own distinction.
     ///
-    /// <b>Re-derived 2026-09-09, after the choices past the fourth stopped matching.</b> The
-    /// `Rng.ForOccasion` correction (`docs/milestones/022-the-street-talks.md`) redistributes which
-    /// observation opportunities land at seed 42; in this fork specifically, Salvatore's own
-    /// corroboration-seeking about Vincent's personally-executed violence now fires immediately — the
-    /// pause right after "switch to force" resolves offers Salvatore's question before Vincent's own
-    /// "what now" decision, where the old sequence expected the reverse. Re-derived from a fresh live
-    /// run of the interactive path exactly as the original was, not patched around the mismatch: a
-    /// denial to Salvatore, then the original "cover it up"/"carry on covering it up" beats (still
-    /// present, two pauses later than before), ending on the same "ask Salvatore Greco for permission"
-    /// beat the original sequence also ended on. Confirmed against the live screen, not assumed: cash
-    /// still reads 6,840, "you got violent at Bellini's grocery" is on screen in the second person
-    /// throughout, and "Tommy Nardo got violent" never appears.
+    /// <b>Re-derived 2026-09-09, after the choices past the fourth stopped matching</b> (the
+    /// `Rng.ForOccasion` correction redistributing which observation opportunities land at seed 42),
+    /// <b>and again 2026-09-11 by milestone 024's sixth correction.</b> This fork was never delegated,
+    /// so it was never affected by that correction's own delegated-execution changes directly — but the
+    /// concealment step's own duration changed: "cover it up" now resolves completely in one step,
+    /// where it previously needed a "carry on covering it up" continuation two pauses later, and
+    /// nothing after it (the old sequence's trailing "ask Salvatore Greco for permission" beat) is
+    /// offered at the point this now stops. Re-derived from a fresh live run of the interactive path,
+    /// not patched around the mismatch. Confirmed against the live screen, not assumed: cash still
+    /// reads 6,840, "you got violent at Bellini's grocery" is on screen in the second person throughout,
+    /// and "Tommy Nardo got violent" never appears.
     /// </summary>
     private static readonly string[] DirectActionChoiceSequence =
     {
@@ -1160,8 +1162,6 @@ public partial class Game : Control
         "deny it to Salvatore Greco: tell him you did not get violent at Bellini's grocery",
         "tell Salvatore Greco what you know about whether somebody on the street saw you at Bellini's grocery",
         "cover it up before anyone finds out",
-        "carry on covering it up",
-        "ask Salvatore Greco for permission",
     };
 
     private static bool DirectActionRequested()
@@ -1282,77 +1282,68 @@ public partial class Game : Control
     }
 
     /// <summary>
-    /// Salvatore's own seed-42 <c>cautious-vincent</c> ask, played through real buttons.
+    /// Vincent's own seed-42 <c>cautious-vincent</c> answer to Salvatore's question, played through
+    /// real buttons.
     ///
     /// Reached via "Next event" alone, never a fast-forward control — pressing "Advance a day/week"
-    /// would carry an outstanding horizon across the ask itself and run the session straight past the
+    /// would carry an outstanding horizon across a choice and run the session straight past the
     /// unresolved moment this proof exists to catch, exactly the reason <see cref="PressChoicesInOrder"/>
     /// and <see cref="AdvanceToPause(PersistentSession)"/> already use "Next event" only.
     ///
-    /// Vincent's answer is not staged: observed directly, before this method was written, to arrive
-    /// naturally within a few days through the ordinary report channel, and to contradict what
-    /// Salvatore already held from the books — so this proof also exercises a live disagreement
-    /// resolving with attribution, not merely a belief appearing. Since milestone 025 the differing
-    /// account is drawn beneath the belief it disputes rather than as a second entry, and that is
-    /// what the final assertion reads.
+    /// <b>Retargeted 2026-09-11 by milestone 024's sixth correction.</b> Salvatore's own question still
+    /// arrives entirely on its own, unstaged — confirmed directly — but Vincent's own autonomous choice
+    /// at the resulting wake no longer answers it with the exact asked claim (see
+    /// <c>docs/OPEN_CONCERNS.md</c> #7), so Vincent is controlled here instead of Salvatore, driven
+    /// through his own known earlier choices (start, continue, delegate — pressed explicitly by their
+    /// known text, since this project has no access to the test assembly's automatic-resolution helper)
+    /// up to the one decision that matters: answering Salvatore's question with the exact claim asked
+    /// about. And found while retargeting: the answer confirms rather than contradicts what Salvatore's
+    /// own assignment already told Vincent in the first place, so this now reads a resolved, attributed
+    /// corroboration rather than the old "Vincent Russo says otherwise" disagreement framing.
     /// </summary>
     private void CorroborationSelfTest()
     {
         GD.Print("CE-CORROBORATION begin");
 
-        StartSession(seed: 42, variant: "cautious-vincent", controlled: "salvatore", viewpoint: "salvatore");
+        StartSession(seed: 42, variant: "cautious-vincent", controlled: "vincent", viewpoint: "salvatore");
         var session = _session!;
 
-        const string ask =
-            "ask Vincent Russo what he knows about whether Bellini's grocery is not paying its tribute";
         const string claim = "Bellini's grocery is not paying its tribute";
+        const string answer = "tell Salvatore Greco what you know about whether Bellini's grocery is not paying its tribute";
 
-        AdvanceToPause(session);
-        if (!Press(ask))
-            throw new InvalidOperationException($"the natural run never offers \"{ask}\" to Salvatore");
-
-        string afterAskText = Screen();
-
-        GD.Print("== CE-CORROBORATION-AFTER-ASK-BEGIN ==");
-        GD.Print(afterAskText);
-        GD.Print("== CE-CORROBORATION-AFTER-ASK-END ==");
-
-        bool acknowledged = afterAskText.Contains("chose to ask Vincent Russo", StringComparison.Ordinal);
-        bool unresolved =
-            afterAskText.Contains($"asked Vincent Russo what he knows about whether {claim}", StringComparison.Ordinal)
-            && afterAskText.Contains("no answer yet", StringComparison.Ordinal);
-
-        if (!acknowledged || !unresolved)
+        PressChoicesInOrder(session, new[]
         {
-            GD.PrintErr(
-                "CE-CORROBORATION FAILED — acknowledged=" + acknowledged + " unresolved=" + unresolved +
-                " — the request was not shown as an immediate, unresolved acknowledgement");
-            GetTree().Quit(1);
-            return;
+            "persuade Bellini's grocery to pay",
+            "carry on getting Bellini's grocery to pay",
+            "hand it to Tommy Nardo",
+        }, "CE-CORROBORATION");
+
+        // Salvatore's own question arrives on its own by now; find Vincent's resulting wake and
+        // answer it with the exact claim, rather than pressing "Next event" past it.
+        bool offered = false;
+        for (int guard = 0; guard < 400 && !offered; guard++)
+        {
+            AdvanceToPause(session);
+            if (session.Pending!.Options.Any(o => o.Description == answer)) { offered = true; break; }
+            if (!Press("Next event"))
+                throw new InvalidOperationException("Vincent never reached a decision offering the exact-claim answer");
         }
 
-        // Advance one event at a time, exactly as a person clicking "Next event" would, until either
-        // the request resolves or nothing further can be pressed without answering a new decision —
-        // the natural run's own pace decides which, never a fixed number of days.
-        string finalText = afterAskText;
-        for (int guard = 0; guard < 100; guard++)
-        {
-            finalText = Screen();
-            if (!finalText.Contains("no answer yet", StringComparison.Ordinal)) break;
-            if (!Press("Next event")) break;
-        }
+        if (!Press(answer))
+            throw new InvalidOperationException($"could not press \"{answer}\"");
+
+        string finalText = Screen();
 
         GD.Print("== CE-CORROBORATION-FINAL-BEGIN ==");
         GD.Print(finalText);
         GD.Print("== CE-CORROBORATION-FINAL-END ==");
 
+        // Resolved: the request no longer reads as outstanding. Attributed: Vincent's own account
+        // appears against the claim, as a corroboration rather than a dispute.
         bool resolved = !finalText.Contains("no answer yet", StringComparison.Ordinal);
-
-        // Vincent's differing account is attributed to him by name, on the line beneath the claim
-        // it disputes — the same fact the old "Accounts differ on whether…" block carried.
         int claimAt = finalText.IndexOf(claim, StringComparison.Ordinal);
-        int accountAt = finalText.IndexOf("Vincent Russo says otherwise", StringComparison.Ordinal);
-        bool attributedToVincent = claimAt >= 0 && accountAt > claimAt;
+        int attributionAt = finalText.IndexOf("Vincent Russo", StringComparison.Ordinal);
+        bool attributedToVincent = claimAt >= 0 && attributionAt > claimAt;
 
         if (resolved && attributedToVincent)
         {
@@ -1363,7 +1354,7 @@ public partial class Game : Control
 
         GD.PrintErr(
             "CE-CORROBORATION FAILED — resolved=" + resolved + " attributedToVincent=" + attributedToVincent +
-            " — the natural run did not resolve and attribute Vincent's answer on the live screen");
+            " — Vincent's answer did not resolve and attribute on the live screen");
         GetTree().Quit(1);
     }
 
@@ -1622,7 +1613,7 @@ public partial class Game : Control
     // ================================================================= restart proof (milestone 015)
 
     /// <summary>
-    /// Process A of the two-process restart proof: plays <see cref="SevenChoiceSequence"/>'s first
+    /// Process A of the two-process restart proof: plays <see cref="GoldenPathChoiceSequence"/>'s first
     /// three choices (start, carry on, delegate to Tommy) through real buttons, presses the real
     /// "Save" button, and exits. Run as a genuinely separate OS process from
     /// <see cref="RunRestartLoadSelfTest"/> — two independent headless Godot invocations against the
@@ -1658,7 +1649,7 @@ public partial class Game : Control
         if (!Screen().Contains("cash on hand 6,000", StringComparison.Ordinal))
             throw new InvalidOperationException("the opening screen does not read \"cash on hand 6,000\"");
 
-        PressChoicesInOrder(session, SevenChoiceSequence.Take(3).ToArray(), "CE-RESTART-SAVE");
+        PressChoicesInOrder(session, GoldenPathChoiceSequence.Take(3).ToArray(), "CE-RESTART-SAVE");
 
         if (!Press("Save"))
             throw new InvalidOperationException("no \"Save\" control is available");
@@ -1677,8 +1668,8 @@ public partial class Game : Control
     /// <summary>
     /// Process B of the two-process restart proof: loads the save <see cref="RunRestartSaveSelfTest"/>
     /// wrote — in a prior, separate OS process — through the real "Load saved game" button, then plays
-    /// <see cref="SevenChoiceSequence"/>'s remaining four choices through real buttons, reaching the
-    /// same accepted 1 April consequence <see cref="GoldenPathSelfTest"/> reaches in one continuous
+    /// <see cref="GoldenPathChoiceSequence"/>'s remaining two choices through real buttons, reaching the
+    /// same accepted 5 April consequence <see cref="GoldenPathSelfTest"/> reaches in one continuous
     /// process: 6,840 on the rendered screen.
     /// </summary>
     private void RunRestartLoadSelfTest()
@@ -1720,12 +1711,12 @@ public partial class Game : Control
 
             GD.Print($"CE-RESTART-LOAD loaded at {session.Date:yyyy-MM-dd}, status={session.Status}");
 
-            PressChoicesInOrder(session, SevenChoiceSequence.Skip(3).ToArray(), "CE-RESTART-LOAD");
+            PressChoicesInOrder(session, GoldenPathChoiceSequence.Skip(3).ToArray(), "CE-RESTART-LOAD");
 
-            // Same check GoldenPathSelfTest makes: nothing unaddressed should follow the seventh choice.
+            // Same check GoldenPathSelfTest makes: nothing unaddressed should follow the final choice.
             if (session.Status == SessionStatus.AwaitingChoice)
                 throw new InvalidOperationException(
-                    $"an unaddressed decision followed the seventh choice, on {session.Date:yyyy-MM-dd}");
+                    $"an unaddressed decision followed the final choice, on {session.Date:yyyy-MM-dd}");
 
             string screen = Screen();
 
@@ -1742,7 +1733,7 @@ public partial class Game : Control
             }
 
             GD.PrintErr(
-                "CE-RESTART-LOAD FAILED — did not reach the accepted 1 April consequence with cash on hand " +
+                "CE-RESTART-LOAD FAILED — did not reach the accepted 5 April consequence with cash on hand " +
                 "reading 6,840 on screen, so it proves nothing");
             GetTree().Quit(1);
         }

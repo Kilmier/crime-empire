@@ -3,6 +3,7 @@ using CrimeSim.Domain;
 using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 using CrimeSim.Trace;
 
 namespace CrimeEmpire.Simulation.Tests;
@@ -102,7 +103,8 @@ public sealed class InformationTransmissionTests
     [Fact]
     public void A_report_conveys_only_what_its_sender_holds_and_omits_what_it_withholds()
     {
-        var world = Run("baseline");
+        var world = StageForceBreach("baseline", "vincent", "tommy");
+        Runner.Run(world, world.Now.AddDays(60));
         Assert.NotEmpty(world.Reports);
 
         foreach (var report in world.Reports)
@@ -138,7 +140,8 @@ public sealed class InformationTransmissionTests
     [Fact]
     public void An_incomplete_report_never_conveys_what_it_withheld()
     {
-        var world = Run("baseline");
+        var world = StageForceBreach("baseline", "vincent", "tommy");
+        Runner.Run(world, world.Now.AddDays(30));
         var salvatore = world.Get(Viewpoint);
 
         Assert.Contains(world.TruthLog, e => e.Kind == "violence");
@@ -152,12 +155,19 @@ public sealed class InformationTransmissionTests
         foreach (var report in concealing)
         foreach (var withheld in report.Withheld)
         {
+            // Scoped to what the recipient held at or before the concealing report's own moment —
+            // the guarantee is about that act of withholding, not about the rest of the man's life.
+            // A sender who conceals something early and is candid about it later (staged here: an
+            // owner who hides his own breach on first report, then answers it candidly once asked
+            // directly) has not leaked it through the concealing report; he has separately chosen to
+            // stop concealing it, which is a different act this test is not about.
             Assert.DoesNotContain(
-                salvatore.Cognition.AccountsOf(withheld),
+                salvatore.Cognition.AccountsOf(withheld).Where(t => t.At <= report.At),
                 t => t.SenderId == report.SenderId && t.Affirms);
 
-            // And if he does hold it, it is on some other footing than that man's word.
-            if (salvatore.Cognition.Find(withheld) is { IsHeld: true } held)
+            // And if what he held at that moment came from that man's word, it is on some other
+            // footing — never checked against a later reading, for the identical reason above.
+            if (salvatore.Cognition.Find(withheld) is { IsHeld: true } held && held.AcquiredAt <= report.At)
                 Assert.NotEqual(report.SenderId, held.SourceId);
         }
     }
@@ -200,7 +210,8 @@ public sealed class InformationTransmissionTests
     [Fact]
     public void A_breach_can_still_be_reasoned_to_from_facts_the_character_holds()
     {
-        var world = Run("disloyal-vincent");
+        var world = StageForceBreach("disloyal-vincent", "vincent", "tommy");
+        Runner.Run(world, world.Now.AddDays(60));
         var salvatore = world.Get(Viewpoint);
 
         var reasoned = salvatore.Cognition.Records
@@ -503,13 +514,20 @@ public sealed class InformationTransmissionTests
     [Fact]
     public void Vincents_own_breach_is_never_rendered_as_personally_witnessed()
     {
-        var world = Run("baseline");
+        var world = StageForceBreach("baseline", "vincent", "vincent");
         var vincent = world.Get("vincent");
 
-        var ownBreach = vincent.Cognition.Records.Single(r =>
-            r.Claim.Kind == ClaimKind.PersonBreachedPolicy && r.Claim.Subject == vincent.Id);
-        Assert.True(ownBreach.Confidence >= 0.9, "the case only bites at the top of the label range");
-        Assert.DoesNotContain("witness", ownBreach.ConfidenceLabel, StringComparison.OrdinalIgnoreCase);
+        // One record per breach occurrence (the claim's own identity carries the event id, so a
+        // press that has to repeat before Marco concedes files one each time) — every one of them
+        // is Vincent's own decision, at full confidence, and none may read as witnessed.
+        var ownBreaches = vincent.Cognition.Records.Where(r =>
+            r.Claim.Kind == ClaimKind.PersonBreachedPolicy && r.Claim.Subject == vincent.Id).ToList();
+        Assert.NotEmpty(ownBreaches);
+        foreach (var ownBreach in ownBreaches)
+        {
+            Assert.True(ownBreach.Confidence >= 0.9, "the case only bites at the top of the label range");
+            Assert.DoesNotContain("witness", ownBreach.ConfidenceLabel, StringComparison.OrdinalIgnoreCase);
+        }
 
         string view = IntelligenceWriter.Render(world, "vincent");
         Assert.DoesNotContain("personally witnessed", view, StringComparison.Ordinal);
@@ -523,7 +541,7 @@ public sealed class InformationTransmissionTests
     [Fact]
     public void The_author_of_a_breach_is_not_described_as_having_observed_it()
     {
-        var world = Run("baseline");
+        var world = StageForceBreach("baseline", "vincent", "vincent");
         var vincent = world.Get("vincent");
 
         var ownBreach = vincent.Cognition.Records
@@ -1372,4 +1390,243 @@ public sealed class InformationTransmissionTests
         Runner.Run(world, Cast.Start.AddDays(90));
         return world;
     }
+
+    /// <summary>
+    /// The owner half of the decision-maker rule: Vincent chooses Force himself, then delegates its
+    /// execution to Tommy. Vincent remains <see cref="StrategyInstance.PolicyBreachDecisionMakerId"/>
+    /// both immediately after he alters (before any delegation exists at all) and after he delegates
+    /// — delegation must not move it, since <see cref="StageForceBreach"/> always alters before
+    /// delegating and this is the identity that ordering exists to protect. Carried through to the
+    /// real consequence, not only the stored field: once violence actually resolves, Vincent is the
+    /// one who gains <c>PersonBreachedPolicy</c> self-knowledge, never Tommy merely because Tommy is
+    /// the one who executes it — a "whoever carries it out" simplification would hand it to Tommy
+    /// instead, which this specifically catches (mutation-checked: swapping the field's owner for
+    /// <c>executor.Id</c> at the read site in <see cref="Strategies.ResolveViolence"/> passed all five
+    /// pre-existing decision-maker tests silently, since none of them separately pin who ends up
+    /// holding it — only this assertion does).
+    /// </summary>
+    [Fact]
+    public void Vincent_who_chooses_force_then_delegates_remains_the_decision_maker()
+    {
+        var world = Cast.Build(seed: 42, "baseline");
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+
+        var startCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+            { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+            startCtx.Agenda, startCtx, new List<string>());
+        var s = vincent.Execution.Strategy!;
+
+        var alterCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            alterCtx.Agenda, alterCtx, new List<string>());
+
+        Assert.Equal("vincent", s.PolicyBreachDecisionMakerId);
+
+        var delegateCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"delegate:{s.Kind}:tommy", ActionKind.DelegateStrategy, "test", "hand it to tommy")
+            { TargetId = "tommy", Strategy = s.Kind, Method = s.Method, Domain = s.Domain, RequiredCrew = 1 },
+            delegateCtx.Agenda, delegateCtx, new List<string>());
+
+        Assert.Equal("vincent", s.PolicyBreachDecisionMakerId);
+
+        Runner.Run(world, world.Now.AddDays(20));
+
+        Assert.Contains(vincent.Cognition.Records,
+            r => r.Claim.Kind == ClaimKind.PersonBreachedPolicy && r.Claim.Subject == "vincent"
+                 && r.SourceKind == SourceKind.Participant);
+        Assert.DoesNotContain(tommy.Cognition.Records,
+            r => r.Claim.Kind == ClaimKind.PersonBreachedPolicy && r.SourceKind == SourceKind.Participant);
+    }
+
+    /// <summary>
+    /// The delegate half of the decision-maker rule, and the information-boundary half of the same
+    /// ruling: Vincent delegates a permitted method — no breach exists yet — and only afterward does
+    /// Tommy, now the executor, independently alter it to Force. Not naturally reachable: no
+    /// generator ever offers a delegate an escalation past his own crew (Tommy's crew is 1, Force
+    /// requires 2 — see <c>Generators.Coercive</c>), so this is staged directly at the
+    /// <see cref="Commit"/> boundary, labeled staged, per Matt's ruling not to alter crew or policy to
+    /// make it emerge naturally. Tommy becomes the decision-maker; carried through to
+    /// <see cref="Strategies.ResolveViolence"/> once the violence actually resolves, Vincent gains no
+    /// <c>PersonBreachedPolicy</c> self-knowledge from a choice he never made — ownership alone must
+    /// not manufacture it for him.
+    /// </summary>
+    [Fact]
+    public void Vincent_who_delegates_persuade_then_tommy_independently_alters_to_force_leaves_tommy_the_decision_maker()
+    {
+        var world = Cast.Build(seed: 42, "baseline");
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+
+        var startCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+            { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+            startCtx.Agenda, startCtx, new List<string>());
+        var s = vincent.Execution.Strategy!;
+
+        var delegateCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"delegate:{s.Kind}:tommy", ActionKind.DelegateStrategy, "test", "hand it to tommy")
+            { TargetId = "tommy", Strategy = s.Kind, Method = s.Method, Domain = s.Domain, RequiredCrew = 1 },
+            delegateCtx.Agenda, delegateCtx, new List<string>());
+
+        // No breach exists yet — Persuade breaches nothing — so nobody is the decision-maker so far.
+        Assert.Null(s.PolicyBreachDecisionMakerId);
+
+        // Staged at the Commit boundary: Tommy, the current executor, independently escalates to
+        // Force. No generator would ever offer him this — Filters' capability stage removes it for
+        // any crew-1 delegate — so this candidate is hand-built and applied directly.
+        var alterCtx = Context(world, tommy);
+        Commit.Apply(world, tommy,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            alterCtx.Agenda, alterCtx, new List<string>());
+
+        Assert.Equal("tommy", s.PolicyBreachDecisionMakerId);
+
+        // Carried through to the real consequence: once violence actually resolves, the self-
+        // knowledge it produces must land on Tommy, never on Vincent merely because he owns the
+        // instance.
+        Runner.Run(world, world.Now.AddDays(20));
+
+        Assert.Contains(tommy.Cognition.Records,
+            r => r.Claim.Kind == ClaimKind.PersonBreachedPolicy && r.Claim.Subject == "tommy"
+                 && r.SourceKind == SourceKind.Participant);
+        Assert.DoesNotContain(vincent.Cognition.Records,
+            r => r.Claim.Kind == ClaimKind.PersonBreachedPolicy);
+    }
+
+    /// <summary>
+    /// A repeated or no-op <see cref="ActionKind.AlterStrategy"/> that does not actually move the
+    /// operative method must not rewrite <see cref="StrategyInstance.PolicyBreachDecisionMakerId"/>,
+    /// even when it still carries the same <see cref="Candidate.BreachesPolicyId"/>. Staged directly
+    /// at the <see cref="Commit"/> boundary — no generator ever offers escalating Force to Force, so
+    /// this cannot arise through <see cref="Generators"/> at all — labeled staged, per Matt's ruling
+    /// that the Commit-level guard itself still needs a falsifying test even where the candidate that
+    /// exercises it cannot be produced naturally.
+    /// </summary>
+    [Fact]
+    public void A_repeated_alter_that_does_not_move_the_operative_method_does_not_rewrite_the_decision_maker()
+    {
+        var world = Cast.Build(seed: 42, "baseline");
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+
+        var startCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+            { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+            startCtx.Agenda, startCtx, new List<string>());
+        var s = vincent.Execution.Strategy!;
+
+        var alterCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            alterCtx.Agenda, alterCtx, new List<string>());
+
+        Assert.Equal("vincent", s.PolicyBreachDecisionMakerId);
+
+        var delegateCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"delegate:{s.Kind}:tommy", ActionKind.DelegateStrategy, "test", "hand it to tommy")
+            { TargetId = "tommy", Strategy = s.Kind, Method = s.Method, Domain = s.Domain, RequiredCrew = 1 },
+            delegateCtx.Agenda, delegateCtx, new List<string>());
+
+        // Staged: Tommy, now the executor, "re-alters" to the identical method Force already is —
+        // a no-op no real generator would ever offer, since Escalate(Force) is undefined. This is
+        // exactly the case the guard exists for: the same BreachesPolicyId, no genuine change in
+        // which method is operative, from a different actor entirely.
+        var noOpCtx = Context(world, tommy);
+        Commit.Apply(world, tommy,
+            new Candidate($"alter:{s.Kind}:force-again", ActionKind.AlterStrategy, "test", "press on with force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            noOpCtx.Agenda, noOpCtx, new List<string>());
+
+        Assert.Equal("vincent", s.PolicyBreachDecisionMakerId);
+        Assert.NotEqual("tommy", s.PolicyBreachDecisionMakerId);
+    }
+
+    /// <summary>
+    /// Force no longer resolves naturally in any accepted variant at this seed, once the delegated-
+    /// execution correction gave the man actually carrying a blocked operation his own reaction to
+    /// being refused — Tommy's own psychology settles for corroborating with Salvatore rather than
+    /// escalating, where Vincent's stood in for his and did. Staged directly through
+    /// <see cref="Commit.Apply"/>/<see cref="Strategies.Advance"/> instead, the same reasoning
+    /// <see cref="Candour_distinguishes_lying_from_merely_leaving_things_out"/> already gives for an
+    /// identical situation. <paramref name="decisionMaker"/> always alters to Force himself before
+    /// any delegation happens — the decision-maker rule names whoever chose the method at the moment
+    /// he chose it, so when <paramref name="decisionMaker"/> differs from <paramref name="executor"/>
+    /// the breach must already be on the instance before <c>DelegateStrategy</c> runs, matching
+    /// whichever of the two halves of the decision-maker rule a given test needs. The world is handed
+    /// back mid-run so a test can either read it immediately or let <see cref="Runner.Run"/> carry the
+    /// natural reporting/concealment/inference chain on from there.
+    /// </summary>
+    private static World StageForceBreach(string variant, string decisionMakerId, string executorId)
+    {
+        var world = Cast.Build(seed: 42, variant);
+        var decisionMaker = world.Get(decisionMakerId);
+        var executor = world.Get(executorId);
+
+        var ctx = Context(world, decisionMaker);
+        var start = new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+        {
+            TargetId = Cast.Grocery,
+            Strategy = StrategyKind.SecureTribute,
+            Domain = Cast.Harbour,
+            Method = CoercionMethod.Persuade,
+        };
+        Commit.Apply(world, decisionMaker, start, ctx.Agenda, ctx, new List<string>());
+        var s = decisionMaker.Execution.Strategy!;
+
+        // Alter before delegate, deliberately: the decision-maker rule names the man who chose the
+        // method at the moment he chose it, which for the "chose it, then handed it off" case (per
+        // this correction's own required pairing) means the breach must already be on the instance
+        // before DelegateStrategy runs — CurrentExecution is null for an owner who has already
+        // delegated, so AlterStrategy is no longer his to commit once he has.
+        var alterCtx = Context(world, decisionMaker);
+        Commit.Apply(world, decisionMaker,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            {
+                TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain,
+                Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour",
+            },
+            alterCtx.Agenda, alterCtx, new List<string>());
+
+        if (decisionMakerId != executorId)
+        {
+            var delegateCtx = Context(world, decisionMaker);
+            Commit.Apply(world, decisionMaker,
+                new Candidate($"delegate:{s.Kind}:{executorId}", ActionKind.DelegateStrategy, "test", $"hand it to {executorId}")
+                { TargetId = executorId, Strategy = s.Kind, Method = s.Method, Domain = s.Domain, RequiredCrew = 1 },
+                delegateCtx.Agenda, delegateCtx, new List<string>());
+        }
+
+        // Driven through the real queue rather than by hand-calling Strategies.Advance: a manual
+        // Advance never dequeues the event it is impersonating, so mixing it with a later
+        // Runner.Run left a stale StrategyStep sitting in the queue behind it. Twenty days comfortably
+        // covers approach/demand/press at this strategy's own three-day step interval, however
+        // Marco's own autonomous refuse-or-concede choice in between happens to land.
+        Runner.Run(world, world.Now.AddDays(20));
+
+        return world;
+    }
+
+    private static GeneratorContext Context(World world, Character actor)
+        => new(
+            actor.View, Salience.Perceive(actor, world.Now),
+            new Agenda(AgendaKind.DischargeResponsibility, "keep the harbour earning", "test", Cast.Harbour),
+            world.Now,
+            new ScheduledEvent { Id = 0, Time = world.Now, Kind = EventKind.RoleReview, OwnerId = actor.Id, Cause = "test" },
+            MyOffice: null, MyAssignment: null, KnownPolicies: Array.Empty<Policy>(),
+            SuperiorId: null, SubordinateIds: Array.Empty<string>(), OrgMemberIds: Array.Empty<string>(),
+            AcquaintedIds: Array.Empty<string>(), ReportsSent: Array.Empty<Report>(),
+            RequestsMade: Array.Empty<InformationRequest>(), VisibleTargets: Array.Empty<string>(),
+            AvailableSubordinateIds: Array.Empty<string>(), CurrentExecution: Strategies.CurrentExecution(world, actor));
 }

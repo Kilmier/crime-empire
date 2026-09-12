@@ -4,6 +4,7 @@ using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 
 namespace CrimeEmpire.Simulation.Tests;
 
@@ -334,23 +335,47 @@ public sealed class ShortfallAttributionTests
     /// <summary>
     /// Ruling 6, checked by driving a session rather than argued by construction: whatever becomes
     /// available to the capo is available to a player controlling him through the same candidate set.
-    /// <c>watchful-boss</c> is one of the two variants at seed 42 where the attribution is actually
-    /// contradicted before day 90 — see the milestone archive for the measured figures.
+    ///
+    /// <b>Retargeted 2026-09-11 by milestone 024's sixth correction.</b> <c>watchful-boss</c>'s own
+    /// natural contradiction depended on Vincent's authority leak while delegated — the report that
+    /// used to reach Salvatore contradicting Vincent's own rejection no longer fires, since Tommy, now
+    /// properly the executor, is the one who reports, and his account agrees with rather than
+    /// contradicts what Salvatore already holds (see
+    /// <c>RelationalConsequenceTests.The_scenario_produces_the_expected_number_of_conflicts</c>'s own
+    /// traced explanation for the identical mechanism). This test's own claim is the assignment-channel
+    /// route from suspicion to a player-visible candidate, not natural contradiction, so the
+    /// contradiction and the boss's own inference are staged directly — the identical two calls
+    /// <see cref="The_assignment_channel_carries_the_boss_suspicion_to_the_capo"/> already uses,
+    /// through the real <see cref="Cognition.Receive"/>/<see cref="Inference.Reconsider"/> path, on
+    /// <see cref="SimulationSession.World"/> before Vincent's own session ever advances. Everything
+    /// downstream — the leadership review creating the assignment, its disclosure reaching Vincent,
+    /// and what he is offered because of it — runs through the real, unstaged pipeline.
     ///
     /// Resolved automatically at every pause rather than by picking the first option: <c>Available</c>
     /// is deliberately sorted by candidate id rather than by rank (milestone 009, ruling 5), so
     /// "always take the first one offered" drives an entirely different, lower-ranked history and
     /// would not reach the bakery at all. <see cref="SimulationSession.ResolveAutomatically"/> commits
-    /// to whichever option the character himself would have preferred — the same run this variant's
-    /// batch figures in the archive are measured from — while this test still records what was
-    /// actually offered at each pause, which is the fact ruling 6 asks to have checked.
+    /// to whichever option the character himself would have preferred, while this test still records
+    /// what was actually offered at each pause, which is the fact ruling 6 asks to have checked.
     /// </summary>
     [Fact]
     public void A_player_controlling_the_capo_is_offered_the_bakery_once_he_suspects_a_gap()
     {
-        var session = SimulationSession.Start(42, "watchful-boss", "vincent", "vincent");
-        var offered = new List<string>();
+        var session = SimulationSession.Start(1, "baseline", "vincent", "vincent");
+        var world = session.World;
+        var salvatore = world.Get("salvatore");
+        var vincent = world.Get("vincent");
 
+        // Staged: the contradiction and the boss's own inference, through the identical real-path
+        // calls The_assignment_channel_carries_the_boss_suspicion_to_the_capo uses. Everything after
+        // this point — the leadership review, the assignment, its disclosure, and what Vincent is
+        // offered — is unstaged.
+        salvatore.Cognition.Receive(
+            ReportedClaim.Honest(Attributed, Stance.Rejects, 0.9, SourceKind.Participant), vincent.Id, world.Now);
+        Inference.Reconsider(world, salvatore, world.Now);
+        Assert.NotNull(salvatore.Cognition.Find(Gap));
+
+        var offered = new List<string>();
         session.AdvanceTo(Cast.Start.AddDays(90));
         while (session.Status == SessionStatus.AwaitingChoice)
         {
@@ -390,6 +415,7 @@ public sealed class ShortfallAttributionTests
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
             VisibleTargets: world.BusinessesIn(Cast.Harbour).Select(b => b.Id).ToList(),
-            AvailableSubordinateIds: Array.Empty<string>());
+            AvailableSubordinateIds: Array.Empty<string>(),
+            CurrentExecution: Strategies.CurrentExecution(world, actor));
     }
 }

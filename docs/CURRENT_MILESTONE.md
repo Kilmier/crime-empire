@@ -229,6 +229,18 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
 corrected three times above), `1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that
 backlog is cleared and Matt says so.
 
+- **Milestone 024's sixth correction is complete and awaiting Codex's implementation review — not
+  described as reviewed, passed, accepted, or closed.** A bounded playtest correction (delegated-
+  execution authority, information boundary, postponement, assignment coherence, and policy-breach
+  decision-maker identity) that also required classifying and remediating 44 pre-existing tests it
+  broke, since the correction proved Force structurally unreachable by any delegate in the current
+  cast (crew-gated) rather than merely absent from searched seeds. Full account, including the
+  Force-impossibility substantiation, the causal-root classification of all 44 tests, and every
+  ruling Matt made along the way: `docs/milestones/024-the-operation-reads.md`'s sixth correction
+  section. Verification summary: 680 tests passing (0 failing), `--verify` deterministic at three
+  seed/variant combinations, `--compare` shows `violence: none` across all six configurations, both
+  required viewpoints clean, all nine Godot self-tests and the two-process restart proof passing.
+
 ## Next, per the demo arc
 
 `ROADMAP.md`'s "The demo arc" — layer 1 finishes with **027 The session has an ending**, and then

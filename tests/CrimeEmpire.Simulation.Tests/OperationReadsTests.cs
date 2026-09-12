@@ -4,6 +4,7 @@ using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 using CrimeSim.Trace;
 
 namespace CrimeEmpire.Simulation.Tests;
@@ -564,5 +565,6 @@ public sealed class OperationReadsTests
             RequestsMade: Array.Empty<InformationRequest>(),
             VisibleTargets: Array.Empty<string>(),
             AvailableSubordinateIds: (subordinateIds ?? Array.Empty<string>())
-                .Where(id => Pipeline.AvailableToExecute(world, id)).ToList());
+                .Where(id => Pipeline.AvailableToExecute(world, id)).ToList(),
+            CurrentExecution: Strategies.CurrentExecution(world, actor));
 }

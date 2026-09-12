@@ -26,6 +26,32 @@ public static class Filters
         {
             if (c.Kind != ActionKind.StartStrategy) continue;
 
+            // Milestone 024's sixth correction, the one-operation-per-involved-character rule applied to
+            // self-starts: a man currently carrying somebody else's delegated operation (he owns
+            // nothing of his own, but CurrentExecution finds one naming him as DelegatedToId) has no
+            // hands free, whatever the new candidate's own kind or target. Refused outright, never
+            // generated-then-scored, the same shape Pipeline.AvailableToExecute's own delegation-
+            // eligibility check already established for being offered as a delegate in the first
+            // place — this is the mirror case, starting one of his own instead.
+            if (ctx.Actor.Execution.Strategy is null && ctx.CurrentExecution is { } busyWith)
+            {
+                rejected.Add(new Rejection(c, RejectionStage.Redundancy,
+                    $"{ctx.Actor.Name} already has his hands full with {busyWith.Label}"));
+                redundant.Add(c.Id);
+                continue;
+            }
+
+            // Milestone 024's sixth correction: an owner may not silently overwrite his own still-live
+            // delegated operation by starting something else — he must call it off explicitly
+            // (AbandonStrategy) first. Commit.StartStrategy fails closed on the identical condition.
+            if (ctx.Actor.Execution.Strategy is { DelegatedToId: not null } delegatedAway)
+            {
+                rejected.Add(new Rejection(c, RejectionStage.Redundancy,
+                    $"{ctx.Actor.Name} would have to call off {delegatedAway.Label} first"));
+                redundant.Add(c.Id);
+                continue;
+            }
+
             // ConcealIncident is identified by which incident it is about, never by (Kind,
             // TargetId). A location is not an incident: two separate beatings at the same shop are
             // two different things to cover up, and a (Kind, TargetId) match to the running

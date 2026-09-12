@@ -157,6 +157,11 @@ public static class Pipeline
         string? domain = agenda.Domain ?? office?.Domain;
         string? superior = SuperiorOf(world, actor);
         var subordinates = SubordinatesOf(world, actor);
+        // The one instance actor is presently the one carrying out — his own, undelegated, or the
+        // one delegated to him. Computed once here, off World, and threaded through both
+        // GeneratorContext (for candidate generation) and Utility.Score (for scoring) rather than
+        // re-derived in either — milestone 024's sixth correction.
+        var currentExecution = Strategies.CurrentExecution(world, actor);
 
         var ctx = new GeneratorContext(
             actor.View,
@@ -174,19 +179,22 @@ public static class Pipeline
             world.Reports.Where(r => r.SenderId == actor.Id).ToList(),
             world.Requests.Where(r => r.AskerId == actor.Id).ToList(),
             VisibleTargets(world, domain),
-            subordinates.Where(id => AvailableToExecute(world, id)).ToList());
+            subordinates.Where(id => AvailableToExecute(world, id)).ToList(),
+            currentExecution);
 
         // 4-5. Bounded generation, then salience/knowledge/capability/access rejection.
         var generated = Generators.GenerateAll(ctx);
         var filtered = Filters.Apply(ctx, generated, salience);
 
-        // 6. Local utility over what remains. Note: perceived situation only, never World.
+        // 6. Local utility over what remains. Note: perceived situation only, never World —
+        // currentExecution is the one exception, passed in as an already-resolved value rather than
+        // read here, exactly like Candidate.ComparingExecutors/ExecutorCoercion before it.
         //
         // The ranking is total — descending score, then candidate id — so it does not depend on the
         // order Filters happened to hand the survivors over in. That is what lets a player-facing
         // surface reorder Available without any risk of moving a score.
         var scored = filtered.Passed
-            .Select(c => Utility.Score(c, actor.View, actor.Psychology, perceived, agenda, rng))
+            .Select(c => Utility.Score(c, actor.View, actor.Psychology, perceived, agenda, rng, currentExecution))
             .OrderByDescending(b => b.Total)
             .ThenBy(b => b.Candidate.Id, StringComparer.Ordinal)
             .ToList();

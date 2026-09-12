@@ -190,6 +190,17 @@ public static class Runner
         if (office?.HolderId is null) return;
         if (org.Assignments.Any(a => a.RecipientId == office.HolderId && a.Deadline >= world.Now)) return;
 
+        // Milestone 024's sixth correction. An assignment's own deadline passing does not mean the
+        // officeholder is free to be handed a second one: his own strategy in this domain — owned
+        // outright or delegated away, StrategyInstance always lives on his own field either way —
+        // might still be live, linked to that now-expired assignment. Leadership must not double-
+        // issue while it is still running; only genuine termination (completion or explicit
+        // abandonment) frees him up for a fresh assignment. Domain-scoped deliberately: a live
+        // operation elsewhere does not hold up a review of this one. No renewal-in-place, no
+        // deadline rewrite, no expired-assignment deletion — this is the smallest gate that
+        // establishes the rule, nothing more.
+        if (world.Get(office.HolderId).Execution.Strategy is { } live && live.Domain == office.Domain) return;
+
         var priority = new Priority("p-harbour-revenue", "restore the harbour tribute", office.Domain, 1.0);
         if (!org.Priorities.Any(p => p.Id == priority.Id)) org.Priorities.Add(priority);
 

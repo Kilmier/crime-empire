@@ -38,6 +38,23 @@ public static class Commit
                         $"ConcealIncident candidate '{c.Id}' has no AboutIncident; it must be " +
                         "refused before commitment, not started unrecorded.");
 
+                // Fail closed, mirroring Filters' own refusal: a man currently carrying somebody
+                // else's delegated operation may not start one of his own — the one-operation-per-
+                // involved-character rule, mirrored from Pipeline.AvailableToExecute's identical
+                // enforcement on being offered as a delegate. Milestone 024's sixth correction.
+                if (actor.Execution.Strategy is null && ctx.CurrentExecution is { } busyWith)
+                    throw new SimulationInvariantException(
+                        $"'{actor.Id}' cannot start {c.Strategy}; he is currently carrying " +
+                        $"{busyWith.Label} for somebody else. One operation at a time.");
+
+                // Fail closed: an owner may not overwrite his own still-live delegated operation by
+                // starting something else without explicitly calling it off first (AbandonStrategy).
+                // Milestone 024's sixth correction.
+                if (actor.Execution.Strategy is { DelegatedToId: not null } delegatedAway)
+                    throw new SimulationInvariantException(
+                        $"'{actor.Id}' cannot start {c.Strategy} while {delegatedAway.Label} is " +
+                        "still delegated and live; call it off first.");
+
                 // Replacing whatever instance is currently running, if any — legitimate (a
                 // genuinely different incident, a new target) but not something that may orphan the
                 // old instance's pending step or leave its commitment behind for AbandonStrategy or
@@ -74,6 +91,10 @@ public static class Commit
                         ? incidentEvent.EventId
                         : null,
                     BreachedPolicyId = c.BreachesPolicyId,
+                    // Set together with BreachedPolicyId, never inferred later: whoever committed
+                    // this StartStrategy is the one who chose the method, full stop. See
+                    // StrategyInstance.PolicyBreachDecisionMakerId's own doc comment.
+                    PolicyBreachDecisionMakerId = c.BreachesPolicyId is not null ? actor.Id : null,
                 };
                 actor.Execution.Strategy = s;
                 actor.Execution.Intention = c.Description;
@@ -92,7 +113,9 @@ public static class Commit
 
             case ActionKind.ContinueStrategy:
             {
-                var s = actor.Execution.Strategy!;
+                // Belongs to whoever is currently executing — the delegate, once there is one.
+                // Milestone 024's sixth correction; see GeneratorContext.CurrentExecution.
+                var s = ctx.CurrentExecution!;
 
                 // Carrying on means leaving whatever is already scheduled alone, not replacing it
                 // with a fresh one at a fresh interval. ScheduleNextStep always cancels-and-
@@ -111,10 +134,21 @@ public static class Commit
 
             case ActionKind.AlterStrategy:
             {
-                var s = actor.Execution.Strategy!;
+                // Belongs to whoever is currently executing — the delegate, once there is one.
+                // Milestone 024's sixth correction; see GeneratorContext.CurrentExecution.
+                var s = ctx.CurrentExecution!;
                 var was = s.Method;
                 s.Method = c.Method ?? s.Method;
-                s.BreachedPolicyId = c.BreachesPolicyId ?? s.BreachedPolicyId;
+                // Only when this alter genuinely changes which prohibited method is operative —
+                // the first breach ever recorded, or the method actually moving under a breaching
+                // candidate — does the decision-maker change. A repeated or no-op alter that leaves
+                // the method where it was must not rewrite who made the original choice, even if it
+                // still carries the same BreachesPolicyId.
+                if (c.BreachesPolicyId is not null && (s.PolicyBreachDecisionMakerId is null || was != s.Method))
+                {
+                    s.BreachedPolicyId = c.BreachesPolicyId;
+                    s.PolicyBreachDecisionMakerId = actor.Id;
+                }
                 // Drop back to the confrontation step so the new method actually gets used, and
                 // let the new method have its own turn at pressing. StepIndex may legitimately
                 // repeat this way; NextAdvanceOrdinal never does, which is why occasion keys are
@@ -196,7 +230,11 @@ public static class Commit
 
             case ActionKind.PostponeStrategy:
             {
-                var s = actor.Execution.Strategy;
+                // Belongs to whoever is currently executing — the delegate, once there is one.
+                // Milestone 024's sixth correction; see GeneratorContext.CurrentExecution. Explicitly
+                // reschedules exactly one step, which is the whole point: the operation is
+                // preserved, not silently dropped the way an unhandled DoNothing would leave it.
+                var s = ctx.CurrentExecution;
                 if (s is null) return "let matters sit";
                 Strategies.ScheduleNextStep(world, s, $"{s.Label}: picked back up after a pause", TimeSpan.FromDays(7));
                 reconsideration.Add("the delay makes things worse");

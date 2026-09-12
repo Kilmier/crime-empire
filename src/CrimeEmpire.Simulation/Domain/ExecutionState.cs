@@ -87,6 +87,24 @@ public sealed class StrategyInstance
     /// </summary>
     public string? BreachedPolicyId { get; set; }
 
+    /// <summary>
+    /// Who chose the currently operative prohibited method — the decision, never who owns the
+    /// instance and never who happens to be carrying it out. Set by whichever <c>StartStrategy</c>
+    /// or <c>AlterStrategy</c> commit first introduces the breach, and updated only when a later
+    /// <c>AlterStrategy</c> genuinely changes which prohibited method is operative (the method
+    /// actually moves). A later delegation, a different executor, or a repeated/no-op
+    /// <c>AlterStrategy</c> that leaves the operative method unchanged must not rewrite who made the
+    /// original choice. Null whenever <see cref="BreachedPolicyId"/> is null.
+    ///
+    /// Ownership alone establishes neither this nor <c>PersonUsedViolence</c>'s own attribution
+    /// (which is already correctly the executor at the moment violence resolves, since that claim's
+    /// subject has always been whoever is running the step). This field exists because the breach
+    /// is different: it is a standing decision made once, not a recurring act, and the owner who
+    /// chose a prohibited method and only then delegated its execution must not be let off the hook
+    /// by the man he sent, nor must that man be credited with a decision he never made.
+    /// </summary>
+    public string? PolicyBreachDecisionMakerId { get; set; }
+
     /// <summary>The scheduled step event, so abandoning can cancel it with a reason.</summary>
     public long? PendingStepEventId { get; set; }
 

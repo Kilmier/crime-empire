@@ -3,6 +3,7 @@ namespace CrimeSim.Decision;
 using CrimeSim.Domain;
 using CrimeSim.Org;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 
 /// <summary>
 /// Everything a generator is allowed to see.
@@ -66,7 +67,18 @@ public sealed record GeneratorContext(
     // Organisational bookkeeping, on the same authoritative footing as SubordinateIds itself, not
     // something belief-limited — the acquaintance boundary below is the separate, genuine belief
     // question of whether the actor could even name him.
-    IReadOnlyList<string> AvailableSubordinateIds);
+    IReadOnlyList<string> AvailableSubordinateIds,
+    // The one strategy instance this actor is presently the one carrying out — his own, if he
+    // hasn't delegated it away, or the one instance naming him as DelegatedToId. Computed by
+    // Strategies.CurrentExecution, the one shared derivation ContinueStrategy/AlterStrategy/
+    // PostponeStrategy generation and their Commit/Utility counterparts all read, so an owner who
+    // has delegated a live instance away is correctly null here — he is no longer its executor, and
+    // FromCommitment must not offer him a candidate to continue or alter work that is no longer
+    // his to run merely because the instance still sits on his own field. Deliberately distinct
+    // from ctx.Actor.Execution.Strategy, which stays the owner-only read DelegateStrategy and
+    // AbandonStrategy generation still need (delegate-again is not authorized, and neither is
+    // offering Abandon to a delegate, in this correction).
+    StrategyInstance? CurrentExecution);
 
 /// <summary>
 /// The bounded set of proposers. The shared action vocabulary never becomes a universal menu:
@@ -118,44 +130,74 @@ public static class Generators
     // ---------------------------------------------------------------- current intention
     private static IEnumerable<Candidate> FromCommitment(GeneratorContext ctx)
     {
-        if (ctx.Actor.Execution.Strategy is not { } s) yield break;
-
-        yield return new Candidate(
-            $"continue:{s.Kind}:{s.TargetId}",
-            ActionKind.ContinueStrategy,
-            nameof(FromCommitment),
-            $"carry on with {s.Label}")
+        // Continue/Alter/Postpone belong to whoever is currently executing — the delegate, once
+        // there is one, not the owner who handed the work away. See GeneratorContext.CurrentExecution
+        // and Strategies.CurrentExecution's own doc comment.
+        if (ctx.CurrentExecution is { } s)
         {
-            TargetId = s.TargetId,
-            Strategy = s.Kind,
-            Method = s.Kind == StrategyKind.SecureTribute ? s.Method : null,
-            Domain = s.Domain,
-        };
-
-        if (s.Kind == StrategyKind.SecureTribute && Escalate(s.Method) is { } harder)
-        {
-            yield return Coercive(
-                ctx,
-                $"escalate:{s.TargetId}:{harder}",
-                ActionKind.AlterStrategy,
+            yield return new Candidate(
+                $"continue:{s.Kind}:{s.TargetId}",
+                ActionKind.ContinueStrategy,
                 nameof(FromCommitment),
-                $"push harder on {s.TargetId} — {harder.ToString().ToLowerInvariant()} instead",
-                s.TargetId!,
-                StrategyKind.SecureTribute,
-                harder,
-                s.Domain);
+                $"carry on with {s.Label}")
+            {
+                TargetId = s.TargetId,
+                Strategy = s.Kind,
+                Method = s.Kind == StrategyKind.SecureTribute ? s.Method : null,
+                Domain = s.Domain,
+            };
+
+            if (s.Kind == StrategyKind.SecureTribute && Escalate(s.Method) is { } harder)
+            {
+                yield return Coercive(
+                    ctx,
+                    $"escalate:{s.TargetId}:{harder}",
+                    ActionKind.AlterStrategy,
+                    nameof(FromCommitment),
+                    $"push harder on {s.TargetId} — {harder.ToString().ToLowerInvariant()} instead",
+                    s.TargetId!,
+                    StrategyKind.SecureTribute,
+                    harder,
+                    s.Domain);
+            }
+
+            // Milestone 024's sixth correction: offered only when genuinely blocked — no pending step —
+            // since "carry on" above already covers the ordinary case where a step is still ticking.
+            // Explicitly preserves the operation and reschedules exactly one later step
+            // (Commit.PostponeStrategy), unlike the generic DoNothing floor this replaces at a
+            // StrategyBlocked decision — see FromTrigger's own suppression of it below.
+            if (s.PendingStepEventId is null)
+            {
+                yield return new Candidate(
+                    $"postpone:{s.Kind}:{s.TargetId}",
+                    ActionKind.PostponeStrategy,
+                    nameof(FromCommitment),
+                    $"leave {s.Label} for now")
+                {
+                    TargetId = s.TargetId,
+                    Strategy = s.Kind,
+                    Domain = s.Domain,
+                };
+            }
         }
 
-        yield return new Candidate(
-            $"abandon:{s.Kind}:{s.TargetId}",
-            ActionKind.AbandonStrategy,
-            nameof(FromCommitment),
-            $"drop {s.Label}")
+        // Abandon stays owner-only in this correction — its consequences for a delegate's own
+        // knowledge and reporting are not yet specified, so ctx.Actor.Execution.Strategy (never
+        // CurrentExecution) is the deliberate read here: null for a delegate, whatever the owner
+        // himself owns otherwise, delegated away or not.
+        if (ctx.Actor.Execution.Strategy is { } owned)
         {
-            TargetId = s.TargetId,
-            Strategy = s.Kind,
-            Domain = s.Domain,
-        };
+            yield return new Candidate(
+                $"abandon:{owned.Kind}:{owned.TargetId}",
+                ActionKind.AbandonStrategy,
+                nameof(FromCommitment),
+                $"drop {owned.Label}")
+            {
+                TargetId = owned.TargetId,
+                Strategy = owned.Kind,
+                Domain = owned.Domain,
+            };
+        }
     }
 
     // ---------------------------------------------------------------- role and responsibility
@@ -165,7 +207,7 @@ public static class Generators
         if (domain is null) yield break;
 
         // Already running something in this domain: FromCommitment owns that.
-        if (ctx.Actor.Execution.Strategy?.Domain == domain) yield break;
+        if (ctx.CurrentExecution?.Domain == domain) yield break;
 
         bool investigator = ctx.Actor.Capabilities[Skill.Investigation] >= 0.4;
 
@@ -336,7 +378,7 @@ public static class Generators
                 break;
             }
 
-            case PressureKind.RevenueShortfall when ctx.Actor.Execution.Strategy is { } s
+            case PressureKind.RevenueShortfall when ctx.CurrentExecution is { } s
                                                     && s.Kind == StrategyKind.SecureTribute
                                                     && Escalate(s.Method) is { } harder:
             {
@@ -358,8 +400,15 @@ public static class Generators
     // ---------------------------------------------------------------- direct response to the trigger
     private static IEnumerable<Candidate> FromTrigger(GeneratorContext ctx)
     {
-        // The floor. Doing nothing is always conceivable, so a choice is never forced by an empty set.
-        yield return new Candidate("nothing", ActionKind.DoNothing, nameof(FromTrigger), "let it lie");
+        // The floor. Doing nothing is always conceivable, so a choice is never forced by an empty
+        // set — except at a StrategyBlocked decision over a genuinely stalled operation (no pending
+        // step), where FromCommitment's PostponeStrategy is the properly-scoped "leave it for now"
+        // option: it explicitly preserves the operation and reschedules a step, where DoNothing's
+        // generic handler would silently drop its schedule instead. Milestone 024's sixth correction.
+        bool blockedWithStalledOperation = ctx.Trigger.Kind == EventKind.StrategyBlocked
+            && ctx.CurrentExecution is { PendingStepEventId: null };
+        if (!blockedWithStalledOperation)
+            yield return new Candidate("nothing", ActionKind.DoNothing, nameof(FromTrigger), "let it lie");
 
         if (ctx.Trigger.Kind == EventKind.Incident && ctx.Trigger.Payload.Note == "tribute-demanded")
         {

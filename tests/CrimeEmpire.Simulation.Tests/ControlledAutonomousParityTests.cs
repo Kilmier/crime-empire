@@ -6,6 +6,7 @@ using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 using Xunit;
 
 namespace CrimeEmpire.Simulation.Tests;
@@ -92,30 +93,56 @@ public sealed class ControlledAutonomousParityTests
     /// Vincent — and, since that report withholds precisely the claim Vincent asked about, it
     /// asserts nothing his own cognition can register, so the request stays identically outstanding
     /// in <c>AwaitingAnswers</c> on both paths rather than resolving.
+    ///
+    /// <b>Retargeted 2026-09-11 by milestone 024's sixth correction.</b> Seed 199's natural reach
+    /// depended on a delegate autonomously reaching Force, now structurally impossible for any
+    /// delegate in this cast. This test's own claim is controlled/autonomous parity at the
+    /// asked-to-account decision, not natural Force emergence, so Vincent's choice of Force and his
+    /// subsequent question are staged identically on both the autonomous and the controlled world —
+    /// through <see cref="Commit.Apply"/> — and the decision compared is whichever one actually
+    /// answers Vincent's question (matched on <c>AnsweringClaim</c>), not literally Tommy's first ever,
+    /// since a staged origin does not guarantee no other decision of his intervenes first.
+    ///
+    /// <b>Also found while retargeting:</b> Tommy's own top choice here is now Candid, not Partial —
+    /// the correction changed his knowledge and pressure situation enough that self-protection no
+    /// longer wins this particular decision. The parity claim never depended on which candor wins,
+    /// only that both paths land on the identical one, so the test is read off whichever candor
+    /// actually wins rather than repinned to the old assumption.
     /// </summary>
     [Fact]
-    public void Tommys_asked_to_account_decision_resolves_automatically_to_the_identical_partial_report()
+    public void Tommys_asked_to_account_decision_resolves_automatically_to_the_identical_report()
     {
-        var autoWorld = Cast.Build(AltSeedWhereVincentAsksTommy, Baseline);
-        Runner.Run(autoWorld, Cast.Start.AddDays(90));
-        var autoDecision = autoWorld.Decisions.First(d => d.ActorId == "tommy");
-        Assert.Equal(ReportCandor.Partial, autoDecision.Chosen?.Candidate.Candor);
+        var autoWorld = Cast.Build(Seed, Baseline);
+        StageViolenceAndQuestion(autoWorld);
+        Runner.Run(autoWorld, autoWorld.Now.AddDays(20));
+        var autoDecision = autoWorld.Decisions.First(d =>
+            d.ActorId == "tommy" && d.Chosen?.Candidate.AnsweringClaim is { Kind: ClaimKind.PersonUsedViolence });
 
-        var session = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
-        for (int guard = 0; guard < 5000 && session.Status != SessionStatus.AwaitingChoice; guard++)
-            session.StepEvent();
-        Assert.Equal(SessionStatus.AwaitingChoice, session.Status);
-        Assert.Equal("tommy", session.Pending!.ActorId);
+        var session = SimulationSession.Start(Seed, Baseline, "tommy", "vincent");
+        StageViolenceAndQuestion(session.World);
+        PendingDecision pending;
+        for (int guard = 0; ; guard++)
+        {
+            if (guard > 20) throw new InvalidOperationException("Tommy never reached the asked-to-account decision");
+            for (int step = 0; step < 5000 && session.Status != SessionStatus.AwaitingChoice; step++)
+                session.StepEvent();
+            Assert.Equal(SessionStatus.AwaitingChoice, session.Status);
+            pending = session.Pending!;
+            if (pending.Options.Any(o => o.Description.Contains("got violent at", StringComparison.Ordinal)))
+                break;
+            session.ResolveAutomatically();
+        }
 
         session.ResolveAutomatically();
         var controlledWorld = session.World;
-        var controlledDecision = controlledWorld.Decisions.First(d => d.ActorId == "tommy");
+        var controlledDecision = controlledWorld.Decisions.First(d =>
+            d.ActorId == "tommy" && d.Chosen?.Candidate.AnsweringClaim is { Kind: ClaimKind.PersonUsedViolence });
 
         // The complete behavioral identity of the choice — kind, id, target, claims and, explicitly,
         // Candor — not only "an answer exists," which is all
         // ScenarioReachTests.And_the_executor_gives_his_delegator_an_account_of_it ever checked.
         Assert.Equal(autoDecision.ChosenActionSignature(), controlledDecision.ChosenActionSignature());
-        Assert.Equal(ReportCandor.Partial, controlledDecision.Chosen?.Candidate.Candor);
+        Assert.Equal(autoDecision.Chosen?.Candidate.Candor, controlledDecision.Chosen?.Candidate.Candor);
 
         var autoReport = autoWorld.Reports.Single(r =>
             r.SenderId == "tommy" && r.RecipientId == "vincent"
@@ -124,18 +151,77 @@ public sealed class ControlledAutonomousParityTests
             r.SenderId == "tommy" && r.RecipientId == "vincent"
             && Equals(r.AnsweringClaim, controlledDecision.Chosen!.Candidate.AnsweringClaim));
 
-        Assert.Equal(ReportCandor.Partial, autoReport.Candor);
         Assert.Equal(autoReport.Candor, controlledReport.Candor);
         Assert.Equal(autoReport.Asserted.Select(a => a.Claim), controlledReport.Asserted.Select(a => a.Claim));
         Assert.Equal(autoReport.Withheld, controlledReport.Withheld);
 
-        // A Partial report that withholds precisely the asked claim asserts nothing Vincent's own
-        // cognition can register, so the request stays outstanding — structurally indistinguishable
-        // from silence, per `DESIGN_DECISIONS.md`'s "Causal feedback" section. The parity claim is
-        // that both paths land on that same outstanding state identically, not that the request
-        // resolves.
-        Assert.Contains(session.Snapshot().AwaitingAnswers, r => r.AskedId == "tommy");
+        // Candid here, not Partial — a full account of precisely the asked claim, so it resolves the
+        // request rather than leaving it outstanding, on both paths identically. The parity claim is
+        // that both paths land on the identical outstanding-or-not state, whichever one that is.
+        var autoSnapshot = PlayerView.Build(autoWorld, "vincent", autoWorld.Now);
+        Assert.Equal(
+            autoSnapshot.AwaitingAnswers.Any(r => r.AskedId == "tommy"),
+            session.Snapshot().AwaitingAnswers.Any(r => r.AskedId == "tommy"));
+        Assert.DoesNotContain(session.Snapshot().AwaitingAnswers, r => r.AskedId == "tommy");
     }
+
+    /// <summary>
+    /// The staged origin this test needs: Vincent delegates a permitted method to Tommy, Tommy — the
+    /// current executor — is staged straight to Force at the <see cref="Commit"/> boundary (no
+    /// generator can offer a crew-1 delegate that escalation), the operation runs to a real,
+    /// resolved violence through the ordinary pipeline, and only then is Vincent's own question
+    /// staged — the discovery roll that would ordinarily produce his suspicion is probabilistic and
+    /// unreliable at this seed. Applied identically to both the autonomous and the controlled world
+    /// so the comparison is fair.
+    /// </summary>
+    private static void StageViolenceAndQuestion(World world)
+    {
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+
+        var startCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+            { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+            startCtx.Agenda, startCtx, new List<string>());
+        var s = vincent.Execution.Strategy!;
+
+        var delegateCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"delegate:{s.Kind}:tommy", ActionKind.DelegateStrategy, "test", "hand it to tommy")
+            { TargetId = "tommy", Strategy = s.Kind, Method = s.Method, Domain = s.Domain, RequiredCrew = 1 },
+            delegateCtx.Agenda, delegateCtx, new List<string>());
+
+        var alterCtx = Context(world, tommy);
+        Commit.Apply(world, tommy,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            alterCtx.Agenda, alterCtx, new List<string>());
+
+        Runner.Run(world, world.Now.AddDays(20));
+
+        var violenceEventId = world.TruthLog.First(e => e.Kind == "violence").Id;
+        var violenceClaim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, violenceEventId);
+        vincent.Cognition.Learn(violenceClaim, Stance.Suspects, 0.5, SourceKind.Discovery, vincent.Id, world.Now);
+
+        var askCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("ask:tommy:violence", ActionKind.SeekCorroboration, "test", "ask tommy directly")
+            { TargetId = "tommy", AboutClaim = violenceClaim },
+            askCtx.Agenda, askCtx, new List<string>());
+    }
+
+    private static GeneratorContext Context(World world, Character actor)
+        => new(
+            actor.View, Salience.Perceive(actor, world.Now),
+            new Agenda(AgendaKind.DischargeResponsibility, "keep the harbour earning", "test", Cast.Harbour),
+            world.Now,
+            new ScheduledEvent { Id = 0, Time = world.Now, Kind = EventKind.RoleReview, OwnerId = actor.Id, Cause = "test" },
+            MyOffice: null, MyAssignment: null, KnownPolicies: Array.Empty<Policy>(),
+            SuperiorId: null, SubordinateIds: Array.Empty<string>(), OrgMemberIds: Array.Empty<string>(),
+            AcquaintedIds: Array.Empty<string>(), ReportsSent: Array.Empty<Report>(),
+            RequestsMade: Array.Empty<InformationRequest>(), VisibleTargets: Array.Empty<string>(),
+            AvailableSubordinateIds: Array.Empty<string>(), CurrentExecution: Strategies.CurrentExecution(world, actor));
 
     /// <summary>Drives a fresh world to Tommy's first pause via the same <see cref="Runner.Step"/>
     /// boundary <see cref="SimulationSession"/> uses internally, returning the prepared decision

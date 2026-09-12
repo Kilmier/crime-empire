@@ -168,3 +168,34 @@ searches for this; it would most likely surface the same way `ForOccasion`'s did
 non-result recorded honestly in a milestone archive before anyone connected it to the RNG.
 **Fix, if this is ever prioritized:** the identical fmix32 finalizer swap `ForOccasion` now uses —
 see `Rng.cs`'s doc comment on `ForOccasion` for the full algebraic argument.
+
+### 7. A logically mooted question can remain displayed forever
+`DESIGN_DECISIONS.md`'s settled rule is exact and correct: `AwaitingAnswers` resolves a request only
+from testimony by the asked person, of exactly the asked claim
+(`t.SenderId == r.AskedId && t.Claim.Equals(r.About) && t.At >= r.At`). Found 2026-09-11 while tracing
+a test failure during milestone 024's sixth correction: a request can become moot — its real-world subject
+resolved by events, and reported on by the asked person — without ever being answered under this
+rule, if the report he eventually sends carries a different claim than the one he was asked about.
+
+Concretely: Salvatore asks Vincent whether Bellini's grocery is refusing tribute
+(`BusinessRefusesTribute`). By the time Vincent next reports to anyone, the grocery has been brought
+to heel and pays — his report asserts `TributeCollected`, `PolicyIssued`, `TargetIsVulnerable`, never
+`BusinessRefusesTribute` itself, because there is no longer any reason for him to independently
+re-litigate a question events have already settled. Salvatore's original request, checked against the
+exact-claim rule above, stays in `AwaitingAnswers` for the rest of the run — confirmed directly,
+extended to a full 90 days with no resolution. Vincent has not gone silent, has not declined to
+answer, and has in fact told the truth about the very situation the question was about; the request
+simply never matches the narrow claim it was filed against.
+
+**This is correctly out of scope for the correction that found it.** Milestone 018's own three-times-
+corrected chain never considered "the subject moved on" at all — what it tried and rejected was
+narrower: reading the asked character's own `World.Decisions` to distinguish silence from a genuine
+decline (rejected as a private-state leak the asker never receives any message establishing), and
+separately, treating a sincere contradicting account as a distinct "Declined" outcome rather than a
+real answer (rejected because a sincere denial is an answer, not a refusal). Neither alternative is
+"resolve when a different, superseding claim moots the question," which is a genuinely new case this
+correction's own tracing surfaced, not one `DESIGN_DECISIONS.md`'s settled rule was ever asked to
+weigh. Whether a stale, logically-mooted request deserves its own resolution path — and what would
+have to recognize "mooted" without reintroducing the leaks the exact-claim rule was built to close —
+is a real, undecided design question, not an oversight, and needs its own ruling rather than a fix
+folded into whatever correction next happens to trip over it.

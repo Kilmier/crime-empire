@@ -2,6 +2,7 @@ using CrimeSim.Decision;
 using CrimeSim.Domain;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 
 namespace CrimeEmpire.Simulation.Tests;
 
@@ -464,6 +465,18 @@ public sealed class RelationshipReaderTests
     /// On the decision milestone 007's finding was measured on, both halves of that pair are under
     /// <c>Significant()</c>'s 0.15, so the human-readable reason list correctly prints neither and the
     /// channel must still report both. A cutoff that hides a cancelling pair hides the cancellation.
+    ///
+    /// <b>Retargeted 2026-09-11 by milestone 024's sixth correction.</b> This claim is diagnostic
+    /// projection — what the scoring channel reports versus what the human-readable reason list shows
+    /// — not natural emergence, so a focused staged setup is appropriate here (ruling 4) where it would
+    /// not be for a claim about what an autonomous character actually chooses. What changed: Vincent's
+    /// one real, natural conflict with Salvatore (<c>RelationalConsequenceTests</c>'s own traced 25 May
+    /// conflict) no longer leaves him any decision that offers a <c>Partial</c>-to-Salvatore candidate —
+    /// everything relevant was already disclosed candidly before that conflict arrives, so there is
+    /// nothing left to partially conceal. The trust erosion itself is still read from that real,
+    /// run-produced state; only the candidate is now built explicitly, through the same
+    /// <c>Utility.Score</c> boundary an autonomous choice would go through, rather than found already
+    /// sitting in <c>Scored</c>.
     /// </summary>
     [Fact]
     public void The_diagnostic_reports_components_the_reason_list_drops()
@@ -473,40 +486,45 @@ public sealed class RelationshipReaderTests
 
         var conflict = world.AccountConflicts
             .First(c => c.ListenerId == "vincent" && c.Conflict.SpeakerId == "salvatore");
+        Assert.True(vincent.Social.Toward("salvatore").Trust < 0.45,
+            "the fixture needs the real conflict to have actually eroded trust for this to be meaningful");
 
-        var partials = world.Decisions
-            .Where(d => d.ActorId == "vincent" && d.At >= conflict.At)
-            .SelectMany(d => d.Scored)
-            .Where(s => s.Candidate.Kind == ActionKind.ReportToSuperior
-                        && s.Candidate.TargetId == "salvatore"
-                        && s.Candidate.Candor == ReportCandor.Partial)
-            .ToList();
+        var suppressed = new Claim(ClaimKind.PersonBreachedPolicy, "vincent", "no-violence-harbour");
+        vincent.Cognition.Learn(suppressed, Stance.Knows, 1.0, SourceKind.Participant, "vincent", conflict.At);
 
-        Assert.NotEmpty(partials);
-
-        // The general property: on every one of these, the channel reports relationship components
-        // that the human-readable reason list drops.
-        Assert.All(partials, s =>
+        Candidate PartialToSalvatore() => new("report:salvatore", ActionKind.ReportToSuperior, "test", "report in")
         {
-            var channel = s.RelationshipComponents().ToList();
-            Assert.NotEmpty(channel);
+            TargetId = "salvatore",
+            Domain = Cast.Harbour,
+            Candor = ReportCandor.Partial,
+            Suppressed = new[] { new SuppressedClaim(suppressed, PriorDisclosureState.NeverAddressed) },
+        };
 
-            var shown = s.Significant().Where(c => c.Name == "relationship effects").ToList();
-            Assert.True(channel.Count > shown.Count,
-                $"the reason list showed all {channel.Count} relationship components, so the cutoff " +
-                "is currently hiding nothing and this test has stopped covering what it claims");
-        });
+        // The moderate case, at Vincent's real, run-produced post-conflict trust: the channel reports
+        // relationship components the human-readable reason list drops.
+        var moderate = Score(vincent, PartialToSalvatore(), world);
+        var channel = moderate.RelationshipComponents().ToList();
+        Assert.NotEmpty(channel);
+        var shown = moderate.Significant().Where(c => c.Name == "relationship effects").ToList();
+        Assert.True(channel.Count > shown.Count,
+            $"the reason list showed all {channel.Count} relationship components, so the cutoff " +
+            "is currently hiding nothing and this test has stopped covering what it claims");
 
-        // And the sharp case, which is the one milestone 007's central finding was measured on: by
-        // the last of them, trust has fallen far enough that every component is under the threshold
-        // and the reason list prints no relationship line at all — for the candidate whose
-        // relationship contribution was the number being reported.
-        var last = partials[^1];
-        Assert.All(last.RelationshipComponents(), c => Assert.True(Math.Abs(c.Value) < 0.15,
+        // And the sharp case milestone 007's central finding was measured on: trust fallen far enough
+        // that every component is under the threshold and the reason list prints no relationship line
+        // at all — for the candidate whose relationship contribution was the number being reported.
+        // Driven further down than the one real conflict reaches, through the same `Relations` API
+        // the natural conflict itself would have used, not by hand-writing the field.
+        Relations.Establish(vincent, "salvatore", trust: 0.03,
+            obligation: vincent.Social.Toward("salvatore").Obligation,
+            fear: vincent.Social.Toward("salvatore").Fear);
+        var sharp = Score(vincent, PartialToSalvatore(), world);
+
+        Assert.All(sharp.RelationshipComponents(), c => Assert.True(Math.Abs(c.Value) < 0.15,
             $"component \"{c.Explanation}\" is {c.Value:0.0000}; if these have grown past the cutoff " +
             "the finding this test records has changed and needs restating"));
-        Assert.DoesNotContain(last.Significant(), c => c.Name == "relationship effects");
-        Assert.NotEmpty(last.RelationshipComponents());
+        Assert.DoesNotContain(sharp.Significant(), c => c.Name == "relationship effects");
+        Assert.NotEmpty(sharp.RelationshipComponents());
     }
 
     // ================================================================ the counterfactual
@@ -583,6 +601,7 @@ public sealed class RelationshipReaderTests
         var agenda = new Agenda(
             AgendaKind.DischargeResponsibility, "keep the harbour earning", "test", Cast.Harbour);
         var rng = Rng.ForOccasion(world.Seed, "test|fixed");
-        return Utility.Score(candidate, actor.View, actor.Psychology, perceived, agenda, rng);
+        return Utility.Score(candidate, actor.View, actor.Psychology, perceived, agenda, rng,
+            Strategies.CurrentExecution(world, actor));
     }
 }

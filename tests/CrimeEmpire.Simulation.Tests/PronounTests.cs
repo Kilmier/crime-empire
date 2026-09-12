@@ -1,9 +1,11 @@
 using System.Text.RegularExpressions;
 using CrimeSim.Decision;
 using CrimeSim.Domain;
+using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 using CrimeSim.Trace;
 
 namespace CrimeEmpire.Simulation.Tests;
@@ -56,22 +58,41 @@ public sealed class PronounTests
     /// And the same over the session boundary, which is what the Godot interface reads. The occasion
     /// and every option are built from a controlled character's own pronouns.
     ///
-    /// <b>Moved off seed 42, 2026-09-09, by the <see cref="Rng.ForOccasion"/> correction.</b> Kane's
-    /// half needs her to reach at least one decision of her own by day 90 when controlled from the
-    /// start; at seed 42 her own investigation-opening observation roll no longer lands in baseline
-    /// (see <c>StreetTalkTests.cs</c>'s milestone 022 correction), so she never wakes for anything and
-    /// <c>session.Pending</c> stays null — a capability gap, not a pronoun regression. Seed 199 is the
-    /// same seed <c>InvestigationTests.AltSeedWhereKaneNamesASuspect</c> already uses for the identical
-    /// reason.
+    /// <b>Retargeted 2026-09-11 by milestone 024's sixth correction.</b> Seed 199's natural incident
+    /// (originally substituted here, 2026-09-09, for the identical reason
+    /// <c>InvestigationTests.AltSeedWhereKaneNamesASuspect</c> was) depended on a delegate autonomously
+    /// reaching Force, now structurally impossible for any delegate in this cast — see that constant's
+    /// own doc comment and the correction's review record. This test's own claim is pronoun rendering
+    /// on a pending decision, not natural emergence, so Kane's half stages only Vincent's initial
+    /// choice of Force through <see cref="Commit.Apply"/> — the same shape
+    /// <c>InvestigationTests.StageViolenceThenRun</c> uses for the identical family of tests — and lets
+    /// delegation and Kane's own investigation proceed unstaged from there. Vincent's own half is
+    /// untouched: his first natural decision at seed 42 needs nothing staged.
     /// </summary>
     [Fact]
     public void A_pending_decision_speaks_of_its_actor_as_themselves()
     {
-        const int AltSeedWhereKaneHasADecision = 199;
-
         string HerText(string controlled)
         {
-            var session = SimulationSession.Start(AltSeedWhereKaneHasADecision, "baseline", controlled, controlled);
+            var session = SimulationSession.Start(42, "baseline", controlled, controlled);
+
+            if (controlled == "kane")
+            {
+                var vincent = session.World.Get("vincent");
+                var startCtx = Context(session.World, vincent);
+                Commit.Apply(session.World, vincent,
+                    new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+                    { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+                    startCtx.Agenda, startCtx, new List<string>());
+                var s = vincent.Execution.Strategy!;
+
+                var alterCtx = Context(session.World, vincent);
+                Commit.Apply(session.World, vincent,
+                    new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+                    { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+                    alterCtx.Agenda, alterCtx, new List<string>());
+            }
+
             session.AdvanceTo(Cast.Start.AddDays(90));
             var pending = session.Pending;
             return pending is null
@@ -89,6 +110,18 @@ public sealed class PronounTests
         Assert.NotEqual("", vincent);
         Assert.DoesNotMatch(Feminine, vincent);
     }
+
+    private static GeneratorContext Context(World world, Character actor)
+        => new(
+            actor.View, Salience.Perceive(actor, world.Now),
+            new Agenda(AgendaKind.DischargeResponsibility, "keep the harbour earning", "test", Cast.Harbour),
+            world.Now,
+            new ScheduledEvent { Id = 0, Time = world.Now, Kind = EventKind.RoleReview, OwnerId = actor.Id, Cause = "test" },
+            MyOffice: null, MyAssignment: null, KnownPolicies: Array.Empty<Policy>(),
+            SuperiorId: null, SubordinateIds: Array.Empty<string>(), OrgMemberIds: Array.Empty<string>(),
+            AcquaintedIds: Array.Empty<string>(), ReportsSent: Array.Empty<Report>(),
+            RequestsMade: Array.Empty<InformationRequest>(), VisibleTargets: Array.Empty<string>(),
+            AvailableSubordinateIds: Array.Empty<string>(), CurrentExecution: Strategies.CurrentExecution(world, actor));
 
     /// <summary>
     /// The snapshot carries how to refer to the people in it, not only their names — otherwise a

@@ -541,7 +541,8 @@ public sealed class ExposureAndDenialTests
         var perceived = Salience.Perceive(actor, world.Now);
         var agenda = new Agenda(AgendaKind.DischargeResponsibility, "keep the harbour earning", "test", Cast.Harbour);
         var breakdown = Utility.Score(
-            denial, actor.View, actor.Psychology, perceived, agenda, Rng.ForOccasion(world.Seed, "test|fixed"));
+            denial, actor.View, actor.Psychology, perceived, agenda, Rng.ForOccasion(world.Seed, "test|fixed"),
+            Strategies.CurrentExecution(world, actor));
 
         return breakdown.Components
             .Where(c => c.Name == "perceived personal risk")
@@ -584,5 +585,6 @@ public sealed class ExposureAndDenialTests
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
             VisibleTargets: Array.Empty<string>(),
-            AvailableSubordinateIds: Array.Empty<string>());
+            AvailableSubordinateIds: Array.Empty<string>(),
+            CurrentExecution: Strategies.CurrentExecution(world, actor));
 }

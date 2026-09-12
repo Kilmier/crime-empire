@@ -232,6 +232,17 @@ public sealed class InvestigationTests
     /// set of exactly one option — <c>let it lie</c> — with nothing generated and nothing rejected,
     /// for the rest of the run. She now puts the allegation to him, in every variant where an
     /// incident occurs, and the exchange reaches his side of the channel.
+    ///
+    /// <b>Retargeted 2026-09-11 by milestone 024's sixth correction.</b> Seed 199's natural incident
+    /// depended on a delegate autonomously reaching Force, which is now structurally impossible for
+    /// any delegate in this cast (crew-gated — see the correction's own review record). The claim this
+    /// test protects is investigation/question/answer behaviour, not natural Force emergence, so only
+    /// Vincent's initial choice of Force is staged — through <see cref="Commit.Apply"/>, labelled as
+    /// staged. He still goes on to delegate its execution to Tommy of his own accord shortly after,
+    /// exactly as the original accepted history did (confirmed directly, not assumed: Kane's suspect
+    /// is Tommy, the executor, not Vincent, in every variant), and everything from there — the
+    /// delegation itself, Kane's own observation roll, case-opening, and the allegation — runs
+    /// unstaged.
     /// </summary>
     [Theory]
     [InlineData("baseline")]
@@ -240,8 +251,7 @@ public sealed class InvestigationTests
     [InlineData("resentful-tommy")]
     public void An_investigator_who_has_named_a_suspect_puts_it_to_him(string variant)
     {
-        var world = Cast.Build(seed: AltSeedWhereKaneNamesASuspect, variant);
-        Runner.Run(world, Cast.Start.AddDays(90));
+        var world = StageViolenceThenRun(variant, 90);
 
         var suspicion = world.Get("kane").Cognition.OfKind(ClaimKind.PersonUsedViolence).ToList();
         Assert.NotEmpty(suspicion);
@@ -260,6 +270,10 @@ public sealed class InvestigationTests
     /// never gets round to it, and asserting an answer there would be asserting a link the simulation
     /// does not make. The variants are listed rather than filtered so that one falling silent is a
     /// visible change to this list rather than a quiet reduction in what is checked.
+    ///
+    /// <b>Retargeted alongside the test above, for the identical reason.</b> "He" is still Tommy — only
+    /// Vincent's initial choice of Force is staged; Tommy remains the one who carries it out and the
+    /// one Kane's suspicion and question actually name.
     /// </summary>
     [Theory]
     [InlineData("baseline")]
@@ -267,8 +281,7 @@ public sealed class InvestigationTests
     [InlineData("disloyal-vincent")]
     public void The_suspect_answers_the_detective(string variant)
     {
-        var world = Cast.Build(seed: AltSeedWhereKaneNamesASuspect, variant);
-        Runner.Run(world, Cast.Start.AddDays(90));
+        var world = StageViolenceThenRun(variant, 90);
 
         var answer = world.Reports.Single(r => r.SenderId == "tommy" && r.RecipientId == "kane");
         Assert.Equal(world.Requests.Single(r => r.AskerId == "kane").About, answer.AnsweringClaim);
@@ -380,13 +393,34 @@ public sealed class InvestigationTests
     /// itself, and advancing again while a choice is outstanding is refused — deliberately, since a
     /// half-handled decision is not a place the clock may pass through. Writing that loop the other
     /// way is what made the first attempt at this check report, wrongly, that she was offered nothing.
+    ///
+    /// <b>Retargeted 2026-09-11, for the identical reason as the pair above.</b> The staged origin is
+    /// built by reaching <see cref="SimulationSession.World"/> — internal, visible to this assembly —
+    /// before Kane's session ever advances, and driving Vincent through the same
+    /// <see cref="Commit.Apply"/> calls <see cref="StageViolenceThenRun"/> uses. Kane herself is
+    /// controlled throughout via the ordinary player-facing session, which is the surface this test
+    /// exists to check.
     /// </summary>
     [Fact]
     public void A_player_controlling_the_investigator_is_offered_the_allegation()
     {
-        var session = SimulationSession.Start(AltSeedWhereKaneNamesASuspect, "baseline", "kane", "kane");
-        var offered = new List<string>();
+        var session = SimulationSession.Start(42, "baseline", "kane", "kane");
+        var vincent = session.World.Get("vincent");
 
+        var startCtx = Context(session.World, vincent);
+        Commit.Apply(session.World, vincent,
+            new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+            { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+            startCtx.Agenda, startCtx, new List<string>());
+        var s = vincent.Execution.Strategy!;
+
+        var alterCtx = Context(session.World, vincent);
+        Commit.Apply(session.World, vincent,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            alterCtx.Agenda, alterCtx, new List<string>());
+
+        var offered = new List<string>();
         session.AdvanceTo(Cast.Start.AddDays(90));
         while (session.Status == SessionStatus.AwaitingChoice)
         {
@@ -636,6 +670,40 @@ public sealed class InvestigationTests
         return drained;
     }
 
+    /// <summary>
+    /// The staged origin ruling 6 requires: a real Force incident, driven entirely through
+    /// <see cref="Commit.Apply"/> — not a hand-staged claim or a hand-built <c>TruthLog</c> entry —
+    /// so that no crew gate needs to be cleared (only Vincent's own choice of method is staged, and
+    /// he clears Force's crew requirement on his own). Only that initial choice is staged; Vincent
+    /// still goes on to delegate its execution to Tommy autonomously, and Tommy — not Vincent — ends
+    /// up the one Kane's suspicion, question, and answer all name, confirmed directly rather than
+    /// assumed. Everything from delegation onward — Kane's own observation roll, case-opening,
+    /// suspect-naming, the allegation and its answer — runs through the real, unstaged production
+    /// pipeline for the remainder of the horizon. Local to this file, per Matt's ruling not to share
+    /// one Force helper across feature families.
+    /// </summary>
+    private static World StageViolenceThenRun(string variant, int totalDays)
+    {
+        var world = Cast.Build(seed: 42, variant);
+        var vincent = world.Get("vincent");
+
+        var startCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+            { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+            startCtx.Agenda, startCtx, new List<string>());
+        var s = vincent.Execution.Strategy!;
+
+        var alterCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            alterCtx.Agenda, alterCtx, new List<string>());
+
+        Runner.Run(world, world.Now.AddDays(totalDays));
+        return world;
+    }
+
     private static GeneratorContext Context(World world, Character actor, params string[] acquainted)
         => Context(world, actor, Array.Empty<InformationRequest>(), acquainted);
 
@@ -665,5 +733,6 @@ public sealed class InvestigationTests
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: requestsMade,
             VisibleTargets: Array.Empty<string>(),
-            AvailableSubordinateIds: Array.Empty<string>());
+            AvailableSubordinateIds: Array.Empty<string>(),
+            CurrentExecution: Strategies.CurrentExecution(world, actor));
 }

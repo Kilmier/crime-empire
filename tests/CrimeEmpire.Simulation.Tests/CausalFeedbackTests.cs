@@ -1,9 +1,12 @@
+using CrimeEmpire.Persistence;
 using CrimeEmpire.Persistence.Session;
 using CrimeSim.Decision;
 using CrimeSim.Domain;
+using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 
 namespace CrimeEmpire.Simulation.Tests;
 
@@ -45,18 +48,6 @@ public sealed class CausalFeedbackTests
 {
     private const int Seed = 42;
 
-    /// <summary>
-    /// The "pending vs. declined" section below reads Tommy's own natural first pause, controlled,
-    /// answering Vincent's direct question about his own violence — the same exchange
-    /// <c>ScenarioReachTests.The_delegator_puts_his_question_to_the_man_he_sent</c> proves reachable.
-    /// At seed 42, under the <see cref="Rng.ForOccasion"/> correction of 2026-09-09, Vincent's own
-    /// discovery roll on that violence no longer lands, so nobody but Salvatore ever puts this
-    /// question to Tommy — the natural exchange these tests need is reachable, just not at this seed.
-    /// Found by the identical search described on that test, and reused here rather than re-run, since
-    /// it is the same underlying fact.
-    /// </summary>
-    private const int AltSeedWhereVincentAsksTommy = 199;
-
     private const string CautiousVincent = "cautious-vincent";
     private const string Baseline = "baseline";
     private const string Salvatore = "salvatore";
@@ -64,6 +55,8 @@ public sealed class CausalFeedbackTests
 
     private const string AskVincent =
         "ask Vincent Russo what he knows about whether Bellini's grocery is not paying its tribute";
+    private const string TellSalvatoreAboutTribute =
+        "tell Salvatore Greco what you know about whether Bellini's grocery is not paying its tribute";
 
     // ================================================================= proof A: Salvatore asks Vincent
 
@@ -103,25 +96,79 @@ public sealed class CausalFeedbackTests
     }
 
     /// <summary>
-    /// Falsifier 4: once Vincent's answer actually arrives — through the ordinary report channel, no
-    /// staging — the request drops out of <c>AwaitingAnswers</c> and his account is attributed to him
-    /// by name, preserving the disagreement the answer itself created (it contradicts what "the books"
-    /// told Salvatore).
+    /// Falsifier 4: once Vincent actually answers the exact claim he was asked about — through the
+    /// ordinary report channel, no staging of the answer's content or consequence — the request drops
+    /// out of <c>AwaitingAnswers</c> and his account is attributed to him by name.
+    ///
+    /// <b>Corrected by milestone 024's sixth correction, in two ways.</b> First: Salvatore's own
+    /// question still arrives entirely on its own — confirmed directly, 1987-03-24, unstaged — but
+    /// once the delegated-execution correction gave Vincent a competing organisational concern that
+    /// now outranks re-litigating a settled question, his autonomous choice at the resulting wake no
+    /// longer answers this exact claim; he moves on to whatever scores highest instead, most often his
+    /// own operation's actual resolution (a genuinely different claim — see
+    /// <see cref="A_later_report_asserting_a_different_claim_does_not_resolve_the_original_request"/>
+    /// and <c>docs/OPEN_CONCERNS.md</c> #7). <c>DESIGN_DECISIONS.md</c>'s settled rule — a request
+    /// resolves only from testimony of the exact asked claim — is correct and untouched; what changed
+    /// is which candidate an autonomous Vincent finds worth choosing. So Vincent is controlled here for
+    /// the one decision that matters: which claim his answer carries, not whether an answer occurs.
+    ///
+    /// Second, and found while rewriting this: milestone 018's own archive records this exchange as
+    /// genuinely producing a disagreement at the time — Vincent's answer contradicted what Salvatore's
+    /// own "books" held, verified live against the unmodified fixture before that milestone's text was
+    /// written. That property does not survive here. Confirmed directly at the decision this test now
+    /// reaches: <c>BusinessRefusesTribute</c> is the very thing Salvatore's own assignment message told
+    /// Vincent in the first place, so Vincent candidly confirming it produces no `AccountConflict` at
+    /// all — only a corroborating entry in `Known`. Whether this was lost by this correction's own
+    /// changes or by the ask's timing having already moved earlier under milestone 022's
+    /// <c>Rng.ForOccasion</c> fix (the ask fires 1987-03-24 here, against 1987-04-03 in milestone 018's
+    /// own account — ten fewer days for the books to have drifted from what Vincent actually knows) is
+    /// not established; only that the contradiction is genuinely gone now, not merely un-asserted. This
+    /// test is retargeted to what falsifier 4 is actually about — resolution and attribution — rather
+    /// than repin a disagreement outcome that no longer occurs.
     /// </summary>
     [Fact]
     public void A_delivered_answer_resolves_the_request_and_attributes_the_account_to_vincent()
+    {
+        var session = SimulationSession.Start(Seed, CautiousVincent, "vincent", Salvatore);
+        var pending = AdvanceToVincentsAnswerToSalvatore(session);
+        session.Choose(pending.Options.Single(o => o.Description == TellSalvatoreAboutTribute).Id);
+
+        var snapshot = session.Snapshot();
+        Assert.DoesNotContain(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
+        Assert.Contains(snapshot.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The negative control ruling 1 requires, and the honest shape of the defect this correction's
+    /// own tracing found: left to resolve entirely on his own — never manually answered — Vincent does
+    /// go on to tell Salvatore something true and real about the situation (the grocery has since paid
+    /// its tribute), and that report is not silence. But it is not an answer to
+    /// <c>BusinessRefusesTribute</c> either, because <c>DESIGN_DECISIONS.md</c>'s settled rule requires
+    /// testimony of the <em>exact</em> asked claim, and a later report about a different claim —
+    /// however true, however much it resolves the real situation — does not satisfy it. The request
+    /// therefore stays in <c>AwaitingAnswers</c> for the rest of the run. This is the permanently-moot
+    /// case <c>docs/OPEN_CONCERNS.md</c> #7 records as deferred, not fixed: pinned here as a real,
+    /// unchanged production behaviour rather than left as an unexplained failure.
+    /// </summary>
+    [Fact]
+    public void A_later_report_asserting_a_different_claim_does_not_resolve_the_original_request()
     {
         var session = SimulationSession.Start(Seed, CautiousVincent, Salvatore);
         var pending = AdvanceToPause(session);
         session.Choose(pending.Options.Single(o => o.Description == AskVincent).Id);
 
-        // Vincent is not controlled here, so his own wake resolves through the ordinary pipeline —
-        // nothing staged, nothing forced. Three days is comfortably past the observed ~2-day delivery.
-        session.AdvanceDays(3);
+        // Vincent is not controlled here at all — this is his fully autonomous path, exactly the
+        // shape the old (now-retired) expectation assumed would answer the question within days.
+        AdvanceDaysThroughOwnPauses(session, 90);
 
         var snapshot = session.Snapshot();
-        Assert.DoesNotContain(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
-        Assert.Contains(snapshot.Disagreements, d => d.Accounts.Any(a => a.SourceName == "Vincent Russo"));
+
+        // He did report, genuinely and candidly — this is not a case of silence or concealment.
+        Assert.Contains(snapshot.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
+
+        // But never on the exact claim Salvatore asked about, so the request never resolves.
+        Assert.Contains(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
+        Assert.DoesNotContain(snapshot.Disagreements, d => d.Accounts.Any(a => a.SourceName == "Vincent Russo"));
     }
 
     /// <summary>
@@ -147,22 +194,49 @@ public sealed class CausalFeedbackTests
         Assert.Equal(autoDescription, playerChosen.Snapshot().LastAction!.Description);
     }
 
-    /// <summary>Staged proof 6: an unresolved request survives a save/load cycle, and resolves
-    /// identically on the reloaded session — replay-reconstructed state, not a copy.</summary>
+    /// <summary>
+    /// Staged proof 6: an unresolved request survives a save/load cycle, and resolves identically on
+    /// the reloaded session — replay-reconstructed state, not a copy.
+    ///
+    /// <b>Corrected by milestone 024's sixth correction, the same way as
+    /// <see cref="A_delivered_answer_resolves_the_request_and_attributes_the_account_to_vincent"/> and
+    /// for the identical reason.</b> <see cref="PersistentSession"/> locks to one controlled character
+    /// for its whole life, including replay, so Vincent — not Salvatore — is controlled here: his own
+    /// early choices are named explicitly (<see cref="SimulationSession.ResolveAutomatically"/> is not
+    /// logged and so cannot survive a save/load replay), and Salvatore's question still arrives
+    /// entirely on its own in between them, unstaged. Resolution is checked via <c>Known</c>, not
+    /// <c>Disagreements</c> — see that test's own doc comment for why the disagreement this exchange
+    /// used to produce no longer occurs.
+    /// </summary>
     [Fact]
     public void Save_load_preserves_an_unresolved_request_and_its_later_resolution()
     {
+        const string persuade = "persuade Bellini's grocery to pay";
+        const string carryOn = "carry on getting Bellini's grocery to pay";
+        const string handToTommy = "hand it to Tommy Nardo";
+
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-request-{Guid.NewGuid():N}.db");
         try
         {
-            var original = PersistentSession.Start(Seed, CautiousVincent, Salvatore, Salvatore);
-            for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
-                original.StepEvent();
-            Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
-            original.Choose(original.Pending!.Options.Single(o => o.Description == AskVincent).Id);
+            var original = PersistentSession.Start(Seed, CautiousVincent, "vincent", "salvatore");
 
-            var beforeSave = original.Snapshot();
-            var pendingRequest = Assert.Single(beforeSave.AwaitingAnswers);
+            PendingDecision AdvanceToPersistentPause()
+            {
+                for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
+                    original.StepEvent();
+                Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
+                return original.Pending!;
+            }
+
+            original.Choose(AdvanceToPersistentPause().Options.Single(o => o.Description == persuade).Id);
+            original.Choose(AdvanceToPersistentPause().Options.Single(o => o.Description == carryOn).Id);
+            original.Choose(AdvanceToPersistentPause().Options.Single(o => o.Description == handToTommy).Id);
+
+            // Salvatore's own question has arrived on its own by now (1987-03-24, confirmed directly)
+            // and Vincent's next pause is the wake it produced — the request is genuinely open here,
+            // not yet answered.
+            AdvanceToPersistentPause();
+            var pendingRequest = Assert.Single(original.Snapshot().AwaitingAnswers);
 
             original.Save(path);
             var loaded = PersistentSession.Load(path);
@@ -173,10 +247,10 @@ public sealed class CausalFeedbackTests
             Assert.Equal(pendingRequest.AskedAt, reloadedRequest.AskedAt);
             Assert.Equal(pendingRequest.Statement, reloadedRequest.Statement);
 
-            loaded.AdvanceDays(3);
+            loaded.Choose(loaded.Pending!.Options.Single(o => o.Description == TellSalvatoreAboutTribute).Id);
             var resolved = loaded.Snapshot();
             Assert.DoesNotContain(resolved.AwaitingAnswers, r => r.AskedId == "vincent");
-            Assert.Contains(resolved.Disagreements, d => d.Accounts.Any(a => a.SourceName == "Vincent Russo"));
+            Assert.Contains(resolved.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
         }
         finally
         {
@@ -228,9 +302,17 @@ public sealed class CausalFeedbackTests
 
     // ================================================================= pending vs. declined (correction)
     //
-    // Every test below reaches Tommy's own natural first pause, controlled, answering Vincent's direct
-    // question about his own violence — moved from seed 42 to AltSeedWhereVincentAsksTommy on
-    // 2026-09-09; see that constant's own doc comment for why.
+    // Every test below reaches Tommy's own pause answering Vincent's direct question about his own
+    // violence.
+    //
+    // Retargeted 2026-09-11 by milestone 024's sixth correction: seed 199's natural reach (Vincent's
+    // own discovery roll landing on Tommy's violence) depended on a delegate autonomously reaching
+    // Force, now structurally impossible for any delegate in this cast. This family's claim is
+    // causal-feedback privacy and save/load behaviour around a private-vs-communicated answer, not
+    // natural Force emergence or natural discovery, so StageTommysViolenceAndVincentsQuestion below
+    // stages exactly two things — Vincent's choice of Force and his subsequent question — through
+    // Commit.Apply, and leaves delegation, Tommy's own deliberation, and everything about his answer
+    // to run through the real, unstaged pipeline.
 
     /// <summary>
     /// The required mutation-checked proof of the private-decision-leak fix itself: two genuinely
@@ -252,10 +334,10 @@ public sealed class CausalFeedbackTests
         const string partialWithholding =
             "say nothing to Vincent Russo about it either way";
 
-        var silent = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
+        var silent = StageTommysViolenceAndVincentsQuestion(Baseline);
         silent.Choose(AdvanceToPause(silent).Options.Single(o => o.Description == silence).Id);
 
-        var partial = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
+        var partial = StageTommysViolenceAndVincentsQuestion(Baseline);
         partial.Choose(AdvanceToPause(partial).Options.Single(o => o.Description == partialWithholding).Id);
 
         var silentRequest = Assert.Single(silent.Snapshot().AwaitingAnswers);
@@ -284,7 +366,7 @@ public sealed class CausalFeedbackTests
     {
         const string falseDenial = "deny it to Vincent Russo: tell him you did not get violent at Bellini's grocery";
 
-        var session = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
+        var session = StageTommysViolenceAndVincentsQuestion(Baseline);
         var pending = AdvanceToPause(session);
         Assert.Equal("tommy", pending.ActorId);
         session.Choose(pending.Options.Single(o => o.Description == falseDenial).Id);
@@ -303,9 +385,16 @@ public sealed class CausalFeedbackTests
     {
         const string falseDenial = "deny it to Vincent Russo: tell him you did not get violent at Bellini's grocery";
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-denial-{Guid.NewGuid():N}.db");
+        string midPath = Path.Combine(Path.GetTempPath(), $"ce-018-denial-mid-{Guid.NewGuid():N}.db");
         try
         {
-            var original = PersistentSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
+            var original = PersistentSession.Start(Seed, Baseline, "tommy", "vincent");
+            StageTommysViolence(original.InnerSession.World);
+            AdvanceThroughOwnPauses(original, 20);
+            original.Save(midPath);
+            int commandsBeforeQuestion = SaveStore.Read(midPath).Commands.Count;
+            StageVincentsQuestion(original.InnerSession.World);
+
             for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
                 original.StepEvent();
             Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
@@ -314,7 +403,7 @@ public sealed class CausalFeedbackTests
             Assert.DoesNotContain(original.Snapshot().AwaitingAnswers, r => r.AskedId == "tommy");
 
             original.Save(path);
-            var loaded = PersistentSession.Load(path);
+            var loaded = StageThenLoad(path, commandsBeforeQuestion);
 
             var reloaded = loaded.Snapshot();
             Assert.DoesNotContain(reloaded.AwaitingAnswers, r => r.AskedId == "tommy");
@@ -323,6 +412,7 @@ public sealed class CausalFeedbackTests
         finally
         {
             if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(midPath)) File.Delete(midPath);
         }
     }
 
@@ -340,9 +430,16 @@ public sealed class CausalFeedbackTests
         const string partialWithholding =
             "say nothing to Vincent Russo about it either way";
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-pending-{Guid.NewGuid():N}.db");
+        string midPath = Path.Combine(Path.GetTempPath(), $"ce-018-pending-mid-{Guid.NewGuid():N}.db");
         try
         {
-            var original = PersistentSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
+            var original = PersistentSession.Start(Seed, Baseline, "tommy", "vincent");
+            StageTommysViolence(original.InnerSession.World);
+            AdvanceThroughOwnPauses(original, 20);
+            original.Save(midPath);
+            int commandsBeforeQuestion = SaveStore.Read(midPath).Commands.Count;
+            StageVincentsQuestion(original.InnerSession.World);
+
             for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
                 original.StepEvent();
             original.Choose(original.Pending!.Options.Single(o => o.Description == partialWithholding).Id);
@@ -350,44 +447,71 @@ public sealed class CausalFeedbackTests
             Assert.Single(original.Snapshot().AwaitingAnswers);
 
             original.Save(path);
-            var loaded = PersistentSession.Load(path);
+            var loaded = StageThenLoad(path, commandsBeforeQuestion);
 
             Assert.Single(loaded.Snapshot().AwaitingAnswers);
         }
         finally
         {
             if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(midPath)) File.Delete(midPath);
         }
     }
 
     /// <summary>
     /// Player/autonomous parity for whether a request remains outstanding, not only for
-    /// <c>LastAction</c>. Reached, not staged: Tommy's own top-ranked preference at this exact pause
-    /// (confirmed by reading <c>PreparedDecision.Scored[0]</c> directly before resolving) is the same
-    /// <em>Partial</em> report used above — his own self-protective instinct. Both sides of this
-    /// comparison control Tommy — one resolves via
+    /// <c>LastAction</c>. Both sides of this comparison control Tommy — one resolves via
     /// <see cref="SimulationSession.ResolveAutomatically"/>, the other via a person explicitly
     /// choosing the identical rendered option — so this isolates exactly the variable the review
     /// asked about (did a person or the pipeline choose?) without also crossing into whether Tommy
     /// was controlled at all, which is a separate variable this fixture is not guaranteed to hold
     /// constant (see the milestone archive's correction section).
+    ///
+    /// <b>Retargeted 2026-09-11 by milestone 024's sixth correction.</b> Read off whichever option
+    /// actually wins autonomously at this staged decision, rather than assuming Partial is still his
+    /// top-ranked preference — the correction changed Tommy's own knowledge and pressure situation
+    /// enough that it may not be, and confirmed directly it no longer is: his own top choice now
+    /// answers rather than staying silent. What is pinned is the parity itself, whichever way that
+    /// choice actually leaves the request — the same option, chosen by the pipeline or by a person,
+    /// must leave it in the identical outstanding-or-not state.
     /// </summary>
     [Fact]
     public void Request_outstanding_status_is_identical_whether_the_asked_persons_choice_was_autonomous_or_player_chosen()
     {
-        const string partialWithholding =
-            "say nothing to Vincent Russo about it either way";
-
-        var autoResolved = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
+        var autoResolved = StageTommysViolenceAndVincentsQuestion(Baseline);
         AdvanceToPause(autoResolved);
+        int tommyDecisionsBefore = autoResolved.World.Decisions.Count(d => d.ActorId == "tommy");
         autoResolved.ResolveAutomatically();
 
-        var playerChosen = SimulationSession.Start(AltSeedWhereVincentAsksTommy, Baseline, "tommy", "vincent");
-        var pending = AdvanceToPause(playerChosen);
-        playerChosen.Choose(pending.Options.Single(o => o.Description == partialWithholding).Id);
+        // LastAction reads the viewpoint's (Vincent's) own most recent action, not Tommy's — Vincent
+        // has his own autonomous decisions firing in the background, so his last action is the wrong
+        // thing to read here. Tommy's own just-resolved decision, read directly off the world, names
+        // exactly which of the six offered options actually won.
+        var tommyChoice = autoResolved.World.Decisions
+            .Where(d => d.ActorId == "tommy")
+            .Skip(tommyDecisionsBefore)
+            .First()
+            .Chosen!.Candidate;
+        string autoDescription = (tommyChoice.Kind, tommyChoice.Candor) switch
+        {
+            (ActionKind.ReportToSuperior, ReportCandor.Candid) => "admit it to Vincent Russo: you got violent at Bellini's grocery",
+            (ActionKind.ReportToSuperior, ReportCandor.False) => "deny it to Vincent Russo: tell him you did not get violent at Bellini's grocery",
+            (ActionKind.ReportToSuperior, ReportCandor.Partial) => "say nothing to Vincent Russo about it either way",
+            (ActionKind.DoNothing, _) => "take no action",
+            (ActionKind.ContinueStrategy, _) => "carry on getting Bellini's grocery to pay",
+            (ActionKind.PostponeStrategy, _) => "leave it for now",
+            _ => throw new InvalidOperationException($"unexpected autonomous choice: {tommyChoice.Kind}:{tommyChoice.Candor}"),
+        };
 
-        Assert.Single(autoResolved.Snapshot().AwaitingAnswers);
-        Assert.Single(playerChosen.Snapshot().AwaitingAnswers);
+        var playerChosen = StageTommysViolenceAndVincentsQuestion(Baseline);
+        var pending = AdvanceToPause(playerChosen);
+        playerChosen.Choose(pending.Options.Single(o => o.Description == autoDescription).Id);
+
+        // The parity itself is the claim, not a specific expected count — whichever way the chosen
+        // option actually leaves the request, both paths must leave it the identical way.
+        Assert.Equal(
+            autoResolved.Snapshot().AwaitingAnswers.Count,
+            playerChosen.Snapshot().AwaitingAnswers.Count);
     }
 
     // ================================================================= proof B: Marco and the demand
@@ -736,4 +860,181 @@ public sealed class CausalFeedbackTests
         Assert.Equal(SessionStatus.AwaitingChoice, session.Status);
         return session.Pending!;
     }
+
+    /// <summary>
+    /// Drives Vincent (controlled) through his own natural path — confirmed directly: start, block,
+    /// delegate — via <see cref="SimulationSession.ResolveAutomatically"/> at every decision that
+    /// isn't the one this test cares about, stopping the moment Salvatore's own question has added
+    /// <see cref="TellSalvatoreAboutTribute"/> to what Vincent is offered. Salvatore's own question is
+    /// never staged or forced; it arrives entirely on its own at this seed and variant.
+    /// </summary>
+    private static PendingDecision AdvanceToVincentsAnswerToSalvatore(SimulationSession session)
+    {
+        for (int guard = 0; guard < 20; guard++)
+        {
+            var pending = AdvanceToPause(session);
+            if (pending.Options.Any(o => o.Description == TellSalvatoreAboutTribute))
+                return pending;
+            session.ResolveAutomatically();
+        }
+        throw new InvalidOperationException(
+            "Vincent never reached a decision offering the exact-claim answer to Salvatore within the guard.");
+    }
+
+    /// <summary>
+    /// Runs the calendar forward by whole days exactly as <see cref="SimulationSession.AdvanceDays"/>
+    /// does, except that a pause belonging to the session's own controlled character mid-fast-forward
+    /// — <see cref="SimulationSession.AdvanceTo"/> stops early for exactly this reason — is resolved
+    /// automatically rather than left outstanding, so a long horizon can be requested in one call
+    /// without the caller having to predict how many times the controlled character will pause along
+    /// the way.
+    /// </summary>
+    private static void AdvanceDaysThroughOwnPauses(SimulationSession session, int days)
+    {
+        var horizon = session.Date.AddDays(days);
+        while (session.Date < horizon)
+        {
+            while (session.Status == SessionStatus.AwaitingChoice)
+                session.ResolveAutomatically();
+            int remaining = (horizon - session.Date).Days;
+            if (remaining <= 0) break;
+            session.AdvanceDays(remaining);
+        }
+    }
+
+    /// <summary>
+    /// The staged origin this family of tests needs, applied directly to an already-constructed
+    /// session's world (internal, visible to this assembly): Vincent delegates a permitted method to
+    /// Tommy, then Tommy — the current executor — is staged straight to Force at the
+    /// <see cref="Commit"/> boundary, since no generator can offer a crew-1 delegate that escalation
+    /// (see the correction's own review record). Only these two choices are staged; the operation's
+    /// actual resolution into real violence runs through the ordinary, unstaged pipeline from there.
+    /// </summary>
+    private static void StageTommysViolence(World world)
+    {
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+
+        var startCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("start:tribute:grocery", ActionKind.StartStrategy, "test", "strong-arm bellini-grocery")
+            { TargetId = Cast.Grocery, Strategy = StrategyKind.SecureTribute, Domain = Cast.Harbour, Method = CoercionMethod.Persuade },
+            startCtx.Agenda, startCtx, new List<string>());
+        var s = vincent.Execution.Strategy!;
+
+        var delegateCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate($"delegate:{s.Kind}:tommy", ActionKind.DelegateStrategy, "test", "hand it to tommy")
+            { TargetId = "tommy", Strategy = s.Kind, Method = s.Method, Domain = s.Domain, RequiredCrew = 1 },
+            delegateCtx.Agenda, delegateCtx, new List<string>());
+
+        var alterCtx = Context(world, tommy);
+        Commit.Apply(world, tommy,
+            new Candidate($"alter:{s.Kind}:force", ActionKind.AlterStrategy, "test", "switch to force")
+            { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain, Method = CoercionMethod.Force, BreachesPolicyId = "no-violence-harbour" },
+            alterCtx.Agenda, alterCtx, new List<string>());
+    }
+
+    /// <summary>
+    /// Vincent's own question, staged explicitly because the discovery roll that would ordinarily
+    /// produce his suspicion is probabilistic and unreliable at this seed — see
+    /// <see cref="StageTommysViolence"/>'s sibling doc comment on what stays unstaged. Requires
+    /// <see cref="StageTommysViolence"/> to have already run and the violence to have actually
+    /// resolved (a real <c>TruthLog</c> "violence" entry to exist).
+    /// </summary>
+    private static void StageVincentsQuestion(World world)
+    {
+        var vincent = world.Get("vincent");
+        var violenceEventId = world.TruthLog.First(e => e.Kind == "violence").Id;
+        var violenceClaim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, violenceEventId);
+
+        // The suspicion a discovery roll would ordinarily have given him — staged for the identical
+        // reason the question itself is: without some prior position to corroborate or contradict,
+        // Tommy's later denial would be news to Vincent rather than a conflict, which is not the
+        // exchange this family of tests is about.
+        vincent.Cognition.Learn(violenceClaim, Stance.Suspects, 0.5, SourceKind.Discovery, vincent.Id, world.Now);
+
+        var askCtx = Context(world, vincent);
+        Commit.Apply(world, vincent,
+            new Candidate("ask:tommy:violence", ActionKind.SeekCorroboration, "test", "ask tommy directly")
+            { TargetId = "tommy", AboutClaim = violenceClaim },
+            askCtx.Agenda, askCtx, new List<string>());
+    }
+
+    private static SimulationSession StageTommysViolenceAndVincentsQuestion(string variant)
+    {
+        var session = SimulationSession.Start(Seed, variant, "tommy", "vincent");
+        StageTommysViolence(session.World);
+        AdvanceDaysThroughOwnPauses(session, 20);
+        StageVincentsQuestion(session.World);
+        return session;
+    }
+
+    /// <summary>
+    /// The identical staging, driven through <see cref="PersistentSession"/>'s own logged, replayable
+    /// mutators rather than <see cref="SimulationSession.ResolveAutomatically"/> (which is not logged
+    /// and so cannot survive a save/load replay): any of Tommy's own intervening pauses while the
+    /// staged operation resolves are answered with his first offered option, logged the ordinary way.
+    /// </summary>
+    private static void AdvanceThroughOwnPauses(PersistentSession session, int days)
+    {
+        var horizon = session.Date.AddDays(days);
+        while (session.Date < horizon)
+        {
+            while (session.Status == SessionStatus.AwaitingChoice)
+                session.Choose(session.Pending!.Options[0].Id);
+            int remaining = (horizon - session.Date).Days;
+            if (remaining <= 0) break;
+            session.AdvanceDays(remaining);
+        }
+    }
+
+    /// <summary>
+    /// The save/load pair's own staged setup: since <see cref="PersistentSession.Load"/> starts a
+    /// genuinely fresh session and replays only its logged commands, a save taken after staging
+    /// directly through <see cref="Commit.Apply"/> cannot be reproduced by that replay alone — the
+    /// staging itself is not a logged command. This restages identically on the freshly-started
+    /// session before replaying the saved log by hand, so the comparison is still "does replaying the
+    /// same choices against the same starting point reach the same state", just with that starting
+    /// point built explicitly on both sides rather than implicitly by the seed alone.
+    /// </summary>
+    private static PersistentSession StageThenLoad(string path, int commandsBeforeQuestion)
+    {
+        var data = SaveStore.Read(path);
+        var loaded = PersistentSession.Start(data.Seed, data.Variant, data.ControlledCharacterId, data.ViewpointCharacterId);
+        StageTommysViolence(loaded.InnerSession.World);
+
+        void Replay(SessionCommand command)
+        {
+            switch (command.Kind)
+            {
+                case SessionCommandKind.StepEvent: loaded.StepEvent(); break;
+                case SessionCommandKind.AdvanceDays: loaded.AdvanceDays(command.Days!.Value); break;
+                case SessionCommandKind.Choose: loaded.Choose(command.OptionToken!); break;
+                default: throw new InvalidOperationException($"unrecognised command kind '{command.Kind}'");
+            }
+        }
+
+        for (int i = 0; i < commandsBeforeQuestion; i++)
+            Replay(data.Commands[i]);
+
+        StageVincentsQuestion(loaded.InnerSession.World);
+
+        for (int i = commandsBeforeQuestion; i < data.Commands.Count; i++)
+            Replay(data.Commands[i]);
+
+        return loaded;
+    }
+
+    private static GeneratorContext Context(World world, Character actor)
+        => new(
+            actor.View, Salience.Perceive(actor, world.Now),
+            new Agenda(AgendaKind.DischargeResponsibility, "keep the harbour earning", "test", Cast.Harbour),
+            world.Now,
+            new ScheduledEvent { Id = 0, Time = world.Now, Kind = EventKind.RoleReview, OwnerId = actor.Id, Cause = "test" },
+            MyOffice: null, MyAssignment: null, KnownPolicies: Array.Empty<Policy>(),
+            SuperiorId: null, SubordinateIds: Array.Empty<string>(), OrgMemberIds: Array.Empty<string>(),
+            AcquaintedIds: Array.Empty<string>(), ReportsSent: Array.Empty<Report>(),
+            RequestsMade: Array.Empty<InformationRequest>(), VisibleTargets: Array.Empty<string>(),
+            AvailableSubordinateIds: Array.Empty<string>(), CurrentExecution: Strategies.CurrentExecution(world, actor));
 }

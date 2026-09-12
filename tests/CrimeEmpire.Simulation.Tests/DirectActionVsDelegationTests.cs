@@ -847,7 +847,8 @@ public sealed class DirectActionVsDelegationTests
             ReportsSent: Array.Empty<Report>(),
             RequestsMade: Array.Empty<InformationRequest>(),
             VisibleTargets: Array.Empty<string>(),
-            AvailableSubordinateIds: Array.Empty<string>());
+            AvailableSubordinateIds: Array.Empty<string>(),
+            CurrentExecution: Strategies.CurrentExecution(world, actor));
 
     // ================================================================= helpers — Section C
 

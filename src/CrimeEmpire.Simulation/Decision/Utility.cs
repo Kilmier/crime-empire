@@ -303,7 +303,16 @@ public static class Utility
         Psychology psy,
         PerceivedSituation perceived,
         Agenda agenda,
-        Rng rng)
+        Rng rng,
+        // The one strategy instance actor is presently the one carrying out — Strategies
+        // .CurrentExecution's own output, computed once in Pipeline.Prepare and passed in rather
+        // than re-derived here, since this method never touches World (only perceived situation,
+        // by design — see Pipeline.Prepare's own comment on this call site). Milestone 024's sixth
+        // correction: actor.Execution.Strategy alone is the owner-only field, null for a delegate
+        // even while he is scoring his own ContinueStrategy/AlterStrategy/PostponeStrategy options.
+        // Required, not defaulted, so every call site states its own answer rather than silently
+        // inheriting one.
+        StrategyInstance? currentExecution)
     {
         var parts = new List<ScoreComponent>();
         double aggressive = psy[Trait.Aggressive];
@@ -500,7 +509,7 @@ public static class Utility
             Add("urgency", 0.8 * agenda.Weight, "the situation would not keep");
 
         // --- continuation / commitment value ---------------------------------------------------
-        int failed = actor.Execution.Strategy?.FailedAttempts ?? 0;
+        int failed = currentExecution?.FailedAttempts ?? 0;
 
         // Capped deliberately. An uncapped frustration term eventually swamps every trait, so a
         // cautious man and a violent one escalate to the same place given enough failures — which
@@ -748,8 +757,12 @@ public static class Utility
         }
 
         // --- switching and opportunity cost -----------------------------------------------------------
+        // currentExecution rather than actor.Execution.Strategy: AbandonStrategy is only ever
+        // scored for an owner (never generated for a delegate in this correction), for whom the two
+        // are identical when he hasn't delegated away; Alter/Postpone need the generalised read so
+        // a delegate's own switching cost is not silently scored as zero. Milestone 024's sixth correction.
         if (cand.Kind is ActionKind.AlterStrategy or ActionKind.AbandonStrategy or ActionKind.PostponeStrategy
-            && actor.Execution.Strategy is not null)
+            && currentExecution is not null)
         {
             double baseCost = cand.Kind == ActionKind.AbandonStrategy ? 1.1 : 0.5;
             double statusCost = cand.Kind == ActionKind.AbandonStrategy ? 0.9 * proud : 0.3 * proud;

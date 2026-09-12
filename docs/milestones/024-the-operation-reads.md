@@ -471,3 +471,220 @@ It awaits Codex's own re-review, the same as every correction before Matt confir
 
 One documentation-only correction commit, touching only `docs/CURRENT_MILESTONE.md`,
 `docs/REVIEW_LEDGER.md`, and this archive. Awaits Codex re-review.
+
+## Correction — delegated-execution authority, information boundary, postponement, assignment coherence, and policy-breach identity (the sixth correction), 2026-09-11
+
+**Not yet reviewed by Codex. This section makes no claim that Codex has reviewed, passed, or
+accepted this implementation — it records what Matt authorized and what was built and verified
+against that authorization, nothing more.**
+
+### What prompted it
+
+A read-only playtest of the delegated `SecureTribute` path (seed 42, baseline) found four defects
+in how a delegated operation is handled: Vincent was woken by `StrategyBlocked` instead of the
+executor he delegated to; `DoNothing` at a genuine block left the strategy live with no pending step
+while the panel still said the executor was handling it; leadership created a second assignment
+after the first deadline while the original operation stayed linked to the expired one; and the
+panel lost the owner-known method and delegation history once delegated. Matt authorized a revised,
+bounded correction rather than the investigation's own proposed remedies verbatim.
+
+### What was authorized and implemented
+
+A shared `Strategies.CurrentExecution(world, actor)` derivation — the owner if he has not delegated,
+otherwise whoever it is delegated to — threaded through wake-routing, candidate generation, scoring
+and commit for `ContinueStrategy` / `AlterStrategy` / `PostponeStrategy` (new); `DelegateStrategy` /
+`AbandonStrategy` stay owner-only. The executor gains firsthand participant knowledge on a refusal;
+`ReportToSuperior` remains scored, not automatic; the existing `RevenueShortfall` pressure at
+Blocked-time is gated to `owner.Id == executor.Id`, closing a synchronous owner-informed-without-a-
+report leak. A `PostponeStrategy` candidate is generated at a genuine block with no pending step, and
+the generic `DoNothing` floor candidate is suppressed there. `LeadershipReview` will not create a
+second assignment while the officeholder still owns a live strategy in that domain, including a
+delegated one. `StartStrategy` now fails closed, both when the actor is already executing delegated
+work and when a different `StartStrategy` would overwrite his own still-delegated instance — the
+owner must explicitly cancel first. `StrategyInstance.PolicyBreachDecisionMakerId` (new field)
+records who chose the currently operative prohibited method, independent of who owns or executes the
+operation; delegation and execution never rewrite it, but a genuine later `AlterStrategy` that
+changes which prohibited method is operative may.
+
+### The structural finding, substantiated not assumed
+
+`Force` requires `RequiredCrew = 2` (`Generators.Coercive`); every delegate in the current cast —
+Tommy, Angelo (capable-angelo) — has crew = 1, while every character who clears crew ≥ 2 — Vincent,
+Salvatore — is never a delegate. `Filters.Apply`'s capability stage removes a Force candidate before
+scoring, for any seed, because it depends only on which character is deliberating. **Force is
+therefore structurally unreachable by any delegate in the current cast — a cast/crew fact, not a
+seed-search gap — and Matt ruled that nothing may change (crew, traits, policy, RNG, fixtures,
+coefficients) to restore the old natural Force chain.** Separately, `PolicyKind.NoPublicViolence`
+gates only on `Force`, not `Threaten` — Threaten is not a policy breach at all — so no delegate can
+naturally trigger `PolicyBreachDecisionMakerId` either; a natural proof of "the executor independently
+breaches a policy" does not exist in the current cast and had to be staged, honestly labeled as
+staged.
+
+### Consequence: 44 pre-existing tests broke, and how each was classified and fixed
+
+None from a coefficient, RNG, or fixture change. Diagnosed read-only, grouped by causal root, before
+anything was touched, then remediated per Matt's rulings on the classification:
+
+- **Group A (22 tests, retargeted to 6 retired / 16 preserved).** All sat downstream of a delegate
+  autonomously reaching Force in an unstaged run — now impossible per the structural finding above.
+  Matt ruled: retire only the tests whose actual claim is natural autonomous delegate-to-Force
+  emergence; preserve the rest (provenance/authorship, witness/information-boundary, causal-feedback
+  privacy and save/load, investigation question/answer, pronoun/actor rendering, executor-reporting)
+  through honest staged origins. Retired, with append-only retraction notes rather than silent
+  deletion: `ScenarioReachTests.The_delegator_puts_his_question_to_the_man_he_sent` (4 variants),
+  `ScenarioReachTests.And_the_executor_gives_his_delegator_an_account_of_it`, and
+  `ExecutorSuitabilityTests.The_natural_runs_chosen_executor_is_who_throws_the_punch`. Preserved
+  through narrowly-scoped, feature-family staged origins — no shared helper across families, no
+  hand-staged breach flag, no cast/crew/trait/policy/RNG change: provenance
+  (`ProvenanceTests.The_author_holds_his_own_order_and_a_witness_does_not_learn_it`),
+  investigation/pronoun (`InvestigationTests.cs`'s natural-suspect/answer/allegation tests,
+  `PronounTests.A_pending_decision_speaks_of_its_actor_as_themselves`), causal feedback
+  (`CausalFeedbackTests.cs`'s "pending vs. declined" section), and reporting
+  (`ControlledAutonomousParityTests.Tommys_asked_to_account_decision_resolves_automatically_to_the_identical_report`,
+  renamed from "...identical_partial_report" since Tommy's real candor is now Candid). Each stages
+  only the originating incident through real `Commit.Apply` calls and lets everything downstream —
+  delegation, observation, investigation, the exchange itself — run through the unstaged production
+  pipeline.
+- **Group B (9 tests + 2 Godot self-tests).** Shared one fixture — the `SevenChoiceSequence` golden
+  path, duplicated in `PersistenceTests.cs`, `PlayerOwnedOperationTests.cs` and `Game.cs` — whose
+  fourth step had the *owner* alter a delegated operation, exactly the authority this correction
+  removed. Re-derived live, not guessed, renamed to `GoldenPathChoiceSequence`: persuade → continue →
+  delegate → (Tommy's own escalation and the operation's genuine completion resolve entirely in the
+  background, Vincent remaining the sole controlled character throughout) → an unrelated question
+  from Salvatore → Vincent starting a fresh cycle once collection has genuinely completed. Persistence,
+  restart, determinism, counterfactual, and information-boundary coverage are retained against the
+  re-derived sequence; the Godot golden-path and two-process restart self-tests re-derived and
+  reconfirmed live. `InPersonTests.A_delegated_threat_is_read_by_the_executor_and_not_the_owner`
+  updated the same way — Tommy's escalation now left to resolve autonomously rather than chosen by
+  Vincent.
+- **Group C (2 tests + 1 new negative test).** `CausalFeedbackTests`' cautious-vincent proof that
+  Vincent's answer to Salvatore reaches him within 3 days. Traced: Vincent's answer to the specific
+  asked claim never arrives within a full 90-day run; he instead reports a later, superseding
+  resolution ("the grocery has paid") that answers a different claim and never satisfies the original
+  request. `DESIGN_DECISIONS.md`'s exact-claim resolution rule is correct and untouched — confirmed by
+  reading it, not assumed. Fixed by controlling Vincent (not Salvatore) for the one decision that
+  matters — Salvatore's own question still arrives entirely unstaged — and choosing the exact-claim
+  answer explicitly; the retired premise that the answer "contradicts what the books told Salvatore"
+  no longer holds either (it now reads as a corroboration, not a conflict), so the test reads
+  resolution and attribution via `Known` rather than `Disagreements`. A new negative test
+  (`A_later_report_asserting_a_different_claim_does_not_resolve_the_original_request`) pins the
+  permanently-moot case as a real, unchanged production behaviour, and the gap itself is recorded as
+  `docs/OPEN_CONCERNS.md` #7, deliberately not fixed here (out of this correction's scope). The
+  identical retargeting was applied to the Godot `--selftest-corroboration` self-test.
+- **Group D (9 tests, retargeted to 8 + 1 honest negative control).** Natural seed-42
+  baseline/cautious-vincent timeline drift in the Salvatore/Vincent/Tommy conflict-and-agreement
+  chain, downstream of legitimate pacing changes (postponement, suppressed `DoNothing`, gated
+  pressure), traced individually rather than repinned. `RelationalConsequenceTests`'s conflict-count
+  theory updated to baseline/watchful-boss/disloyal-vincent/resentful-tommy = 1, cautious-vincent = 0
+  — each figure confirmed by an individual run, not inferred from baseline. Mechanism traced: Vincent
+  no longer personally runs the delegated operation, so the report that used to contradict Salvatore
+  is gone; the one surviving conflict in the four non-collapsed variants is a later, genuine
+  assignment reissue. cautious-vincent's own larger collapse (every contradiction source gone, not
+  just one) is pulled into its own honest negative-control test,
+  `Cautious_vincent_no_longer_produces_a_conflict_to_be_contradicted_by`.
+  `AccountAgreementTests.Salvatores_generated_answer_to_tommy_raises_tommys_trust_when_chosen`
+  (renamed from "The_natural_seed42_chain_...") traced to Salvatore's own generated-candidate set at
+  Tommy's `asked-to-account` wake: the answering candidate is genuinely generated and scores 0.2446,
+  losing to an unrelated `SeekCorroboration`-to-Vincent candidate at 0.5849 — generated but not chosen,
+  an honest behavioural non-result, preserved by explicitly choosing the real candidate through the
+  controlled production pipeline (`Runner.Step`/`Pipeline.Resolve`) rather than routed around.
+  `RelationshipReaderTests.The_diagnostic_reports_components_the_reason_list_drops` preserved as a
+  focused staged setup on real, run-produced post-conflict trust, driven through the real
+  `Utility.Score` boundary — diagnostic projection, not natural emergence, per Matt's own distinction.
+- **Group E (1 test).** `ShortfallAttributionTests.A_player_controlling_the_capo_is_offered_the_bakery_once_he_suspects_a_gap`'s
+  old trigger for Vincent suspecting a shortfall *was* the synchronous pressure leak this correction
+  gated closed. Fixed by staging Salvatore's own organisational inference and its assignment-channel
+  disclosure to Vincent — the identical two calls
+  `The_assignment_channel_carries_the_boss_suspicion_to_the_capo` already uses — never a fabricated
+  Tommy report.
+- **Group F (1 test, renamed).** `RelationalConsequenceTests`'s one already-staged denial test
+  hand-built a `StrategyInstance` outside `Commit.Apply`, so it could never populate
+  `PolicyBreachDecisionMakerId`. Rebuilt through the real `Start` → `Alter(Force)` → `Delegate`
+  sequence; Tommy's real score components at the question now favour Candid, not the old fixture's
+  False, so the test is renamed
+  (`An_executor_who_candidly_confirms_it_is_trusted_more_not_less`) and its assertions rewritten to
+  what candour and corroboration production code actually produces, rather than forced back to a
+  denial that no longer occurs.
+
+### The policy-breach decision-maker identity pair, and a real bug found while building it
+
+Two required paired tests, added to `InformationTransmissionTests.cs`: Vincent chooses Force then
+delegates — he remains decision-maker, carried through to real `PersonBreachedPolicy` self-knowledge
+once violence resolves (`Vincent_who_chooses_force_then_delegates_remains_the_decision_maker`);
+Vincent delegates Persuade and Tommy independently alters to Force, staged at the `Commit` boundary
+since no generator can offer a crew-1 delegate that escalation — Tommy becomes decision-maker,
+Vincent gains no self-knowledge of it
+(`Vincent_who_delegates_persuade_then_tommy_independently_alters_to_force_leaves_tommy_the_decision_maker`).
+
+Both mutation-checked against wrong-owner and wrong-executor simplifications in
+`Strategies.ResolveViolence`'s read site (swapping `decisionMakerId` for `owner.Id`, then for
+`executor.Id`): each mutation was caught by exactly one of the two tests. The first test had to be
+strengthened mid-check — it originally asserted only the stored field, not the resulting `Cognition`
+consequence — because in that form it did not catch the wrong-executor mutation at all; extended to
+assert Vincent (not Tommy) gains the real `PersonBreachedPolicy` self-knowledge, it did.
+
+A genuine, pre-existing bug was found in the same pass: `Commit.cs`'s `AlterStrategy` case updated
+`PolicyBreachDecisionMakerId` on every breach-bearing alter, including a repeated or no-op one that
+left the operative method unchanged — contradicting the field's own doc comment and Matt's ruling that
+delegation and execution must never rewrite it. Fixed with a guard (update only on the first breach
+ever recorded, or when the method genuinely moves under a breaching candidate) and a new
+mutation-checked negative test,
+`A_repeated_alter_that_does_not_move_the_operative_method_does_not_rewrite_the_decision_maker`.
+
+### Documentation corrections made in the same pass
+
+`InformationTransmissionTests.cs`'s `StageForceBreach` doc comment, which had drifted to say "delegates
+before altering," corrected to state the actual order — it always alters to the prohibited method
+before any delegation, for the decision-maker-identity reason the comment itself gives — and a
+duplicated summary block left orphaned above the wrong method by an earlier edit was moved back onto
+`StageForceBreach`. `docs/OPEN_CONCERNS.md` #7 corrected to state accurately what milestone 018's own
+three-times-corrected chain actually rejected — a private-decision leak (reading the asked
+character's own `World.Decisions`), and treating a sincere denial as a distinct "Declined" outcome —
+neither of which is a moot/supersession alternative, which that chain never considered. Every
+`Milestone [N]` placeholder in the production-code comments, `docs/CURRENT_MILESTONE.md`, and the
+Godot self-tests replaced with "milestone 024's sixth correction."
+
+### Verification
+
+- Full test suite: **680 passing, 0 failing** (up from 636 passing / 44 failing when this correction's
+  implementation first broke them; net-additive, since Group C's negative test and the two
+  `PolicyBreachDecisionMakerId` identity tests are new).
+- `dotnet run --project src/CrimeEmpire.Runner -- --verify` (seed 42, baseline; also re-run at
+  disloyal-vincent and resentful-tommy): identical hashes from two runs each — deterministic.
+- `dotnet run --project src/CrimeEmpire.Runner -- --compare` (all six configurations, seed 42): 6
+  distinct traces, 5 distinct chosen-action sequences, `violence: none` in every one — independent
+  corroboration, at the CLI level, of the Force-impossibility finding.
+- Both required viewpoints (`--viewpoint vincent`, baseline; `--viewpoint salvatore`,
+  disloyal-vincent) render cleanly with no cross-character leak visible; Tommy's viewpoint checked as
+  an additional, non-required sanity pass.
+- All nine Godot self-tests pass: `--selftest`, `--selftest-goldenpath`, `--selftest-directaction`
+  (its own trailing beats re-derived live — the concealment step now resolves in one pass rather than
+  needing a continuation, unrelated to delegation but confirmed by an actual run, not assumed),
+  `--selftest-corroboration` (rebuilt the same way as the equivalent xunit tests), `--selftest-tribute`,
+  `--selftest-capability`, `--selftest-operation`, `--selftest-restart-save`, and
+  `--selftest-restart-load` — the two-process restart proof, the loaded screen byte-identical to the
+  golden path's own.
+- Mutation checks performed and reverted: the exact-claim request-resolution comparison in
+  `PlayerSnapshot.cs` (Group C); the `PolicyBreachDecisionMakerId` guard against both a wrong-owner and
+  a wrong-executor simplification in `Strategies.ResolveViolence` (the identity pair above).
+
+**Not yet done, recorded rather than glossed over:** not every one of the roughly thirty rebuilt or
+retargeted tests was individually mutation-checked against its own reverted production change — only
+the `PolicyBreachDecisionMakerId` pair and Group C's new negative test were. The rest were confirmed
+correct against the real, unstaged pipeline (the point of "staged origin, unstaged everything
+downstream"), but a mutation check specifically proving each one would catch a regression was not
+performed for all of them.
+
+### Scope discipline
+
+`docs/DESIGN_DECISIONS.md`, `docs/PERSONALITY_AND_CHARACTER_PROFILES.md`, and
+`docs/UI_AND_PLAYER_LEGIBILITY.md` untouched. Milestone 027 not started; the remaining pre-existing
+review backlog (`1a7bcc6`, `95e60b5`) untouched. `docs/ROADMAP.md`'s pre-existing, independently
+authored working-tree change (the continuous-calendar finding) preserved exactly and never staged by
+this correction.
+
+### Commit
+
+One commit, "milestone 024 sixth correction," covering the production-code changes described above,
+every test file listed, and this archive entry. **Awaits Codex's implementation review — not
+described as reviewed, passed, accepted, or closed anywhere in this record.**

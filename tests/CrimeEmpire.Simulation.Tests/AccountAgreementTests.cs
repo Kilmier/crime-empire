@@ -7,6 +7,7 @@ using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Session;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 using CrimeSim.Trace;
 
 namespace CrimeEmpire.Simulation.Tests;
@@ -425,16 +426,27 @@ public sealed class AccountAgreementTests
     // ---------------------------------------------------------------- the natural seed-42 chain (ruling 8)
 
     /// <summary>
-    /// The demonstrated chain, off the unmodified baseline scenario: Tommy already holds
-    /// <c>TargetIsVulnerable(bellini-grocery)</c> from Vincent's delegation briefing; he asks
-    /// Salvatore on 6 April; Salvatore — who independently suspects the same thing — answers on 7
-    /// April; the account is fresh (Salvatore has never told Tommy anything about this claim before)
-    /// and agrees with what Tommy already holds, so it is an agreement, not news and not a conflict;
-    /// Tommy's trust in Salvatore rises from its scenario-established 0.30 by exactly
-    /// <c>AccountAgreementTrustGain * Strength</c>.
+    /// Tommy already holds <c>TargetIsVulnerable(bellini-grocery)</c> from Vincent's delegation
+    /// briefing, and asks Salvatore about it — confirmed directly, 1987-03-23, unstaged. The answering
+    /// candidate this test needs — Salvatore giving Tommy his own account, Candid — is genuinely
+    /// generated at the resulting wake: this is not a missing mechanic.
+    ///
+    /// <b>Retargeted by milestone 024's sixth correction, not repinned to a new date.</b> The old title
+    /// claimed this agreement emerges autonomously at seed 42; it no longer does, and — traced directly
+    /// via <c>DecisionRecord.Generated</c>/<c>.Scored</c> at Salvatore's own wake — it never wins on its
+    /// own merits either: the delegated-execution correction gave Salvatore a competing organisational
+    /// concern (asking Vincent about the harbour's own shortfall) that scores 0.5849 against this
+    /// candidate's 0.2446, so Salvatore autonomously pursues the stronger concern instead. That is an
+    /// honest behavioural non-result, preserved below rather than routed around, per ruling 2 — Matt's
+    /// own words: Tommy honestly not getting corroborated is an acceptable outcome, not a defect to
+    /// paper over. The mechanic itself — an agreement Salvatore never withheld anything about raising
+    /// Tommy's trust by exactly <c>AccountAgreementTrustGain * Strength</c> — is preserved by explicitly
+    /// choosing that real, generated candidate through the controlled production pipeline: the same
+    /// <c>Runner.Step</c>/<c>Pipeline.Resolve</c> boundary an autonomous choice would have gone through,
+    /// with only which candidate wins made deliberate.
     /// </summary>
     [Fact]
-    public void The_natural_seed42_chain_raises_tommys_trust_in_salvatore()
+    public void Salvatores_generated_answer_to_tommy_raises_tommys_trust_when_chosen()
     {
         var world = Cast.Build(42, "baseline");
         var tommy = world.Get("tommy");
@@ -442,8 +454,20 @@ public sealed class AccountAgreementTests
         double before = tommy.Social.Toward("salvatore").Trust;
         Assert.Equal(0.30, before, 9);
 
-        // Just past Salvatore's 7 April 15:00 answer, short of Tommy's own 8 April decision.
-        Runner.Run(world, new DateTime(1987, 4, 7, 16, 0, 0));
+        var prepared = AdvanceToPause(world, "salvatore");
+        Assert.Equal(EventKind.RoleReview, prepared.Trigger.Kind);
+
+        var answer = prepared.Scored
+            .Select(s => s.Candidate)
+            .Single(c => c.Kind == ActionKind.ReportToSuperior && c.TargetId == "tommy"
+                         && c.Candor == ReportCandor.Candid && c.AnsweringClaim is { } a && a.Equals(Vulnerable));
+
+        // The honest non-result: left alone, Salvatore does not choose this. Recorded, not routed
+        // around — see this test's own doc comment.
+        var topRanked = prepared.Scored.OrderByDescending(s => s.Total).ThenBy(s => s.Candidate.Id, StringComparer.Ordinal).First();
+        Assert.NotEqual(answer.Id, topRanked.Candidate.Id);
+
+        Pipeline.Resolve(prepared, answer.Id);
 
         var agreement = Assert.Single(world.AccountAgreements,
             a => a.ListenerId == "tommy" && a.Agreement.SpeakerId == "salvatore" && a.Agreement.Claim.Equals(Vulnerable));
@@ -456,23 +480,32 @@ public sealed class AccountAgreementTests
     }
 
     /// <summary>
-    /// The read: Tommy's 8 April decision about answering Salvatore's own question — an entirely
-    /// different claim, <c>PersonUsedViolence</c> — scores its report-related components differently
-    /// once the corroboration above has happened, through the existing, unmodified
-    /// <c>AddLoyaltyParts</c> component of <see cref="ActionKind.ReportToSuperior"/> and
-    /// <see cref="ReportCandor.Partial"/> in <c>Utility.cs</c>. This is the natural-run half of ruling
-    /// 9's pair — see <see cref="The_agreement_measurably_changes_a_later_staged_score"/> for the
-    /// staged counterfactual half.
+    /// The read: a later Tommy decision about an entirely different claim,
+    /// <c>PersonUsedViolence</c>, scores its report-related components differently once the
+    /// corroboration above has happened, through the existing, unmodified <c>AddLoyaltyParts</c>
+    /// component of <see cref="ActionKind.ReportToSuperior"/> and <see cref="ReportCandor.Partial"/> in
+    /// <c>Utility.cs</c>. This is the controlled-choice half of ruling 9's pair — see
+    /// <see cref="The_agreement_measurably_changes_a_later_staged_score"/> for the staged counterfactual
+    /// half.
+    ///
+    /// <b>Retargeted alongside the test above, for the identical reason.</b> The trust movement is real
+    /// (proved above); what changed is that it no longer arrives on its own, so this reads the same
+    /// candidate's score before and after the identical controlled choice rather than before and after
+    /// an autonomous date.
     /// </summary>
     [Fact]
-    public void Tommys_8_april_answer_score_reads_the_trust_the_natural_agreement_raised()
+    public void A_later_report_score_reads_the_trust_the_chosen_agreement_raised()
     {
         var undisturbed = Cast.Build(42, "baseline");
-        Runner.Run(undisturbed, new DateTime(1987, 4, 6, 16, 0, 0)); // before Salvatore answers
         double trustBefore = undisturbed.Get("tommy").Social.Toward("salvatore").Trust;
 
         var afterAgreement = Cast.Build(42, "baseline");
-        Runner.Run(afterAgreement, new DateTime(1987, 4, 7, 16, 0, 0)); // after Salvatore answers
+        var prepared = AdvanceToPause(afterAgreement, "salvatore");
+        var answer = prepared.Scored
+            .Select(s => s.Candidate)
+            .Single(c => c.Kind == ActionKind.ReportToSuperior && c.TargetId == "tommy"
+                         && c.Candor == ReportCandor.Candid && c.AnsweringClaim is { } a && a.Equals(Vulnerable));
+        Pipeline.Resolve(prepared, answer.Id);
         double trustAfter = afterAgreement.Get("tommy").Social.Toward("salvatore").Trust;
 
         Assert.True(trustAfter > trustBefore);
@@ -485,10 +518,27 @@ public sealed class AccountAgreementTests
             var tommy = world.Get("tommy");
             var ctx = Context(world, tommy);
             var rng = Rng.ForOccasion(world.Seed, "test|fixed");
-            return Utility.Score(reportCandid, tommy.View, tommy.Psychology, ctx.Perceived, ctx.Agenda, rng).RelationshipNet();
+            return Utility.Score(reportCandid, tommy.View, tommy.Psychology, ctx.Perceived, ctx.Agenda, rng, ctx.CurrentExecution).RelationshipNet();
         }
 
         Assert.NotEqual(ScoreFor(undisturbed), ScoreFor(afterAgreement));
+    }
+
+    /// <summary>
+    /// Drives <paramref name="controlled"/> to his own next deliberation, whichever it is, with
+    /// nothing chosen yet — the same <see cref="Runner.Step"/> boundary an autonomous choice would
+    /// resolve through, left open so a test can choose deliberately instead.
+    /// </summary>
+    private static PreparedDecision AdvanceToPause(World world, string controlled)
+    {
+        for (int guard = 0; guard < 5000; guard++)
+        {
+            var step = Runner.Step(world, DateTime.MaxValue, controlled);
+            if (step.Status == StepStatus.AwaitingChoice) return step.Awaiting!;
+            if (step.Status == StepStatus.Exhausted)
+                throw new InvalidOperationException($"queue exhausted before {controlled} ever paused");
+        }
+        throw new InvalidOperationException("guard exceeded");
     }
 
     // ---------------------------------------------------------------- ruling 9: the staged counterfactual
@@ -670,7 +720,8 @@ public sealed class AccountAgreementTests
             Pipeline.OrgMembersOf(world, actor),
             Acquaintance.KnownTo(world, actor),
             Array.Empty<Report>(), Array.Empty<InformationRequest>(), new[] { Cast.Grocery },
-            Pipeline.SubordinatesOf(world, actor).Where(id => Pipeline.AvailableToExecute(world, id)).ToList());
+            Pipeline.SubordinatesOf(world, actor).Where(id => Pipeline.AvailableToExecute(world, id)).ToList(),
+            Strategies.CurrentExecution(world, actor));
     }
 
     /// <summary>
@@ -697,7 +748,7 @@ public sealed class AccountAgreementTests
 
         var ctx = Context(world, tommy);
         var rng = Rng.ForOccasion(world.Seed, "test|fixed");
-        return Utility.Score(candidate, tommy.View, tommy.Psychology, ctx.Perceived, ctx.Agenda, rng).RelationshipNet();
+        return Utility.Score(candidate, tommy.View, tommy.Psychology, ctx.Perceived, ctx.Agenda, rng, ctx.CurrentExecution).RelationshipNet();
     }
 
     // ---------------------------------------------------------------- minimal IL walk (ruling 1's proof)

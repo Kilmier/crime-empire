@@ -3,6 +3,7 @@ using CrimeSim.Domain;
 using CrimeSim.Org;
 using CrimeSim.Scenario;
 using CrimeSim.Sim;
+using CrimeSim.Strategy;
 using CrimeSim.Trace;
 
 namespace CrimeEmpire.Simulation.Tests;
@@ -254,7 +255,7 @@ public sealed class ScenarioReachTests
 
         return Utility.Score(
                 candidate, vincent.View, vincent.Psychology, ctx.Perceived, ctx.Agenda,
-                Rng.ForOccasion(world.Seed, "test|fixed"))
+                Rng.ForOccasion(world.Seed, "test|fixed"), ctx.CurrentExecution)
             .Components.Where(p => p.Name == "self-protection")
             .Sum(p => p.Value);
     }
@@ -442,78 +443,21 @@ public sealed class ScenarioReachTests
     }
 
     // ================================================================ the milestone's own claims
-
-    /// <summary>
-    /// The delegator's question wins in play. It has existed since milestone 006's first correction
-    /// and had never been chosen in any variant, losing every time to a report that was being paid
-    /// afresh for concealing what it had already concealed.
-    ///
-    /// Note what is asserted: that it was chosen, against the man he sent, about that man's own act.
-    /// Not that it was chosen at a particular moment or with a particular score — nothing was tuned
-    /// to make it win, and pinning the margin would invite exactly that.
-    ///
-    /// <b>Milestone 022 removed the generator name from this assertion, and strengthened what
-    /// replaced it.</b> It used to require <c>Generator == "FromDelegation"</c>. Once violence
-    /// arrives as street talk rather than as something Vincent worked out himself, the belief is
-    /// testimony — so <c>FromRelationship</c>'s ordinary "go and check what you were told" branch
-    /// accepts it too, runs first, and wins the <c>(kind, target, claim)</c> dedupe. Matt ruled on
-    /// 2026-09-05 that this is the wanted surface: *ask Tommy for his own account*, so we hear what
-    /// Tommy says about it, rather than a delegator-specific audit.
-    ///
-    /// What the assertion pins instead is the thing that actually matters and that the generator name
-    /// was only standing in for: Vincent puts the question **to Tommy, about Tommy's own act**. A
-    /// generic question that happened to land on Tommy about somebody else's business would pass the
-    /// old test's target check and fails this one.
-    ///
-    /// <b>Moved off seed 42, 2026-09-09, by the <see cref="Rng.ForOccasion"/> correction.</b> Vincent
-    /// reaches this question through his own owner's-carve-out discovery roll on Tommy's violence —
-    /// the same kind of occasion-keyed roll <c>StreetTalkTests.cs</c>'s milestone 022 correction fixed
-    /// — and at seed 42, under the corrected mixer, that roll no longer lands in any of these four
-    /// variants: Vincent never comes to hold the belief this decision is about, so he never asks. This
-    /// is a capability proof, not a pin on seed 42's own history (contrast
-    /// <see cref="Resentment_no_longer_reaches_a_chosen_action_at_seed_42"/> below, which is
-    /// deliberately kept at seed 42 because its claim is specifically about that seed), so it moves to
-    /// seed 199 — found by search over this same unmodified production scenario, the first seed at
-    /// which Vincent's discovery roll lands in all four of these variants together, letting one seed
-    /// serve the whole theory rather than four.
-    /// </summary>
-    [Theory]
-    [InlineData("baseline")]
-    [InlineData("watchful-boss")]
-    [InlineData("disloyal-vincent")]
-    [InlineData("resentful-tommy")]
-    public void The_delegator_puts_his_question_to_the_man_he_sent(string variant)
-    {
-        var world = Run(variant, seed: AltSeedWhereVincentAsksTommy);
-
-        Assert.Contains(world.Decisions, d =>
-            d.ActorId == "vincent"
-            && d.Chosen?.Candidate.Kind == ActionKind.SeekCorroboration
-            && d.Chosen.Candidate.TargetId == "tommy"
-            && d.Chosen.Candidate.AboutClaim is { } about
-            && about.Subject == "tommy");
-    }
-
-    /// <summary>
-    /// And the man answers. This is the first delegator-to-executor exchange the accepted scenario
-    /// has ever produced — milestone 006 could prove the path only through a staged test.
-    ///
-    /// <b>Moved off seed 42 alongside the test above, and for the identical reason</b> — this reads
-    /// the request Vincent's own discovery roll produces, so it can only be proven where that roll
-    /// lands.
-    /// </summary>
-    [Fact]
-    public void And_the_executor_gives_his_delegator_an_account_of_it()
-    {
-        var world = Run("baseline", seed: AltSeedWhereVincentAsksTommy);
-
-        var question = world.Requests.First(q => q.AskerId == "vincent" && q.AskedId == "tommy");
-        var reply = world.Reports.FirstOrDefault(r =>
-            r.SenderId == "tommy" && r.RecipientId == "vincent"
-            && r.AnsweringClaim is { } about && about.Equals(question.About));
-
-        Assert.NotNull(reply);
-    }
+    //
+    // Retired 2026-09-11 by milestone 024's sixth correction, not relocated: "The_delegator_puts_his_
+    // question_to_the_man_he_sent" and "And_the_executor_gives_his_delegator_an_account_of_it" both
+    // pinned Vincent's own discovery roll on a delegate's violence naturally landing at seed 199,
+    // producing a natural ask-and-answer exchange. That chain depended on a delegate autonomously
+    // reaching Force, which is now structurally impossible for any delegate in this cast — every
+    // eligible delegate (Tommy, Angelo in capable-angelo) has Capabilities.Crew below Force's
+    // RequiredCrew=2, and Filters.Apply's capability stage removes the candidate before scoring, for
+    // any seed. There is therefore no seed at which either claim can be honestly reproduced as a
+    // natural-autonomous-emergence proof; retracting rather than moving them again is the same
+    // treatment "Resentment_no_longer_reaches_a_chosen_action_at_seed_42" got when its own claim
+    // stopped holding. The underlying exchange — a delegator putting a direct question to the man he
+    // sent, and being answered — is preserved instead through honestly staged production-path proofs
+    // in CausalFeedbackTests.cs's "pending vs. declined" section and ControlledAutonomousParityTests.cs,
+    // where only the originating incident is staged and the exchange itself runs unstaged.
 
     /// <summary>
     /// <b>The milestone's success bar.</b> A perceived account conflict moved a relationship, and a
@@ -577,7 +521,8 @@ public sealed class ScenarioReachTests
         // folded in the Belonging share of loyalty, which is a drive rather than anything owed to
         // Salvatore, so the figure it reported was never purely relational.
         double Relationship() => Utility
-            .Score(later.Candidate, vincent.View, vincent.Psychology, perceived, agenda, rng)
+            .Score(later.Candidate, vincent.View, vincent.Psychology, perceived, agenda, rng,
+                Strategies.CurrentExecution(world, vincent))
             .RelationshipNet();
 
         double withConflict = Relationship();
@@ -764,6 +709,7 @@ public sealed class ScenarioReachTests
             sent,
             Array.Empty<InformationRequest>(),
             new[] { Cast.Grocery },
-            Pipeline.SubordinatesOf(world, actor).Where(id => Pipeline.AvailableToExecute(world, id)).ToList());
+            Pipeline.SubordinatesOf(world, actor).Where(id => Pipeline.AvailableToExecute(world, id)).ToList(),
+            Strategies.CurrentExecution(world, actor));
     }
 }

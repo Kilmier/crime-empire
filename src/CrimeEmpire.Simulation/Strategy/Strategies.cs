@@ -64,6 +64,36 @@ public static class Strategies
     }
 
     /// <summary>
+    /// The one strategy instance <paramref name="actor"/> is presently the one carrying out — not
+    /// merely has a stake in. An owner who has delegated his own instance away is <em>not</em> its
+    /// current executor any more, and this returns null for him; the man it was delegated to is.
+    ///
+    /// This is the write-side question — which decision-pipeline reads (Agenda, Generators, Filters,
+    /// Commit, Utility) need to answer identically before offering or committing
+    /// <c>ContinueStrategy</c>/<c>AlterStrategy</c>/<c>PostponeStrategy</c> — and it is deliberately
+    /// narrower than <see cref="Session.PlayerView"/>'s own read-side notion of "his operation":
+    /// an owner who delegated away still keeps information rights that survive delegation (what he
+    /// ordered, who has it), which is a different question from whose standing it is to act on it
+    /// right now. Answering both the same way was exactly the defect this correction fixes —
+    /// letting the owner continue or alter a delegate's work merely because the instance sits on
+    /// his own field.
+    ///
+    /// Owned-and-undelegated is checked first — true for every owner working alone, and for an
+    /// owner who has not (yet) delegated — before scanning for the one other instance, if any,
+    /// naming <paramref name="actor"/> as <see cref="StrategyInstance.DelegatedToId"/>. At most one
+    /// such instance can ever exist (<see cref="Decision.Pipeline.AvailableToExecute"/>'s own
+    /// enforcement), so this reads as <c>SingleOrDefault</c> rather than taking the first match,
+    /// mirroring <see cref="Session.PlayerView"/>'s identical choice for the identical reason: a
+    /// second match should throw, not be silently and arbitrarily resolved.
+    /// </summary>
+    public static StrategyInstance? CurrentExecution(World world, Character actor)
+        => actor.Execution.Strategy is { DelegatedToId: null } own
+            ? own
+            : world.Characters.Values
+                .Select(other => other.Execution.Strategy)
+                .SingleOrDefault(candidate => candidate is not null && candidate.DelegatedToId == actor.Id);
+
+    /// <summary>
     /// Removes this instance's commitment from the owner and, if execution was delegated, from the
     /// delegate too. Both sides accumulate one — the owner's at start, the delegate's at
     /// delegation — but only the owner's was ever cleaned up on completion or abandonment. Since
@@ -312,21 +342,44 @@ public static class Strategies
 
         world.Record("tribute-refused", business.OwnerId, executor.Id,
             $"{business.Name} still would not pay ({s.Method.ToString().ToLowerInvariant()}, attempt {s.FailedAttempts})");
-        owner.Motivations.AddPressure(PressureKind.RevenueShortfall, 0.2);
 
-        // NOTHING IS LEARNED HERE, AND THAT IS THE CORRECTION.
+        // Milestone 024's sixth correction. This used to move regardless of who executed — the owner's
+        // own pressure, synchronised to a failure he was never told about. Gated on being the one
+        // who actually stood there and heard "no": the man who executed it firsthand may reasonably
+        // feel the pressure of his own failed attempt, but nothing here invents a channel to carry
+        // it to an owner who delegated the job away. Silent for the owner in that case, exactly as
+        // his cognition stays silent below — not moved by some other, unproven route either.
+        if (owner.Id == executor.Id)
+            owner.Motivations.AddPressure(PressureKind.RevenueShortfall, 0.2);
+
+        // The man who was actually refused knows it firsthand — his own participant knowledge,
+        // independent of and possibly sharper than whatever he was briefed at delegation time.
+        // Milestone 024's sixth correction: this is what makes an ordinary ReportToSuperior candidate
+        // available to him afterward (FromRelationship's standing "report the situation to X"),
+        // without inventing any new reporting machinery — reporting it is still his own scored
+        // choice, not something this method does for him.
+        executor.Cognition.Learn(
+            new Claim(ClaimKind.BusinessRefusesTribute, business.Id),
+            Stance.Knows, 1.0, SourceKind.Participant, executor.Id, world.Now);
+
+        // NOTHING IS LEARNED BY THE OWNER HERE, AND THAT IS THE CORRECTION.
         //
         // Milestone 021 revised the owner's read of the man he sent on this path too. It was wrong:
-        // this branch is silent. The target held out, and no report, no observation and no discovery
-        // roll has carried that back to whoever ordered the job — the owner is not present, nobody
-        // has told him, and the claim the collection path files on him has no counterpart here. A
-        // belief moving anyway is the owner reading the world's state directly, which is the
-        // omniscience this milestone's own scoring term had already been corrected for twice.
+        // this branch is silent toward him. The target held out, and no report, no observation and
+        // no discovery roll has carried that back to whoever ordered the job — the owner is not
+        // present, nobody has told him, and the claim the collection path files on him has no
+        // counterpart here. A belief moving anyway is the owner reading the world's state directly,
+        // which is the omniscience this milestone's own scoring term had already been corrected for
+        // twice.
         //
-        // The event below wakes him, and waking is not learning: EventKind.StrategyBlocked carries no
-        // claim into anybody's cognition. That a pause is itself observable to a *player* is a known
-        // and separately recorded leak (ROADMAP.md); it is not a channel to his character.
-        world.Queue.Schedule(world.Now, EventKind.StrategyBlocked, owner.Id,
+        // The event below wakes whoever is actually carrying the operation right now — the delegate
+        // if there is one, the owner himself otherwise — and waking is not learning: no claim rides
+        // along with it into anybody's cognition. Milestone 024's sixth correction: this used to wake the
+        // owner unconditionally, even mid-delegation, which is what let him decide tactics on work
+        // that was no longer his to run — see Decision/Commit.cs and Decision/Generators.cs for the
+        // matching correction on the receiving end. That a pause is itself observable to a *player*
+        // remains a separately recorded question (ROADMAP.md); it is not a channel to a character.
+        world.Queue.Schedule(world.Now, EventKind.StrategyBlocked, s.DelegatedToId ?? s.OwnerId,
             $"{business.Name} held out against {s.Method.ToString().ToLowerInvariant()}",
             new EventPayload { TargetId = business.Id, Strategy = s.Kind });
     }
@@ -408,24 +461,30 @@ public static class Strategies
         owner.Motivations.AddPressure(PressureKind.LegalExposure, 0.3);
         executor.Motivations.AddPressure(PressureKind.LegalExposure, 0.35);
 
-        if (s.BreachedPolicyId is not null)
+        if (s.BreachedPolicyId is not null && s.PolicyBreachDecisionMakerId is { } decisionMakerId)
         {
             world.Org.AdjustCondition(OrgCondition.LeadershipInstability, 0.2);
 
-            // He ordered it. A man does not have to discover that he went outside his own boss's
-            // rule — he is the one who decided to. This is what gives him something to conceal
-            // later; without it the person who ordered the breach holds no claim naming himself
-            // and can only ever report candidly, while the subordinate who carried it out takes
-            // all of the exposure.
+            // He decided to. A man does not have to discover that he went outside his own boss's
+            // rule — he is the one who chose to. This is what gives him something to conceal
+            // later; without it the person who chose the breach holds no claim naming himself and
+            // can only ever report candidly, while the man who carried it out takes all of the
+            // exposure.
             //
-            // Note the boundary this sits on. Knowing he gave the order is his own act. Knowing it
-            // was carried out is not, and is deliberately absent here — he acquires that through a
+            // Milestone 024's sixth correction: the decision-maker, not the owner and not whoever happens
+            // to be executing when the violence actually resolves. Those three can all differ once
+            // delegation lets somebody other than the owner alter the method, and can differ from
+            // each other again if the owner chose the method and only then delegated its execution
+            // — see StrategyInstance.PolicyBreachDecisionMakerId, set once at the StartStrategy or
+            // AlterStrategy that introduced the breach and never rewritten by what happens after.
+            //
+            // Note the boundary this sits on. Knowing he chose it is his own act. Knowing it was
+            // carried out is not, and is deliberately absent here — he acquires that through a
             // report or a discovery roll like anyone else, or not at all. A man can be talked into
-            // doubting that Tommy went through with it; he cannot be talked out of having given
-            // the order.
-            owner.Cognition.Learn(
-                new Claim(ClaimKind.PersonBreachedPolicy, owner.Id, s.BreachedPolicyId, ev.Id),
-                Stance.Knows, 1.0, SourceKind.Participant, owner.Id, world.Now);
+            // doubting that it was carried out; he cannot be talked out of having chosen it.
+            world.Get(decisionMakerId).Cognition.Learn(
+                new Claim(ClaimKind.PersonBreachedPolicy, decisionMakerId, s.BreachedPolicyId, ev.Id),
+                Stance.Knows, 1.0, SourceKind.Participant, decisionMakerId, world.Now);
         }
 
         // Who gets a chance to notice, and on what terms. Collected before scheduling so that one

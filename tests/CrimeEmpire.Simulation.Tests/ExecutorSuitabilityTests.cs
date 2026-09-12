@@ -843,31 +843,17 @@ public sealed class ExecutorSuitabilityTests
         Assert.Equal(startingResistance - expectedReduction, business.Resistance, precision: 9);
     }
 
-    /// <summary>
-    /// The natural run's own consequence, not only a staged one: whichever subordinate Vincent
-    /// actually delegates to at seed 42, that same man — never the owner, never the other
-    /// subordinate — is the one whose name is on the violence when force is eventually applied.
-    /// Combined with the staged proof above (which pins the exact numeric outcome each executor's
-    /// own Coercion produces from identical state), this ties the natural run's choice to a real,
-    /// production-computed consequence rather than asserting the arithmetic a second time across a
-    /// full 90-day run, where other events (Marco's own concession) also move
-    /// <see cref="Business.Resistance"/> and would make a hand-derived expected total fragile.
-    /// </summary>
-    [Fact]
-    public void The_natural_runs_chosen_executor_is_who_throws_the_punch()
-    {
-        var world = Cast.Build(Seed, Variant);
-        Runner.Run(world, End);
-
-        var delegation = world.Decisions.Single(d =>
-            d.Chosen?.Candidate.Kind == ActionKind.DelegateStrategy
-            && d.Chosen.Candidate.TargetId is Tommy or Angelo);
-        string executorId = delegation.Chosen!.Candidate.TargetId!;
-
-        var violence = world.TruthLog.SingleOrDefault(e => e.Kind == "violence");
-        Assert.True(violence is not null, "no force was applied in the natural run, so this proves nothing");
-        Assert.Equal(executorId, violence!.ActorId);
-    }
+    // Retired 2026-09-11 by milestone 024's sixth correction, not relocated:
+    // "The_natural_runs_chosen_executor_is_who_throws_the_punch" pinned that force is eventually
+    // applied in an unstaged, natural 90-day run and that the punch is thrown by whoever Vincent
+    // actually delegated to. Force is now structurally impossible for any delegate in this cast —
+    // every eligible delegate has Capabilities.Crew below Force's RequiredCrew=2, and Filters.Apply's
+    // capability stage removes the candidate before scoring, for any seed — so no natural run at any
+    // seed ever reaches a TruthLog "violence" entry to attribute. The claim this test actually
+    // protected — that whichever man was delegated to is who the violence names, never the owner —
+    // remains proven at the unit level above (staged, identical state, each candidate executor
+    // compared directly) and, through production writers, in
+    // InformationTransmissionTests.cs's decision-maker-identity tests.
 
     // ================================================================= save/load through the fork
 
@@ -1592,7 +1578,8 @@ public sealed class ExecutorSuitabilityTests
             // every other World-reading helper in this file.
             AvailableSubordinateIds: (subordinateIds ?? Array.Empty<string>())
                 .Where(id => world.Characters.ContainsKey(id) && Pipeline.AvailableToExecute(world, id))
-                .ToList());
+                .ToList(),
+            CurrentExecution: Strategies.CurrentExecution(world, actor));
 
     // ================================================================= helpers — save/load (Section C idiom)
 

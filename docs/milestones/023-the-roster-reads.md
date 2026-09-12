@@ -485,3 +485,20 @@ moments[1].At)`, that the two rendered moments share one instant, not only two n
 ### Commit
 
 One correction commit, test-and-documentation-only. Awaits Codex re-review.
+
+## Review-ledger correction — acceptance facts, authorship, and archive links, 2026-09-12
+
+Astra independently reviewed audit-record commit `61fa056` and returned one P2, accepted by Matt.
+When that commit replaced unresolved placeholders with the historical-audit verdicts, it also removed
+three facts the compact ledger already carried: Matt's acceptance of milestones 014 and 015, and his
+acceptance and closure of milestone 022's RNG correction chain at `4ed58e3`. The verdicts and owner
+acceptances answer different questions, so the corrected rows now retain both.
+
+The same update restores the relevant historical attribution: Codex prepared and validated the
+review-process cleanup committed as `d6af1a6`; Astra independently reviewed the exact committed
+change. It also replaces both shorthand milestone-023 references in the ledger — on `6738200` and
+`ba83b12` — with links to this archive's actual path. No historical verdict, grouped coverage row,
+owner ruling, runtime behavior, or baseline changed. `891368d` remains pending independent review,
+and this documentation correction cannot establish its own review outcome. Verification compared
+`61fa056` directly with its parent to identify the three removed facts, checked `d6af1a6`'s commit
+record for the Codex/Astra attribution, resolved both links to this file, and ran `git diff --check`.

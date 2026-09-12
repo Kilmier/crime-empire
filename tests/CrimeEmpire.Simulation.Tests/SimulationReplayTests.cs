@@ -240,6 +240,25 @@ public sealed class SimulationReplayTests
         Assert.NotEqual(BehavioralSnapshot(vincentChose), BehavioralSnapshot(tommyChose));
     }
 
+    /// <summary>
+    /// Whether the current agreement's initial payment has already been taken changes what a later
+    /// collection step may do. It is therefore behavioral persistent state, not presentation detail,
+    /// and both replay comparators must see it.
+    /// </summary>
+    [Fact]
+    public void Current_agreement_collection_state_is_part_of_both_replay_comparators()
+    {
+        var notYetCollected = Cast.Build(seed: 42, "baseline");
+        var alreadyCollected = Cast.Build(seed: 42, "baseline");
+
+        notYetCollected.Businesses[Cast.Grocery].PayingTribute = true;
+        alreadyCollected.Businesses[Cast.Grocery].PayingTribute = true;
+        alreadyCollected.Businesses[Cast.Grocery].TributeCollectedForCurrentAgreement = true;
+
+        Assert.NotEqual(Snapshot(notYetCollected), Snapshot(alreadyCollected));
+        Assert.NotEqual(BehavioralSnapshot(notYetCollected), BehavioralSnapshot(alreadyCollected));
+    }
+
     private static World Run(int seed, string variant, int days)
     {
         var world = Cast.Build(seed, variant);
@@ -294,7 +313,8 @@ public sealed class SimulationReplayTests
 
         foreach (var business in world.Businesses.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
             lines.Add($"business|{business.Id}|{Number(business.MonthlyRevenue)}|" +
-                      $"{business.PayingTribute}|{Number(business.Resistance)}|{business.Damaged}");
+                      $"{business.PayingTribute}|{business.TributeCollectedForCurrentAgreement}|" +
+                      $"{Number(business.Resistance)}|{business.Damaged}");
 
         foreach (var character in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
         {
@@ -400,7 +420,8 @@ public sealed class SimulationReplayTests
 
         foreach (var business in world.Businesses.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
             lines.Add($"business|{business.Id}|{Number(business.MonthlyRevenue)}|" +
-                      $"{business.PayingTribute}|{Number(business.Resistance)}|{business.Damaged}");
+                      $"{business.PayingTribute}|{business.TributeCollectedForCurrentAgreement}|" +
+                      $"{Number(business.Resistance)}|{business.Damaged}");
 
         foreach (var character in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
         {

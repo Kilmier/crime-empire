@@ -848,6 +848,24 @@ true, and records a scope boundary Matt confirmed in chat rather than in a miles
   chose the currently operative prohibited method. Ownership, delegation, and execution do not move
   it. A later `AlterStrategy` moves it only when that actor genuinely changes which prohibited method
   is operative. This identity is persistent behavioral state and belongs in replay fingerprints.
+- **Operation choice remains belief-limited; operation resolution remains authoritative.** A man may
+  honestly begin a tribute operation from stale or mistaken information. Candidate generation must
+  not consult `Business.PayingTribute` to erase that mistake from his decision. When the operation
+  reaches the shop, however, objective state decides the consequence: finding an already-paying shop
+  corrects the executor's belief and ends the redundant operation before a demand or payment. A
+  mistaken belief may cost time; it may not manufacture money.
+- **One continuous tribute agreement yields one initial collection.** Agreement and collection are
+  separate steps, so `PayingTribute` alone cannot say whether the payment has already been awarded.
+  `Business.TributeCollectedForCurrentAgreement` is authoritative persistent state and makes the
+  collection boundary idempotent even if two operations began while the shop was refusing. A future
+  transition back to non-payment must clear it when ending that continuous agreement; nothing in the
+  current scenario changes a paying shop back yet.
+- **Owner-observable success may be named without exposing delegated execution.** Money arriving and
+  the identity of the man the owner assigned are both facts the owner already has. A completed
+  `SecureTribute` occasion may therefore say that the money arrived after that executor handled the
+  job. It still must not reveal method, intermediate progress, private refusals, or any other fact
+  learned only by the delegate. Other strategy completions retain outcome-agnostic wording unless a
+  separately established owner-observable consequence supports more.
 
 Full implementation and correction history: `docs/milestones/024-the-operation-reads.md`.
 

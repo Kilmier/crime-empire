@@ -105,6 +105,20 @@ internal static class PlayerOccasion
             // his own state — Strategies.Complete cleared his Execution.Strategy, and the screen
             // beside this already says "you have nothing running" — so the fact is said and the
             // outcome is not: "one way or another" is the whole of what he can be told.
+            // Money arriving is not the delegate's private operational outcome: the owner receives
+            // it, and the collection branch has already written his own Discovery reading before
+            // scheduling this event. He also knows whom he assigned. Name those two owner-known
+            // facts while keeping method, progress and everything else about delegated execution
+            // private. Other completions retain the deliberately outcome-agnostic wording below.
+            EventKind.StrategyComplete when
+                trigger.Payload.Strategy == StrategyKind.SecureTribute
+                && trigger.Payload.Note == "the money started arriving"
+                && trigger.Payload.TargetId is { } paidBusiness
+                && trigger.Payload.ExecutorId is { } executorId =>
+                    executorId == actor.Id
+                        ? $"money from {name(paidBusiness)} has started arriving after {self.Subject} handled the job"
+                        : $"money from {name(paidBusiness)} has started arriving after {name(executorId)} handled the job",
+
             EventKind.StrategyComplete =>
                 $"the job {self.Subject} had running has come to an end, one way or another",
 

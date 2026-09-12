@@ -563,7 +563,7 @@ public sealed class ScenarioReachTests
     /// A later change that genuinely made the term choice-changing here still has to come and say so.
     /// </summary>
     [Fact]
-    public void The_relationship_change_does_not_decide_the_next_choice()
+    public void The_relationship_change_now_decides_the_next_choice_after_the_duplicate_cycle_is_removed()
     {
         var world = Run("baseline");
 
@@ -582,12 +582,10 @@ public sealed class ScenarioReachTests
             .ThenBy(s => s.Candidate.Id, StringComparer.Ordinal)
             .First();
 
-        Assert.True(
-            ReferenceEquals(withoutRelationships, decision.Scored[0]),
-            $"at {decision.At:yyyy-MM-dd} the relationship channel decided the winner: with it " +
-            $"\"{decision.Scored[0].Candidate.Id}\" wins, without it " +
-            $"\"{withoutRelationships.Candidate.Id}\" does. That would be a real result and needs " +
-            "recording rather than passing silently.");
+        Assert.False(ReferenceEquals(withoutRelationships, decision.Scored[0]));
+        Assert.Equal("approval:salvatore:no-violence-harbour", decision.Scored[0].Candidate.Id);
+        Assert.StartsWith("corroborate:tommy:PolicyIssued", withoutRelationships.Candidate.Id,
+            StringComparison.Ordinal);
     }
 
     // ================================================================ D4 — honest distinctness
@@ -666,8 +664,9 @@ public sealed class ScenarioReachTests
     }
 
     /// <summary>
-    /// The four configurations that do differ behaviourally still do. Kept alongside the test above
-    /// so the honest non-result cannot quietly become "nothing distinguishes anything".
+    /// Three of these four configurations still differ behaviourally. Baseline and watchful-boss now
+    /// converge in chosen actions after the invalid second grocery cycle is removed, while their full
+    /// traces remain distinct; cautious-vincent and disloyal-vincent retain distinct action histories.
     /// </summary>
     [Fact]
     public void The_remaining_configurations_still_choose_differently_from_each_other()
@@ -677,7 +676,7 @@ public sealed class ScenarioReachTests
             .Distinct()
             .Count();
 
-        Assert.Equal(4, distinct);
+        Assert.Equal(3, distinct);
     }
 
     // ================================================================ helpers

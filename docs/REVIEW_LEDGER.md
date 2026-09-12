@@ -2531,3 +2531,28 @@ unchanged accepted hashes (`96422513E42FCB10`, `CF3E412C9CE67185`, `6FDFE3EBACD6
 6-trace/5-action comparison, all three relevant viewpoints clean, all nine Godot checks passing, and
 the two-process restart proof passing. This seventh correction awaits Codex review; no acceptance or
 closure is recorded here.
+
+### Measured — milestone 024 playtest correction, authored by Codex (not an independent review)
+
+Matt's 2026-09-12 Godot playtest of seventh-correction commit `344f1e0` exposed a real duplicate
+collection: Tommy's delegated operation succeeded, its owner-facing completion withheld that
+owner-observable fact, Vincent's stronger stale refusal belief survived the weaker discovery of money
+arriving, and a second Bellini operation paid the same 840 again. At Matt's request Codex implemented
+the eighth correction; because the reviewer authored it, this entry records measurements and does not
+claim independent acceptance.
+
+The correction makes the changed refusal state equally certain, adds an authoritative already-paying
+resolution at first visit, makes one current tribute agreement's initial collection idempotent,
+fingerprints that behavioral state in both replay comparators, and gives the owner a bounded success
+occasion naming the arriving money and the executor he assigned without exposing private progress or
+method. Four load-bearing branches were mutation-checked and reverted: collection belief, first-visit
+truth, collection idempotency, and the bounded completion occasion. Twelve pre-existing
+test failures were traced individually: two stale staging seams, one false-assurance report-content
+fingerprint that omitted `AnsweringClaim`, and nine honest downstream history assertions.
+
+Final measurements after the last edit: build 0 warnings/errors; 689/689 tests; deterministic hashes
+baseline `92F742E3CB85E54B`, disloyal-vincent `455A684A29A5F717`, resentful-tommy
+`ADC3F2DDF1A9D50C`; `--compare` 6 distinct traces / 4 distinct action sequences; required viewpoints
+plus Tommy clean; all nine Godot checks including the separate restart processes exit 0. The
+pre-existing `docs/ROADMAP.md` change remains unstaged. This is an implementation record only; the
+eighth correction awaits independent review and milestone 024 remains open.

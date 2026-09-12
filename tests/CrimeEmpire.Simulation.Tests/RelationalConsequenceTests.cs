@@ -484,11 +484,11 @@ public sealed class RelationalConsequenceTests
     /// concern (traced in `AccountAgreementTests.Salvatores_generated_answer_to_tommy_raises_tommys_trust_when_chosen`)
     /// now outranks answering Tommy at all, so no account — agreeing or conflicting — is ever given.
     [Theory]
-    [InlineData("baseline", 1)]
-    [InlineData("cautious-vincent", 0)]
-    [InlineData("watchful-boss", 1)]
+    [InlineData("baseline", 2)]
+    [InlineData("cautious-vincent", 2)]
+    [InlineData("watchful-boss", 2)]
     [InlineData("disloyal-vincent", 1)]
-    [InlineData("resentful-tommy", 1)]
+    [InlineData("resentful-tommy", 2)]
     public void The_scenario_produces_the_expected_number_of_conflicts(string variant, int expected)
         => Assert.Equal(expected, Run(variant).AccountConflicts.Count);
 
@@ -539,21 +539,20 @@ public sealed class RelationalConsequenceTests
     }
 
     /// <summary>
-    /// The honest negative control ruling 3 asked for. cautious-vincent produces zero conflicts now
-    /// (traced in <see cref="The_scenario_produces_the_expected_number_of_conflicts"/>'s docstring),
-    /// so Vincent's trust in Salvatore must not have moved from contradiction at all — there is nothing
-    /// here for it to have moved from. This is not the same claim as "trust is unchanged for any
-    /// reason"; it pins specifically that the contradiction mechanism this file is about did not fire.
+    /// cautious-vincent now reaches the same honest assignment contradiction as the other paying
+    /// variants: Salvatore reasserts the stale refusal after Vincent has discovered the money arriving.
+    /// The conflict must therefore be present and must lower Vincent's trust, rather than preserving
+    /// the former negative control whose causal premise disappeared with the duplicate-cycle fix.
     /// </summary>
     [Fact]
-    public void Cautious_vincent_no_longer_produces_a_conflict_to_be_contradicted_by()
+    public void Cautious_vincent_is_contradicted_after_discovering_the_shop_is_paying()
     {
         var world = Run("cautious-vincent");
         var vincent = world.Get("vincent");
 
-        Assert.DoesNotContain(world.AccountConflicts,
+        Assert.Contains(world.AccountConflicts,
             c => c.ListenerId == "vincent" && c.Conflict.SpeakerId == "salvatore");
-        Assert.Equal(0.45, vincent.Social.Toward("salvatore").Trust, 9);
+        Assert.True(vincent.Social.Toward("salvatore").Trust < 0.45);
     }
 
     /// <summary>

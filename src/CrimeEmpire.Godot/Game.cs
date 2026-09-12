@@ -139,7 +139,7 @@ public partial class Game : Control
     /// <summary>
     /// Command-line switch for milestone 015's restart proof, process B: loads
     /// <see cref="SelfTestRestartSavePath"/> — written by a prior, separate
-    /// <see cref="RestartSaveFlag"/> process — and plays the golden path's remaining two choices
+    /// <see cref="RestartSaveFlag"/> process — and plays the golden path's remaining three choices
     /// through real buttons, reaching the accepted 5 April consequence.
     /// </summary>
     private const string RestartLoadFlag = "--selftest-restart-load";
@@ -1009,15 +1009,17 @@ public partial class Game : Control
     // comment in PersistenceTests.cs/PlayerOwnedOperationTests.cs for the full reasoning. Vincent can
     // no longer alter a delegated operation, so his escalation is delegated to Tommy at step 3 and
     // Tommy's own escalation and the operation's genuine completion happen autonomously in the
-    // background; Vincent's own next two real pauses are an unrelated question from Salvatore and, once
-    // collection has genuinely completed, starting a fresh cycle of his own.
+    // background; Vincent's remaining pauses report the completed result and answer the next day's
+    // organizational review. The former second collection cycle was a real double-payment defect
+    // exposed by Matt's 2026-09-12 playtest.
     private static readonly string[] GoldenPathChoiceSequence =
     {
         "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
         "ask Salvatore Greco for permission",
-        "persuade Bellini's grocery to pay",
+        "report the situation to Salvatore Greco",
+        "ask Salvatore Greco for permission",
     };
 
     /// <summary>
@@ -1668,7 +1670,7 @@ public partial class Game : Control
     /// <summary>
     /// Process B of the two-process restart proof: loads the save <see cref="RunRestartSaveSelfTest"/>
     /// wrote — in a prior, separate OS process — through the real "Load saved game" button, then plays
-    /// <see cref="GoldenPathChoiceSequence"/>'s remaining two choices through real buttons, reaching the
+    /// <see cref="GoldenPathChoiceSequence"/>'s remaining three choices through real buttons, reaching the
     /// same accepted 5 April consequence <see cref="GoldenPathSelfTest"/> reaches in one continuous
     /// process: 6,840 on the rendered screen.
     /// </summary>

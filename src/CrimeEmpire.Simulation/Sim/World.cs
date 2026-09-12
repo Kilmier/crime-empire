@@ -14,6 +14,14 @@ public sealed class Business
     public double MonthlyRevenue { get; set; }
     public bool PayingTribute { get; set; }
 
+    /// <summary>
+    /// Whether the initial payment for the current continuous paying state has already been taken.
+    /// Separate from <see cref="PayingTribute"/>: agreement precedes collection by one strategy step,
+    /// and two operations reaching that later step must not both award the same payment. A future
+    /// transition back to non-payment must clear this together with changing <see cref="PayingTribute"/>.
+    /// </summary>
+    public bool TributeCollectedForCurrentAgreement { get; set; }
+
     /// <summary>How hard the owner resists demands. Objective; characters only estimate it.</summary>
     public double Resistance { get; set; }
 

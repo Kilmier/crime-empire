@@ -34,6 +34,59 @@ public sealed class StrategyLifecycleTests
         Assert.NotEqual(originalPending, s.PendingStepEventId);
     }
 
+    /// <summary>
+    /// A decision may honestly begin from stale information, but resolution may not turn that error
+    /// into a second payment. The first real visit discovers the authoritative current state and
+    /// closes the redundant operation before a demand or collection is recorded.
+    /// </summary>
+    [Fact]
+    public void A_new_tribute_operation_against_an_already_paying_shop_ends_without_collecting_again()
+    {
+        var (world, vincent, s) = FreshRunningStrategy();
+        var grocery = world.Businesses[Cast.Grocery];
+        grocery.PayingTribute = true;
+        double cashBefore = vincent.Capabilities.Cash;
+
+        Strategies.Advance(world, vincent, ValidStepEvent(vincent, s));
+
+        Assert.Null(vincent.Execution.Strategy);
+        Assert.Equal(cashBefore, vincent.Capabilities.Cash);
+        Assert.Contains(world.TruthLog,
+            e => e.Kind == "tribute-already-paying" && e.TargetId == Cast.Grocery);
+        Assert.DoesNotContain(world.TruthLog,
+            e => e.Kind is "demand" or "tribute-collected");
+
+        var corrected = vincent.Cognition.Find(
+            new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery));
+        Assert.NotNull(corrected);
+        Assert.Equal(Stance.Rejects, corrected!.Stance);
+        Assert.Equal(SourceKind.Discovery, corrected.SourceKind);
+        Assert.Equal(1.0, corrected.Confidence);
+    }
+
+    /// <summary>
+    /// Independent resolution-boundary proof for the race the first-visit guard cannot cover: two
+    /// operations can both have visited while the shop was refusing, then reach collection after one
+    /// agreement. Once one payment is marked taken, the other completes without awarding it again.
+    /// </summary>
+    [Fact]
+    public void A_second_operation_reaching_the_same_agreements_collection_step_cannot_pay_twice()
+    {
+        var (world, vincent, s) = FreshRunningStrategy();
+        var grocery = world.Businesses[Cast.Grocery];
+        grocery.PayingTribute = true;
+        grocery.TributeCollectedForCurrentAgreement = true;
+        s.StepIndex = Strategies.TributeSteps.Length - 1;
+        double cashBefore = vincent.Capabilities.Cash;
+
+        Strategies.Advance(world, vincent, ValidStepEvent(vincent, s));
+
+        Assert.Null(vincent.Execution.Strategy);
+        Assert.Equal(cashBefore, vincent.Capabilities.Cash);
+        Assert.DoesNotContain(world.TruthLog, e => e.Kind == "tribute-collected");
+        Assert.Contains(world.TruthLog, e => e.Kind == "tribute-already-paying");
+    }
+
     [Fact]
     public void A_step_event_naming_a_nonexistent_owner_throws()
     {

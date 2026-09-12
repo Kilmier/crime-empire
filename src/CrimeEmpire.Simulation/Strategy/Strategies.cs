@@ -185,6 +185,18 @@ public static class Strategies
         {
             case 1: // approached — and formed a first impression of how hard this will be
             {
+                // A character may honestly begin from stale or mistaken information. If the shop
+                // was already paying before this operation reached it, the visit corrects his
+                // belief and ends the redundant operation; it must not manufacture another demand
+                // and another cash payment merely because the decision began from a false premise.
+                // This is deliberately an execution-time truth check, not a candidate filter:
+                // choices remain belief-limited, while consequences remain authoritative.
+                if (business.PayingTribute)
+                {
+                    DiscoverAlreadyPaying(world, owner, executor, s, business);
+                    return;
+                }
+
                 world.Record("approach", executor.Id, business.Id,
                     $"{executor.Name} came by {business.Name}");
 
@@ -300,6 +312,18 @@ public static class Strategies
             }
 
             default: // collected
+                // Collection is idempotent for one continuous paying state. The ordinary natural
+                // path is also protected earlier, at the first visit; this second boundary covers
+                // two operations that both began while the shop was still refusing and only later
+                // converged on the same agreement. Belief can justify both attempts. World state
+                // may pay only one of them.
+                if (business.TributeCollectedForCurrentAgreement)
+                {
+                    DiscoverAlreadyPaying(world, owner, executor, s, business);
+                    return;
+                }
+
+                business.TributeCollectedForCurrentAgreement = true;
                 owner.Capabilities.Cash += business.MonthlyRevenue * 0.2;
                 owner.Motivations.AddPressure(PressureKind.RevenueShortfall, -0.6);
                 world.Org.AdjustCondition(OrgCondition.RevenueLoss, -0.5);
@@ -314,10 +338,10 @@ public static class Strategies
                 // neither is the other's account, but they are not the same acquisition and the
                 // record should not say they are.
                 var collected = new Claim(ClaimKind.BusinessRefusesTribute, business.Id);
-                executor.Cognition.Learn(collected, Stance.Rejects, 0.9,
+                executor.Cognition.Learn(collected, Stance.Rejects, 1.0,
                     SourceKind.Participant, executor.Id, world.Now);
                 if (owner.Id != executor.Id)
-                    owner.Cognition.Learn(collected, Stance.Rejects, 0.9,
+                    owner.Cognition.Learn(collected, Stance.Rejects, 1.0,
                         SourceKind.Discovery, owner.Id, world.Now);
 
                 // And the same arrival tells him something — or he takes it to — about the man he
@@ -328,6 +352,17 @@ public static class Strategies
                 Complete(world, owner, s, "the money started arriving");
                 return;
         }
+    }
+
+    private static void DiscoverAlreadyPaying(
+        World world, Character owner, Character executor, StrategyInstance s, Business business)
+    {
+        world.Record("tribute-already-paying", executor.Id, business.Id,
+            $"{executor.Name} found {business.Name} was already paying");
+        executor.Cognition.Learn(
+            new Claim(ClaimKind.BusinessRefusesTribute, business.Id),
+            Stance.Rejects, 1.0, SourceKind.Discovery, executor.Id, world.Now);
+        Complete(world, owner, s, "the business was already paying");
     }
 
     /// <summary>The target held out. Records the failure so continuation can lose value to evidence.</summary>
@@ -797,9 +832,16 @@ public static class Strategies
     // ------------------------------------------------------------------ completion
     public static void Complete(World world, Character owner, StrategyInstance s, string why)
     {
+        string executorId = s.DelegatedToId ?? s.OwnerId;
         world.Queue.Schedule(world.Now, EventKind.StrategyComplete, owner.Id,
             $"{s.Label} finished: {why}",
-            new EventPayload { Strategy = s.Kind, TargetId = s.TargetId, Note = why });
+            new EventPayload
+            {
+                Strategy = s.Kind,
+                TargetId = s.TargetId,
+                ExecutorId = executorId,
+                Note = why,
+            });
 
         owner.Execution.Strategy = null;
         owner.Execution.Intention = null;

@@ -14,10 +14,11 @@ namespace CrimeEmpire.Simulation.Tests;
 ///
 /// Vincent Russo's <c>SecureTribute</c> operation against Bellini's grocery is not invented for this
 /// milestone — every accepted variant at seed 42 independently reaches
-/// "1987-04-01 15:00 Tommy Nardo collected from Bellini's grocery" through the same sequence of
-/// Vincent's own decisions: start (persuade), carry on, delegate to Tommy, escalate to threaten,
-/// escalate to force, a reaffirmed carry-on when Kane's investigation changes the picture, and an
-/// immediate report to Salvatore once the money arrives — seven pauses, pinned below as
+/// "1987-04-05 15:00 Tommy Nardo collected from Bellini's grocery" through the same sequence of
+/// Vincent's own decisions: start (persuade), carry on, delegate to Tommy, answer an unrelated
+/// question while Tommy works, report the completed operation without inventing a second one,
+/// and ask for latitude at the next day's still-unresolved organizational review — six pauses,
+/// pinned below as
 /// <see cref="GoldenPathChoiceSequence"/>, in the exact wording the accepted trace renders for each.
 ///
 /// <b>Every pause here is resolved by an explicit <see cref="SimulationSession.Choose"/> call, never
@@ -42,24 +43,26 @@ public sealed class PlayerOwnedOperationTests
     private static DateTime End => Cast.Start.AddDays(Days);
 
     // Comfortably past the re-derived golden path's own genuine collection (1987-04-05, confirmed
-    // directly: the delegated operation completes and Vincent starts a fresh cycle of his own), and
-    // short of his next pause on an unrelated thread, 1987-04-17.
+    // directly: the delegated operation completes and Vincent declines to invent a second cycle
+    // against the shop that is already paying), and short of his next review.
     private static DateTime JustAfterCollection => Cast.Start.AddDays(36);
 
-    // The exact seven option descriptions PlayerOption renders for Vincent's seven pauses in the
+    // The exact six option descriptions PlayerOption renders for Vincent's six pauses in the
     // accepted baseline trace at seed 42, read directly from a live run of the interactive path
     // (SimulationSession.Snapshot()/Pending.Options — the same surface Godot renders) rather than
     // reconstructed from the developer trace's candidate ids or wording. Pinned in order: start
-    // (persuade), carry on, delegate to Tommy, escalate to threaten, escalate to force, a reaffirmed
-    // carry-on when Kane's investigation interrupts, and the immediate report to Salvatore once the
-    // money arrives.
+    // (persuade), carry on, delegate to Tommy, an unrelated permission request while Tommy works,
+    // a report at the completion wake after the money arrives, and a permission request at the next
+    // day's organizational review. These are the autonomous pipeline's own choices too; neither
+    // invents another collection against the already-paying shop.
     private static readonly string[] GoldenPathChoiceSequence =
     {
         "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
         "ask Salvatore Greco for permission",
-        "persuade Bellini's grocery to pay",
+        "report the situation to Salvatore Greco",
+        "ask Salvatore Greco for permission",
     };
 
     private const string LetItLie = "take no action";
@@ -111,7 +114,11 @@ public sealed class PlayerOwnedOperationTests
         var session = SimulationSession.Start(Seed, "baseline", Controlled);
         PlayGoldenPath(session, JustAfterCollection);
 
-        Assert.Equal(SessionStatus.Ready, session.Status);
+        Assert.True(session.Status == SessionStatus.Ready,
+            session.Pending is null
+                ? $"expected Ready, got {session.Status}"
+                : $"unexpected pause on {session.Pending.At:yyyy-MM-dd}: " +
+                  string.Join(" | ", session.Pending.Options.Select(o => o.Description)));
         Assert.Equal(JustAfterCollection, session.Date);
 
         // Through the player-facing snapshot, not only the internal world — the consequence a person
@@ -127,17 +134,15 @@ public sealed class PlayerOwnedOperationTests
         // His own belief on the business condition, through the existing belief channel rather than
         // any new mechanism.
         //
-        // Re-derived 2026-09-11: Knows/Participant, not the old fixture's Rejects/Discovery — traced,
-        // not assumed. The re-derived golden path's own fifth and final choice is Vincent personally
-        // starting a fresh SecureTribute cycle once the delegated one has genuinely completed, which
-        // gives him firsthand Participant knowledge from his own direct assessment at that moment,
-        // rather than the Discovery-sourced read the old (undelegated-throughout) path produced. The
-        // financial and business-state consequences above (Cash, PayingTribute) are independently
-        // confirmed correct; this is narrower, about which channel his own belief record reflects.
+        // The money arrived to Vincent from work Tommy carried out. That is Vincent's own discovery
+        // of the changed state, not firsthand participation in Tommy's execution and not a report
+        // attributed to Tommy that nobody gave.
         var ownReading = vincent.Cognition.Find(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery));
         Assert.NotNull(ownReading);
-        Assert.Equal(Stance.Knows, ownReading!.Stance);
-        Assert.Equal(SourceKind.Participant, ownReading.SourceKind);
+        Assert.Equal(Stance.Rejects, ownReading!.Stance);
+        Assert.Equal(SourceKind.Discovery, ownReading.SourceKind);
+        Assert.True(ownReading.Confidence >= 0.3,
+            "a later stale briefing may contest the discovery, but must not reverse it back into a refusal");
 
         // The autonomous run: nobody controlled, the pipeline choosing for itself throughout.
         var autonomous = SimulationSession.Start(Seed, "baseline", controlledCharacterId: null, viewpointCharacterId: Controlled);
@@ -151,6 +156,36 @@ public sealed class PlayerOwnedOperationTests
         Assert.Equal(
             TraceWriter.Render(autonomous.World, "baseline", false),
             TraceWriter.Render(session.World, "baseline", false));
+    }
+
+    /// <summary>
+    /// Regression for Matt's 2026-09-12 playtest. The prior golden path stopped immediately after
+    /// selecting a second SecureTribute start, so it never exposed the second 840 payment that start
+    /// eventually produced. Drive the same real button path only as far as Tommy's completion and
+    /// assert both halves the player needs: Vincent is told the owner-observable success and the
+    /// executor he knowingly assigned, while no fresh collection action is offered for a shop he now
+    /// knows is paying.
+    /// </summary>
+    [Fact]
+    public void A_delegated_collection_is_legible_and_cannot_immediately_be_started_again()
+    {
+        var session = SimulationSession.Start(Seed, "baseline", Controlled);
+
+        foreach (string description in GoldenPathChoiceSequence.Take(4))
+        {
+            RunToFirstPause(session, JustAfterCollection);
+            ChooseByDescription(session, description, JustAfterCollection);
+        }
+
+        var completion = RunToFirstPause(session, JustAfterCollection);
+
+        Assert.Equal(new DateTime(1987, 4, 5, 15, 0, 0), completion.At);
+        Assert.Equal(
+            "money from Bellini's grocery has started arriving after Tommy Nardo handled the job",
+            completion.Occasion);
+        Assert.Equal(6840, session.Snapshot().Cash);
+        Assert.DoesNotContain(completion.Options,
+            option => option.Description.Contains("Bellini's grocery to pay", StringComparison.Ordinal));
     }
 
     // ================================================================= abandonment (ruling 3)
@@ -345,7 +380,11 @@ public sealed class PlayerOwnedOperationTests
             Assert.Throws<InvalidOperationException>(() => interrupted.StepEvent());
         });
 
-        Assert.Equal(SessionStatus.Ready, interrupted.Status);
+        Assert.True(interrupted.Status == SessionStatus.Ready,
+            interrupted.Pending is null
+                ? $"expected Ready, got {interrupted.Status}"
+                : $"unexpected pause on {interrupted.Pending.At:yyyy-MM-dd}: " +
+                  string.Join(" | ", interrupted.Pending.Options.Select(o => o.Description)));
         Assert.Equal(
             TraceWriter.Render(uninterrupted.World, "baseline", false),
             TraceWriter.Render(interrupted.World, "baseline", false));

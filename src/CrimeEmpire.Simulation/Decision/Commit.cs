@@ -356,6 +356,8 @@ public static class Commit
                 var biz = world.Businesses.Values.FirstOrDefault(b => b.OwnerId == actor.Id);
                 if (biz is not null)
                 {
+                    if (!biz.PayingTribute)
+                        biz.TributeCollectedForCurrentAgreement = false;
                     biz.PayingTribute = true;
                     biz.Resistance = Math.Max(0, biz.Resistance - 0.4);
                     world.Record("concede", actor.Id, biz.Id, $"{actor.Name} agreed to pay");

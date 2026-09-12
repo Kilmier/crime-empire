@@ -47,15 +47,17 @@ public sealed class PersistenceTests
     // (never controlled, never staged), his escalation to Threaten and the operation's own genuine
     // completion both happen entirely in the background. Vincent's own next two real decisions are an
     // unrelated question from Salvatore (3/25) and, once the delegated operation has genuinely
-    // completed, starting a fresh collection cycle of his own (4/05) — confirmed the grocery is by
-    // then actually paying, i.e. real collection, not a hand-waved terminus.
+    // completed, reporting that changed state (4/05), then asking for latitude at the next day's
+    // organizational review. A second collection cycle against the already-paying shop was a defect
+    // exposed by Matt's 2026-09-12 playtest, not a valid terminus.
     private static readonly string[] GoldenPathChoiceSequence =
     {
         "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
         "ask Salvatore Greco for permission",
-        "persuade Bellini's grocery to pay",
+        "report the situation to Salvatore Greco",
+        "ask Salvatore Greco for permission",
     };
 
     private const string LetItLie = "take no action";

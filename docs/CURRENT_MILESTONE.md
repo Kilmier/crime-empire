@@ -7,8 +7,11 @@ do not create a separate handoff document.
 
 ## Status
 
-**Nothing is active.** Codex is reviewing again, and three milestones' standing changed on 2026-09-08
-as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
+**Milestone 024 remains active after Matt's 2026-09-12 playtest.** Its seventh correction is commit
+`344f1e0`; Matt then reproduced a missing delegated-success explanation and a second payment from the
+same already-paying grocery. Codex implemented an eighth correction at Matt's request because Claude
+was unavailable. It is complete and awaits independent implementation review; milestone 024 is not
+closed. See `REVIEW_LEDGER.md` and the archive for the measured account.
 
 - **Milestone 021 — Capability Is a Belief, Not a Stat — is closed.** Three corrections beyond its
   implementation, each answering a Codex review; the third (`9fed181`) returned no findings and Matt
@@ -239,6 +242,20 @@ backlog is cleared and Matt says so.
   corrected append-only. **The seventh correction is complete and awaits Codex review; it is not
   described as reviewed, passed, accepted, or closed.** Full account:
   `docs/milestones/024-the-operation-reads.md`'s seventh correction section.
+
+- **Matt's playtest of the seventh-correction state found two connected defects, corrected together
+  in milestone 024's eighth correction.** Tommy's delegated operation really succeeded on 5 April,
+  but the completion occasion said only that the job ended “one way or another,” even though Vincent
+  directly observed the money and knew whom he had assigned. Worse, Vincent's earlier confidence-1.0
+  participant knowledge that the grocery had refused survived the later confidence-0.9 discovery
+  that money arrived, so the real player path offered a second operation and eventually paid the same
+  840 again (cash 6,000 → 6,840 → 7,680). Corrected: collection now gives the owner an equally certain
+  Discovery rejection of the stale refusal; the bounded completion occasion names the arriving money
+  and assigned executor but no private method/progress; a stale operation discovers an already-paying
+  shop and closes before demanding; and collection is independently idempotent for the current
+  agreement. The invalid second-cycle golden path was re-derived through real choices. Four
+  load-bearing branches plus the collection-state replay fingerprint have focused assurance. **This
+  correction was authored by Codex and awaits independent review; it is not accepted or closed.**
 
 ## Next, per the demo arc
 

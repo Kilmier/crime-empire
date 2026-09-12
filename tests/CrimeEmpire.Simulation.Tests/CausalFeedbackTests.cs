@@ -139,19 +139,15 @@ public sealed class CausalFeedbackTests
     }
 
     /// <summary>
-    /// The negative control ruling 1 requires, and the honest shape of the defect this correction's
-    /// own tracing found: left to resolve entirely on his own — never manually answered — Vincent does
-    /// go on to tell Salvatore something true and real about the situation (the grocery has since paid
-    /// its tribute), and that report is not silence. But it is not an answer to
-    /// <c>BusinessRefusesTribute</c> either, because <c>DESIGN_DECISIONS.md</c>'s settled rule requires
-    /// testimony of the <em>exact</em> asked claim, and a later report about a different claim —
-    /// however true, however much it resolves the real situation — does not satisfy it. The request
-    /// therefore stays in <c>AwaitingAnswers</c> for the rest of the run. This is the permanently-moot
-    /// case <c>docs/OPEN_CONCERNS.md</c> #7 records as deferred, not fixed: pinned here as a real,
-    /// unchanged production behaviour rather than left as an unexplained failure.
+    /// Once the delegated collection reaches Vincent as his own discovery, his autonomous report
+    /// includes a rejection of the exact <c>BusinessRefusesTribute</c> claim Salvatore asked about.
+    /// That resolves the request through the established exact-claim rule. This used to assert the
+    /// request stayed open because the later report carried only <c>TributeCollected</c>; Matt's
+    /// double-payment correction made the state change itself durable and reportable, so that premise
+    /// is no longer true.
     /// </summary>
     [Fact]
-    public void A_later_report_asserting_a_different_claim_does_not_resolve_the_original_request()
+    public void The_autonomous_report_of_the_resolved_refusal_answers_the_original_request()
     {
         var session = SimulationSession.Start(Seed, CautiousVincent, Salvatore);
         var pending = AdvanceToPause(session);
@@ -163,12 +159,13 @@ public sealed class CausalFeedbackTests
 
         var snapshot = session.Snapshot();
 
-        // He did report, genuinely and candidly — this is not a case of silence or concealment.
+        // He reported genuinely and candidly, including the exact claim in its resolved direction.
         Assert.Contains(snapshot.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
 
-        // But never on the exact claim Salvatore asked about, so the request never resolves.
-        Assert.Contains(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
-        Assert.DoesNotContain(snapshot.Disagreements, d => d.Accounts.Any(a => a.SourceName == "Vincent Russo"));
+        Assert.DoesNotContain(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
+        Assert.Contains(snapshot.Disagreements,
+            d => d.Statement.Contains("Bellini's grocery", StringComparison.Ordinal)
+                 && d.Accounts.Any(a => a.SourceName == "Vincent Russo"));
     }
 
     /// <summary>

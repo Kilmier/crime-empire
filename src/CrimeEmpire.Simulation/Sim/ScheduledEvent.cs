@@ -47,6 +47,12 @@ public sealed record Trace(
 public sealed class EventPayload
 {
     public string? TargetId { get; init; }
+    /// <summary>
+    /// Who was carrying a strategy when it completed. Set on <see cref="EventKind.StrategyComplete"/>
+    /// so a player-facing reader can distinguish work the owner did from work he knowingly handed
+    /// to somebody else without retaining the whole completed strategy instance.
+    /// </summary>
+    public string? ExecutorId { get; init; }
     public long? AssignmentId { get; init; }
     public long? RelatedEventId { get; init; }
     public Domain.StrategyKind? Strategy { get; init; }

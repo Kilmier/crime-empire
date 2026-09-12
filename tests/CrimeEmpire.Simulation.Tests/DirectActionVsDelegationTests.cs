@@ -392,9 +392,10 @@ public sealed class DirectActionVsDelegationTests
         var business = world.Businesses[Cast.Grocery];
 
         var s = OpenTributeCase(world, owner, executor, CoercionMethod.Persuade);
+        AdvanceTributeSteps(world, executor, s, steps: 2); // approach and demand precede the answer
         business.PayingTribute = true; // staged: Marco's own concession, out of scope for this proof
-        // approach, demand, press-or-accept (records the agreement), collect (the 4th, StepIndex >= TributeSteps.Length)
-        AdvanceTributeSteps(world, executor, s, steps: 4);
+        // press-or-accept records the agreement; the following step collects it
+        AdvanceTributeSteps(world, executor, s, steps: 2);
 
         var collected = executor.Cognition.Find(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery));
         Assert.NotNull(collected);

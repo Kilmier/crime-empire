@@ -1027,8 +1027,9 @@ public sealed class ExecutorSuitabilityTests
         // which is his own decision made elsewhere in the pipeline. Resistance is what that
         // decision reads, and staging it here would be staging the input to a decision this test
         // is not running.
+        AdvanceTributeSteps(collected, executor, open, steps: 2);
         collected.Businesses[Cast.Grocery].PayingTribute = true;
-        AdvanceTributeSteps(collected, executor, open, steps: 8);
+        AdvanceTributeSteps(collected, executor, open, steps: 6);
 
         Assert.NotEqual(before, Held(collected));
     }

@@ -946,7 +946,8 @@ public sealed class InformationTransmissionTests
         static string Content(Report r) =>
             $"{r.Candor}|" +
             string.Join(",", r.Asserted.Select(a => $"{a.Claim}:{a.AssertedStance}")) +
-            "|" + string.Join(",", r.Withheld.Select(w => w.ToString()));
+            "|" + string.Join(",", r.Withheld.Select(w => w.ToString())) +
+            $"|answering:{r.AnsweringClaim}";
 
         var repeats = world.Reports
             .GroupBy(r => (r.SenderId, r.RecipientId, Content: Content(r)))

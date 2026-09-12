@@ -756,3 +756,74 @@ sixth-correction account above. It does not rewrite that historical text.
 
 One focused seventh-correction commit. It awaits Codex review and is not described here as reviewed,
 passed, accepted, or closed.
+
+## Correction — delegated success and duplicate tribute collection (the eighth correction), 2026-09-12
+
+Matt playtested the seventh-correction state (`344f1e0`) through the real Godot shell as baseline
+Vincent at seed 42. He started persuasion on 2 March, delegated the refused operation to Tommy on 11
+March, and waited. The panel correctly preserved Tommy's private progress as “no word back yet,” but
+the eventual completion said only that the job had ended “one way or another.” Matt then personally
+started persuasion again; the already-paying grocery produced another collection, moving cash from
+6,000 to 6,840 and then 7,680. This was a real mechanic defect, not only unclear presentation.
+
+### Root cause and correction
+
+- Vincent's first demand had given him confidence-1.0 Participant knowledge that the grocery was
+  refusing. Tommy's later collection wrote the changed state to Vincent as confidence-0.9 Discovery.
+  `Cognition.Learn` correctly preserves a stronger prior against a weaker acquisition, so the call
+  failed to reverse Vincent's stale refusal even though its comment claimed it did. Collection now
+  writes the owner-observed state change at 1.0. The natural 5 April decision no longer offers a new
+  Bellini operation. A later assignment briefing may contest that discovery, but does not reverse it.
+- Candidate generation remains bounded by the actor's beliefs. A genuinely mistaken actor can still
+  decide to investigate a shop that is already paying; the first operation step now discovers the
+  authoritative state, corrects the executor's belief, and completes before creating a demand or
+  payment. This keeps mistakes expressible without letting false beliefs mint cash.
+- A second authoritative guard closes the concurrency/direct-caller hole the first-visit check cannot:
+  `Business.TributeCollectedForCurrentAgreement` records whether the current continuous agreement's
+  initial payment has been awarded. The collection step is idempotent against it, and both replay
+  comparators carry it because it changes later consequences. The current scenario never returns a
+  paying shop to refusal; any future transition that does must clear this field with that transition.
+- `StrategyComplete` now carries the executor identity that existed before the instance is cleared.
+  For the one outcome the owner necessarily observes — `SecureTribute` money arriving — the occasion
+  says “money from Bellini's grocery has started arriving after Tommy Nardo handled the job.” It says
+  nothing about Tommy's private method or intermediate progress. Other completion outcomes keep the
+  generic, outcome-agnostic wording.
+
+### Test remediation and behavioral consequences
+
+Two new production-path regressions reproduce the natural delegated completion/no-second-offer and a
+stale start against an already-paying shop; a third independently reaches the collection boundary
+with the current agreement already collected. All four load-bearing production branches — the
+owner's collection belief, first-visit truth check, collection idempotency check, and bounded
+completion occasion — were mutation-checked against their exact regressions and failed as intended
+before being reverted. A paired-world replay test proves both comparators distinguish the new
+collection state.
+
+The full suite initially exposed twelve affected tests. Two collection tests had staged
+`PayingTribute` before the operation's first visit and were corrected to stage Marco's answer after
+approach/demand. The repeated-report invariant had omitted `Report.AnsweringClaim`, collapsing two
+truthfully distinct uninformed answers into one apparent duplicate; its fingerprint now includes the
+question. The remaining failures were honest natural-history changes after removing the invalid
+second operation: the later autonomous report now resolves Salvatore's exact-claim request, four
+variants produce two real account conflicts (disloyal-vincent produces one), relationship state
+genuinely changes Vincent's 6 April choice, and baseline/watchful-boss/resentful-tommy converge in
+chosen actions while their full traces remain distinct. No coefficient, RNG, fixture, or policy was
+changed to restore an obsolete history.
+
+The six-choice player/golden path is now persuade → continue → delegate → ask permission while Tommy
+works → report the successful collection → ask permission at the next organizational review. The old
+fifth choice, starting another Bellini cycle, is explicitly retired as the defect this correction
+removes. Persistence and both Godot restart processes use that same re-derived public-button path.
+
+### Verification and scope
+
+Final measurements after all code, test, and documentation edits: full solution build 0 warnings / 0
+errors; 689 tests passing; deterministic 90-day hashes baseline `92F742E3CB85E54B`,
+disloyal-vincent `455A684A29A5F717`, resentful-tommy `ADC3F2DDF1A9D50C`; `--compare` 6 distinct
+traces / 4 distinct chosen-action sequences, no violence; both required viewpoints plus Tommy's
+executor viewpoint exit 0; all seven ordinary Godot self-tests and the two-process restart proof exit
+0. The golden path and restart screen show cash 6,840, not 7,680.
+
+Authored by Codex at Matt's request while Claude was unavailable. `docs/ROADMAP.md`'s pre-existing
+working-tree change remains untouched and unstaged. Milestone 027 and unrelated backlog were not
+started. This correction awaits independent implementation review and is not accepted or closed.

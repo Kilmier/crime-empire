@@ -417,3 +417,47 @@ correction above. Matt accepted all three on 2026-09-12.
 Documentation-only. No production code, test, fixture, or other archive changed. See
 `REVIEW_LEDGER.md`'s active-range row for `bec0370`, `22e73d1`, `925611a` for the full disposition, and
 `CURRENT_MILESTONE.md` for this correction's own pending-review status.
+
+## Correction to the second correction — the actual P2-2 and P2-3, 2026-09-12
+
+Appended, not rewriting either section above, per this archive's append-only rule. The second
+correction above misidentified what Astra's original P2-2 and P2-3 findings actually said. Matt
+accepted the corrected account of both on 2026-09-12. P2-1's finding and its six-occurrence count,
+above, are unaffected and stand as corrected.
+
+**P2-2, correctly stated — `925611a`'s false "first" claim was about no corrective round, not about
+self-review.** `925611a`'s own `REVIEW_LEDGER.md` edit read: "Milestone 010 is the first accepted on a
+review nobody but its author performed, **and the first whose implementation commit needed no
+corrective round**." The second correction above attacked the first half of that sentence, using
+milestone 009's self-review-only acceptance as its counterexample — the wrong half and the wrong
+counterexample. Milestone 009 needed four corrective rounds (see its own archive's Corrections 1–4),
+so it is not a counterexample to "needed no corrective round" at all. The half that is actually false
+is the second: milestone 010 was not the first whose implementation commit needed no corrective round.
+**Milestone 002's implementation commit, `7032981`, was Codex-reviewed, returned no findings, and was
+accepted with no corrective round** — and it precedes milestone 010 by every measure. The milestone-009
+account in the second correction is withdrawn as a mischaracterization of this finding, not as a
+retraction of the fact it stated — milestone 009 was in fact self-review-only accepted; that fact just
+answers a different question than the one `925611a`'s "first whose implementation commit needed no
+corrective round" got wrong.
+
+**P2-3, correctly stated — `925611a`'s false blanket claim concerned every row from `c0bb60f` onward,
+not "the two outstanding rows."** `925611a`'s own `REVIEW_LEDGER.md` edit read: "**Every row from
+`c0bb60f` onward was produced without Codex**, and their status rests on Matt's acceptance and a
+self-review." That same edit adds the row for `12d1054` — a commit between `c0bb60f` and `824f3fc` —
+reading only "**Status not established**." A row explicitly recorded as status-not-established does
+not rest on Matt's acceptance and a self-review; the blanket claim is falsified by a row `925611a`
+itself added in the same diff. The second correction above instead attacked "the two outstanding rows
+are folded in here," a different sentence in the same commit message that was never shown to be false,
+and that account is withdrawn as this finding's basis.
+
+The narrower conclusion carried from P2-1 is unaffected: no existing scoring coefficient was retuned,
+and the six-occurrence count stands.
+
+Found by Astra's independent Class B review of the grouped `bec0370`/`22e73d1`/`925611a` commits and of
+the second correction's account of P2-2 and P2-3. Matt accepted the corrected findings on 2026-09-12.
+
+### Commit
+
+Documentation-only. No production code, test, fixture, or other archive changed. See
+`REVIEW_LEDGER.md`'s active-range row for `bec0370`, `22e73d1`, `925611a` for the full, current
+disposition, and `CURRENT_MILESTONE.md` for this correction's own pending-review status.

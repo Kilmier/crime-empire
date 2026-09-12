@@ -20,20 +20,25 @@ the commit that contains its own update — to a change authorized for another r
 **Astra's first review under the new process** covered the ledger's then-oldest active-range
 unresolved row, the grouped commit `bec0370`/`22e73d1`/`925611a`: Class B, FAIL, **three** P2s.
 (1) `bec0370` claimed its diff added no `src/` numeric literals beyond `0.2` and `0.1`; false — six
-more executable occurrences exist. (2) `925611a`'s claim that milestone 010 "is the first here
-accepted on a review nobody but its author performed" is false — milestone 009 (`7ca7819`) was also
-self-review-only and precedes it. (3) `925611a`'s "the two outstanding rows are folded in here"
-overstated what Matt's acceptance of `824f3fc` actually covered — neither `bec0370`'s nor `22e73d1`'s
-own content had been independently reviewed until this pass. The narrower conclusion behind finding
-(1) — no existing scoring coefficient was retuned — still holds. Matt accepted all three on
-2026-09-12.
+more executable occurrences exist. (2) `925611a` claimed milestone 010 was "the first whose
+implementation commit needed no corrective round"; false — milestone 002's implementation commit
+`7032981` was Codex-reviewed, found no findings, and needed no corrective round, and precedes
+milestone 010. (3) `925611a` claimed "every row from `c0bb60f` onward" rested on "Matt's acceptance
+and a self-review"; false — that same commit's own new row for `12d1054` reads "Status not
+established." The narrower conclusion behind finding (1) — no existing scoring coefficient was
+retuned — still holds. Matt accepted all three on 2026-09-12.
 
-**The first correction (`da43fbb`) itself had two gaps**, both found by Astra and both accepted by
-Matt: it recorded only finding (1) above, omitting (2) and (3); and it undercounted finding (1) at
-five occurrences instead of six, missing `Cognition.cs`'s `if (i < 0) return null;`. Both gaps are
-fixed in a second correction appended to `docs/milestones/010-a-denial-that-can-win.md` and recorded
-in `REVIEW_LEDGER.md`. **That second correction has not yet been independently reviewed** — do not
-treat this row as closed until it is.
+**Two corrections since have each had gaps, both found by Astra and both accepted by Matt.** The first
+correction (`da43fbb`) recorded only finding (1), and undercounted it at five occurrences instead of
+six, missing `Cognition.cs`'s `if (i < 0) return null;`. The second correction (`bad7ad4`) fixed the
+count and added findings (2) and (3) — but misidentified both: it attacked "first accepted on a review
+nobody but its author performed" via milestone 009's self-review-only acceptance, when the actual false
+claim was "first whose implementation commit needed no corrective round," falsified by milestone 002;
+and it attacked "the two outstanding rows are folded in here," when the actual false claim was the
+"every row ... onward" blanket claim contradicted by `925611a`'s own `12d1054` row. A third correction,
+appended to `docs/milestones/010-a-denial-that-can-win.md` and recorded in `REVIEW_LEDGER.md`, fixes
+both. **That third correction has not yet been independently reviewed** — do not treat this row as
+closed until it is.
 
 ## Completed — bounded review-process cleanup
 

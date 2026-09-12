@@ -474,3 +474,28 @@ exited 0. Runtime behavior and the accepted baseline are unchanged. The Godot 4.
 not present on PATH or either local drive, so the compiled render regression and its render-side
 mutation were not executed in this worktree; that is the disclosed verification limit for Astra.
 The correction awaits Astra's independent exact-commit review.
+
+## Correction to the projected-claim collision correction — incident positions and bases, 2026-09-12
+
+Astra independently reviewed `8fdf2e5` and returned one P2, accepted by Matt. Grouping equal
+`PlayerClaim` values stopped the crash and retained every named source account, but the held-belief
+branch rendered only the freshest projected belief's headline and skipped each underlying
+`PlayerDisagreement`'s own position and basis. Two same-predicate incidents could therefore disagree
+with each other on what the viewpoint character thought, yet the screen would omit that distinction.
+
+Both held and standalone disagreement groups now use one incident-row renderer. For every projected
+incident it renders that incident's own `OwnPositionHeld` together with its own `OwnBasis`, followed
+by that incident's source accounts. The visible predicate is still drawn once, and no incident id or
+truth-log identity crosses the player boundary.
+
+The production projection regression now stages one discovered belief held true and one inferred
+belief held false and proves their distinct positions, bases, and named accounts all survive
+`PlayerView.Build`. The Godot render regression uses two colliding disagreements with opposite own
+positions and distinct bases and requires both lines, both source accounts, and one visible heading.
+The focused projection test passed. Mutation-checking `PlayerView.Build` by temporarily dropping
+every incident's `OwnBasis` made that test fail and was reverted. The full solution built with 0
+warnings/errors and all 691 tests passed. The three verification hashes remained
+`92F742E3CB85E54B`, `455A684A29A5F717`, and `ADC3F2DDF1A9D50C`; comparison remained 6 distinct
+traces / 4 action sequences, and both required viewpoint runs completed. The Godot executable
+remains unavailable in this worktree, so the compiled render regression and a renderer-side mutation
+could not be executed here. This correction awaits Astra's independent review.

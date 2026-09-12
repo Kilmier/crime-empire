@@ -14,7 +14,7 @@ public sealed class ProjectedClaimCollisionTests
     /// of their source accounts for the renderer to coalesce safely.
     /// </summary>
     [Fact]
-    public void Two_incidents_with_one_visible_predicate_preserve_both_projected_accounts()
+    public void Two_incidents_with_one_visible_predicate_preserve_each_position_basis_and_account()
     {
         var world = Cast.Build(seed: 42, variant: "baseline");
         var salvatore = world.Get("salvatore");
@@ -30,7 +30,7 @@ public sealed class ProjectedClaimCollisionTests
             new ReportedClaim(first, Stance.Rejects, 0.9), "vincent", firstAt.AddHours(1));
 
         salvatore.Cognition.Learn(
-            second, Stance.Rejects, 0.8, SourceKind.Discovery, salvatore.Id, secondAt);
+            second, Stance.Rejects, 0.8, SourceKind.Inference, salvatore.Id, secondAt);
         salvatore.Cognition.Receive(
             new ReportedClaim(second, Stance.Believes, 0.9), "kane", secondAt.AddHours(1));
 
@@ -40,6 +40,8 @@ public sealed class ProjectedClaimCollisionTests
 
         Assert.Equal(2, projected.Count);
         Assert.All(projected, d => Assert.Equal(visible, d.Claim));
+        Assert.Contains(projected, d => d.OwnPositionHeld && d.OwnBasis == "what he found out");
+        Assert.Contains(projected, d => !d.OwnPositionHeld && d.OwnBasis == "what he worked out");
         Assert.Contains(projected.SelectMany(d => d.Accounts), a => a.SourceId == "vincent" && !a.Affirms);
         Assert.Contains(projected.SelectMany(d => d.Accounts), a => a.SourceId == "kane" && a.Affirms);
     }

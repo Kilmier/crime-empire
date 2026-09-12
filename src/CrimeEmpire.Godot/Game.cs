@@ -590,7 +590,7 @@ public partial class Game : Control
 
         // PlayerClaim deliberately drops the incident id. Two distinct incidents can therefore
         // arrive here under one visible predicate; group at that lossy boundary, render the claim
-        // once, and retain every source account from every projected incident.
+        // once, and retain every incident's own position and basis as well as every source account.
         var byClaim = snapshot.Disagreements
             .GroupBy(d => d.Claim)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<PlayerDisagreement>)g.ToList());
@@ -639,13 +639,7 @@ public partial class Game : Control
                 var d = group.First();
                 yield return ClaimEntry(d.Claim, $"on whether {d.Statement}");
                 foreach (var incident in group)
-                {
-                    if (incident.OwnBasis is { } basis)
-                        yield return Faint(
-                            $"        {p.Subject} {p.Verb("thinks", "think")} " +
-                            $"{(incident.OwnPositionHeld ? "so" : "otherwise")} ({basis})");
-                    foreach (var row in AccountRows(incident)) yield return row;
-                }
+                    foreach (var row in DisagreementRows(incident, p)) yield return row;
             }
         }
 
@@ -694,7 +688,21 @@ public partial class Game : Control
 
         if (disagreements is not null)
             foreach (var disagreement in disagreements)
-                foreach (var row in AccountRows(disagreement)) yield return row;
+                foreach (var row in DisagreementRows(disagreement, p)) yield return row;
+    }
+
+    /// <summary>
+    /// One incident-specific disagreement beneath a possibly coalesced player claim. Its own
+    /// position and basis belong to this incident just as its named accounts do; neither may be
+    /// borrowed from the freshest same-predicate belief chosen for the shared heading.
+    /// </summary>
+    private static IEnumerable<Control> DisagreementRows(PlayerDisagreement d, Pronouns p)
+    {
+        if (d.OwnBasis is { } basis)
+            yield return Faint(
+                $"        {p.Subject} {p.Verb("thinks", "think")} " +
+                $"{(d.OwnPositionHeld ? "so" : "otherwise")} ({basis})");
+        foreach (var row in AccountRows(d)) yield return row;
     }
 
     private static IEnumerable<Control> AccountRows(PlayerDisagreement d)
@@ -1025,7 +1033,8 @@ public partial class Game : Control
     /// Astra's accepted historical-audit finding L3, exercised at the rendering boundary. The
     /// simulation projection may contain two incident-specific disagreements whose truth-log ids
     /// are deliberately absent from their identical <see cref="PlayerClaim"/> values. The live
-    /// knowledge renderer must draw that visible predicate once and retain both source accounts.
+    /// knowledge renderer must draw that visible predicate once and retain both incidents' own
+    /// positions and bases as well as both source accounts.
     /// </summary>
     private void ProjectedClaimCollisionSelfTest()
     {
@@ -1051,10 +1060,10 @@ public partial class Game : Control
             Disagreements: new[]
             {
                 new PlayerDisagreement(
-                    claim, statement, "what you found out", OwnPositionHeld: true,
+                    claim, statement, "what you saw first", OwnPositionHeld: true,
                     new[] { new PlayerAccount("vincent", "Vincent Russo", Affirms: false, first) }),
                 new PlayerDisagreement(
-                    claim, statement, "what you found out", OwnPositionHeld: true,
+                    claim, statement, "what you worked out later", OwnPositionHeld: false,
                     new[] { new PlayerAccount("kane", "Detective Eileen Kane", Affirms: true, second) }),
             },
             Attitudes: Array.Empty<PlayerAttitude>(),
@@ -1079,6 +1088,10 @@ public partial class Game : Control
             || !screen.Contains("Detective Eileen Kane says so", StringComparison.Ordinal))
             throw new InvalidOperationException(
                 "the projected claim collision did not render every incident's source account");
+        if (!screen.Contains("you think so (what you saw first)", StringComparison.Ordinal)
+            || !screen.Contains("you think otherwise (what you worked out later)", StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "the projected claim collision did not render every incident's own position and basis");
     }
 
     // ================================================================= golden path (milestone 014)

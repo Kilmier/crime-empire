@@ -394,10 +394,12 @@ public static class Strategies
     }
 
     /// <summary>
-    /// Tommy Nardo's Coercion — the only value <see cref="ResolveViolence"/>'s force outcome has
-    /// ever been exercised against in an accepted run (verified via <c>--compare</c> at seed 42:
-    /// violence fires in baseline/watchful-boss/disloyal-vincent/resentful-tommy, never
-    /// cautious-vincent, and Tommy is the delegate every time). The reduction formula below is
+    /// Tommy Nardo's Coercion — the only value <see cref="ResolveViolence"/>'s force outcome had
+    /// been exercised against in the accepted histories when milestone 020 set this pivot. Its
+    /// then-current <c>--compare</c> at seed 42 reached violence with Tommy as delegate in four
+    /// variants. Milestone 024's delegated-executor correction later made those natural histories
+    /// honest non-results; this is a historical justification for the coefficient, not a claim
+    /// that the current accepted seed still reaches Force. The reduction formula below is
     /// centered here so that wiring capability into force resolution changes nothing for any
     /// accepted history and only diverges for a different executor — milestone 020's own flagged
     /// judgment call, recorded in that milestone's archive rather than discovered later as a

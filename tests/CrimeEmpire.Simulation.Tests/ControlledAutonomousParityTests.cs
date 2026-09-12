@@ -474,6 +474,8 @@ public sealed class ControlledAutonomousParityTests
                     $"{c.Weight:0.0000}\n");
 
             var s = character.Execution.Strategy;
+            // PolicyBreachDecisionMakerId is carried by SimulationReplayTests.Snapshot above: it is
+            // behavioral actor identity, not scheduling noise, so both replay comparators name it.
             sb.Append(
                 $"strategy-extra|{character.Id}|{s?.DelegatedToId}|{s?.Deadline:O}|{s?.AssignmentId}|" +
                 $"{s?.BreachedPolicyId}|{s?.FailedAttempts}|{s?.PressureApplied}\n");

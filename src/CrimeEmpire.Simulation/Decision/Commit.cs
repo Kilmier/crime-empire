@@ -41,8 +41,11 @@ public static class Commit
                 // Fail closed, mirroring Filters' own refusal: a man currently carrying somebody
                 // else's delegated operation may not start one of his own — the one-operation-per-
                 // involved-character rule, mirrored from Pipeline.AvailableToExecute's identical
-                // enforcement on being offered as a delegate. Milestone 024's sixth correction.
-                if (actor.Execution.Strategy is null && ctx.CurrentExecution is { } busyWith)
+                // enforcement on being offered as a delegate. Re-read World at the write boundary:
+                // GeneratorContext is a preparation-time snapshot and is not authoritative if a
+                // caller reaches Commit directly or the world changes between prepare and commit.
+                var authoritativeExecution = Strategies.CurrentExecution(world, actor);
+                if (actor.Execution.Strategy is null && authoritativeExecution is { } busyWith)
                     throw new SimulationInvariantException(
                         $"'{actor.Id}' cannot start {c.Strategy}; he is currently carrying " +
                         $"{busyWith.Label} for somebody else. One operation at a time.");

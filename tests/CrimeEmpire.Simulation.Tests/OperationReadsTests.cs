@@ -395,6 +395,129 @@ public sealed class OperationReadsTests
             r => r.Candidate.Kind == ActionKind.DelegateStrategy && r.Candidate.TargetId == "tommy");
     }
 
+    // ================================================================= sixth/seventh-correction mechanics
+
+    /// <summary>
+    /// Commit is the authoritative write boundary. A caller may hand it a stale preparation-time
+    /// context, but that must not let a delegate start a second operation while the world still
+    /// names him as the executor of somebody else's live one.
+    /// </summary>
+    [Fact]
+    public void Commit_rechecks_the_world_before_a_delegate_starts_a_second_operation()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var salvatore = world.Get("salvatore");
+        var tommy = world.Get("tommy");
+
+        DelegateThroughCommit(world, salvatore, Cast.Bakery, tommy.Id);
+        var delegated = salvatore.Execution.Strategy!;
+        var stale = Context(world, tommy) with { CurrentExecution = null };
+
+        var start = StartCandidate(Cast.Grocery);
+        Assert.Throws<SimulationInvariantException>(() =>
+            Commit.Apply(world, tommy, start, stale.Agenda, stale, new List<string>()));
+
+        Assert.Null(tommy.Execution.Strategy);
+        Assert.Same(delegated, salvatore.Execution.Strategy);
+        Assert.Equal(tommy.Id, delegated.DelegatedToId);
+    }
+
+    /// <summary>
+    /// Ownership is still distinct from execution standing: handing an operation away does not
+    /// make its owner free to overwrite the only live record of it with a new start.
+    /// </summary>
+    [Fact]
+    public void An_owner_cannot_overwrite_his_live_delegated_operation()
+    {
+        var world = Cast.Build(Seed, "baseline");
+        var vincent = world.Get("vincent");
+
+        DelegateThroughCommit(world, vincent, Cast.Grocery, "tommy");
+        var delegated = vincent.Execution.Strategy!;
+        var ctx = Context(world, vincent);
+
+        Assert.Null(ctx.CurrentExecution);
+        Assert.Throws<SimulationInvariantException>(() =>
+            Commit.Apply(world, vincent, StartCandidate(Cast.Bakery), ctx.Agenda, ctx, new List<string>()));
+        Assert.Same(delegated, vincent.Execution.Strategy);
+    }
+
+    /// <summary>
+    /// The complete production path for the playtest defect: the real strategy scheduler wakes the
+    /// delegate at refusal, gives him executor-owned Continue/Alter/Postpone choices, gives the
+    /// owner none of those choices, and an explicit postpone preserves the same instance with one
+    /// newly pending step. Waking Tommy neither tells Vincent nor moves Vincent's pressure.
+    /// </summary>
+    [Fact]
+    public void A_delegated_block_belongs_to_the_executor_and_postpone_keeps_it_schedulable()
+    {
+        var world = WorldWithoutScheduledScenarioEvents();
+        var vincent = world.Get("vincent");
+        var tommy = world.Get("tommy");
+        double ownerPressure = vincent.Motivations.Pressure(PressureKind.RevenueShortfall);
+
+        DelegateThroughCommit(world, vincent, Cast.Grocery, tommy.Id);
+        var operation = vincent.Execution.Strategy!;
+        var blocked = AdvanceToDelegatedBlock(world, tommy.Id);
+
+        Assert.Equal(EventKind.StrategyBlocked, blocked.Trigger.Kind);
+        Assert.Equal(tommy.Id, blocked.Actor.Id);
+        Assert.Contains(blocked.Available, c => c.Kind == ActionKind.ContinueStrategy);
+        Assert.Contains(blocked.Available, c => c.Kind == ActionKind.AlterStrategy);
+        Assert.Contains(blocked.Available, c => c.Kind == ActionKind.PostponeStrategy);
+        Assert.DoesNotContain(blocked.Available, c => c.Kind == ActionKind.DoNothing);
+
+        var refusal = tommy.Cognition.Find(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery));
+        Assert.NotNull(refusal);
+        Assert.Equal(SourceKind.Participant, refusal!.SourceKind);
+        Assert.Equal(tommy.Id, refusal.SourceId);
+        Assert.Null(vincent.Cognition.Find(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery)));
+        Assert.Equal(ownerPressure, vincent.Motivations.Pressure(PressureKind.RevenueShortfall));
+
+        var ownerDecision = Pipeline.Prepare(world, vincent, Wake(vincent.Id, EventKind.RoleReview));
+        Assert.DoesNotContain(ownerDecision.Available,
+            c => c.Kind is ActionKind.ContinueStrategy or ActionKind.AlterStrategy or ActionKind.PostponeStrategy);
+
+        int queueBefore = world.Queue.Count;
+        var postpone = blocked.Available.Single(c => c.Kind == ActionKind.PostponeStrategy);
+        Pipeline.Resolve(blocked, postpone.Id);
+
+        Assert.Same(operation, vincent.Execution.Strategy);
+        Assert.NotNull(operation.PendingStepEventId);
+        Assert.False(world.Queue.Cancelled.ContainsKey(operation.PendingStepEventId!.Value));
+        Assert.Equal(queueBefore + 1, world.Queue.Count);
+    }
+
+    /// <summary>
+    /// Leadership suppresses a duplicate assignment only for a live operation in the office's own
+    /// domain. A different-domain operation is the negative control: it must not silence a
+    /// legitimate harbour assignment.
+    /// </summary>
+    [Fact]
+    public void Leaderships_live_operation_gate_is_domain_scoped()
+    {
+        var sameDomain = WorldWithoutScheduledScenarioEvents();
+        var sameVincent = sameDomain.Get("vincent");
+        sameVincent.Execution.Strategy = NewStrategy(sameVincent, Cast.Grocery, sameVincent.StrategyCount++);
+        RunReviewNow(sameDomain);
+        Assert.DoesNotContain(sameDomain.Org.Assignments, a => a.RecipientId == sameVincent.Id);
+
+        var otherDomain = WorldWithoutScheduledScenarioEvents();
+        var otherVincent = otherDomain.Get("vincent");
+        otherVincent.Execution.Strategy = new StrategyInstance
+        {
+            OwnerId = otherVincent.Id,
+            LocalSequence = otherVincent.StrategyCount++,
+            Kind = StrategyKind.InvestigateIncident,
+            Domain = "uptown",
+            StartedAt = Cast.Start,
+            Deadline = Cast.Start.AddDays(30),
+        };
+        RunReviewNow(otherDomain);
+        Assert.Contains(otherDomain.Org.Assignments,
+            a => a.RecipientId == otherVincent.Id && a.Domain == Cast.Harbour);
+    }
+
     // ================================================================= helpers
 
     private static void CheckOperationSection(string rendered, string mustContain, string mustNotContain)
@@ -476,6 +599,39 @@ public sealed class OperationReadsTests
             RequiredCrew = 1,
         };
 
+    private static Candidate StartCandidate(string targetId)
+        => new($"start:tribute:{targetId}", ActionKind.StartStrategy, "test", $"lean on {targetId}")
+        {
+            TargetId = targetId,
+            Strategy = StrategyKind.SecureTribute,
+            Domain = Cast.Harbour,
+            Method = CoercionMethod.Persuade,
+        };
+
+    private static ScheduledEvent Wake(string actorId, EventKind kind)
+        => new()
+        {
+            Id = 0,
+            Time = Cast.Start,
+            Kind = kind,
+            OwnerId = actorId,
+            Cause = "test",
+        };
+
+    /// <summary>
+    /// The authored cast and institution with its two unrelated opening events removed. The tests
+    /// that use this still drive the production scheduler and pipeline; they isolate the operation
+    /// or leadership review under test from the scenario's independent opening assignment.
+    /// </summary>
+    private static World WorldWithoutScheduledScenarioEvents()
+    {
+        var cast = Cast.Build(Seed, "baseline");
+        var world = new World { Seed = cast.Seed, Now = cast.Now, Org = cast.Org };
+        foreach (var (id, character) in cast.Characters) world.Characters.Add(id, character);
+        foreach (var (id, business) in cast.Businesses) world.Businesses.Add(id, business);
+        return world;
+    }
+
     /// <summary>
     /// Starts a strategy for <paramref name="owner"/> and hands it to <paramref name="executorId"/>,
     /// both through the real <see cref="Commit.Apply"/> path — mirroring
@@ -485,16 +641,43 @@ public sealed class OperationReadsTests
     private static void DelegateThroughCommit(World world, Character owner, string targetId, string executorId)
     {
         var ctx = Context(world, owner);
-        var start = new Candidate($"start:tribute:{targetId}", ActionKind.StartStrategy, "test", $"lean on {targetId}")
-        {
-            TargetId = targetId,
-            Strategy = StrategyKind.SecureTribute,
-            Domain = Cast.Harbour,
-            Method = CoercionMethod.Persuade,
-        };
+        var start = StartCandidate(targetId);
         Commit.Apply(world, owner, start, ctx.Agenda, ctx, new List<string>());
         Commit.Apply(
             world, owner, DelegateCandidate(owner.Execution.Strategy, executorId), ctx.Agenda, ctx, new List<string>());
+    }
+
+    private static PreparedDecision AdvanceToDelegatedBlock(World world, string executorId)
+    {
+        for (int guard = 0; guard < 5000; guard++)
+        {
+            var step = Runner.Step(world, Cast.Start.AddDays(60), executorId);
+            if (step.Status == StepStatus.Exhausted)
+                throw new InvalidOperationException("queue exhausted before the delegated operation blocked");
+
+            if (step.Status != StepStatus.AwaitingChoice) continue;
+            if (step.Event?.Kind == EventKind.StrategyBlocked) return step.Awaiting!;
+
+            // Preserve the ordinary autonomous path for any unrelated wake belonging to the same
+            // actor; only the delegated block is held for the test's explicit choice.
+            Pipeline.Resolve(step.Awaiting!, null);
+        }
+
+        throw new InvalidOperationException("guard exceeded before the delegated operation blocked");
+    }
+
+    private static void RunReviewNow(World world)
+    {
+        var review = world.Queue.Schedule(world.Now, EventKind.OrgReview, world.Org.BossId, "test review");
+        for (int guard = 0; guard < 20; guard++)
+        {
+            var step = Runner.Step(world, world.Now, controlledCharacterId: null);
+            if (step.Status == StepStatus.Exhausted)
+                throw new InvalidOperationException("queue exhausted before the staged leadership review");
+            if (step.Event?.Id == review.Id) return;
+        }
+
+        throw new InvalidOperationException("guard exceeded before the staged leadership review");
     }
 
     /// <summary>

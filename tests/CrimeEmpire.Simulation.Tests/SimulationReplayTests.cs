@@ -208,6 +208,38 @@ public sealed class SimulationReplayTests
         Assert.Equal(BehavioralSnapshot(unperturbed), BehavioralSnapshot(perturbed));
     }
 
+    /// <summary>
+    /// The actor who chose a prohibited operative method is behavioral persistent state: that
+    /// identity determines whose self-knowledge is written when violence resolves. Both replay
+    /// comparators must distinguish it even when every scheduling-derived field agrees.
+    /// </summary>
+    [Fact]
+    public void Policy_breach_decision_maker_identity_is_part_of_both_replay_comparators()
+    {
+        var vincentChose = Cast.Build(seed: 42, "baseline");
+        var tommyChose = Cast.Build(seed: 42, "baseline");
+
+        static StrategyInstance Breach(string decisionMakerId) => new()
+        {
+            OwnerId = "vincent",
+            LocalSequence = 0,
+            Kind = StrategyKind.SecureTribute,
+            Domain = Cast.Harbour,
+            TargetId = Cast.Grocery,
+            Method = CoercionMethod.Force,
+            StartedAt = Cast.Start,
+            Deadline = Cast.Start.AddDays(30),
+            BreachedPolicyId = "no-violence-harbour",
+            PolicyBreachDecisionMakerId = decisionMakerId,
+        };
+
+        vincentChose.Get("vincent").Execution.Strategy = Breach("vincent");
+        tommyChose.Get("vincent").Execution.Strategy = Breach("tommy");
+
+        Assert.NotEqual(Snapshot(vincentChose), Snapshot(tommyChose));
+        Assert.NotEqual(BehavioralSnapshot(vincentChose), BehavioralSnapshot(tommyChose));
+    }
+
     private static World Run(int seed, string variant, int days)
     {
         var world = Cast.Build(seed, variant);
@@ -283,6 +315,7 @@ public sealed class SimulationReplayTests
                       $"{character.Execution.Strategy?.StepIndex}|{character.Execution.Strategy?.NextAdvanceOrdinal}|" +
                       $"{character.Execution.Strategy?.PendingStepEventId}|" +
                       $"{character.Execution.Strategy?.SourceEventId}|" +
+                      $"{character.Execution.Strategy?.PolicyBreachDecisionMakerId}|" +
                       string.Join(",", character.Execution.AttemptedConcealments.Select(a => a.ToString())) +
                       // Who has executed work for him gates the delegator's account question, so a
                       // run that recorded a different set would go on to generate different
@@ -375,6 +408,7 @@ public sealed class SimulationReplayTests
                       $"{character.StrategyCount}|{character.Execution.Strategy?.Kind}|" +
                       $"{character.Execution.Strategy?.TargetId}|{character.Execution.Strategy?.StepIndex}|" +
                       $"{character.Execution.Strategy?.NextAdvanceOrdinal}|" +
+                      $"{character.Execution.Strategy?.PolicyBreachDecisionMakerId}|" +
                       string.Join(",", character.Execution.AttemptedConcealments.Select(a =>
                           $"{a.Kind}:{a.Subject}:{a.Object}")) +
                       "|" + string.Join(",", character.Execution.DelegatedExecutorIds));

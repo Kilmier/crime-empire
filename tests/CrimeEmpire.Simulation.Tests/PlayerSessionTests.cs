@@ -518,15 +518,14 @@ public sealed class PlayerSessionTests
     }
 
     /// <summary>
-    /// The P1 finding, as a staged proof: an owner whose delegated operation fails learns nothing
-    /// from being woken about it.
+    /// The P1 finding, retained as a staged robustness proof: an owner whose delegated operation
+    /// fails learns nothing merely because a malformed legacy event wakes him about it.
     ///
-    /// <c>Strategies.Blocked</c> schedules <see cref="EventKind.StrategyBlocked"/> addressed to the
-    /// strategy's owner, with the cause "Bellini's grocery held out against force" — the executor's
-    /// operational outcome, written by the scheduler, for a man who was not there and has been told
-    /// nothing. Milestone 009 shipped that string straight into the pending decision as its occasion,
-    /// and into its focus as well, because <c>AgendaSelection</c> sets a RespondToTrigger agenda's
-    /// description to the trigger cause verbatim.
+    /// Production <c>Strategies.Blocked</c> now addresses the current executor. This test
+    /// deliberately injects the old, wrong owner-routed shape with the cause "Bellini's grocery
+    /// held out against force" to keep the presentation boundary fail-closed: even if an upstream
+    /// caller violates routing again, the scheduler's operational truth must not become the absent
+    /// owner's knowledge through the occasion or focus text.
     ///
     /// Staged rather than taken from a natural run, because the case has to be exercised on demand
     /// and with the owner and executor definitely distinct — and it drives the real

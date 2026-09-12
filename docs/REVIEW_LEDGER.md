@@ -2510,3 +2510,24 @@ The milestone archives are append-only and refer to two documents this file repl
 `CANONICAL_CODE_REVIEW_CONTEXT.md` and `CANONICAL_DESIGN_CONTEXT.md`. Those references are
 historical and correct as history; the files themselves are gone, their unique content divided
 between this ledger, `ROADMAP.md`, `DESIGN_DECISIONS.md`, and `OPEN_CONCERNS.md`.
+
+### Measured — milestone 024, the operation reads, sixth implementation review
+
+**Codex reviewed `ed7d38a` and returned FAIL; Matt accepted all five findings and authorized a
+seventh correction.** Two were implementation/record-integrity failures: `Commit.StartStrategy`
+trusted stale `GeneratorContext.CurrentExecution` instead of re-reading authoritative world state,
+and the sixth archive overstated what its staged tests proved. Three were missing assurance:
+`PolicyBreachDecisionMakerId` was absent from replay fingerprints; the central delegated-block,
+postponement, leadership-domain, and replacement rules lacked focused production-path acceptance
+tests; and the newly settled mechanics had not been recorded in `DESIGN_DECISIONS.md`.
+
+The correction committed with this entry re-reads `Strategies.CurrentExecution` at the commit
+boundary; fingerprints the policy decision-maker in both replay comparators; adds five focused tests
+covering stale-context refusal, owner non-overwrite, the complete delegated block/postpone path, and
+both sides of the domain-scoped leadership gate; records the durable rulings; and appends an accurate
+correction to the milestone archive, including its false staging, net-additive test-count, and
+Capital-versus-Crew claims. Final verification: clean build (0 warnings/errors), 685/685 tests,
+unchanged accepted hashes (`96422513E42FCB10`, `CF3E412C9CE67185`, `6FDFE3EBACD69294`), unchanged
+6-trace/5-action comparison, all three relevant viewpoints clean, all nine Godot checks passing, and
+the two-process restart proof passing. This seventh correction awaits Codex review; no acceptance or
+closure is recorded here.

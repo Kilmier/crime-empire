@@ -688,3 +688,71 @@ this correction.
 One commit, "milestone 024 sixth correction," covering the production-code changes described above,
 every test file listed, and this archive entry. **Awaits Codex's implementation review — not
 described as reviewed, passed, accepted, or closed anywhere in this record.**
+
+## Correction — review gaps in the sixth correction (the seventh correction), 2026-09-11
+
+**Codex reviewed `ed7d38a` and returned FAIL with five findings, all accepted by Matt.** This entry
+corrects the implementation, missing coverage, missing durable authority, and inaccuracies in the
+sixth-correction account above. It does not rewrite that historical text.
+
+### Implementation and coverage corrections
+
+- `Commit.Apply`'s new self-start guard trusted `GeneratorContext.CurrentExecution`, a snapshot from
+  preparation time. A direct caller or a world change between prepare and commit could pass null
+  while authoritative `World` still named the actor as another owner's delegate, allowing him to
+  start a second operation and violate the rule the guard claimed to enforce. The commit boundary now
+  calls `Strategies.CurrentExecution(world, actor)` itself and fails closed from that result. A
+  regression test deliberately supplies the stale null context and proves neither strategy changes.
+- `StrategyInstance.PolicyBreachDecisionMakerId` was persistent, consequence-bearing actor identity
+  but absent from both `SimulationReplayTests.Snapshot` and `BehavioralSnapshot`; two worlds that
+  would later give policy-breach self-knowledge to different men compared equal. Both comparators now
+  carry the field, and an independent paired-world test proves they distinguish only that identity.
+- The sixth correction lacked focused acceptance tests for several central claims. New tests now
+  drive the real scheduler and decision pipeline through a delegated refusal, proving the block wakes
+  Tommy rather than Vincent; Tommy receives Continue/Alter/Postpone, not generic DoNothing; Vincent
+  receives none of those executor-owned choices, gains no refusal knowledge, and receives no
+  synchronous shortfall pressure; resolving Postpone preserves the same instance and schedules one
+  live later step. Separate tests prove the commit-boundary stale-context guard, the owner's
+  no-overwrite rule, and both halves of the domain-scoped leadership gate.
+- The accepted delegated-authority, information, postponement, assignment-coherence, replacement,
+  and policy-identity rulings are now recorded in `docs/DESIGN_DECISIONS.md`. They no longer depend
+  on this archive or implementation comments to serve as authority.
+
+### Corrections to the sixth-correction account
+
+- The blanket Group A description was too broad. `CausalFeedbackTests` and
+  `ControlledAutonomousParityTests` explicitly stage Vincent's suspicion and question in addition to
+  staging the incident/method origin; their own comments disclose that honestly. They still exercise
+  real production behavior after those stated seams, but the account's claim that only the
+  originating incident was staged and *everything* downstream was unstaged was false.
+- “680 passing ... net-additive” was false relative to the sixth correction's parent, which had 682
+  tests. The correction retired cases and added/reworked others; 680 was the verified resulting
+  total, not a net increase. This seventh correction adds five focused tests, producing 685 total.
+- The immutable `ed7d38a` commit message says delegates lack enough **Capital** for Force. The actual
+  gate is `RequiredCrew`, as the archive's structural analysis correctly says; “Capital” is a typo in
+  the commit message, not a mechanic.
+- `PlayerSessionTests.A_delegated_failure_tells_its_owner_nothing_until_somebody_does` manually
+  injects the obsolete owner-routed event as a presentation robustness test. Its comment now says so;
+  it no longer claims production `Strategies.Blocked` routes that event to the owner.
+- `Strategies.ForceReferenceCoercion`'s comment described the old seed-42 Force histories in present
+  tense. It now identifies them as the historical evidence used when milestone 020 selected the
+  pivot and explicitly notes that the current accepted histories do not reach Force.
+
+### Verification
+
+- Full solution build: **0 warnings, 0 errors**.
+- Full test suite: **685 passing, 0 failing**.
+- Deterministic runner: baseline `96422513E42FCB10` (repeated), disloyal-vincent
+  `CF3E412C9CE67185`, and resentful-tommy `6FDFE3EBACD69294`, all unchanged. `--compare`
+  remains 6 distinct traces / 5 distinct chosen-action sequences with violence absent in all six.
+  Required Vincent and Salvatore viewpoints, plus Tommy's executor viewpoint, all render cleanly.
+- All nine Godot checks pass: the seven ordinary self-tests plus
+  `--selftest-restart-save`/`--selftest-restart-load` in separate processes; restart load reaches the
+  same 5 April screen as the golden path.
+- `docs/ROADMAP.md`'s pre-existing working-tree change remains untouched and unstaged. The two
+  off-limits design documents, milestone 027, and unrelated backlog remain untouched.
+
+### Commit
+
+One focused seventh-correction commit. It awaits Codex review and is not described here as reviewed,
+passed, accepted, or closed.

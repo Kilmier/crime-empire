@@ -819,6 +819,38 @@ true, and records a scope boundary Matt confirmed in chat rather than in a miles
   filters independently — a subordinate can be nameable but busy, or available but unacquainted, and
   either alone is enough to keep him off the offered list.
 
+## Delegated-operation authority and information — settled by milestone 024's sixth correction, 2026-09-11
+
+- **Execution standing follows the current executor, not the owner field that stores the instance.**
+  An undelegated owner may Continue, Alter, or Postpone his operation. After delegation those choices
+  belong to the named executor; the owner may neither continue nor alter the delegate's work merely
+  because the instance remains in his `ExecutionState`. Delegate and Abandon remain owner-only until
+  a later, separately authorized design says otherwise. `Strategies.CurrentExecution(World,
+  Character)` is the shared derivation used by agenda, generation, filtering, scoring, and commit.
+- **A delegated block wakes the executor and informs only the person who experienced it.** The
+  executor learns the refusal as participant knowledge and may choose how to react. The absent owner
+  gains no belief and no `RevenueShortfall` pressure synchronously; either may move later only through
+  a real report, observation, discovery, or other already-authorized channel. A wake is not a report.
+- **Postponement is an explicit operation-preserving choice.** At a genuine block, `PostponeStrategy`
+  replaces the generic `DoNothing` candidate and schedules one later step on the same instance.
+  `DoNothing` must not leave a displayed live operation with no event capable of advancing it.
+- **Assignment coherence is domain-scoped.** Leadership does not issue a second assignment to an
+  officeholder who still owns a live strategy in that office's domain, including one delegated for
+  execution. A live strategy in a different domain does not suppress a legitimate assignment.
+  Expired assignments remain historical until the existing completion/abandonment lifecycle closes
+  them; this ruling does not authorize renewal-in-place or deletion merely because a deadline passed.
+- **No live operation may be silently replaced.** A delegate already carrying another owner's work
+  cannot start an operation of his own, and an owner cannot overwrite an operation he has delegated
+  away; he must explicitly call it off first. Candidate filtering prevents ordinary offers and
+  `Commit.Apply` independently re-reads authoritative `World` state and fails closed, rather than
+  trusting a potentially stale prepared context.
+- **Policy-breach identity follows the choice.** `PolicyBreachDecisionMakerId` names the actor who
+  chose the currently operative prohibited method. Ownership, delegation, and execution do not move
+  it. A later `AlterStrategy` moves it only when that actor genuinely changes which prohibited method
+  is operative. This identity is persistent behavioral state and belongs in replay fingerprints.
+
+Full implementation and correction history: `docs/milestones/024-the-operation-reads.md`.
+
 ## Concerns resolved since `design-doc-concerns_1.md` was written
 
 The concerns doc was never updated after later doc revisions addressed several of its own

@@ -229,17 +229,16 @@ as a result — see `REVIEW_LEDGER.md` for the full accounting behind each.
 corrected three times above), `1a7bcc6`, `95e60b5`.** Nothing here authorizes starting 027 until that
 backlog is cleared and Matt says so.
 
-- **Milestone 024's sixth correction is complete and awaiting Codex's implementation review — not
-  described as reviewed, passed, accepted, or closed.** A bounded playtest correction (delegated-
-  execution authority, information boundary, postponement, assignment coherence, and policy-breach
-  decision-maker identity) that also required classifying and remediating 44 pre-existing tests it
-  broke, since the correction proved Force structurally unreachable by any delegate in the current
-  cast (crew-gated) rather than merely absent from searched seeds. Full account, including the
-  Force-impossibility substantiation, the causal-root classification of all 44 tests, and every
-  ruling Matt made along the way: `docs/milestones/024-the-operation-reads.md`'s sixth correction
-  section. Verification summary: 680 tests passing (0 failing), `--verify` deterministic at three
-  seed/variant combinations, `--compare` shows `violence: none` across all six configurations, both
-  required viewpoints clean, all nine Godot self-tests and the two-process restart proof passing.
+- **Codex reviewed milestone 024's sixth correction (`ed7d38a`) and returned FAIL with five
+  findings; Matt accepted them and authorized this seventh correction.** Corrected: `Commit.Apply`
+  now re-reads authoritative world state before a delegate can start a second operation; both replay
+  comparators fingerprint `PolicyBreachDecisionMakerId`; production-path tests pin executor wake and
+  choices, owner non-authority/non-information, explicit postponement, the domain-scoped leadership
+  gate, stale-context refusal, and owner non-overwrite; the durable rulings now live in
+  `DESIGN_DECISIONS.md`; and false verification/staging claims in the sixth archive account are
+  corrected append-only. **The seventh correction is complete and awaits Codex review; it is not
+  described as reviewed, passed, accepted, or closed.** Full account:
+  `docs/milestones/024-the-operation-reads.md`'s seventh correction section.
 
 ## Next, per the demo arc
 

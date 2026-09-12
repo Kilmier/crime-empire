@@ -13,53 +13,30 @@ one P2 documentation finding. The documentation-only closeout is `c7dd34b`. Full
 Milestones 021 and 026 are also closed at `9fed181` and `abcffd5`. Milestone 020's independently
 confirmed accepted state is `8e6878e`. These are historical anchors, not active scope.
 
-The bounded review-process cleanup authorized 2026-09-12 (below) is committed at `d6af1a6`. Its own
-independent review remains deferred per `REVIEW_LEDGER.md`'s rule 8 — a tracked ledger cannot cover
-the commit that contains its own update — to a change authorized for another reason.
+The bounded review-process cleanup is committed at `d6af1a6`. Its independent exact-commit review
+remains pending in chronological queue order; pre-commit review does not satisfy that requirement.
 
-**Astra's first review under the new process** covered the ledger's then-oldest active-range
-unresolved row, the grouped commit `bec0370`/`22e73d1`/`925611a`: Class B, FAIL, **three** P2s.
-(1) `bec0370` claimed its diff added no `src/` numeric literals beyond `0.2` and `0.1`; false — six
-more executable occurrences exist. (2) `925611a` claimed milestone 010 was "the first whose
-implementation commit needed no corrective round"; false — milestone 002's implementation commit
-`7032981` was Codex-reviewed, found no findings, and needed no corrective round, and precedes
-milestone 010. (3) `925611a` claimed "every row from `c0bb60f` onward" rested on "Matt's acceptance
-and a self-review"; false — that same commit's own new row for `12d1054` reads "Status not
-established." The narrower conclusion behind finding (1) — no existing scoring coefficient was
-retuned — still holds. Matt accepted all three on 2026-09-12.
+**The correction chain for grouped commits `bec0370` / `22e73d1` / `925611a` is closed at
+`0482dfc`.** Astra independently reviewed that Claude-authored correction: Class B PASS, no blocking
+findings. Matt accepted the PASS on 2026-09-12. The original grouped FAIL and the two failed
+corrections remain preserved in `REVIEW_LEDGER.md` and the append-only milestone-010 archive.
 
-**Two corrections since have each had gaps, both found by Astra and both accepted by Matt.** The first
-correction (`da43fbb`) recorded only finding (1), and undercounted it at five occurrences instead of
-six, missing `Cognition.cs`'s `if (i < 0) return null;`. The second correction (`bad7ad4`) fixed the
-count and added findings (2) and (3) — but misidentified both: it attacked "first accepted on a review
-nobody but its author performed" via milestone 009's self-review-only acceptance, when the actual false
-claim was "first whose implementation commit needed no corrective round," falsified by milestone 002;
-and it attacked "the two outstanding rows are folded in here," when the actual false claim was the
-"every row ... onward" blanket claim contradicted by `925611a`'s own `12d1054` row. A third correction,
-appended to `docs/milestones/010-a-denial-that-can-win.md` and recorded in `REVIEW_LEDGER.md`, fixes
-both. **That third correction has not yet been independently reviewed** — do not treat this row as
-closed until it is.
+## Authorized — documentation closeout and GitHub push
 
-## Completed — bounded review-process cleanup
+Matt explicitly authorized this update, closeout, and GitHub push on 2026-09-12, superseding the
+earlier instruction to defer this acceptance record until another authorized documentation change.
 
-Matt authorized this documentation-only cleanup on 2026-09-12, before introducing Astra into the
-workflow. Committed at `d6af1a6`.
+Scope: record the accepted `0482dfc` outcome in this file and `REVIEW_LEDGER.md`, append the closeout
+to `docs/milestones/010-a-denial-that-can-win.md`, and commit and push those three files.
+The closeout commit itself still requires independent review; it cannot record its own PASS.
 
-In scope, and done:
-
-- proportional Class A/B/C review defined in `AGENTS.md`;
-- this file compacted to current truth and authorization;
-- `REVIEW_LEDGER.md` compacted without losing established outcomes, reviewer identity, explicit
-  unknowns, grouped rows, the current baseline, or recurring lessons;
-- the real chronological review queue exposed instead of copying stale milestone summaries.
-
-Out of scope, and untouched: simulation, tests, fixtures, UI, persistence, canon, proposals, milestone
-archives, and `docs/ROADMAP.md`; no reclassification of a proposal as canon; no milestone 027 planning
-or implementation; no claim that this cleanup reviewed itself.
+No gameplay, simulation, tests, fixtures, UI, persistence, canon, proposals, or other archives are in
+scope. Leave the pre-existing `docs/ROADMAP.md` change untouched and unstaged. Stop after pushing;
+no next queue target or new milestone is authorized by this closeout.
 
 ## What follows
 
-Resume the ledger's oldest active-range unresolved commit using the proportional class, per
+The next review target remains the ledger's oldest active-range unresolved grouped row, per
 `REVIEW_LEDGER.md`. Do not infer the queue from milestone numbers or from this file.
 
 Milestone 027 — **The session has an ending** — remains a roadmap candidate and is not authorized.

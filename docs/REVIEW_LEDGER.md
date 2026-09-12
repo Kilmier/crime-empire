@@ -40,19 +40,22 @@ does not turn them into defects.
 
 ## Coverage boundary and queue
 
-**Reconciled checkpoint: `c7dd34b`.** Every commit through that hash appears below, either alone or in
-an exact group. This normalization records what the pre-cleanup ledger and milestone archives actually
-established; it does not perform new reviews.
+**Reconciled checkpoint: `0482dfc`.** Every commit through that hash appears below, either alone or in
+an exact group. Coverage through `c7dd34b` preserves the pre-cleanup ledger and milestone evidence;
+the subsequent rows record the cleanup and its reviewed correction chain. Recording these outcomes
+does not perform new reviews.
 
 The previous authoritative checkpoint was `824f3fc`. Rows at or before it marked
 `STATUS NOT ESTABLISHED` are preserved legacy uncertainty and do not reopen closed milestones unless
 Matt explicitly asks. The **active ordered range begins after `824f3fc`**. Its oldest unresolved row
-is therefore **`bec0370`**, not a milestone-023 commit. Later established outcomes remain valid, but
-they do not let review jump over earlier unresolved rows.
+is now **`40f0ded` / `520924b` / `3004d2f` / `c7ae3d6`**, preserved as one grouped target, following
+Matt's acceptance of the preceding group's correction at `0482dfc`. Later established outcomes
+remain valid, but they do not let review jump over earlier unresolved rows.
 
-The commit containing this normalization will be later than `c7dd34b` and cannot appear as reviewed
-inside itself. Its independent Class B outcome is recorded in the next change authorized for another
-reason.
+The normalization commit `d6af1a6` still requires its own independent exact-commit review in queue
+order; its pre-commit review does not substitute for that review. This ledger cannot establish an
+independent outcome for the closeout commit containing this update. Matt explicitly authorized this
+closeout update and GitHub push on 2026-09-12; this bounded authorization does not waive its review.
 
 ## Legacy coverage through `824f3fc`
 
@@ -127,7 +130,7 @@ its A/B/C class only after opening the exact diff.
 
 | Commit(s) | Review evidence and disposition |
 |---|---|
-| `bec0370`, `22e73d1`, `925611a` | Astra independently reviewed all three grouped commits (Class B): FAIL, three P2s. (1) `bec0370` claimed its diff added no `src/` numeric literals beyond `0.2` and `0.1`; false — six more executable occurrences exist, including `Cognition.cs`'s `if (i < 0) return null;`. (2) `925611a` claimed milestone 010 was "the first whose implementation commit needed no corrective round"; false — milestone 002's implementation commit `7032981` was Codex-reviewed, found no findings, and needed no corrective round, and precedes milestone 010. (3) `925611a` claimed "every row from `c0bb60f` onward" rested on "Matt's acceptance and a self-review"; false — that same commit's own new row for `12d1054` (above) reads "Status not established," not acceptance-and-self-review. The narrower conclusion behind (1) — no existing scoring coefficient was retuned — still holds. Matt accepted all three on 2026-09-12; corrected in `docs/milestones/010-a-denial-that-can-win.md` (a first correction recorded only finding 1, undercounted at five; a second correction recorded findings 2 and 3 but misidentified both — self-review-only precedence via milestone 009 instead of no-corrective-round precedence via milestone 002, and "the two outstanding rows are folded in here" instead of the "every row ... onward" blanket claim; a third correction fixes both). That correction awaits independent review. Preserve as one grouped review. |
+| `bec0370`, `22e73d1`, `925611a` | Astra independently reviewed all three together (Class B): FAIL, three P2s; Matt accepted the findings. False claims: only two added numeric literals (six additional occurrences actually exist); milestone 010 first to need no corrective round (milestone 002, `7032981`, is a counterexample); every row from `c0bb60f` onward accepted and self-reviewed (the same diff labels `12d1054` status not established). No existing scoring coefficient was retuned. Corrections `da43fbb` and `bad7ad4` each received independent Class B FAIL; `0482dfc` received independent Class B PASS, accepted by Matt on 2026-09-12, closing this correction chain. Original FAIL remains the outcome for these three hashes. Preserve as one grouped review. Full append-only history: [milestone 010](milestones/010-a-denial-that-can-win.md). |
 | `6a8a765` | Claude self-reviewed; later Codex FAIL. Corrected by `3c86ba4`; Matt accepted the correction (`milestones/011`). |
 | `40f0ded`, `520924b`, `3004d2f`, `c7ae3d6` | **UNRESOLVED — explicitly not reviewed.** Preserve as one grouped planning/premise row. |
 | `3871d23`, `58016e8`, `10c42c3` | **UNRESOLVED — STATUS NOT ESTABLISHED.** |
@@ -207,6 +210,10 @@ its A/B/C class only after opening the exact diff.
 | `ed7d38a` | Codex FAIL, five findings; corrected by `344f1e0`. |
 | `344f1e0`, `762210f` | Claude independently reviewed both Codex-authored commits together: PASS with one P2 documentation finding; Matt accepted and closed milestone 024 at `762210f`. Preserve as one grouped review. |
 | `c7dd34b` | Matt explicitly exempted this bookkeeping-only closeout from another immediate round. Closed by owner exception, not an independent review. |
+| `d6af1a6` | **UNRESOLVED — independent exact-commit review pending.** Codex-authored review-process cleanup; pre-commit review is not an independent review of this exact commit. |
+| `da43fbb` | Astra independently reviewed this Claude-authored correction (Class B): FAIL, two P2s; omitted two original findings and undercounted six additional numeric occurrences as five. Matt accepted; correction continued at `bad7ad4` (`milestones/010`). |
+| `bad7ad4` | Astra independently reviewed this Claude-authored correction (Class B): FAIL, two P2s; misidentified the original P2-2 and P2-3. Matt accepted; corrected at `0482dfc` (`milestones/010`). |
+| `0482dfc` | Astra independently reviewed this Claude-authored correction (Class B): PASS, no blocking findings. Matt accepted on 2026-09-12, closing the grouped `bec0370`/`22e73d1`/`925611a` correction chain. Prior FAIL outcomes remain intact (`milestones/010`). |
 
 ## Current verification baseline
 

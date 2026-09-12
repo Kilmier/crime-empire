@@ -461,3 +461,33 @@ the second correction's account of P2-2 and P2-3. Matt accepted the corrected fi
 Documentation-only. No production code, test, fixture, or other archive changed. See
 `REVIEW_LEDGER.md`'s active-range row for `bec0370`, `22e73d1`, `925611a` for the full, current
 disposition, and `CURRENT_MILESTONE.md` for this correction's own pending-review status.
+
+## Accepted closeout — correction chain closed at `0482dfc`, 2026-09-12
+
+Astra (Codex) independently reviewed the exact Claude-authored correction `0482dfc` as Class B:
+**PASS, no blocking findings.** The reviewer did not author that correction or the earlier commits
+in this correction chain. Matt accepted this PASS on 2026-09-12. This supersedes the pending-review
+status at the end of the third correction above.
+
+The original grouped review covered all three exact commits `bec0370`, `22e73d1`, and `925611a`:
+**FAIL, three P2s**, accepted by Matt. The first correction `da43fbb` received independent Class B
+FAIL for omitting two findings and undercounting the numeric occurrences. The second correction
+`bad7ad4` received independent Class B FAIL for misidentifying the original P2-2 and P2-3. Matt
+accepted both rounds' findings. The third correction `0482dfc` passed and closes the correction
+chain; it does not change any earlier exact-commit FAIL into PASS. All three correction accounts
+above remain standing as append-only history.
+
+Evidence checked for the `0482dfc` review: its complete exact diff, the original historical claims
+and milestone-002 counterexample, the corrected six-occurrence account and no-retuning conclusion,
+preservation of the existing archive as an unchanged prefix, the three-file documentation scope,
+and `git diff --check`. The unrelated roadmap content hash remained unchanged. This Class B review
+did not rerun simulation tests or historical runtime measurements; its PASS concerns the
+documentation correction, not a fresh verification of simulation behaviour.
+
+Matt subsequently explicitly authorized recording this acceptance, closing out the documentation,
+and pushing it to GitHub on 2026-09-12, replacing the earlier instruction to defer the record.
+That authorization covers this file, `CURRENT_MILESTONE.md`, and `REVIEW_LEDGER.md` only. The
+pre-existing `ROADMAP.md` change remains excluded. The closeout commit itself has no independent
+review outcome recorded here. `d6af1a6` also remains pending independent exact-commit review;
+the next unresolved grouped target `40f0ded` / `520924b` / `3004d2f` / `c7ae3d6` was not reviewed
+or started as part of this closeout.

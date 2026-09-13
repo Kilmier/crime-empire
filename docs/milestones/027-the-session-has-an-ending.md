@@ -122,3 +122,45 @@ scene tree for the opening brief, both outcomes, control state, and absence of r
 
 One implementation-and-archive commit containing this file. It is Class A, unreviewed, and
 unaccepted; the implementer has not recorded an independent review of their own work.
+
+## Correction — the authorization review was not in the ledger
+
+**Appended, not rewritten.** Fresh Claude Opus 5 independently reviewed exact implementation commit
+`64881a162581b366314ace043c0a866ef0ddb7c3` as Class A. Claude authored none of the inspected
+commits, edited nothing, and recorded no acceptance. The verdict was **FAIL**, one P2; Matt accepted
+P2-1 on 2026-09-12.
+
+The runtime implementation met R1–R6 with no blocking code defect. The record defect was in this
+archive's opening: it truthfully stated that Matt accepted an independent review of authorization
+transition `608f05ef0e67149ba64a6ec50585fd5df6a30506` before implementation, but the same
+implementation commit did not fold that review outcome into `REVIEW_LEDGER.md`. Because a tracked
+ledger cannot record its own review, ledger operating rule 8 required the next independently
+authorized change — the implementation commit — to do so. Leaving `608f05e` absent created a gap in
+the active ordered range and made the archive sentence the only durable record.
+
+This correction adds chronological ledger rows for `608f05e`'s independently reviewed and
+owner-accepted Class B PASS and `64881a1`'s independently reviewed Class A FAIL with Matt's accepted
+P2. It advances the reconciled checkpoint and independent verification baseline without changing a
+historical verdict or treating this correction as reviewed. `CURRENT_MILESTONE.md` now points at this
+focused correction as the only active review gate.
+
+The review also recorded three non-blocking notes, which do not enter this correction loop. The
+largest disclosed note was that the direct `RequireUnresolved()` calls in `Choose`,
+`ResolveAutomatically`, and `AdvanceDays` are redundant with other guards and not independently
+mutation-pinned; removing all three left 707 tests green. The `RequireReady()` guard that actually
+carries R6 for advance paths is pinned. No code cleanup was authorized from that NOTE.
+
+Claude independently reproduced build 0 warnings/errors, all 707 tests, all six trace and
+chosen-action hashes, comparison at 6 configurations / 6 traces / 4 action sequences, both viewpoint
+runs, and all three mutation checks claimed above. A disposable out-of-repository cross-process probe
+also confirmed the exact terminal instant, both natural outcomes, `int.MaxValue` clamping, and
+post-load refusal. Claude's disclosed limit remains: no Godot binary was available, so the compiled
+Godot project was verified by the build but none of its self-tests were run independently.
+
+No runtime code or test changed in this correction. `git diff --check` passed; the documentation
+claims were checked against the exact commit order and the accepted review reports.
+
+### Commit
+
+One focused documentation correction commit containing this appendix and the ledger/current-gate
+updates. It is unreviewed and unaccepted; it cannot record its own outcome.

@@ -40,10 +40,11 @@ does not turn them into defects.
 
 ## Coverage boundary and queue
 
-**Reconciled checkpoint: `8651ecd`.** Every commit through exact
-`8651ecd1c3b34fc30adec98637cedbaf265f8d14` appears below, either alone or in an exact group. Coverage
+**Reconciled checkpoint: `64881a1`.** Every commit through exact
+`64881a162581b366314ace043c0a866ef0ddb7c3` appears below, either alone or in an exact group. Coverage
 through `c7dd34b` preserves the pre-cleanup ledger and milestone evidence; the subsequent rows record
-the cleanup, correction chain, 2026-09-12 historical audit, and its independently reviewed repairs.
+the cleanup, correction chain, 2026-09-12 historical audit, its independently reviewed repairs, the
+Milestone 027 authorization transition, and the reviewed implementation.
 
 The previous authoritative checkpoint was `824f3fc`. Rows at or before it marked
 `STATUS NOT ESTABLISHED` are preserved legacy uncertainty and do not reopen closed milestones unless
@@ -52,8 +53,10 @@ audit at `891368d` established the outcomes of its 29 requested rows (38 unique 
 preserving every grouped row. Astra subsequently reviewed the remaining exact commits in
 chronological order, including `891368d` itself and the final correction record `8651ecd`. Matt
 accepted both PASS outcomes on 2026-09-12. The historical chronological review gate through
-`8651ecd` is closed. This ledger update cannot establish the review outcome of the transition commit
-that contains it.
+`8651ecd` is closed. Astra then independently passed `608f05e`, and Matt accepted that transition
+before implementation began. Claude independently failed `64881a1` on one accepted P2 record defect;
+the runtime implementation had no blocking finding. This ledger update cannot establish the review
+outcome of the correction commit that contains it.
 
 The audit was an independent exact-diff review by Astra, who authored none of the inspected commits.
 It was static: Astra did not run builds, tests, Runner verification, Godot, restart, or
@@ -229,24 +232,30 @@ its A/B/C class only after opening the exact diff.
 | `86eef5e` | Astra independent exact-commit review (Class A): **PASS**. Every grouped incident retains and renders its own position, basis, and accounts. Matt accepted on 2026-09-12 (`milestones/025`). |
 | `b7344a5` | Astra independent exact-commit review (Class B): **FAIL**, one P2 accepted by Matt. It conflated `68a6c32`'s status/count fixes with `d6af1a6`'s correction of overstated independent-review coverage and inaccurately said the prior finding concerned omitted Codex authorship. Corrected by `8651ecd`. |
 | `8651ecd` (exact `8651ecd1c3b34fc30adec98637cedbaf265f8d14`) | Astra independent exact-commit review (Class B): **PASS**, no findings. The correction accurately separates the `68a6c32` and `d6af1a6` histories, removes the inaccurate authorship account, preserves prior verdicts and owner rulings, repairs all four milestone-023 links, and keeps the archive append-only. `git diff --check` passed; simulation tests were not rerun for this documentation-only diff. Matt accepted on 2026-09-12 (`milestones/023`). |
+| `608f05e` (exact `608f05ef0e67149ba64a6ec50585fd5df6a30506`) | Astra independent exact-commit review (Class B): **PASS**, no findings. Astra did not author the inspected commit. The six-document transition accurately recorded the accepted historical PASS outcomes, closed the historical gate through `8651ecd`, preserved every prior FAIL, authorized Milestone 027 with R1–R6, and deferred finished-operation history. Matt accepted the outcome on 2026-09-12 before implementation began. |
+| `64881a1` (exact `64881a162581b366314ace043c0a866ef0ddb7c3`) | Fresh Claude Opus 5 independent exact-commit review (Class A): **FAIL**, one P2 accepted by Matt on 2026-09-12. Runtime implementation met all six authorized rulings with no blocking code defect, but its archive claimed the accepted `608f05e` review without folding that outcome into this ledger as rule 8 required. Corrected by the next documentation commit. Claude authored none of the inspected commits, edited nothing, and recorded no acceptance (`milestones/027`). |
 
 ## Current verification baseline
 
-Latest independently reproduced baseline: `762210f`, also current at documentation-only `c7dd34b`.
+Latest independently reproduced baseline: `64881a1`.
 Hashes are regression evidence, not permanent design requirements; an authorized behaviour change may
 move them if the new values and reasons are recorded in its milestone archive.
 
 - Build: 0 warnings, 0 errors.
-- Tests: 689 passed, 0 failed.
-- `baseline`: `92F742E3CB85E54B`.
-- `disloyal-vincent`: `455A684A29A5F717`.
-- `resentful-tommy`: `ADC3F2DDF1A9D50C`.
-- `--compare --seed 42`: 6 distinct traces, 4 distinct chosen-action sequences.
-- The implementer recorded the required viewpoint runs as passing; Claude's independent closeout did
-  not explicitly list rerunning them.
-- Review limitation: Claude did not independently run the nine Godot self-tests, the two-process
-  restart proof, or Codex's four mutation checks for the final milestone-024 correction. Matt accepted
-  analytical and .NET-test corroboration on that disclosed basis. See `milestones/024-the-operation-reads.md`.
+- Tests: 707 passed, 0 failed.
+- Trace / chosen-action hashes: `baseline` `92F742E3CB85E54B` / `BC280412B238B49F`;
+  `cautious-vincent` `957DAC26D3DCBEF5` / `37640788CD6BA71B`; `watchful-boss`
+  `38D0C93FB5F6B0AF` / `BC280412B238B49F`; `disloyal-vincent` `455A684A29A5F717` /
+  `90C660AFB38741BB`; `resentful-tommy` `ADC3F2DDF1A9D50C` / `BC280412B238B49F`;
+  `capable-angelo` `842B0968FB0388E9` / `2D16B6CD6153037C`.
+- `--compare --seed 42`: 6 configurations, 6 distinct traces, 4 distinct chosen-action sequences.
+- Both required viewpoint runs exit 0.
+- Claude independently reproduced the three archive mutation checks and added two more. A disposable
+  cross-process probe outside the repository confirmed the exact terminal instant, both natural
+  outcomes, the `int.MaxValue` clamp, and post-load refusal across a real process boundary.
+- Review limitation: no Godot binary was available to Claude, so the compiled project was verified
+  by the build but none of the Godot self-tests were independently run. Their passing results remain
+  implementer-reported in `milestones/027-the-session-has-an-ending.md`.
 
 Run commands from `AGENTS.md` §Verification. Re-measure after the last edit that could affect the
 reported value; never copy a number from an earlier worktree state.

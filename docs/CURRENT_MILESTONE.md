@@ -5,18 +5,21 @@ in `docs/milestones/`, review coverage in `REVIEW_LEDGER.md`, and future candida
 
 ## Status
 
-**No gameplay milestone is active.** Milestone 027 — The session has an ending — has been implemented
-exactly under Matt's accepted R1–R6 authorization and archived in
-`docs/milestones/027-the-session-has-an-ending.md`.
+**No gameplay milestone is active.** Milestone 027 — The session has an ending — was implemented at
+exact commit `64881a162581b366314ace043c0a866ef0ddb7c3`. Fresh Claude Opus 5 independently
+reviewed it as Class A and returned **FAIL**, one P2 record finding and no blocking runtime defect.
+Matt accepted P2-1 on 2026-09-12.
 
-The implementation-and-archive commit containing this file is Class A, unreviewed, and unaccepted.
-It must receive an independent exact-commit review before Matt can accept it. The implementer has
-recorded verification evidence, not an independent review outcome.
+This focused correction records the previously accepted independent PASS of authorization transition
+`608f05ef0e67149ba64a6ec50585fd5df6a30506` in `REVIEW_LEDGER.md`, adds `64881a1`'s FAIL and
+owner ruling to the ordered range, updates the independent verification baseline, and appends the
+correction to the milestone archive. Runtime code and tests are untouched. The correction commit
+containing this file is itself unreviewed and unaccepted.
 
 ## Current gate
 
-Stop for independent review of the Milestone 027 implementation commit. Do not begin layer 2 or infer
-a next milestone from `ROADMAP.md`; no later gameplay work is authorized.
+Stop for independent exact-commit review of this Milestone 027 record correction. Do not begin layer
+2 or infer a next milestone from `ROADMAP.md`; no later gameplay work is authorized.
 
 ## Deliberately carried work
 

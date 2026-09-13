@@ -180,7 +180,10 @@ public static class Pipeline
             world.Requests.Where(r => r.AskerId == actor.Id).ToList(),
             VisibleTargets(world, domain),
             subordinates.Where(id => AvailableToExecute(world, id)).ToList(),
-            currentExecution);
+            currentExecution,
+            trigger.Payload.Note == "operation-review"
+                ? actor.Execution.Operations.SingleOrDefault(s => s.LocalSequence == trigger.Payload.StrategySequence)
+                : null);
 
         // 4-5. Bounded generation, then salience/knowledge/capability/access rejection.
         var generated = Generators.GenerateAll(ctx);
@@ -194,7 +197,8 @@ public static class Pipeline
         // order Filters happened to hand the survivors over in. That is what lets a player-facing
         // surface reorder Available without any risk of moving a score.
         var scored = filtered.Passed
-            .Select(c => Utility.Score(c, actor.View, actor.Psychology, perceived, agenda, rng, currentExecution))
+            .Select(c => Utility.Score(c, actor.View, actor.Psychology, perceived, agenda, rng,
+                ctx.ReviewOperation is null ? currentExecution : null))
             .OrderByDescending(b => b.Total)
             .ThenBy(b => b.Candidate.Id, StringComparer.Ordinal)
             .ToList();
@@ -344,8 +348,6 @@ public static class Pipeline
     /// </summary>
     public static bool AvailableToExecute(World world, string candidateId)
     {
-        if (world.Get(candidateId).Execution.Strategy is not null) return false;
-        return !world.Characters.Values.Any(
-            other => other.Execution.Strategy?.DelegatedToId == candidateId);
+        return Strategies.CurrentExecution(world, world.Get(candidateId)) is null;
     }
 }

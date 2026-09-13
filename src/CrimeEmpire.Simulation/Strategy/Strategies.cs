@@ -15,6 +15,15 @@ using CrimeSim.Sim;
 /// </summary>
 public static class Strategies
 {
+    /// <summary>A bounded owner review occasion, independent of the delegate's private progress.</summary>
+    public static void ScheduleReview(World world, StrategyInstance s)
+    {
+        if (s.PendingReviewEventId is { } prior)
+            world.Queue.Cancel(prior, "operation review superseded");
+        s.PendingReviewEventId = world.Queue.Schedule(world.Now.AddDays(7), EventKind.RoleReview,
+            s.OwnerId, "review standing operation orders", new EventPayload
+            { Note = "operation-review", StrategyOwnerId = s.OwnerId, StrategySequence = s.LocalSequence }).Id;
+    }
     public static readonly string[] TributeSteps = { "make the approach", "put the demand", "press or accept", "collect" };
     public static readonly string[] ConcealSteps = { "quiet the witnesses", "tidy the paperwork" };
     public static readonly string[] InvestigateSteps = { "check the records", "canvass the street", "put on surveillance" };
@@ -87,11 +96,8 @@ public static class Strategies
     /// second match should throw, not be silently and arbitrarily resolved.
     /// </summary>
     public static StrategyInstance? CurrentExecution(World world, Character actor)
-        => actor.Execution.Strategy is { DelegatedToId: null } own
-            ? own
-            : world.Characters.Values
-                .Select(other => other.Execution.Strategy)
-                .SingleOrDefault(candidate => candidate is not null && candidate.DelegatedToId == actor.Id);
+        => world.Characters.Values.SelectMany(other => other.Execution.Operations)
+            .SingleOrDefault(s => (s.DelegatedToId ?? s.OwnerId) == actor.Id);
 
     /// <summary>
     /// Removes this instance's commitment from the owner and, if execution was delegated, from the
@@ -102,6 +108,9 @@ public static class Strategies
     /// </summary>
     public static void RemoveCommitments(World world, StrategyInstance s)
     {
+        if (s.PendingReviewEventId is { } review)
+            world.Queue.Cancel(review, "operation ended");
+        s.PendingReviewEventId = null;
         string id = $"strategy:{s.OwnerId}:{s.LocalSequence}";
         if (world.Find(s.OwnerId) is { } owner)
             owner.Execution.Commitments.RemoveAll(c => c.Id == id);
@@ -127,7 +136,7 @@ public static class Strategies
         int? ordinal = payload.AdvanceOrdinal;
 
         var owner = ownerId is null ? null : world.Find(ownerId);
-        var s = owner?.Execution.Strategy;
+        var s = owner?.Execution.Operations.SingleOrDefault(s => s.LocalSequence == sequence);
 
         if (ownerId is null || sequence is null || ordinal is null || owner is null || s is null
             || s.LocalSequence != sequence.Value
@@ -416,13 +425,15 @@ public static class Strategies
         // remains a separately recorded question (ROADMAP.md); it is not a channel to a character.
         world.Queue.Schedule(world.Now, EventKind.StrategyBlocked, s.DelegatedToId ?? s.OwnerId,
             $"{business.Name} held out against {s.Method.ToString().ToLowerInvariant()}",
-            new EventPayload { TargetId = business.Id, Strategy = s.Kind });
+            new EventPayload { TargetId = business.Id, Strategy = s.Kind,
+                StrategyOwnerId = s.OwnerId, StrategySequence = s.LocalSequence });
     }
 
     /// <summary>An assignment that has been satisfied stops generating obligations.</summary>
     private static void CloseAssignment(World world, Character owner, StrategyInstance s)
     {
         if (s.AssignmentId is not { } id) return;
+        if (owner.Execution.Operations.Any(other => other != s && other.AssignmentId == id)) return;
         world.Org.Assignments.RemoveAll(a => a.Id == id);
         owner.Motivations.Responsibilities.RemoveAll(r => r.Id == $"assignment:{id}");
         owner.Execution.Commitments.RemoveAll(c => c.Id == $"assignment:{id}");
@@ -843,8 +854,8 @@ public static class Strategies
                 Note = why,
             });
 
-        owner.Execution.Strategy = null;
-        owner.Execution.Intention = null;
+        owner.Execution.Operations.Remove(s);
+        if (owner.Execution.Strategy is null) owner.Execution.Intention = null;
         RemoveCommitments(world, s);
     }
 }

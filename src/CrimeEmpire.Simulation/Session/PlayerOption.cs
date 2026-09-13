@@ -57,6 +57,7 @@ internal static class PlayerOption
         Candidate c, Func<string, string> name, Pronouns self, Func<string, Pronouns> pronouns,
         string? selfId) => c.Kind switch
     {
+        ActionKind.ContinueStrategy when c.IsOperationReview => "leave these orders unchanged",
         ActionKind.ContinueStrategy => $"carry on {Work(c, name, self)}",
         ActionKind.AlterStrategy when c.Method is { } m && c.TargetId is { } t =>
             $"switch to {Verb(m)} with {name(t)}",
@@ -84,6 +85,7 @@ internal static class PlayerOption
         ActionKind.Concede => "pay what is being asked",
         ActionKind.Refuse when c.TargetId is { } asker => $"refuse {name(asker)}",
         ActionKind.Refuse => "refuse",
+        ActionKind.DoNothing when c.OperationSequence is not null => "leave these orders unchanged",
         // Not "do nothing": the floor candidate's id is the word "nothing", and a test guards that
         // no candidate id ever reaches the player's text — a guard worth keeping even when the id
         // happens to be a plain word.

@@ -726,6 +726,14 @@ Everything in layer 2 is measured against it.
 
 ### Layer 2 onward — sketched, deliberately
 
+**028 — Delegation creates bandwidth.** Capacity prerequisite: leaders can supervise delegated work
+while executing another operation, with focused review and multiple ongoing-operation rows. This
+does **not** satisfy layer 2's gate of a reason to prefer one day's plan. Competing jobs and that
+day-plan preference proof remain candidates for **029/030**, subject to separate authorization and
+acceptance of 028 first. Rich progress requests/reports, delayed cancellation/compliance, and a
+skill-based management limit are deferred rather than implied by the capacity change. See
+`milestones/028-delegation-creates-bandwidth.md` for implementation evidence, not acceptance.
+
 The rival gang and its crew; more business owners; the police as an organisation with an arrest that
 can remove somebody from play; further operation kinds beyond extort/conceal/investigate; money with a
 sink so accumulation means something; territory worth contesting. Roughly six to eight milestones,

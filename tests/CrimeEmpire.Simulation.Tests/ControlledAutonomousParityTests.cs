@@ -466,7 +466,7 @@ public sealed class ControlledAutonomousParityTests
     /// once, in <c>Cast.cs</c>) — included anyway below since they cost nothing to carry and the
     /// point of an audit is not to trust that judgement silently.
     /// </summary>
-    private static string ComprehensiveFingerprint(World world)
+    internal static string ComprehensiveFingerprint(World world)
     {
         var sb = new StringBuilder();
         sb.Append(SimulationReplayTests.Snapshot(world)).Append('\n');
@@ -498,7 +498,7 @@ public sealed class ControlledAutonomousParityTests
                     $"commitment|{character.Id}|{c.Id}|{c.Description}|{c.ToWhomId}|{c.Since:O}|" +
                     $"{c.Weight:0.0000}\n");
 
-            var s = character.Execution.Strategy;
+            foreach (var s in character.Execution.Operations)
             // PolicyBreachDecisionMakerId is carried by SimulationReplayTests.Snapshot above: it is
             // behavioral actor identity, not scheduling noise, so both replay comparators name it.
             sb.Append(

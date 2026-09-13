@@ -74,6 +74,12 @@ public sealed class PersistentSession
         _log.Add(SessionCommand.Choose(optionId));
     }
 
+    public void ReviewOperation(string token)
+    {
+        _session.ReviewOperation(token);
+        _log.Add(SessionCommand.ReviewOperation(token));
+    }
+
     /// <summary>
     /// Writes the complete history of this session — meta plus every successful input so far — to
     /// <paramref name="path"/>. Works while ready, awaiting a choice, or resolved (milestone 027
@@ -138,6 +144,9 @@ public sealed class PersistentSession
                 break;
             case SessionCommandKind.Choose:
                 session.Choose(command.OptionToken!);
+                break;
+            case SessionCommandKind.ReviewOperation:
+                session.ReviewOperation(command.OptionToken!);
                 break;
             default:
                 throw new SaveFormatException($"unrecognised command kind '{command.Kind}' during replay.");

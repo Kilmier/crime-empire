@@ -75,6 +75,19 @@ public static class Runner
     private static PreparedDecision? Handle(World world, ScheduledEvent ev, string? controlledCharacterId)
     {
         var actor = ev.OwnerId is null ? null : world.Find(ev.OwnerId);
+        if (ev.Kind == EventKind.StrategyBlocked && ev.Payload.StrategyOwnerId is { } operationOwner)
+        {
+            var blocked = world.Find(operationOwner)?.Execution.Operations.SingleOrDefault(s =>
+                s.LocalSequence == ev.Payload.StrategySequence);
+            if (blocked is null || (blocked.DelegatedToId ?? blocked.OwnerId) != actor?.Id) return null;
+        }
+        if (ev.Payload.Note == "operation-review")
+        {
+            var reviewed = actor?.Execution.Operations.SingleOrDefault(s =>
+                s.OwnerId == ev.Payload.StrategyOwnerId && s.LocalSequence == ev.Payload.StrategySequence);
+            if (reviewed is null || reviewed.PendingReviewEventId != ev.Id) return null;
+            reviewed.PendingReviewEventId = null;
+        }
 
         switch (ev.Kind)
         {
@@ -199,7 +212,7 @@ public static class Runner
         // operation elsewhere does not hold up a review of this one. No renewal-in-place, no
         // deadline rewrite, no expired-assignment deletion — this is the smallest gate that
         // establishes the rule, nothing more.
-        if (world.Get(office.HolderId).Execution.Strategy is { } live && live.Domain == office.Domain) return;
+        if (world.Get(office.HolderId).Execution.Operations.Any(s => s.Domain == office.Domain)) return;
 
         var priority = new Priority("p-harbour-revenue", "restore the harbour tribute", office.Domain, 1.0);
         if (!org.Priorities.Any(p => p.Id == priority.Id)) org.Priorities.Add(priority);

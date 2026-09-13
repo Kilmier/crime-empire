@@ -1076,6 +1076,8 @@ public sealed class InformationTransmissionTests
             .SelectMany(c => c.Cognition.Testimony.Select(t =>
                 $"testimony|{c.Id}|{t.SenderId}|{t.Claim}|{t.AssertedStance}|{t.ClaimedBasis}|{t.At:O}")));
 
+        lines = lines.Concat(world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal)
+            .Select(c => $"operations|{c.Id}|" + System.Text.Json.JsonSerializer.Serialize(c.Execution.Operations)));
         return string.Join('\n', lines);
     }
 

@@ -5,7 +5,7 @@ using CrimeSim.Org;
 using CrimeSim.Sim;
 
 /// <summary>
-/// The harbour scenario: one organisation, one contested district, six people, two businesses.
+/// The harbour scenario: one organisation, one contested district, seven people, three businesses.
 ///
 /// Deliberately small. The question this spike answers is whether the decision pipeline produces
 /// motivated behaviour, and a bigger cast makes it harder to tell whether an odd trace came from
@@ -15,7 +15,7 @@ using CrimeSim.Sim;
 /// grievance; whether he breaks his boss's rule is a scoring outcome, and the variants exist to
 /// check that it is genuinely contingent on those inputs.
 ///
-/// <b>Why there are two businesses (milestone 007).</b> With one, the whole run had exactly one
+/// <b>Why the second business was added (milestone 007, historical account).</b> With one, the whole run had exactly one
 /// collection cycle: the grocery paid, <c>RevenueLoss</c> dropped half a point, nothing was left to
 /// tick it back over <see cref="Org.Organization"/>'s review threshold, and the last third of the
 /// simulation was a boss choosing to do nothing eleven times. Three consecutive milestones had ended
@@ -23,6 +23,9 @@ using CrimeSim.Sim;
 /// than any mechanism's fault — one line of causation has nowhere to put a second event. A second
 /// contested business keeps the organisational condition alive, which produces a second assignment,
 /// a second briefing, and a second delegation, and those are where relationships get read.
+///
+/// Milestone 028 adds a third shop, initially known to Vincent, to expose parallel execution.
+/// It does not tune the objective or promise the earlier seed-42 history still occurs.
 ///
 /// The second shop needs an owner because <c>AdvanceTribute</c> resolves a demand through the
 /// owner's own decision rather than a roll on his behalf. Sharing Marco would have been worse than
@@ -44,6 +47,7 @@ public static class Cast
     /// test rather than left to a naming coincidence.
     /// </summary>
     public const string Bakery = "dorato-bakery";
+    public const string Tailor = "ferri-tailor";
 
     public static readonly DateTime Start = new(1987, 3, 2, 8, 0, 0, DateTimeKind.Utc);
 
@@ -200,6 +204,20 @@ public static class Cast
         foreach (var c in new[] { salvatore, vincent, tommy, marco, nunzio, kane })
             world.Characters[c.Id] = c;
 
+        // M028's bounded feasibility fixture: one additional shopkeeper, using the existing
+        // baker profile without tuning a new personality to make the concurrency proof win.
+        world.Characters["paolo"] = new Character
+        {
+            Id = "paolo", Name = "Paolo Ferri", RoleTitle = "tailor", Pronouns = Pronouns.He,
+            Capabilities = new Capabilities(
+                new Dictionary<Skill, double> { [Skill.Persuasion] = 0.35, [Skill.Discretion] = 0.40 },
+                crew: 0, cash: 2600, authority: 0, districts: new[] { Harbour }),
+            Psychology = new Psychology(
+                new Dictionary<Trait, double> { [Trait.Cautious] = 0.70, [Trait.Proud] = 0.35, [Trait.Suspicious] = 0.45 },
+                new Dictionary<Drive, double>
+                { [Drive.Wealth] = 0.65, [Drive.Security] = 0.65, [Drive.Status] = 0.25, [Drive.Belonging] = 0.40 }),
+        };
+
         // ---------------------------------------------------------------- affiliations
         salvatore.Social.OrganizationId = OrgId;
         vincent.Social.OrganizationId = OrgId;
@@ -252,6 +270,14 @@ public static class Cast
         };
 
         // ---------------------------------------------------------------- institution
+        world.Businesses[Tailor] = new Business
+        {
+            Id = Tailor, Name = "Ferri's tailor shop", DistrictId = Harbour, OwnerId = "paolo",
+            MonthlyRevenue = 3100, PayingTribute = false, Resistance = 0.50,
+        };
+        vincent.Cognition.Learn(new Claim(ClaimKind.BusinessRefusesTribute, Tailor),
+            Stance.Knows, 1.0, SourceKind.Discovery, vincent.Id, Start);
+
         org.Offices.Add(new Office { Title = "capo, harbour", Domain = Harbour, Authority = 2, HolderId = "vincent" });
         org.Conditions[OrgCondition.RevenueLoss] = 0.55;
 

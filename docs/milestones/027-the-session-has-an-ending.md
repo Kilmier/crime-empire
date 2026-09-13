@@ -164,3 +164,25 @@ claims were checked against the exact commit order and the accepted review repor
 
 One focused documentation correction commit containing this appendix and the ledger/current-gate
 updates. It is unreviewed and unaccepted; it cannot record its own outcome.
+
+## Closure — milestone 027 closed by owner ruling, 2026-09-12
+
+**Appended, not rewritten.** Matt closed milestone 027 on 2026-09-12 and explicitly exempted the
+record correction `303eed0f1504c76c59671821877be9a98ed82b5e` — the commit containing the appendix
+above — from a further independent review round.
+
+What that does and does not establish:
+
+- **It is an owner closure, not an independent exact-commit review.** No independent review of
+  `303eed0`'s diff exists and none is claimed. The precedent for recording an owner exception this
+  way is `c7dd34b`.
+- **`64881a1`'s independently reviewed Class A FAIL remains the outcome for that hash**, as do every
+  earlier FAIL in this milestone's chain. Closure does not convert a historical FAIL into a PASS.
+- **The accepted P2 record defect is corrected**, and `REVIEW_LEDGER.md` now carries the chronological
+  rows for `608f05e`, `64881a1`, and `303eed0` with the reconciled checkpoint advanced to `303eed0`.
+- The Godot self-test results in this archive remain implementer-reported: the independent reviewer
+  had no Godot binary and verified the compiled project by build only. Closure does not upgrade that
+  evidence.
+
+No runtime code or test changed in this closure. The review gate that stood on the 027 record
+correction is closed and is not to be reopened.

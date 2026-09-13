@@ -207,6 +207,24 @@ public sealed class SimulationSession
         Pump(Objective.Deadline, oneEventOnly: true);
     }
 
+    /// <summary>Request an owner review, through the same occasion used by autonomous supervisors.</summary>
+    public void ReviewOperation(string operationToken)
+    {
+        RequireReady();
+        if (_controlledId is null || _controlledId != ViewpointCharacterId)
+            throw new InvalidOperationException("Review requires control of the viewpoint character.");
+        var actor = _world.Get(_controlledId);
+        var operation = actor.Execution.Operations.SingleOrDefault(s => $"work-{s.LocalSequence}" == operationToken)
+            ?? throw new ArgumentException("This operation is not an active order of yours.", nameof(operationToken));
+        if (operation.PendingReviewEventId is { } previous)
+            _world.Queue.Cancel(previous, "owner requested an earlier review");
+        operation.PendingReviewEventId = _world.Queue.Schedule(_clock, EventKind.RoleReview, actor.Id,
+            "review standing operation orders", new EventPayload
+            { Note = "operation-review", StrategyOwnerId = actor.Id, StrategySequence = operation.LocalSequence }).Id;
+        _runUntil = null;
+        Pump(_clock, oneEventOnly: false);
+    }
+
     /// <summary>Runs the calendar forward by whole days from the current date.</summary>
     public void AdvanceDays(int days)
     {

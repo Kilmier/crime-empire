@@ -329,6 +329,7 @@ public sealed class SimulationReplayTests
             // different incident on the instance would leave the concealer holding a different view
             // of his own exposure and score every later report from it. Deliberately absent from
             // BehavioralSnapshot below, which excludes every field derived from a monotonic counter.
+            lines.Add($"operations|{character.Id}|" + System.Text.Json.JsonSerializer.Serialize(character.Execution.Operations));
             lines.Add($"character|{character.Id}|{character.Tier}|{character.DecisionCount}|" +
                       $"{character.StrategyCount}|{character.Execution.Strategy?.Kind}|" +
                       $"{character.Execution.Strategy?.OwnerId}|{character.Execution.Strategy?.LocalSequence}|" +
@@ -433,6 +434,11 @@ public sealed class SimulationReplayTests
                       string.Join(",", character.Execution.AttemptedConcealments.Select(a =>
                           $"{a.Kind}:{a.Subject}:{a.Object}")) +
                       "|" + string.Join(",", character.Execution.DelegatedExecutorIds));
+
+            foreach (var operation in character.Execution.Operations)
+                lines.Add($"operation|{operation.OwnerId}|{operation.LocalSequence}|{operation.Kind}|" +
+                    $"{operation.TargetId}|{operation.Method}|{operation.StepIndex}|{operation.NextAdvanceOrdinal}|" +
+                    $"{operation.DelegatedToId}|{operation.PolicyBreachDecisionMakerId}|{operation.FailedAttempts}");
 
             // As above, minus the grievance timestamp: a DateTime is not derived from any global
             // counter, but it is free text as far as this comparator is concerned and the narrower

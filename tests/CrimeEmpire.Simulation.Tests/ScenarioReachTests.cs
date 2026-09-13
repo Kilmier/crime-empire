@@ -10,7 +10,8 @@ namespace CrimeEmpire.Simulation.Tests;
 
 /// <summary>
 /// Milestone 007. Three things had to become true together for the mechanisms built in 004–006 to
-/// show up in a natural scenario, and each of the three is pinned here.
+/// show up in a natural scenario. M028 changes that natural history: the conflict/channel
+/// checks now explicitly stage their inputs, while separate tests measure the current natural run.
 ///
 /// First, concealment stops being re-priced as a fresh gain every time it is repeated: what a report
 /// buys is the protection it did not already have. Second, being re-told something you have since
@@ -343,14 +344,15 @@ public sealed class ScenarioReachTests
         Assert.Null(cognition.Receive(account, "salvatore", t0.AddDays(28)).Conflict);
     }
 
-    /// <summary>
-    /// The property above holds in the accepted run and is not merely stageable: Salvatore issues
-    /// three identical briefings about the grocery, and they do not all count.
-    /// </summary>
+    /// <summary>Explicit stale accounts exercise conflict deduplication through Reporting.Deliver; not a natural-run claim.</summary>
     [Fact]
-    public void The_accepted_run_shows_a_repeated_briefing_counting_once_per_movement()
+    public void Repeated_stale_briefings_count_once_through_the_production_report_channel()
     {
-        var world = Run("baseline");
+        // M028: the old natural repeated-briefing witness no longer occurs. Stage the account,
+        // not the conflict calculation, and deliver its repetition through Reporting as well.
+        var world = Cast.Build(42, "baseline");
+        AccountScenario.ContradictVincent(world);
+        Reporting.Deliver(world, world.Reports.Last() with { Id = world.NextReportId(), At = world.Now.AddDays(1) }, world.Get("vincent"));
         var vincent = world.Get("vincent");
         var refusing = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
 
@@ -382,7 +384,7 @@ public sealed class ScenarioReachTests
     {
         var world = Cast.Build(42, "baseline");
         Assert.Equal(
-            new[] { Cast.Grocery, Cast.Bakery },
+            new[] { Cast.Grocery, Cast.Bakery, Cast.Tailor },
             world.BusinessesIn(Cast.Harbour).Select(b => b.Id).ToArray());
     }
 
@@ -403,16 +405,13 @@ public sealed class ScenarioReachTests
         Assert.Null(salvatore.Cognition.Find(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Bakery)));
     }
 
-    /// <summary>
-    /// The first collection cycle is unchanged by the second shop's existence: same target, same
-    /// escalation, same delegation. The fixture gained room without gaining a different opening.
-    /// </summary>
+    /// <summary>Measure the first selected target, without treating a start as proof of collection.</summary>
     [Theory]
     [InlineData("baseline")]
     [InlineData("watchful-boss")]
     [InlineData("disloyal-vincent")]
     [InlineData("resentful-tommy")]
-    public void The_first_collection_cycle_still_runs_on_the_grocery(string variant)
+    public void The_first_target_is_measured_without_promising_collection(string variant)
     {
         var world = Run(variant);
 
@@ -422,24 +421,21 @@ public sealed class ScenarioReachTests
             .Select(d => d.Chosen!.Candidate.TargetId)
             .FirstOrDefault();
 
-        Assert.Equal(Cast.Grocery, firstStrategy);
-        Assert.True(world.Businesses[Cast.Grocery].PayingTribute);
+        // M028: the choice is not a promise of collection; parallel work can remain blocked.
+        Assert.Equal(variant == "disloyal-vincent" ? Cast.Tailor : Cast.Grocery, firstStrategy);
     }
 
-    /// <summary>
-    /// The second organisational review happens, which is the whole reason the second shop is there.
-    /// Without a business still short, the condition falls below the review threshold on collection
-    /// and the last third of the run is a boss deciding nothing.
-    /// </summary>
+    /// <summary>A live sibling keeps the shared assignment open despite continued shortfall.</summary>
     [Fact]
-    public void The_shortfall_survives_the_first_collection_and_produces_a_second_briefing()
+    public void The_shortfall_does_not_duplicate_a_still_live_assignment()
     {
         var world = Run("baseline");
 
         var briefings = world.TruthLog.Where(e => e.Kind == "assignment").ToList();
-        Assert.True(briefings.Count >= 2,
-            $"only {briefings.Count} assignment(s) issued — the organisational condition died with " +
-            "the first collection and the scenario has no second act");
+        // M028: a still-live delegated operation keeps the assignment gate closed.
+        Assert.Single(briefings);
+        Assert.True(world.Org.Condition(OrgCondition.RevenueLoss) >= Organization.SignificantRevenueLoss);
+        Assert.Contains(world.Get("vincent").Execution.Operations, s => s.DelegatedToId == "tommy");
     }
 
     // ================================================================ the milestone's own claims
@@ -459,50 +455,16 @@ public sealed class ScenarioReachTests
     // in CausalFeedbackTests.cs's "pending vs. declined" section and ControlledAutonomousParityTests.cs,
     // where only the originating incident is staged and the exchange itself runs unstaged.
 
-    /// <summary>
-    /// <b>The milestone's success bar.</b> A perceived account conflict moved a relationship, and a
-    /// decision taken afterwards is scored differently because of it.
-    ///
-    /// Two arms, both through the production scorer. The live arm takes the real post-conflict world
-    /// and reads the component off a candidate that was actually weighed. The counterfactual arm puts
-    /// the relationship back where it started — nothing else changes, the same beliefs, the same
-    /// candidate, the same everything — and scores it again. The delta is computed by
-    /// <see cref="Utility"/>, never re-implemented here, which is what stops this being a test that
-    /// asserts against a copy of the rule it is checking.
-    ///
-    /// This is decision-relevance, and it is deliberately all that is claimed. Whether the difference
-    /// is large enough to change which candidate wins is a separate question, measured by
-    /// <see cref="The_relationship_change_is_not_large_enough_to_change_a_choice"/> and answered no.
-    ///
-    /// <b>Moved off seed 42, 2026-09-09, by the <see cref="Rng.ForOccasion"/> correction — traced, not
-    /// assumed.</b> At seed 42 under the corrected mixer, the first <c>ReportToSuperior</c>-to-
-    /// Salvatore candidate scored after this same conflict is now a deceptive one — "tell salvatore it
-    /// did not happen" — rather than a candid report. That candidate's relationship math is genuinely
-    /// different in kind: what a lie costs scales with how much trust there is to betray, so *lower*
-    /// trust from being contradicted makes the lie look relatively *cheaper*, not more expensive,
-    /// which inverts this test's direction for a reason that has nothing to do with the conflict
-    /// mechanism being wrong. Confirmed directly (component-by-component) before moving the seed,
-    /// not inferred from the assertion failing. Seed 199 — already in use above for the identical
-    /// underlying reason, Vincent's own discovery roll landing — reaches an honest, undisguised
-    /// candid report at this same decision, which is the case the milestone's own words describe
-    /// ("reports to his boss price standing off loyalty").
-    /// </summary>
+    /// <summary>Stage a real account conflict, then compare the same candid report through Utility before and after restoring trust. This is mechanism coverage, not current natural emergence.</summary>
     [Fact]
     public void The_conflict_changes_what_a_later_decision_is_scored_on()
     {
-        var world = Run("baseline", seed: AltSeedWhereVincentAsksTommy);
+        // M028: explicit stale account; scoring remains the real Utility path.
+        var world = Cast.Build(42, "baseline");
+        AccountScenario.ContradictVincent(world);
         var vincent = world.Get("vincent");
-
-        var conflict = world.AccountConflicts
-            .First(c => c.ListenerId == "vincent" && c.Conflict.SpeakerId == "salvatore");
-
-        // A candidate actually weighed after the conflict, whose score reads the relationship it
-        // moved. Reports to his boss price standing off loyalty, and loyalty derives from trust.
-        var later = world.Decisions
-            .Where(d => d.ActorId == "vincent" && d.At >= conflict.At)
-            .SelectMany(d => d.Scored)
-            .First(s => s.Candidate.Kind == ActionKind.ReportToSuperior
-                        && s.Candidate.TargetId == "salvatore");
+        var later = new Candidate("report:salvatore", ActionKind.ReportToSuperior, "test", "report in")
+        { TargetId = "salvatore", Domain = Cast.Harbour, Candor = ReportCandor.Candid };
 
         double afterTrust = vincent.Social.Toward("salvatore").Trust;
         Assert.True(afterTrust < 0.45, $"the conflict did not move trust: it stands at {afterTrust:0.000}");
@@ -521,7 +483,7 @@ public sealed class ScenarioReachTests
         // folded in the Belonging share of loyalty, which is a drive rather than anything owed to
         // Salvatore, so the figure it reported was never purely relational.
         double Relationship() => Utility
-            .Score(later.Candidate, vincent.View, vincent.Psychology, perceived, agenda, rng,
+            .Score(later, vincent.View, vincent.Psychology, perceived, agenda, rng,
                 Strategies.CurrentExecution(world, vincent))
             .RelationshipNet();
 
@@ -540,52 +502,16 @@ public sealed class ScenarioReachTests
             $"but the component went from {withoutConflict:0.000} to {withConflict:0.000}");
     }
 
-    /// <summary>
-    /// And the honest other half of it. The trust movement is real and reaches a score; it does not
-    /// flip the winner of the first decision that follows it, and nothing was tuned either way.
-    ///
-    /// <b>Rewritten in milestone 011, and the reason is the ledger's own recurring pattern.</b> This
-    /// asserted <c>winner - runnerUp &gt; 0.5</c> — a *proxy* for "the relationship term did not
-    /// decide this", on the reasoning that the term is worth about a tenth of a point and the margin
-    /// was an order of magnitude wider. Milestone 011's allegation route reordered the run, the test
-    /// landed on a different decision whose margin is 0.037, and it failed — while the relationship
-    /// term at that decision is **not** choice-changing: without any relationship state the same
-    /// candidate still wins, and `--compare`'s own figure for the variant is unchanged at 2.
-    ///
-    /// So the proxy was reporting a change that had not happened, and could equally have stayed
-    /// silent about one that had — a wide margin does not mean the term was irrelevant, it means the
-    /// gap was wide. *Is this assertion checking a link the simulation actually records, or one the
-    /// test is inferring?* The simulation records the real thing:
-    /// <see cref="ScoreBreakdown.TotalWithoutRelationships"/>, which is what the runner's own
-    /// counterfactual uses. This now re-ranks through that and asserts the winner is unchanged,
-    /// which is both stronger and immune to the run being reordered.
-    ///
-    /// A later change that genuinely made the term choice-changing here still has to come and say so.
-    /// </summary>
+    /// <summary>Re-rank actual current-run decisions without relationship terms; at least one winner changes.</summary>
     [Fact]
-    public void The_relationship_change_now_decides_the_next_choice_after_the_duplicate_cycle_is_removed()
+    public void Relationship_components_change_at_least_one_natural_choice()
     {
+        // M028 retires the specific post-contradiction winner: that contradiction no longer
+        // occurs naturally. Measure actual re-ranking, not a margin or an invented replacement.
         var world = Run("baseline");
-
-        var conflict = world.AccountConflicts
-            .First(c => c.ListenerId == "vincent" && c.Conflict.SpeakerId == "salvatore");
-
-        var decision = world.Decisions
-            .First(d => d.ActorId == "vincent" && d.At >= conflict.At && d.Scored.Count > 1);
-
-        // Some relationship state was actually read, or this decision proves nothing either way.
-        Assert.Contains(decision.Scored, s => s.RelationshipGross() > 1e-9);
-
-        // Re-ranked with every relationship contribution removed, exactly as `--compare` does it.
-        var withoutRelationships = decision.Scored
-            .OrderByDescending(s => s.TotalWithoutRelationships())
-            .ThenBy(s => s.Candidate.Id, StringComparer.Ordinal)
-            .First();
-
-        Assert.False(ReferenceEquals(withoutRelationships, decision.Scored[0]));
-        Assert.Equal("approval:salvatore:no-violence-harbour", decision.Scored[0].Candidate.Id);
-        Assert.StartsWith("corroborate:tommy:PolicyIssued", withoutRelationships.Candidate.Id,
-            StringComparison.Ordinal);
+        Assert.Contains(world.Decisions, d => d.Scored.Count > 1 &&
+            !ReferenceEquals(d.Scored[0], d.Scored.OrderByDescending(s => s.TotalWithoutRelationships())
+                .ThenBy(s => s.Candidate.Id, StringComparer.Ordinal).First()));
     }
 
     // ================================================================ D4 — honest distinctness
@@ -676,7 +602,7 @@ public sealed class ScenarioReachTests
             .Distinct()
             .Count();
 
-        Assert.Equal(3, distinct);
+        Assert.Equal(4, distinct);
     }
 
     // ================================================================ helpers

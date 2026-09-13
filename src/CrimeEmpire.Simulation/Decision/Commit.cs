@@ -50,13 +50,12 @@ public static class Commit
                         $"'{actor.Id}' cannot start {c.Strategy}; he is currently carrying " +
                         $"{busyWith.Label} for somebody else. One operation at a time.");
 
-                // Fail closed: an owner may not overwrite his own still-live delegated operation by
-                // starting something else without explicitly calling it off first (AbandonStrategy).
-                // Milestone 024's sixth correction.
-                if (actor.Execution.Strategy is { DelegatedToId: not null } delegatedAway)
+                // Supervision leaves personal execution free, but must not duplicate the owner's
+                // existing operation on this target. Independent actors are not globally reserved.
+                if (c.Strategy != StrategyKind.ConcealIncident && actor.Execution.Operations.Any(
+                        s => s.Kind == c.Strategy && s.TargetId == c.TargetId))
                     throw new SimulationInvariantException(
-                        $"'{actor.Id}' cannot start {c.Strategy} while {delegatedAway.Label} is " +
-                        "still delegated and live; call it off first.");
+                        $"'{actor.Id}' already owns {c.Strategy} on {c.TargetId}.");
 
                 // Replacing whatever instance is currently running, if any — legitimate (a
                 // genuinely different incident, a new target) but not something that may orphan the
@@ -116,9 +115,14 @@ public static class Commit
 
             case ActionKind.ContinueStrategy:
             {
+                if (ctx.ReviewOperation is not null)
+                {
+                    Strategies.ScheduleReview(world, OwnedOperation(actor, c));
+                    return "left the operation's orders unchanged";
+                }
                 // Belongs to whoever is currently executing — the delegate, once there is one.
                 // Milestone 024's sixth correction; see GeneratorContext.CurrentExecution.
-                var s = ctx.CurrentExecution!;
+                var s = ExecutedOperation(world, actor, c, ctx);
 
                 // Carrying on means leaving whatever is already scheduled alone, not replacing it
                 // with a fresh one at a fresh interval. ScheduleNextStep always cancels-and-
@@ -139,7 +143,7 @@ public static class Commit
             {
                 // Belongs to whoever is currently executing — the delegate, once there is one.
                 // Milestone 024's sixth correction; see GeneratorContext.CurrentExecution.
-                var s = ctx.CurrentExecution!;
+                var s = ExecutedOperation(world, actor, c, ctx);
                 var was = s.Method;
                 s.Method = c.Method ?? s.Method;
                 // Only when this alter genuinely changes which prohibited method is operative —
@@ -166,7 +170,7 @@ public static class Commit
 
             case ActionKind.DelegateStrategy:
             {
-                var s = actor.Execution.Strategy!;
+                var s = OwnedOperation(actor, c);
 
                 // Fail closed, mirroring the ConcealIncident guard above: Filters/Generators is
                 // expected to have already refused a candidate targeting a busy subordinate — see
@@ -179,6 +183,13 @@ public static class Commit
                         "strategy or is already carrying delegated work for somebody else. The " +
                         "one-operation-per-executor rule must be enforced before Commit, not here.");
 
+                if (c.IsOperationReview && (!Pipeline.SubordinatesOf(world, actor).Contains(c.TargetId!)
+                    || !Acquaintance.KnownTo(world, actor).Contains(c.TargetId!)))
+                    throw new SimulationInvariantException("Delegation requires an acquainted direct subordinate.");
+                bool freedPersonalExecution = s.DelegatedToId is null;
+                if (s.DelegatedToId is { } former)
+                    world.Get(former).Execution.Commitments.RemoveAll(
+                        entry => entry.Id == $"strategy:{s.OwnerId}:{s.LocalSequence}");
                 s.DelegatedToId = c.TargetId;
                 var sub = world.Get(c.TargetId!);
 
@@ -227,6 +238,10 @@ public static class Commit
                     $"strategy:{s.OwnerId}:{s.LocalSequence}", $"handle {s.Label} for {actor.Name}", actor.Id, world.Now, 0.7));
 
                 Strategies.ScheduleNextStep(world, s, $"{s.Label}: {sub.Name} takes it on");
+                Strategies.ScheduleReview(world, s);
+                if (freedPersonalExecution)
+                    world.Queue.Schedule(world.Now, EventKind.RoleReview, actor.Id,
+                        "delegation freed his hands", new EventPayload { Note = "hands-free" });
                 reconsideration.Add($"{sub.Name} reports back or fails to");
                 return $"handed {s.Label} to {sub.Name}";
             }
@@ -237,7 +252,7 @@ public static class Commit
                 // Milestone 024's sixth correction; see GeneratorContext.CurrentExecution. Explicitly
                 // reschedules exactly one step, which is the whole point: the operation is
                 // preserved, not silently dropped the way an unhandled DoNothing would leave it.
-                var s = ctx.CurrentExecution;
+                var s = c.OperationSequence is null ? ctx.CurrentExecution : ExecutedOperation(world, actor, c, ctx);
                 if (s is null) return "let matters sit";
                 Strategies.ScheduleNextStep(world, s, $"{s.Label}: picked back up after a pause", TimeSpan.FromDays(7));
                 reconsideration.Add("the delay makes things worse");
@@ -246,11 +261,11 @@ public static class Commit
 
             case ActionKind.AbandonStrategy:
             {
-                var s = actor.Execution.Strategy!;
+                var s = OwnedOperation(actor, c);
                 if (s.PendingStepEventId is { } pending)
                     world.Queue.Cancel(pending, $"{actor.Name} abandoned {s.Label}");
-                actor.Execution.Strategy = null;
-                actor.Execution.Intention = null;
+                actor.Execution.Operations.Remove(s);
+                if (actor.Execution.Strategy is null) actor.Execution.Intention = null;
                 Strategies.RemoveCommitments(world, s);
                 world.Queue.Schedule(world.Now.AddDays(10), EventKind.RoleReview, actor.Id,
                     "periodic review of his own patch");
@@ -378,6 +393,11 @@ public static class Commit
             }
 
             default:
+                if (ctx.ReviewOperation is { } reviewed)
+                {
+                    Strategies.ScheduleReview(world, reviewed);
+                    return "left the operation's orders unchanged";
+                }
                 // Only come back to someone who has something standing to come back to. Waking a
                 // character on a timer to decide nothing is exactly the fast-forward cost the
                 // event model is supposed to avoid.
@@ -386,5 +406,24 @@ public static class Commit
                         "his patch came up for review again");
                 return "did nothing";
         }
+    }
+
+    private static StrategyInstance ExecutedOperation(World world, Character actor, Candidate candidate, GeneratorContext ctx)
+    {
+        if (candidate.OperationSequence is null)
+            return ctx.CurrentExecution ?? throw new SimulationInvariantException("No current execution.");
+        var s = Strategies.CurrentExecution(world, actor);
+        if (s is null || s.OwnerId != candidate.OperationOwnerId || s.LocalSequence != candidate.OperationSequence)
+            throw new SimulationInvariantException("The selected operation is no longer executed by this actor.");
+        return s;
+    }
+
+    private static StrategyInstance OwnedOperation(Character actor, Candidate candidate)
+    {
+        var s = candidate.OperationSequence is { } sequence
+            ? actor.Execution.Operations.SingleOrDefault(s => s.LocalSequence == sequence
+                && s.OwnerId == candidate.OperationOwnerId)
+            : actor.Execution.Strategy;
+        return s ?? throw new SimulationInvariantException("The selected owned operation is no longer active.");
     }
 }

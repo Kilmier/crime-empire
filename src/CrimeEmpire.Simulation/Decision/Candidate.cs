@@ -39,6 +39,9 @@ public sealed record Candidate(
     public StrategyKind? Strategy { get; init; }
     public CoercionMethod? Method { get; init; }
     public string? Domain { get; init; }
+    public string? OperationOwnerId { get; init; }
+    public int? OperationSequence { get; init; }
+    public bool IsOperationReview { get; init; }
 
     /// <summary>
     /// How honest this report would be. Set only on <see cref="ActionKind.ReportToSuperior"/>.

@@ -270,12 +270,41 @@ only by which way the account points.
 - **`Domain/Relations.cs` remains the only code that can change relationship state.** No new mutation
   surface was opened; `RecordAccountAgreement` is a second method on the same exclusive API.
 
+## Operation ownership and execution — milestone 028, Matt's rulings
+
+- **Supervision is distinct from execution.** An actor may own multiple operations but executes at
+  most one, whether personally commissioned or delegated by another actor. Available direct
+  subordinates supply initial capacity; no additional skill/trait management cap is settled here.
+- **Identity and responsibility survive handover.** The commissioning owner and owner-local sequence
+  identify an operation throughout its life. Reassignment changes its executor, not its progress,
+  ownership, or recorded author of a policy breach. Existing attribution remains; this does not
+  authorize new generic failure penalties for either participant.
+- **Immediate cancellation is the prototype.** A selected owner's order can be cancelled through
+  the shared decision pipeline; only that operation's pending work and commitments are released.
+  Commands travelling in flight and a subordinate choosing whether to comply are deferred.
+- **Bounded prospective selection remains.** Generate one prospective tribute target, excluding
+  same-kind operations this actor already owns; other actors' unknown operations do not reserve a
+  target globally. The six-candidate attention cap and coercion-method fan-out remain unchanged.
+- **Orders are not telemetry.** An owner may see their issued order, target and assigned executor,
+  but a delegate's private progress, changed method and failed attempts are not automatically
+  disclosed. Existing report channels remain; richer progress inquiries are separate work.
+
+Source: Matt's milestone-028 authorization and follow-up rulings in the implementation task;
+implementation and prototype timing are recorded in `milestones/028-delegation-creates-bandwidth.md`.
+
 ## The player boundary — settled by milestone 009
 
 See `milestones/009-godot-playable-shell.md`. What is settled is where a person enters the decision
 pipeline and what an interface may be given; the interface itself is deliberately provisional and
 settles nothing about presentation.
 
+- **Focused operation review explicitly considers cancellation (milestone 028, Matt's ruling
+  in the implementation task).** When an actor deliberately reviews an operation they own,
+  its feasible cancellation receives a place in the bounded candidate set even if personality
+  would normally suppress abandonment. This applies identically to player and NPC reviews:
+  personality still affects utility/preference, knowledge and feasibility filters still apply,
+  and the six-candidate cap is unchanged. Ordinary unfocused deliberation is unchanged by this
+  exception. This is not authority to bypass salience for arbitrary player actions.
 - **A player is a preference, not a second action implementation.** Deliberation splits into
   `Pipeline.Prepare` (trigger, beliefs, agenda, bounded generation, salience/knowledge/capability/
   access rejection, scoring) and `Pipeline.Resolve` (commit, schedule, record). `Pipeline.Deliberate`

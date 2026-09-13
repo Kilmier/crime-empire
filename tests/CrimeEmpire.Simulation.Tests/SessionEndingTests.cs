@@ -29,9 +29,9 @@ public sealed class SessionEndingTests
     }
 
     [Theory]
-    [InlineData("baseline", ObjectiveOutcome.ObjectiveUnmet, 0.90)]
-    [InlineData("cautious-vincent", ObjectiveOutcome.ObjectiveMet, 0.15)]
-    public void Natural_watch_only_runs_reach_the_authorized_opposite_results(
+    [InlineData("baseline", ObjectiveOutcome.ObjectiveUnmet, 1.0)]
+    [InlineData("cautious-vincent", ObjectiveOutcome.ObjectiveUnmet, 1.0)]
+    public void Natural_watch_only_runs_record_the_untuned_parallel_scenario_results(
         string variant,
         ObjectiveOutcome expected,
         double expectedLoss)

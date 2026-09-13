@@ -481,7 +481,9 @@ public sealed class RelationshipReaderTests
     [Fact]
     public void The_diagnostic_reports_components_the_reason_list_drops()
     {
-        var world = Run("baseline");
+        // M028: explicit production-channel conflict; no claim about natural stale briefings.
+        var world = Cast.Build(42, "baseline");
+        AccountScenario.ContradictVincent(world);
         var vincent = world.Get("vincent");
 
         var conflict = world.AccountConflicts

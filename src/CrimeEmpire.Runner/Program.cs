@@ -114,7 +114,7 @@ if (compare)
         Console.WriteLine($"  {"",-18} rel. read:  {relationshipRead} decision(s) weighed relationship state");
         Console.WriteLine($"  {"",-18} rel. chose: {channelDecided} decision(s) would have chosen differently without it");
         Console.WriteLine($"  {"",-18} violence:   {(violence.Count == 0 ? "none" : $"{violence.Count} incident(s)")}");
-        bool breached = violence.Count > 0 || vincent.Execution.Strategy?.BreachedPolicyId is not null;
+        bool breached = violence.Count > 0 || vincent.Execution.Operations.Any(s => s.BreachedPolicyId is not null);
         Console.WriteLine($"  {"",-18} policy:     {(breached ? "breached" : "held")}");
         Console.WriteLine($"  {"",-18} grocery:    {(grocery.PayingTribute ? "paying" : "not paying")}, resistance {grocery.Resistance:0.00}");
         Console.WriteLine($"  {"",-18} bakery:     {(bakery.PayingTribute ? "paying" : "not paying")}, resistance {bakery.Resistance:0.00}");

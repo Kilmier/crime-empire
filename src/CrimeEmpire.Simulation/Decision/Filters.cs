@@ -10,6 +10,10 @@ using CrimeSim.Domain;
 /// </summary>
 public static class Filters
 {
+    private static bool FocusedCancellation(GeneratorContext ctx, Candidate c)
+        => ctx.ReviewOperation is { } reviewed && c.IsOperationReview
+            && c.Kind == ActionKind.AbandonStrategy && c.OperationOwnerId == reviewed.OwnerId
+            && c.OperationSequence == reviewed.LocalSequence;
     public sealed record Result(
         List<Candidate> Passed,
         List<Rejection> Rejected);
@@ -41,13 +45,13 @@ public static class Filters
                 continue;
             }
 
-            // Milestone 024's sixth correction: an owner may not silently overwrite his own still-live
-            // delegated operation by starting something else — he must call it off explicitly
-            // (AbandonStrategy) first. Commit.StartStrategy fails closed on the identical condition.
-            if (ctx.Actor.Execution.Strategy is { DelegatedToId: not null } delegatedAway)
+            // Exclude this owner's existing target, not other actors' unknown operations.
+            // Supervision itself does not occupy the owner's personal execution slot.
+            if (ctx.Actor.Execution.Operations.Any(s => s.Kind == c.Strategy && s.TargetId == c.TargetId)
+                && c.Strategy != StrategyKind.ConcealIncident)
             {
                 rejected.Add(new Rejection(c, RejectionStage.Redundancy,
-                    $"{ctx.Actor.Name} would have to call off {delegatedAway.Label} first"));
+                    $"{ctx.Actor.Name} already has an operation on that target"));
                 redundant.Add(c.Id);
                 continue;
             }
@@ -104,6 +108,7 @@ public static class Filters
             if (redundant.Contains(c.Id)) continue;
 
             double s = salience.For(c);
+            if (FocusedCancellation(ctx, c)) s = Math.Max(s, SalienceProfile.Threshold);
             if (s < SalienceProfile.Threshold)
                 rejected.Add(new Rejection(c, RejectionStage.Salience, $"it did not occur to {ctx.Actor.Name} (salience {s:0.00})"));
             else
@@ -111,7 +116,8 @@ public static class Filters
         }
 
         var considered = salient
-            .OrderByDescending(x => x.Score)
+            .OrderByDescending(x => FocusedCancellation(ctx, x.Candidate))
+            .ThenByDescending(x => x.Score)
             .ThenBy(x => x.Candidate.Id, StringComparer.Ordinal)
             .ToList();
 

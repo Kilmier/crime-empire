@@ -178,6 +178,7 @@ public static class SaveStore
     {
         SessionCommandKind.AdvanceDays => command.Days!.Value.ToString(CultureInfo.InvariantCulture),
         SessionCommandKind.Choose => command.OptionToken,
+        SessionCommandKind.ReviewOperation => command.OptionToken,
         _ => null,
     };
 
@@ -237,6 +238,7 @@ public static class SaveStore
                     SessionCommandKind.StepEvent => SessionCommand.StepEvent(),
                     SessionCommandKind.AdvanceDays => ParseAdvanceDays(path, ordinal, arg),
                     SessionCommandKind.Choose => ParseChoose(path, ordinal, arg),
+                    SessionCommandKind.ReviewOperation => SessionCommand.ReviewOperation(ParseChoose(path, ordinal, arg).OptionToken!),
                     _ => throw new SaveFormatException(
                         $"'{path}' has an unrecognised command kind '{kindText}' at ordinal {ordinal}."),
                 });

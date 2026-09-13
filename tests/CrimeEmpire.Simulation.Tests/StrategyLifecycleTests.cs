@@ -300,6 +300,7 @@ public sealed class StrategyLifecycleTests
         var ctx = MinimalContext(world, vincent);
         var abandon = new Candidate($"abandon:{s.Kind}:{s.TargetId}", ActionKind.AbandonStrategy, "test", "drop it")
         {
+            OperationOwnerId = s.OwnerId, OperationSequence = s.LocalSequence,
             TargetId = s.TargetId,
             Strategy = s.Kind,
             Domain = s.Domain,

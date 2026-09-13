@@ -75,10 +75,10 @@ public sealed record GeneratorContext(
     // has delegated a live instance away is correctly null here — he is no longer its executor, and
     // FromCommitment must not offer him a candidate to continue or alter work that is no longer
     // his to run merely because the instance still sits on his own field. Deliberately distinct
-    // from ctx.Actor.Execution.Strategy, which stays the owner-only read DelegateStrategy and
-    // AbandonStrategy generation still need (delegate-again is not authorized, and neither is
-    // offering Abandon to a delegate, in this correction).
-    StrategyInstance? CurrentExecution);
+    // from ctx.Actor.Execution.Strategy, the owned personal operation used by ordinary delegation
+    // and abandonment. Focused review selects one owned operation, including supervised work.
+    StrategyInstance? CurrentExecution,
+    StrategyInstance? ReviewOperation = null);
 
 /// <summary>
 /// The bounded set of proposers. The shared action vocabulary never becomes a universal menu:
@@ -89,6 +89,7 @@ public static class Generators
 {
     public static List<Candidate> GenerateAll(GeneratorContext ctx)
     {
+        if (ctx.ReviewOperation is { } reviewed) return FromOperationReview(ctx, reviewed).ToList();
         var all = new List<Candidate>();
         all.AddRange(FromCommitment(ctx));
         all.AddRange(FromResponsibility(ctx));
@@ -124,7 +125,38 @@ public static class Generators
                         || c.TargetId is null
                         || c.AboutClaim is not { } about
                         || asked.Add((c.Kind, c.TargetId, about)))
+            .Select(c => BindOperation(ctx, c))
             .ToList();
+    }
+
+    private static Candidate BindOperation(GeneratorContext ctx, Candidate c)
+    {
+        var s = c.Kind switch
+        {
+            ActionKind.ContinueStrategy or ActionKind.AlterStrategy or ActionKind.PostponeStrategy => ctx.CurrentExecution,
+            ActionKind.DelegateStrategy or ActionKind.AbandonStrategy => ctx.Actor.Execution.Strategy,
+            _ => null,
+        };
+        return s is null ? c : c with { OperationOwnerId = s.OwnerId, OperationSequence = s.LocalSequence };
+    }
+
+    private static IEnumerable<Candidate> FromOperationReview(GeneratorContext ctx, StrategyInstance s)
+    {
+        // Orders are the owner's knowledge. Do not read a delegate's progress or changed method.
+        var cancel = new Candidate($"abandon:operation:{s.LocalSequence}", ActionKind.AbandonStrategy,
+            nameof(FromOperationReview), $"call off {s.Kind} at {s.TargetId}")
+        { TargetId = s.TargetId, Strategy = s.Kind, Domain = s.Domain,
+          OperationOwnerId = s.OwnerId, OperationSequence = s.LocalSequence, IsOperationReview = true };
+        yield return cancel;
+        yield return cancel with { Id = $"keep:operation:{s.LocalSequence}", Kind = ActionKind.ContinueStrategy,
+            Description = $"leave the orders for {s.TargetId} unchanged" };
+        var available = ctx.SubordinateIds.Intersect(ctx.AcquaintedIds).Intersect(ctx.AvailableSubordinateIds)
+            .OrderBy(id => id, StringComparer.Ordinal).ToList();
+        foreach (var sub in available)
+            yield return cancel with { Id = $"reassign:operation:{s.LocalSequence}:{sub}",
+                Kind = ActionKind.DelegateStrategy, TargetId = sub, RequiredCrew = 1,
+                ComparingExecutors = available.Count > 1,
+                Description = $"have {sub} take responsibility for {s.Kind} at {s.TargetId}" };
     }
 
     // ---------------------------------------------------------------- current intention
@@ -260,6 +292,8 @@ public static class Generators
 
         var refusing = ctx.Perceived.OfKind(ClaimKind.BusinessRefusesTribute)
                                     .Select(r => r.Claim.Subject)
+                                    .Where(t => !ctx.Actor.Execution.Operations.Any(s => s.Kind == StrategyKind.SecureTribute && s.TargetId == t))
+                                    .OrderBy(t => t, StringComparer.Ordinal)
                                     .FirstOrDefault();
 
         string? mark = refusing;
@@ -290,6 +324,7 @@ public static class Generators
             if (ctx.Perceived.Holds(gap))
             {
                 mark = ctx.VisibleTargets.FirstOrDefault(t =>
+                    !ctx.Actor.Execution.Operations.Any(s => s.Kind == StrategyKind.SecureTribute && s.TargetId == t) &&
                     ctx.Perceived.Position(new Claim(ClaimKind.BusinessRefusesTribute, t))?.Stance
                         != Stance.Rejects);
                 if (mark is not null)

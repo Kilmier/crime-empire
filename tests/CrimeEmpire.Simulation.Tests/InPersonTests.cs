@@ -296,6 +296,7 @@ public sealed class InPersonTests
         Choose(session, "carry on getting Bellini's grocery to pay");
         Choose(session, "hand it to Tommy Nardo");
         session.AdvanceDays(15);
+        while (session.Status == SessionStatus.AwaitingChoice) session.ResolveAutomatically();
 
         var tommy = session.World.Get("tommy");
         var vincent = session.World.Get("vincent");

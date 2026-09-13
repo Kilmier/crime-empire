@@ -138,16 +138,9 @@ public sealed class CausalFeedbackTests
         Assert.Contains(snapshot.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
     }
 
-    /// <summary>
-    /// Once the delegated collection reaches Vincent as his own discovery, his autonomous report
-    /// includes a rejection of the exact <c>BusinessRefusesTribute</c> claim Salvatore asked about.
-    /// That resolves the request through the established exact-claim rule. This used to assert the
-    /// request stayed open because the later report carried only <c>TributeCollected</c>; Matt's
-    /// double-payment correction made the state change itself durable and reportable, so that premise
-    /// is no longer true.
-    /// </summary>
+    /// <summary>The current natural answer resolves the request without inventing a collection.</summary>
     [Fact]
-    public void The_autonomous_report_of_the_resolved_refusal_answers_the_original_request()
+    public void The_autonomous_report_answers_without_inventing_a_resolved_refusal()
     {
         var session = SimulationSession.Start(Seed, CautiousVincent, Salvatore);
         var pending = AdvanceToPause(session);
@@ -159,11 +152,12 @@ public sealed class CausalFeedbackTests
 
         var snapshot = session.Snapshot();
 
-        // He reported genuinely and candidly, including the exact claim in its resolved direction.
-        Assert.Contains(snapshot.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
-
+        // M028: Vincent reports the tailor's collection but still holds the grocery refusal.
+        // His exact-claim answer resolves the question without inventing a successful grocery job.
+        Assert.Contains(snapshot.Known, b => b.Claim.Kind == ClaimKind.BusinessRefusesTribute && b.Claim.Subject == Cast.Grocery
+            && (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
         Assert.DoesNotContain(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
-        Assert.Contains(snapshot.Disagreements,
+        Assert.DoesNotContain(snapshot.Disagreements,
             d => d.Statement.Contains("Bellini's grocery", StringComparison.Ordinal)
                  && d.Accounts.Any(a => a.SourceName == "Vincent Russo"));
     }
@@ -232,6 +226,9 @@ public sealed class CausalFeedbackTests
             // Salvatore's own question has arrived on its own by now (1987-03-24, confirmed directly)
             // and Vincent's next pause is the wake it produced — the request is genuinely open here,
             // not yet answered.
+            foreach (var next in new[] { "persuade Ferri's tailor shop to pay", "leave these orders unchanged",
+                         "carry on getting Ferri's tailor shop to pay" })
+                original.Choose(AdvanceToPersistentPause().Options.Single(o => o.Description == next).Id);
             AdvanceToPersistentPause();
             var pendingRequest = Assert.Single(original.Snapshot().AwaitingAnswers);
 

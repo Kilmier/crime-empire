@@ -50,13 +50,21 @@ public sealed class PersistenceTests
     // completed, reporting that changed state (4/05), then asking for latitude at the next day's
     // organizational review. A second collection cycle against the already-paying shop was a defect
     // exposed by Matt's 2026-09-12 playtest, not a valid terminus.
+    // M028 measured public choices: delegated grocery plus personal tailor collection.
     private static readonly string[] GoldenPathChoiceSequence =
     {
         "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
-        "ask Salvatore Greco for permission",
-        "report the situation to Salvatore Greco",
+        "persuade Ferri's tailor shop to pay",
+        "leave these orders unchanged",
+        "carry on getting Ferri's tailor shop to pay",
+        "carry on getting Ferri's tailor shop to pay",
+        "carry on getting Ferri's tailor shop to pay",
+        "leave these orders unchanged",
+        "switch to threats with Ferri's tailor shop",
+        "leave these orders unchanged",
+        "ask Tommy Nardo what he knows about whether the outfit has a rule: no public violence in the harbour",
         "ask Salvatore Greco for permission",
     };
 
@@ -251,7 +259,7 @@ public sealed class PersistenceTests
             var resumed = PersistentSession.Load(path);
             PlayChoices(resumed, GoldenPathChoiceSequence.Skip(3));
 
-            Assert.Equal(6840, resumed.Snapshot().Cash);
+            Assert.Equal(6620, resumed.Snapshot().Cash);
             Assert.Equal(uninterrupted.Snapshot().Cash, resumed.Snapshot().Cash);
             Assert.Equal(
                 TraceWriter.Render(uninterrupted.InnerSession.World, Variant, false),
@@ -321,10 +329,10 @@ public sealed class PersistenceTests
             var declined = PersistentSession.Load(path);
             ChooseByDescription(declined, LetItLie);
 
-            Assert.Equal(6840, golden.Snapshot().Cash);
+            Assert.Equal(6620, golden.Snapshot().Cash);
             Assert.NotEqual(golden.Snapshot().Cash, declined.Snapshot().Cash);
-            Assert.True(golden.InnerSession.World.Businesses[Cast.Grocery].PayingTribute);
-            Assert.False(declined.InnerSession.World.Businesses[Cast.Grocery].PayingTribute);
+            Assert.True(golden.InnerSession.World.Businesses[Cast.Tailor].PayingTribute);
+            Assert.False(declined.InnerSession.World.Businesses[Cast.Tailor].PayingTribute);
         }
         finally
         {

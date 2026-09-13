@@ -40,8 +40,8 @@ does not turn them into defects.
 
 ## Coverage boundary and queue
 
-**Reconciled checkpoint: `64881a1`.** Every commit through exact
-`64881a162581b366314ace043c0a866ef0ddb7c3` appears below, either alone or in an exact group. Coverage
+**Reconciled checkpoint: `303eed0`.** Every commit through exact
+`303eed0f1504c76c59671821877be9a98ed82b5e` appears below, either alone or in an exact group. Coverage
 through `c7dd34b` preserves the pre-cleanup ledger and milestone evidence; the subsequent rows record
 the cleanup, correction chain, 2026-09-12 historical audit, its independently reviewed repairs, the
 Milestone 027 authorization transition, and the reviewed implementation.
@@ -55,8 +55,10 @@ chronological order, including `891368d` itself and the final correction record 
 accepted both PASS outcomes on 2026-09-12. The historical chronological review gate through
 `8651ecd` is closed. Astra then independently passed `608f05e`, and Matt accepted that transition
 before implementation began. Claude independently failed `64881a1` on one accepted P2 record defect;
-the runtime implementation had no blocking finding. This ledger update cannot establish the review
-outcome of the correction commit that contains it.
+the runtime implementation had no blocking finding. Matt then closed milestone 027 on 2026-09-12,
+exempting the record correction `303eed0` from a further review round by owner ruling; that row is an
+owner closure and not an independent review. This ledger update cannot establish the review outcome
+of the commit that contains it.
 
 The audit was an independent exact-diff review by Astra, who authored none of the inspected commits.
 It was static: Astra did not run builds, tests, Runner verification, Godot, restart, or
@@ -233,11 +235,15 @@ its A/B/C class only after opening the exact diff.
 | `b7344a5` | Astra independent exact-commit review (Class B): **FAIL**, one P2 accepted by Matt. It conflated `68a6c32`'s status/count fixes with `d6af1a6`'s correction of overstated independent-review coverage and inaccurately said the prior finding concerned omitted Codex authorship. Corrected by `8651ecd`. |
 | `8651ecd` (exact `8651ecd1c3b34fc30adec98637cedbaf265f8d14`) | Astra independent exact-commit review (Class B): **PASS**, no findings. The correction accurately separates the `68a6c32` and `d6af1a6` histories, removes the inaccurate authorship account, preserves prior verdicts and owner rulings, repairs all four milestone-023 links, and keeps the archive append-only. `git diff --check` passed; simulation tests were not rerun for this documentation-only diff. Matt accepted on 2026-09-12 (`milestones/023`). |
 | `608f05e` (exact `608f05ef0e67149ba64a6ec50585fd5df6a30506`) | Astra independent exact-commit review (Class B): **PASS**, no findings. Astra did not author the inspected commit. The six-document transition accurately recorded the accepted historical PASS outcomes, closed the historical gate through `8651ecd`, preserved every prior FAIL, authorized Milestone 027 with R1–R6, and deferred finished-operation history. Matt accepted the outcome on 2026-09-12 before implementation began. |
-| `64881a1` (exact `64881a162581b366314ace043c0a866ef0ddb7c3`) | Fresh Claude Opus 5 independent exact-commit review (Class A): **FAIL**, one P2 accepted by Matt on 2026-09-12. Runtime implementation met all six authorized rulings with no blocking code defect, but its archive claimed the accepted `608f05e` review without folding that outcome into this ledger as rule 8 required. Corrected by the next documentation commit. Claude authored none of the inspected commits, edited nothing, and recorded no acceptance (`milestones/027`). |
+| `64881a1` (exact `64881a162581b366314ace043c0a866ef0ddb7c3`) | Fresh Claude Opus 5 independent exact-commit review (Class A): **FAIL**, one P2 accepted by Matt on 2026-09-12. Runtime implementation met all six authorized rulings with no blocking code defect, but its archive claimed the accepted `608f05e` review without folding that outcome into this ledger as rule 8 required. Corrected by `303eed0`. Claude authored none of the inspected commits, edited nothing, and recorded no acceptance (`milestones/027`). |
+| `303eed0` (exact `303eed0f1504c76c59671821877be9a98ed82b5e`) | **Closed by owner ruling, not an independent review.** Matt closed milestone 027 on 2026-09-12 and explicitly exempted this documentation-only record correction from a further review round, the same owner exception recorded for `c7dd34b`. No independent exact-commit review of this diff exists and none is claimed. The correction folded `608f05e`'s accepted PASS and `64881a1`'s accepted FAIL into the active range and advanced the verification baseline; `64881a1`'s FAIL and every earlier FAIL remain the historical outcomes for their hashes (`milestones/027`). |
 
 ## Current verification baseline
 
 Latest independently reproduced baseline: `64881a1`.
+Milestone 028's newer implementation measurements are in
+`milestones/028-delegation-creates-bandwidth.md`; they are implementer evidence, not a replacement
+for this independent baseline or a review outcome for the commit containing them.
 Hashes are regression evidence, not permanent design requirements; an authorized behaviour change may
 move them if the new values and reasons are recorded in its milestone archive.
 

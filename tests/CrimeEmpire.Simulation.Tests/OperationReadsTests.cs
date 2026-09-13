@@ -44,13 +44,13 @@ public sealed class OperationReadsTests
         var lateDelegated = Operating(delegated: true, stepIndex: 3);
 
         Assert.Equal(Render(earlyDelegated), Render(lateDelegated));
-        Assert.Null(Snapshot(earlyDelegated).Operation!.Progress);
+        Assert.Null(Snapshot(earlyDelegated).Operations.SingleOrDefault()!.Progress);
 
         var earlyOwn = Operating(delegated: false, stepIndex: 1);
         var lateOwn = Operating(delegated: false, stepIndex: 3);
 
         Assert.NotEqual(Render(earlyOwn), Render(lateOwn));
-        Assert.NotNull(Snapshot(earlyOwn).Operation!.Progress);
+        Assert.NotNull(Snapshot(earlyOwn).Operations.SingleOrDefault()!.Progress);
     }
 
     /// <summary>
@@ -61,7 +61,7 @@ public sealed class OperationReadsTests
     [Fact]
     public void What_he_ordered_and_who_is_carrying_it_are_always_his_to_know()
     {
-        var op = Snapshot(Operating(delegated: true, stepIndex: 2)).Operation;
+        var op = Snapshot(Operating(delegated: true, stepIndex: 2)).Operations.SingleOrDefault();
 
         Assert.NotNull(op);
         Assert.Contains("Bellini's grocery", op!.Description, StringComparison.Ordinal);
@@ -74,7 +74,7 @@ public sealed class OperationReadsTests
     public void A_man_with_nothing_running_has_no_operation()
     {
         var world = Cast.Build(Seed, "baseline");
-        Assert.Null(PlayerView.Build(world, "vincent", world.Now).Operation);
+        Assert.Null(PlayerView.Build(world, "vincent", world.Now).Operations.SingleOrDefault());
     }
 
     // ================================================================= what it is allowed to say
@@ -93,7 +93,7 @@ public sealed class OperationReadsTests
     {
         foreach (bool delegated in new[] { true, false })
         {
-            var op = Snapshot(Operating(delegated, stepIndex: 2)).Operation!;
+            var op = Snapshot(Operating(delegated, stepIndex: 2)).Operations.SingleOrDefault()!;
             string text = $"{op.Description} {op.ExecutorName} {op.Progress}";
 
             Assert.DoesNotContain("SecureTribute", text, StringComparison.Ordinal);
@@ -119,7 +119,7 @@ public sealed class OperationReadsTests
         var world = Operating(delegated: false, stepIndex: 2);
         world.Get("vincent").Execution.Strategy!.FailedAttempts = failures;
 
-        Assert.Contains(expected, Snapshot(world).Operation!.Progress!, StringComparison.Ordinal);
+        Assert.Contains(expected, Snapshot(world).Operations.SingleOrDefault()!.Progress!, StringComparison.Ordinal);
     }
 
     // ================================================================= natural, and both surfaces
@@ -141,7 +141,7 @@ public sealed class OperationReadsTests
         var world = Cast.Build(Seed, "baseline");
         Runner.Run(world, Cast.Start.AddDays(20));
 
-        var op = PlayerView.Build(world, "vincent", world.Now).Operation;
+        var op = PlayerView.Build(world, "vincent", world.Now).Operations.Single(o => o.ExecutorName == "Tommy Nardo");
 
         Assert.NotNull(op);
         Assert.Equal("Tommy Nardo", op!.ExecutorName);
@@ -170,7 +170,7 @@ public sealed class OperationReadsTests
         var world = Cast.Build(Seed, "baseline");
         Runner.Run(world, Cast.Start.AddDays(20));
 
-        var op = PlayerView.Build(world, "tommy", world.Now).Operation;
+        var op = PlayerView.Build(world, "tommy", world.Now).Operations.SingleOrDefault();
 
         Assert.NotNull(op);
         Assert.Contains("Bellini's grocery", op!.Description, StringComparison.Ordinal);
@@ -188,7 +188,7 @@ public sealed class OperationReadsTests
         var world = Cast.Build(Seed, "baseline");
         Runner.Run(world, Cast.Start.AddDays(20));
 
-        Assert.Null(PlayerView.Build(world, "salvatore", world.Now).Operation);
+        Assert.Null(PlayerView.Build(world, "salvatore", world.Now).Operations.SingleOrDefault());
     }
 
     /// <summary>
@@ -206,7 +206,10 @@ public sealed class OperationReadsTests
         Runner.Run(world, Cast.Start.AddDays(20));
 
         string vincentRendered = IntelligenceWriter.Render(world, "vincent");
-        CheckOperationSection(vincentRendered, mustContain: "Tommy Nardo is handling it", mustNotContain: "made his demand");
+        // Isolate the delegated row, not Vincent's separate personal operation below it.
+        string delegatedRow = vincentRendered.Split("WHAT HE HAS OUT", StringSplitOptions.None)[1];
+        Assert.Contains("Tommy Nardo is handling it", delegatedRow);
+        Assert.DoesNotContain("made his demand", delegatedRow);
 
         string tommyRendered = IntelligenceWriter.Render(world, "tommy");
         CheckOperationSection(tommyRendered, mustContain: "made his demand", mustNotContain: "is handling it");
@@ -260,7 +263,7 @@ public sealed class OperationReadsTests
         var salvatore = world.Get("salvatore");
 
         DelegateThroughCommit(world, salvatore, Cast.Bakery, "tommy");
-        Assert.Equal("tommy", salvatore.Execution.Strategy!.DelegatedToId);
+        Assert.Equal("tommy", Assert.Single(salvatore.Execution.Operations).DelegatedToId);
 
         // Vincent needs an undelegated strategy of his own, or FromRelationship's whole branch never
         // runs and the assertion below would pass vacuously regardless of availability.
@@ -379,18 +382,18 @@ public sealed class OperationReadsTests
     /// wrongly pass.
     /// </summary>
     [Fact]
-    public void A_subordinate_who_delegated_his_own_operation_onward_is_still_not_offered_through_pipeline_prepare()
+    public void A_subordinate_who_delegated_his_own_operation_onward_is_available_through_pipeline_prepare()
     {
         var world = Cast.Build(Seed, "baseline");
         var tommy = world.Get("tommy");
         DelegateThroughCommit(world, tommy, Cast.Bakery, "kane");
-        Assert.NotNull(tommy.Execution.Strategy);
-        Assert.Equal("kane", tommy.Execution.Strategy!.DelegatedToId);
+        Assert.Null(tommy.Execution.Strategy);
+        Assert.Equal("kane", Assert.Single(tommy.Execution.Operations).DelegatedToId);
 
         var prepared = AdvanceVincentToDelegationFork(world);
 
         var delegateCandidates = prepared.Available.Where(c => c.Kind == ActionKind.DelegateStrategy).ToList();
-        Assert.DoesNotContain(delegateCandidates, c => c.TargetId == "tommy");
+        Assert.Contains(delegateCandidates, c => c.TargetId == "tommy");
         Assert.DoesNotContain(prepared.Rejected,
             r => r.Candidate.Kind == ActionKind.DelegateStrategy && r.Candidate.TargetId == "tommy");
     }
@@ -410,7 +413,7 @@ public sealed class OperationReadsTests
         var tommy = world.Get("tommy");
 
         DelegateThroughCommit(world, salvatore, Cast.Bakery, tommy.Id);
-        var delegated = salvatore.Execution.Strategy!;
+        var delegated = Assert.Single(salvatore.Execution.Operations);
         var stale = Context(world, tommy) with { CurrentExecution = null };
 
         var start = StartCandidate(Cast.Grocery);
@@ -418,7 +421,7 @@ public sealed class OperationReadsTests
             Commit.Apply(world, tommy, start, stale.Agenda, stale, new List<string>()));
 
         Assert.Null(tommy.Execution.Strategy);
-        Assert.Same(delegated, salvatore.Execution.Strategy);
+        Assert.Same(delegated, Assert.Single(salvatore.Execution.Operations));
         Assert.Equal(tommy.Id, delegated.DelegatedToId);
     }
 
@@ -427,19 +430,20 @@ public sealed class OperationReadsTests
     /// make its owner free to overwrite the only live record of it with a new start.
     /// </summary>
     [Fact]
-    public void An_owner_cannot_overwrite_his_live_delegated_operation()
+    public void An_owner_starts_personal_work_without_overwriting_his_live_delegated_operation()
     {
         var world = Cast.Build(Seed, "baseline");
         var vincent = world.Get("vincent");
 
         DelegateThroughCommit(world, vincent, Cast.Grocery, "tommy");
-        var delegated = vincent.Execution.Strategy!;
+        var delegated = Assert.Single(vincent.Execution.Operations);
         var ctx = Context(world, vincent);
 
         Assert.Null(ctx.CurrentExecution);
-        Assert.Throws<SimulationInvariantException>(() =>
-            Commit.Apply(world, vincent, StartCandidate(Cast.Bakery), ctx.Agenda, ctx, new List<string>()));
-        Assert.Same(delegated, vincent.Execution.Strategy);
+        Commit.Apply(world, vincent, StartCandidate(Cast.Bakery), ctx.Agenda, ctx, new List<string>());
+        Assert.Equal(2, vincent.Execution.Operations.Count);
+        Assert.Contains(delegated, vincent.Execution.Operations);
+        Assert.Equal(Cast.Bakery, vincent.Execution.Strategy!.TargetId);
     }
 
     /// <summary>
@@ -457,7 +461,7 @@ public sealed class OperationReadsTests
         double ownerPressure = vincent.Motivations.Pressure(PressureKind.RevenueShortfall);
 
         DelegateThroughCommit(world, vincent, Cast.Grocery, tommy.Id);
-        var operation = vincent.Execution.Strategy!;
+        var operation = Assert.Single(vincent.Execution.Operations);
         var blocked = AdvanceToDelegatedBlock(world, tommy.Id);
 
         Assert.Equal(EventKind.StrategyBlocked, blocked.Trigger.Kind);
@@ -482,7 +486,7 @@ public sealed class OperationReadsTests
         var postpone = blocked.Available.Single(c => c.Kind == ActionKind.PostponeStrategy);
         Pipeline.Resolve(blocked, postpone.Id);
 
-        Assert.Same(operation, vincent.Execution.Strategy);
+        Assert.Contains(operation, vincent.Execution.Operations);
         Assert.NotNull(operation.PendingStepEventId);
         Assert.False(world.Queue.Cancelled.ContainsKey(operation.PendingStepEventId!.Value));
         Assert.Equal(queueBefore + 1, world.Queue.Count);
@@ -569,7 +573,7 @@ public sealed class OperationReadsTests
     /// <summary>Everything about the operation the player can see, as one string to diff.</summary>
     private static string Render(World world)
     {
-        var op = Snapshot(world).Operation;
+        var op = Snapshot(world).Operations.SingleOrDefault();
         return op is null ? "" : $"{op.Description}|{op.ExecutorName}|{op.Since:O}|{op.Progress}";
     }
 
@@ -626,6 +630,9 @@ public sealed class OperationReadsTests
     private static World WorldWithoutScheduledScenarioEvents()
     {
         var cast = Cast.Build(Seed, "baseline");
+        // Isolate the delegated refusal: no unrelated personal job may change owner pressure.
+        cast.Get("vincent").Cognition.Learn(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Tailor),
+            Stance.Rejects, 1.0, SourceKind.Discovery, "vincent", cast.Now);
         var world = new World { Seed = cast.Seed, Now = cast.Now, Org = cast.Org };
         foreach (var (id, character) in cast.Characters) world.Characters.Add(id, character);
         foreach (var (id, business) in cast.Businesses) world.Businesses.Add(id, business);

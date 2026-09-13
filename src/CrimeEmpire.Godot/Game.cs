@@ -66,7 +66,7 @@ public partial class Game : Control
 
     /// <summary>
     /// Command-line switch for milestone 027's complete rendered proof: opening objective, both
-    /// natural terminal outcomes, disabled terminal controls, and load of a resolved session.
+    /// natural unmet endings, an explicit met-result render, disabled controls, and resolved load.
     /// </summary>
     private const string EndingFlag = "--selftest-ending";
 
@@ -74,7 +74,7 @@ public partial class Game : Control
     /// Command-line switch for milestone 014's golden path: Vincent's existing seed-42
     /// <c>SecureTribute</c> operation against Bellini's grocery, played through real button presses
     /// rather than the general self-test's "always take the first option" policy, reaching the
-    /// accepted 5 April consequence and reading the rendered cash off the live screen.
+    /// milestone 028 personal-tailor collection and reading cash off the live screen.
     /// </summary>
     private const string GoldenPathFlag = "--selftest-goldenpath";
 
@@ -136,7 +136,7 @@ public partial class Game : Control
 
     /// <summary>
     /// Command-line switch for milestone 015's restart proof, process A: plays the golden path's
-    /// first three choices (start, carry on, delegate to Tommy) through real buttons, saves to
+    /// first four choices (including delegated grocery and personal tailor work), saves to
     /// <see cref="SelfTestRestartSavePath"/> (never the production slot — see the type header), and
     /// exits. Meant to be run as a genuinely separate OS process from <see cref="RestartLoadFlag"/> —
     /// see the milestone archive for the exact two-invocation proof.
@@ -146,8 +146,8 @@ public partial class Game : Control
     /// <summary>
     /// Command-line switch for milestone 015's restart proof, process B: loads
     /// <see cref="SelfTestRestartSavePath"/> — written by a prior, separate
-    /// <see cref="RestartSaveFlag"/> process — and plays the golden path's remaining three choices
-    /// through real buttons, reaching the accepted 5 April consequence.
+    /// <see cref="RestartSaveFlag"/> process — and plays the golden path's remaining choices
+    /// through real buttons, reaching the personal tailor collection.
     /// </summary>
     private const string RestartLoadFlag = "--selftest-restart-load";
 
@@ -497,6 +497,9 @@ public partial class Game : Control
     /// or progress. Once resolved it adds only the authorized one-bit result.
     /// </summary>
     private static Control BuildObjective(PersistentSession session)
+        => BuildObjective(session.Objective, session.Result);
+
+    private static Control BuildObjective(SessionObjective objective, SessionResult? result)
     {
         var panel = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         var margin = new MarginContainer();
@@ -508,18 +511,18 @@ public partial class Game : Control
         row.AddThemeConstantOverride("separation", 18);
         margin.AddChild(row);
 
-        string heading = session.Result?.Outcome switch
+        string heading = result?.Outcome switch
         {
             ObjectiveOutcome.ObjectiveMet => "OBJECTIVE MET",
             ObjectiveOutcome.ObjectiveUnmet => "OBJECTIVE UNMET",
             _ => "SESSION OBJECTIVE",
         };
         row.AddChild(Heading(heading));
-        row.AddChild(Plain($"{session.Objective.Name} before this 90-day session ends."));
+        row.AddChild(Plain($"{objective.Name} before this 90-day session ends."));
         row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        row.AddChild(FaintChip(session.Result is null
-            ? $"Ends {session.Objective.Deadline.ToString("d MMMM yyyy 'at' HH:mm 'UTC'", CultureInfo.InvariantCulture)}"
-            : $"Session ended {session.Result.ResolvedAt.ToString("d MMMM yyyy 'at' HH:mm 'UTC'", CultureInfo.InvariantCulture)}"));
+        row.AddChild(FaintChip(result is null
+            ? $"Ends {objective.Deadline.ToString("d MMMM yyyy 'at' HH:mm 'UTC'", CultureInfo.InvariantCulture)}"
+            : $"Session ended {result.ResolvedAt.ToString("d MMMM yyyy 'at' HH:mm 'UTC'", CultureInfo.InvariantCulture)}"));
         return panel;
     }
 
@@ -786,7 +789,8 @@ public partial class Game : Control
     {
         var p = snapshot.ViewpointPronouns;
 
-        if (snapshot.Operation is { } op)
+        yield return Plain("ONGOING OPERATIONS");
+        foreach (var op in snapshot.Operations)
         {
             yield return Plain(op.Description);
             // Second correction: Since is the owner's own age for the operation, not a handover time
@@ -797,9 +801,13 @@ public partial class Game : Control
                 yield return Faint($"    running since {since.ToString("d MMM", CultureInfo.InvariantCulture)}");
             if (op.ExecutorName is { } executor)
                 yield return Faint($"    {executor} is handling it");
-            yield return Faint($"    {op.Progress ?? "no word back yet"}");
+            yield return Faint($"    {op.Progress ?? "progress is not directly visible; see received accounts"}");
+            if (op.ReviewToken is { } token && _session is { } session
+                && session.ControlledCharacterId == session.ViewpointCharacterId)
+                yield return Advance($"Review {op.Description}", session.Status != SessionStatus.Ready,
+                    () => session.ReviewOperation(token));
         }
-        else
+        if (snapshot.Operations.Count == 0)
         {
             yield return Plain($"{p.Subject_} {p.Verb("has", "have")} nothing running.");
         }
@@ -1033,10 +1041,18 @@ public partial class Game : Control
             var cautious = _session!;
             AdvanceToEndingThroughButtons(cautious);
             string met = Screen();
-            if (cautious.Result?.Outcome != ObjectiveOutcome.ObjectiveMet
-                || !met.Contains("OBJECTIVE MET", StringComparison.Ordinal))
-                throw new InvalidOperationException("the natural cautious-vincent ending is not rendered as ObjectiveMet");
+            if (cautious.Result?.Outcome != ObjectiveOutcome.ObjectiveUnmet
+                || !met.Contains("OBJECTIVE UNMET", StringComparison.Ordinal))
+                throw new InvalidOperationException("the untuned parallel cautious-vincent ending is not rendered as ObjectiveUnmet");
             AssertTerminalControls();
+            // All seed-42 variants now end Unmet. Preserve the positive renderer check with
+            // explicit scenario-result metadata; do not pretend this is a naturally earned win.
+            var metProbe = BuildObjective(cautious.Objective,
+                new SessionResult(ObjectiveOutcome.ObjectiveMet, cautious.Objective.Deadline));
+            _root.AddChild(metProbe);
+            if (!Screen().Contains("OBJECTIVE MET", StringComparison.Ordinal))
+                throw new InvalidOperationException("the explicit ObjectiveMet renderer probe is missing");
+            metProbe.Free();
 
             if (!Press("Load"))
                 throw new InvalidOperationException("the resolved save could not be loaded through the live Load button");
@@ -1052,7 +1068,7 @@ public partial class Game : Control
                 || loaded.Contains("0.15", StringComparison.Ordinal))
                 throw new InvalidOperationException("the rendered terminal block exposed raw objective progress");
 
-            GD.Print("CE-ENDING opening=ok baseline=ObjectiveUnmet cautious-vincent=ObjectiveMet controls=disabled postload=ok");
+            GD.Print("CE-ENDING opening=ok baseline=ObjectiveUnmet cautious-vincent=ObjectiveUnmet staged-met-render=ok controls=disabled postload=ok");
             GD.Print("CE-ENDING ok");
             GetTree().Quit();
         }
@@ -1237,7 +1253,7 @@ public partial class Game : Control
             Exposure: Array.Empty<string>(),
             LastAction: null,
             MyBusiness: null,
-            Operation: null,
+            Operations: Array.Empty<PlayerOperation>(),
             AwaitingAnswers: Array.Empty<PlayerRequest>());
 
         Clear(_root);
@@ -1275,13 +1291,21 @@ public partial class Game : Control
     // background; Vincent's remaining pauses report the completed result and answer the next day's
     // organizational review. The former second collection cycle was a real double-payment defect
     // exposed by Matt's 2026-09-12 playtest.
+    // M028 measured public choices: delegated grocery plus personal tailor collection.
     private static readonly string[] GoldenPathChoiceSequence =
     {
         "persuade Bellini's grocery to pay",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
-        "ask Salvatore Greco for permission",
-        "report the situation to Salvatore Greco",
+        "persuade Ferri's tailor shop to pay",
+        "leave these orders unchanged",
+        "carry on getting Ferri's tailor shop to pay",
+        "carry on getting Ferri's tailor shop to pay",
+        "carry on getting Ferri's tailor shop to pay",
+        "leave these orders unchanged",
+        "switch to threats with Ferri's tailor shop",
+        "leave these orders unchanged",
+        "ask Tommy Nardo what he knows about whether the outfit has a rule: no public violence in the harbour",
         "ask Salvatore Greco for permission",
     };
 
@@ -1336,15 +1360,15 @@ public partial class Game : Control
     }
 
     /// <summary>
-    /// Drives Vincent's own seed-42 <c>SecureTribute</c> operation against Bellini's grocery through
+    /// Drives Vincent's seed-42 delegated grocery and personal tailor operations through
     /// real button presses — the interactive playthrough itself, not a claim about it — and reads the
     /// rendered cash label off the live screen, never <see cref="SimulationSession"/>'s internal
-    /// state, to confirm the accepted consequence: 6,000 rising to 6,840.
+    /// state, to confirm the measured personal collection: 6,000 rising to 6,620.
     ///
     /// <b>Asserts the opening screen too, before any button is pressed.</b> A check that only reads
-    /// the final screen cannot tell a real 6,000-to-6,840 change from a toolbar that always rendered
-    /// 6,840 regardless of what happened — confirmed by mutation: temporarily hardcoding the toolbar
-    /// to a fixed "6,840" made the opening assertion fail, before the mutation was reverted.
+    /// the final screen cannot tell a real 6,000-to-6,620 change from a toolbar that always rendered
+    /// 6,620 regardless of what happened. The opening assertion guards against a fixed cash label;
+    /// earlier mutation evidence belongs to the earlier milestone's archived amount, not this run.
     /// </summary>
     private void GoldenPathSelfTest()
     {
@@ -1356,7 +1380,7 @@ public partial class Game : Control
         if (!Screen().Contains("cash on hand 6,000", StringComparison.Ordinal))
             throw new InvalidOperationException(
                 "the opening screen does not read \"cash on hand 6,000\" — the golden path's own " +
-                "starting point is wrong, so the later 6,840 would prove nothing");
+                "starting point is wrong, so the later 6,620 would prove nothing");
 
         PressChoicesInOrder(session, GoldenPathChoiceSequence, "CE-GOLDENPATH");
 
@@ -1376,7 +1400,7 @@ public partial class Game : Control
         GD.Print(screen);
         GD.Print("== CE-GOLDENPATH-SCREEN-END ==");
 
-        bool proved = screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
+        bool proved = screen.Contains("cash on hand 6,620", StringComparison.Ordinal);
 
         if (proved)
         {
@@ -1386,8 +1410,8 @@ public partial class Game : Control
         }
 
         GD.PrintErr(
-            "CE-GOLDENPATH FAILED — did not reach the accepted 5 April consequence with cash on hand " +
-            "reading 6,840 on screen, so it proves nothing");
+            "CE-GOLDENPATH FAILED — did not reach the personal tailor collection with cash on hand " +
+            "reading 6,620 on screen, so it proves nothing");
         GetTree().Quit(1);
     }
 
@@ -1582,6 +1606,13 @@ public partial class Game : Control
             "carry on getting Bellini's grocery to pay",
             "hand it to Tommy Nardo",
         }, "CE-CORROBORATION");
+
+        PressChoicesInOrder(session, new[]
+        {
+            "persuade Ferri's tailor shop to pay",
+            "leave these orders unchanged",
+            "carry on getting Ferri's tailor shop to pay",
+        }, "CE-CORROBORATION-BANDWIDTH");
 
         // Salvatore's own question arrives on its own by now; find Vincent's resulting wake and
         // answer it with the exact claim, rather than pressing "Next event" past it.
@@ -1788,7 +1819,7 @@ public partial class Game : Control
     }
 
     /// <summary>
-    /// Proves the delegated operation line — <see cref="PlayerSnapshot.Operation"/> — reaches the
+    /// Proves the delegated operation line — <see cref="PlayerSnapshot.Operations"/> — reaches the
     /// live rendered <c>DOING</c> panel, from both sides of the same delegation, against the real
     /// screen rather than the snapshot behind it.
     ///
@@ -1835,6 +1866,18 @@ public partial class Game : Control
 
         if (vincentResult.ok && tommyResult.ok)
         {
+            StartSession(seed: 42, variant: "baseline", controlled: "vincent", viewpoint: "vincent");
+            PressChoicesInOrder(_session!, GoldenPathChoiceSequence.Take(4).ToArray(), "CE-BANDWIDTH");
+            if (FindButton(this, "Review getting Bellini's grocery to pay") is null
+                || FindButton(this, "Review getting Ferri's tailor shop to pay") is null)
+                throw new InvalidOperationException("the sidebar does not expose both ongoing operation reviews");
+            if (!Press("Review getting Bellini's grocery to pay")
+                || !Press("drop getting Bellini's grocery to pay"))
+                throw new InvalidOperationException("the selected operation cannot be cancelled through real buttons");
+            if (FindButton(this, "Review getting Bellini's grocery to pay") is not null
+                || FindButton(this, "Review getting Ferri's tailor shop to pay") is null)
+                throw new InvalidOperationException("cancellation removed the wrong sidebar operation");
+            GD.Print("CE-BANDWIDTH ok");
             GD.Print("CE-OPERATION ok");
             GetTree().Quit();
             return;
@@ -1862,6 +1905,9 @@ public partial class Game : Control
         if (doingEnd < 0) return (false, "no WHAT JUST HAPPENED marker found after DOING");
 
         string section = screen[doingStart..doingEnd];
+        // M028: Vincent's own tailor job may legitimately have personal progress below this row.
+        int nextOperation = section.IndexOf("getting Ferri's tailor shop to pay", StringComparison.Ordinal);
+        if (nextOperation >= 0) section = section[..nextOperation];
 
         bool wordsAppearEarlier = screen[..doingStart].Contains("Bellini's grocery", StringComparison.Ordinal);
         if (!wordsAppearEarlier)
@@ -1879,7 +1925,7 @@ public partial class Game : Control
 
     /// <summary>
     /// Process A of the two-process restart proof: plays <see cref="GoldenPathChoiceSequence"/>'s first
-    /// three choices (start, carry on, delegate to Tommy) through real buttons, presses the real
+    /// four choices (including delegated grocery and personal tailor work), presses the real
     /// "Save" button, and exits. Run as a genuinely separate OS process from
     /// <see cref="RunRestartLoadSelfTest"/> — two independent headless Godot invocations against the
     /// same real save slot, not two calls within one process. See the milestone archive for the exact
@@ -1914,7 +1960,9 @@ public partial class Game : Control
         if (!Screen().Contains("cash on hand 6,000", StringComparison.Ordinal))
             throw new InvalidOperationException("the opening screen does not read \"cash on hand 6,000\"");
 
-        PressChoicesInOrder(session, GoldenPathChoiceSequence.Take(3).ToArray(), "CE-RESTART-SAVE");
+        PressChoicesInOrder(session, GoldenPathChoiceSequence.Take(4).ToArray(), "CE-RESTART-SAVE");
+        if (session.Snapshot().Operations.Count != 2)
+            throw new InvalidOperationException("restart proof must save two ongoing operations");
 
         if (!Press("Save"))
             throw new InvalidOperationException("no \"Save\" control is available");
@@ -1933,9 +1981,9 @@ public partial class Game : Control
     /// <summary>
     /// Process B of the two-process restart proof: loads the save <see cref="RunRestartSaveSelfTest"/>
     /// wrote — in a prior, separate OS process — through the real "Load saved game" button, then plays
-    /// <see cref="GoldenPathChoiceSequence"/>'s remaining three choices through real buttons, reaching the
-    /// same accepted 5 April consequence <see cref="GoldenPathSelfTest"/> reaches in one continuous
-    /// process: 6,840 on the rendered screen.
+    /// <see cref="GoldenPathChoiceSequence"/>'s remaining choices through real buttons, reaching the
+    /// same personal tailor collection <see cref="GoldenPathSelfTest"/> reaches in one continuous
+    /// process: 6,620 on the rendered screen.
     /// </summary>
     private void RunRestartLoadSelfTest()
     {
@@ -1976,7 +2024,9 @@ public partial class Game : Control
 
             GD.Print($"CE-RESTART-LOAD loaded at {session.Date:yyyy-MM-dd}, status={session.Status}");
 
-            PressChoicesInOrder(session, GoldenPathChoiceSequence.Skip(3).ToArray(), "CE-RESTART-LOAD");
+            if (session.Snapshot().Operations.Count != 2)
+                throw new InvalidOperationException("restart did not restore both ongoing operations");
+            PressChoicesInOrder(session, GoldenPathChoiceSequence.Skip(4).ToArray(), "CE-RESTART-LOAD");
 
             // Same check GoldenPathSelfTest makes: nothing unaddressed should follow the final choice.
             if (session.Status == SessionStatus.AwaitingChoice)
@@ -1989,7 +2039,7 @@ public partial class Game : Control
             GD.Print(screen);
             GD.Print("== CE-RESTART-LOAD-SCREEN-END ==");
 
-            bool proved = screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
+            bool proved = screen.Contains("cash on hand 6,620", StringComparison.Ordinal);
             if (proved)
             {
                 GD.Print("CE-RESTART-LOAD ok");
@@ -1998,8 +2048,8 @@ public partial class Game : Control
             }
 
             GD.PrintErr(
-                "CE-RESTART-LOAD FAILED — did not reach the accepted 5 April consequence with cash on hand " +
-                "reading 6,840 on screen, so it proves nothing");
+                "CE-RESTART-LOAD FAILED — did not reach the personal tailor collection with cash on hand " +
+                "reading 6,620 on screen, so it proves nothing");
             GetTree().Quit(1);
         }
         finally

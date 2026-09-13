@@ -575,7 +575,7 @@ public sealed class AccountAgreementTests
     [Fact]
     public void The_agreement_mechanism_is_identical_whether_vincent_is_controlled_or_autonomous()
     {
-        var end = new DateTime(1987, 4, 10, 0, 0, 0);
+        var end = Cast.Start.AddDays(90); // M028: the agreeing account arrives later in the parallel history.
 
         var autonomous = SimulationSession.Start(42, "baseline", controlledCharacterId: null, viewpointCharacterId: "tommy");
         autonomous.AdvanceTo(end);
@@ -621,7 +621,7 @@ public sealed class AccountAgreementTests
     [Fact]
     public void Save_and_load_replay_reproduces_the_agreement_and_trust_state()
     {
-        var end = new DateTime(1987, 4, 10, 0, 0, 0);
+        var end = Cast.Start.AddDays(90); // M028: the agreeing account arrives later in the parallel history.
         var split = new DateTime(1987, 4, 2, 0, 0, 0); // before the 6 April question, well short of the answer
 
         var uninterrupted = PersistentSession.Start(42, "baseline", controlledCharacterId: null, viewpointCharacterId: "tommy");

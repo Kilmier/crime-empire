@@ -81,6 +81,11 @@ internal static class PlayerOccasion
                 "asked-to-account" => $"somebody has asked {self.Object} a question",
                 "reported-to" => $"somebody has reported to {self.Object}",
                 "permission-sought" => $"somebody has asked {self.Object} for permission",
+                "hands-free" => $"{self.Possessive} delegated work leaves room for another action",
+                "operation-review" => actor.Execution.Operations.FirstOrDefault(s =>
+                    s.LocalSequence == trigger.Payload.StrategySequence) is { } operation
+                    ? $"reviewing {PlayerOption.Work(operation.Kind, operation.TargetId, name, self)}"
+                    : "reviewing standing orders",
                 _ => $"{self.Subject} {self.Verb("is", "are")} checking on {self.Possessive} own patch",
             },
 

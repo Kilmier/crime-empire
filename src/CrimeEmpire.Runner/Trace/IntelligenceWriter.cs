@@ -104,7 +104,7 @@ public static class IntelligenceWriter
         //
         // Milestone 024. What he has out, and — for work he handed to somebody — deliberately no
         // more than that: who has it. How far a delegate has got is that man's state.
-        if (view.Operation is { } op)
+        foreach (var op in view.Operations)
         {
             sb.AppendLine("WHAT HE HAS OUT");
             sb.AppendLine();
@@ -120,7 +120,7 @@ public static class IntelligenceWriter
             if (op.Progress is { } progress)
                 sb.AppendLine($"     {progress}");
             else
-                sb.AppendLine($"     no word back yet");
+                sb.AppendLine("     progress is not directly visible; see received accounts");
             sb.AppendLine();
         }
 

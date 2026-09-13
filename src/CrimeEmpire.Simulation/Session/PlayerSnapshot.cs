@@ -145,7 +145,8 @@ public sealed record PlayerOperation(
     string Description,
     string? ExecutorName,
     DateTime? Since,
-    string? Progress);
+    string? Progress,
+    string? ReviewToken = null);
 
 /// <summary>
 /// The viewpoint character's own business, when he owns one. <see cref="PayingTribute"/> only — on
@@ -285,10 +286,11 @@ public sealed record PlayerSnapshot(
     PlayerCommittedAction? LastAction,
     /// <summary>His own business's paying status, or null when he owns none.</summary>
     PlayerBusinessStatus? MyBusiness,
-    /// <summary>The order he has out, or null when he has nothing running.</summary>
-    PlayerOperation? Operation,
+    /// <summary>His active orders and work he executes for someone else.</summary>
+    IReadOnlyList<PlayerOperation> Operations,
     IReadOnlyList<PlayerRequest> AwaitingAnswers)
 {
+    public IReadOnlyList<PlayerOperation> Operations { get; init; } = Frozen.List(Operations);
     public IReadOnlyList<string> SelfKnowledge { get; init; } = Frozen.List(SelfKnowledge);
     public IReadOnlyList<PlayerBelief> Known { get; init; } = Frozen.List(Known);
     public IReadOnlyList<PlayerDisagreement> Disagreements { get; init; } = Frozen.List(Disagreements);
@@ -721,68 +723,18 @@ public static class PlayerView
     }
 
     /// <summary>
-    /// The order he currently has out, or null when he has nothing running — milestone 024,
-    /// corrected 2026-09-11 for actor neutrality after Codex's review of `f993386` found this method
-    /// read only <c>who.Execution.Strategy</c>, which is the <em>owner's</em> record and stays null
-    /// on a delegate for the instance's entire life — <c>StrategyInstance</c>'s own doc comment says
-    /// so: delegation is never copied onto the executor, only pointed to from the owner's own field.
-    /// The man actually carrying a delegated job therefore saw nothing running at all, which is the
-    /// identical information-rule failure this milestone exists to fix, just facing the other way.
-    ///
-    /// <b>The whole of the information rule still lives in one branch here</b>, and it is still the
-    /// milestone: progress is reported for work he is doing himself — whether he owns it and never
-    /// delegated, or it was handed to him — and withheld for work somebody else is doing on his
-    /// order. The step a delegate has reached is that man's own state; the owner learns whether the
-    /// job was carried out through a report, a rumour or the takings arriving, exactly as milestones
-    /// 017 and 022 settled. Reading `StepIndex` off a delegated instance would hand it to whichever
-    /// of the two is not the one who reached it, for free, through a panel rather than through a
-    /// belief, which makes it no less a leak either direction.
-    ///
-    /// <b>Search order, and why it stays cheap.</b> <paramref name="who"/>'s own
-    /// <c>Execution.Strategy</c> is checked first — true for every owner, whether or not he
-    /// delegated, and for a man working alone — before scanning every other character's own
-    /// <c>Execution.Strategy</c> for one naming <paramref name="who"/> as
-    /// <see cref="StrategyInstance.DelegatedToId"/>. The scan is the only way to find it: a delegated
-    /// instance is never indexed anywhere else, and <c>World.Characters</c> is bounded by the cast,
-    /// not by anything this milestone grows.
-    ///
-    /// <b>At most one match, and now genuinely so — milestone 024's second correction.</b> The first
-    /// version of this scan took whichever match it found first (a plain loop with a <c>break</c>),
-    /// which was silently correct only because nothing actually stopped a subordinate from being
-    /// handed a second operation while still carrying a first, or from running one of his own at the
-    /// same time — Codex found this as the same review's second finding. The fix lives at the two
-    /// places a delegation is created, not here: <c>Generators.FromRelationship</c> no longer offers a
-    /// subordinate who is unavailable, and <c>Commit.Apply</c> refuses to delegate to one even if a
-    /// candidate reaches it some other way — see <see cref="Decision.Pipeline.AvailableToExecute"/>,
-    /// the one definition both enforce. With uniqueness actually held rather than assumed, this reads
-    /// as <c>SingleOrDefault</c> rather than <c>FirstOrDefault</c>: a second match now throws instead
-    /// of being silently and arbitrarily resolved, which is what should happen if that invariant is
-    /// ever broken again — a wrong answer picked quietly here would hide the exact defect this
-    /// correction exists to make loud.
-    ///
-    /// Wording comes from <see cref="PlayerOption.Work"/> rather than a second phrasing of the same
-    /// thing. That method exists, and is `internal` for this exact purpose, because
-    /// `StrategyInstance.Label` — a developer string carrying raw ids — once reached the player as a
-    /// decision's focus, and the fix was one shared vocabulary rather than two that drift. Nothing
-    /// read here reaches beyond what the instance itself carries — its kind, target, method, start
-    /// date and step progress — all operational fact the executor holds simply by being the one
-    /// doing the work; no belief, relationship, or other character's private state is consulted.
+    /// Project owned orders and the viewpoint actor's current execution in stable identity order.
+    /// Ownership does not imply access to a delegate's progress; only the executor sees that state.
+    /// Work wording is shared with PlayerOption, without exposing internal ids or mutable instances.
     /// </summary>
-    private static PlayerOperation? Operating(World world, Character who, Func<string, string> name, Pronouns self)
-    {
-        // Milestone 024's second correction. The fallback scan used to take the first match it found
-        // (foreach + break) — silently correct only because nothing enforced that at most one could
-        // exist. Now that a subordinate already busy is refused as a delegation target both at
-        // candidate generation (Generators.FromRelationship) and, fail-closed, at Commit.Apply, this
-        // may rely on that uniqueness rather than defend against its absence: SingleOrDefault throws
-        // if it is ever violated, which is what should happen — a silently-picked wrong answer here
-        // would hide exactly the invariant break this correction exists to prevent.
-        StrategyInstance? s = who.Execution.Strategy
-            ?? world.Characters.Values
-                .Select(other => other.Execution.Strategy)
-                .SingleOrDefault(candidate => candidate is not null && candidate.DelegatedToId == who.Id);
-        if (s is null) return null;
+    private static IReadOnlyList<PlayerOperation> Operating(World world, Character who, Func<string, string> name, Pronouns self)
+        => world.Characters.Values.SelectMany(c => c.Execution.Operations)
+            .Where(s => s.OwnerId == who.Id || s.DelegatedToId == who.Id)
+            .OrderBy(s => s.OwnerId, StringComparer.Ordinal).ThenBy(s => s.LocalSequence)
+            .Select(s => ProjectOperation(who, s, name, self)).ToList();
 
+    private static PlayerOperation ProjectOperation(Character who, StrategyInstance s, Func<string, string> name, Pronouns self)
+    {
         // StepIndex is the *next* step to run, so the last one completed is the one before it. Null
         // before anything has run, which reads as not having started in earnest rather than as a
         // step named "nothing".
@@ -803,7 +755,8 @@ public static class PlayerView
             // executor's: StartedAt is when the operation began, which for a man it was later handed
             // to is not when he came to hold it — see PlayerOperation.Since's own comment.
             who.Id == s.OwnerId ? s.StartedAt : null,
-            doingItHimself ? PlayerNarration.OwnProgress(lastDone, s.FailedAttempts, self) : null);
+            doingItHimself ? PlayerNarration.OwnProgress(lastDone, s.FailedAttempts, self) : null,
+            who.Id == s.OwnerId ? $"work-{s.LocalSequence}" : null);
     }
 
     /// <summary>

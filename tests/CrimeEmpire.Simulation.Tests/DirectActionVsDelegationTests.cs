@@ -119,7 +119,7 @@ public sealed class DirectActionVsDelegationTests
         ChooseByDescription(delegated, DelegateToTommy);
 
         var directStrategy = direct.World.Get(Vincent).Execution.Strategy;
-        var delegatedStrategy = delegated.World.Get(Vincent).Execution.Strategy;
+        var delegatedStrategy = delegated.World.Get(Vincent).Execution.Operations.Single(s => s.TargetId == Cast.Grocery);
 
         // Ownership never moves — Vincent owns the operation in both branches.
         Assert.NotNull(directStrategy);

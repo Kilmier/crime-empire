@@ -107,6 +107,7 @@ public sealed class StrategyInstance
 
     /// <summary>The scheduled step event, so abandoning can cancel it with a reason.</summary>
     public long? PendingStepEventId { get; set; }
+    public long? PendingReviewEventId { get; set; }
 
     /// <summary>
     /// How many times this approach has visibly failed. Commitment supplies continuity, but
@@ -128,7 +129,19 @@ public sealed class ExecutionState
     /// <summary>What the character has chosen to pursue, in plain words, for the trace.</summary>
     public string? Intention { get; set; }
 
-    public StrategyInstance? Strategy { get; set; }
+    /// <summary>Active work commissioned by this actor, in creation order.</summary>
+    public List<StrategyInstance> Operations { get; } = new();
+
+    /// <summary>The owned operation this actor executes personally, not supervised work.</summary>
+    public StrategyInstance? Strategy
+    {
+        get => Operations.SingleOrDefault(s => s.DelegatedToId is null);
+        set
+        {
+            if (Strategy is { } previous) Operations.Remove(previous);
+            if (value is not null) Operations.Add(value);
+        }
+    }
     public List<Commitment> Commitments { get; } = new();
 
     /// <summary>Conditions that should wake this character early. Recorded on the decision that set them.</summary>

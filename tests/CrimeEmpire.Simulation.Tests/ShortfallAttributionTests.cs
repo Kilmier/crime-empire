@@ -392,6 +392,10 @@ public sealed class ShortfallAttributionTests
     {
         var org = world.Org;
         var office = org.OfficeFor(actor.Id);
+        // These staged gap tests isolate unnamed-target reasoning: the new third shop is
+        // already ruled out here, so its fixture knowledge cannot stand in for the gap claim.
+        actor.Cognition.Learn(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Tailor),
+            Stance.Rejects, 1.0, SourceKind.Discovery, actor.Id, world.Now);
         return new GeneratorContext(
             actor.View,
             Salience.Perceive(actor, world.Now),

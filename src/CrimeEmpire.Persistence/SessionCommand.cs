@@ -11,6 +11,7 @@ public enum SessionCommandKind
 
     /// <summary>Maps to <c>SimulationSession.Choose(string)</c>. <see cref="SessionCommand.OptionToken"/> carries the opaque token.</summary>
     Choose,
+    ReviewOperation,
 }
 
 /// <summary>
@@ -35,4 +36,5 @@ public sealed record SessionCommand(SessionCommandKind Kind, int? Days = null, s
     public static SessionCommand AdvanceDays(int days) => new(SessionCommandKind.AdvanceDays, Days: days);
 
     public static SessionCommand Choose(string optionToken) => new(SessionCommandKind.Choose, OptionToken: optionToken);
+    public static SessionCommand ReviewOperation(string token) => new(SessionCommandKind.ReviewOperation, OptionToken: token);
 }

@@ -484,11 +484,11 @@ public sealed class RelationalConsequenceTests
     /// concern (traced in `AccountAgreementTests.Salvatores_generated_answer_to_tommy_raises_tommys_trust_when_chosen`)
     /// now outranks answering Tommy at all, so no account — agreeing or conflicting — is ever given.
     [Theory]
-    [InlineData("baseline", 2)]
-    [InlineData("cautious-vincent", 2)]
-    [InlineData("watchful-boss", 2)]
-    [InlineData("disloyal-vincent", 1)]
-    [InlineData("resentful-tommy", 2)]
+    [InlineData("baseline", 0)]
+    [InlineData("cautious-vincent", 0)]
+    [InlineData("watchful-boss", 0)]
+    [InlineData("disloyal-vincent", 2)]
+    [InlineData("resentful-tommy", 0)]
     public void The_scenario_produces_the_expected_number_of_conflicts(string variant, int expected)
         => Assert.Equal(expected, Run(variant).AccountConflicts.Count);
 
@@ -521,7 +521,10 @@ public sealed class RelationalConsequenceTests
     [InlineData("resentful-tommy")]
     public void The_capo_trusts_his_boss_less_after_being_contradicted(string variant)
     {
-        var world = Run(variant);
+        // M028: the natural parallel history no longer issues the stale second briefing.
+        // Stage that account through Reporting, retaining the listener-specific consequence proof.
+        var world = Cast.Build(42, variant);
+        AccountScenario.ContradictVincent(world);
         var vincent = world.Get("vincent");
 
         double started = variant switch
@@ -547,7 +550,8 @@ public sealed class RelationalConsequenceTests
     [Fact]
     public void Cautious_vincent_is_contradicted_after_discovering_the_shop_is_paying()
     {
-        var world = Run("cautious-vincent");
+        var world = Cast.Build(42, "cautious-vincent");
+        AccountScenario.ContradictVincent(world);
         var vincent = world.Get("vincent");
 
         Assert.Contains(world.AccountConflicts,

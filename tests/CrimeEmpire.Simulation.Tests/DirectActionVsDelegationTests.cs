@@ -45,7 +45,7 @@ public sealed class DirectActionVsDelegationTests
 
     private static DateTime End => Cast.Start.AddDays(90);
 
-    private const string CarryOn = "carry on getting Bellini's grocery to pay";
+    private const string CarryOn = "carry on getting Ferri's tailor shop to pay";
     private const string DelegateToTommy = "hand it to Tommy Nardo";
 
     // Vincent's very first pause is the start decision itself (SevenChoiceSequence[0] in
@@ -54,7 +54,7 @@ public sealed class DirectActionVsDelegationTests
     // that follows it, not the first pause overall. Independently pinned here, matching those two
     // files' own copies, per this project's practice of not sharing the same constant across files
     // that check the same assumption.
-    private const string StartPersuade = "persuade Bellini's grocery to pay";
+    private const string StartPersuade = "persuade Ferri's tailor shop to pay";
 
     // ================================================================= Section A: the natural fork
 
@@ -119,7 +119,7 @@ public sealed class DirectActionVsDelegationTests
         ChooseByDescription(delegated, DelegateToTommy);
 
         var directStrategy = direct.World.Get(Vincent).Execution.Strategy;
-        var delegatedStrategy = delegated.World.Get(Vincent).Execution.Operations.Single(s => s.TargetId == Cast.Grocery);
+        var delegatedStrategy = delegated.World.Get(Vincent).Execution.Operations.Single(s => s.TargetId == Cast.Tailor);
 
         // Ownership never moves — Vincent owns the operation in both branches.
         Assert.NotNull(directStrategy);
@@ -145,8 +145,8 @@ public sealed class DirectActionVsDelegationTests
         // clarification, checked as a required negative: this is NOT where the two branches diverge.
         // (Only asserted when both branches actually reach collection; a natural run is permitted to
         // fail, delay, or take a different path in either branch.)
-        var directGrocery = direct.World.Businesses[Cast.Grocery];
-        var delegatedGrocery = delegated.World.Businesses[Cast.Grocery];
+        var directGrocery = direct.World.Businesses[Cast.Tailor];
+        var delegatedGrocery = delegated.World.Businesses[Cast.Tailor];
         if (directGrocery.PayingTribute && delegatedGrocery.PayingTribute)
         {
             Assert.True(direct.World.Get(Vincent).Capabilities.Cash > 6000);
@@ -312,8 +312,8 @@ public sealed class DirectActionVsDelegationTests
             fastForwarded.World.Get(Vincent).Capabilities.Cash,
             stepped.World.Get(Vincent).Capabilities.Cash);
         Assert.Equal(
-            fastForwarded.World.Businesses[Cast.Grocery].PayingTribute,
-            stepped.World.Businesses[Cast.Grocery].PayingTribute);
+            fastForwarded.World.Businesses[Cast.Tailor].PayingTribute,
+            stepped.World.Businesses[Cast.Tailor].PayingTribute);
     }
 
     // ================================================================= Section B: staged boundary proof

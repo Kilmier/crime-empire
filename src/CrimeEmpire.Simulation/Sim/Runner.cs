@@ -279,6 +279,7 @@ public static class Runner
         foreach (var disclosed in assignment.Disclosed)
         {
             var receipt = actor.Cognition.Receive(disclosed, assignment.IssuerId, world.Now);
+            Strategies.ReviewAfterReceipt(world, actor, receipt);
 
             // The third receipt path, and it takes the same rule. A boss whose briefing contradicts
             // what his capo already holds has contradicted him, and being the man who issued the
@@ -338,7 +339,8 @@ public static class Runner
             // corroborate what you were told. Milestone 022; before it, both were Discovery and
             // street talk had the standing of something seen.
             bool hearsay = ev.Payload.AcquiredAs == SourceKind.Rumor;
-            observer.Cognition.Learn(
+            var prior = observer.Cognition.Find(claim);
+            var acquired = observer.Cognition.Learn(
                 claim,
                 // PROVISIONAL TUNING, in the same family as the discovery confidence beside it:
                 // Suspects rather than Believes, because "it is going round" is not "I know", and
@@ -350,6 +352,8 @@ public static class Runner
                 ev.Payload.AttributedTo ?? observer.Id,
                 world.Now);
             learnedSomething = true;
+            if (!ReferenceEquals(prior, acquired))
+                Strategies.ReviewAfterInformation(world, observer, acquired.Claim);
 
             if (claim.Kind == ClaimKind.PersonBreachedPolicy && claim.Subject != observer.Id)
             {

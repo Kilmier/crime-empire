@@ -77,8 +77,8 @@ public sealed class ExecutorSuitabilityTests
 
     // Independently pinned, matching DirectActionVsDelegationTests' own copy, per this project's
     // practice of not sharing the same constant across files that check the same assumption.
-    private const string StartPersuade = "persuade Bellini's grocery to pay";
-    private const string CarryOn = "carry on getting Bellini's grocery to pay";
+    private const string StartPersuade = "persuade Ferri's tailor shop to pay";
+    private const string CarryOn = "carry on getting Ferri's tailor shop to pay";
     private const string DelegateToTommy = "hand it to Tommy Nardo";
     private const string DelegateToAngelo = "hand it to Angelo Conti";
 
@@ -1376,7 +1376,7 @@ public sealed class ExecutorSuitabilityTests
         // two vocabularies are deliberately different (PlayerOption.cs's own header explains why).
         var startCandidate = first.Available.Single(c =>
             c.Kind == ActionKind.StartStrategy && c.Strategy == StrategyKind.SecureTribute
-            && c.TargetId == Cast.Grocery && c.Method == CoercionMethod.Persuade);
+            && c.TargetId == Cast.Tailor && c.Method == CoercionMethod.Persuade);
         Pipeline.Resolve(first, startCandidate.Id);
 
         return AdvanceToVincentsNextPause(world);

@@ -257,6 +257,15 @@ public static class Pipeline
             ? "nothing was open to him"
             : Commit.Apply(world, actor, chosen.Candidate, prepared.Agenda, prepared.Context, reconsideration);
 
+        // A question, report, or other side action does not abandon the executor's standing work.
+        // At a block the step has finished; preserve continuity if the chosen action did not already
+        // schedule, replace, delegate, postpone, or cancel it. This is execution bookkeeping, never
+        // information or a wake granted to an absent supervisor.
+        if (prepared.Context.CurrentExecution is { } prior
+            && ReferenceEquals(Strategies.CurrentExecution(world, actor), prior)
+            && (prior.PendingStepEventId is null || world.Queue.Cancelled.ContainsKey(prior.PendingStepEventId.Value)))
+            Strategies.ScheduleNextStep(world, prior, $"{prior.Label}: standing work continues after {actor.Name}'s decision");
+
         actor.Execution.ReconsiderationTriggers.Clear();
         actor.Execution.ReconsiderationTriggers.AddRange(reconsideration);
 

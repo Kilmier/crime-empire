@@ -9,17 +9,10 @@ using CrimeSim.Trace;
 namespace CrimeEmpire.Simulation.Tests;
 
 /// <summary>
-/// Milestone 014: one complete player-owned operation, played through the real interactive path
-/// rather than assembled from staged fragments.
-///
-/// Vincent Russo's <c>SecureTribute</c> operation against Bellini's grocery is not invented for this
-/// milestone — every accepted variant at seed 42 independently reaches
-/// "1987-04-05 15:00 Tommy Nardo collected from Bellini's grocery" through the same sequence of
-/// Vincent's own decisions: start (persuade), carry on, delegate to Tommy, answer an unrelated
-/// question while Tommy works, report the completed operation without inventing a second one,
-/// and ask for latitude at the next day's still-unresolved organizational review — six pauses,
-/// pinned below as
-/// <see cref="GoldenPathChoiceSequence"/>, in the exact wording the accepted trace renders for each.
+/// Milestone 014's real-button operation proof, updated for M028's corrected opening:
+/// Vincent commissions the tailor first, starts the grocery while Tommy works, and eventually
+/// delegates that job too. Both collections arrive by April 13; he reports on April 17.
+/// The thirteen public choices below are pinned from a measured run, not ranked at test time.
 ///
 /// <b>Every pause here is resolved by an explicit <see cref="SimulationSession.Choose"/> call, never
 /// by <see cref="SimulationSession.ResolveAutomatically"/>, and never by inspecting anything beyond
@@ -28,7 +21,7 @@ namespace CrimeEmpire.Simulation.Tests;
 /// <see cref="PlayGoldenPath"/> read no candidate id, no score, no <c>PreparedDecision</c>, and use no
 /// reflection into session-private state; a run built this way exercises the interactive path under
 /// the same information a human clicking through the shell would have, not a shortcut that happens to
-/// look like one. The seven choices are independently pinned from a prior run of the accepted trace,
+/// look like one. The choices are independently pinned from a prior run of the accepted trace,
 /// not derived from the pipeline's own ranking at test time, so this remains a check on the
 /// interactive path rather than a restatement of whatever the pipeline currently prefers.
 /// </summary>
@@ -42,25 +35,25 @@ public sealed class PlayerOwnedOperationTests
 
     private static DateTime End => Cast.Start.AddDays(Days);
 
-    // Past the M028 personal tailor collection and its immediate follow-up decisions.
-    private static DateTime JustAfterCollection => Cast.Start.AddDays(39);
+    // Past both M028 delegated collections and its immediate follow-up decisions.
+    private static DateTime JustAfterCollection => Cast.Start.AddDays(48);
 
-    // M028 measured public choices: delegated grocery plus personal tailor collection.
+    // M028 correction: measured public choices through both delegated collections and the April 17 report.
     private static readonly string[] GoldenPathChoiceSequence =
     {
+        "persuade Ferri's tailor shop to pay",
+        "carry on getting Ferri's tailor shop to pay",
+        "hand it to Tommy Nardo",
         "persuade Bellini's grocery to pay",
+        "leave these orders unchanged",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
-        "persuade Ferri's tailor shop to pay",
+        "ask Salvatore Greco for permission",
+        "ask Salvatore Greco for permission",
         "leave these orders unchanged",
-        "carry on getting Ferri's tailor shop to pay",
-        "carry on getting Ferri's tailor shop to pay",
-        "carry on getting Ferri's tailor shop to pay",
-        "leave these orders unchanged",
-        "switch to threats with Ferri's tailor shop",
         "leave these orders unchanged",
         "ask Tommy Nardo what he knows about whether the outfit has a rule: no public violence in the harbour",
-        "ask Salvatore Greco for permission",
+        "report the situation to Salvatore Greco",
     };
 
     private const string LetItLie = "take no action";
@@ -75,7 +68,7 @@ public sealed class PlayerOwnedOperationTests
     /// interactive path itself, which the rest of this file never does this way (see the type doc).
     /// </summary>
     [Fact]
-    public void The_natural_run_offers_vincent_a_secure_tribute_choice_against_bellinis_grocery()
+    public void The_natural_run_offers_vincent_a_secure_tribute_choice_against_ferris_tailor()
     {
         var session = SimulationSession.Start(Seed, "baseline", Controlled);
         var pending = RunToFirstPause(session, JustAfterCollection);
@@ -89,7 +82,7 @@ public sealed class PlayerOwnedOperationTests
         var start = PreparedOf(session).Available.Single(c =>
             c.Kind == ActionKind.StartStrategy
             && c.Strategy == StrategyKind.SecureTribute
-            && c.TargetId == Cast.Grocery
+            && c.TargetId == Cast.Tailor
             && c.Method == CoercionMethod.Persuade);
         Assert.NotNull(start);
     }
@@ -97,11 +90,7 @@ public sealed class PlayerOwnedOperationTests
     // ================================================================= the golden path (ruling 6)
 
     /// <summary>
-    /// The complete operation, played through every one of Vincent's seven pinned decisions — none of
-    /// them resolved automatically, per ruling 2, and each chosen by matching the exact public option
-    /// text a Godot button would carry, never a candidate id or score — reaching the accepted 1 April
-    /// consequence: the business condition changes and Vincent's own cash rises by exactly 840.
-    ///
+    /// Both operations, played through every pinned public choice, produce 620 + 840 in receipts.
     /// Compared against the same seed run fully autonomously, because ruling 6 asks for both halves:
     /// that the interactive arc reaches the consequence, and that it is the same consequence the
     /// pipeline's own preference would have reached without a person in front of it at all.
@@ -121,22 +110,22 @@ public sealed class PlayerOwnedOperationTests
 
         // Through the player-facing snapshot, not only the internal world — the consequence a person
         // watching the Godot shell would actually see.
-        Assert.Equal(6620, session.Snapshot().Cash);
+        Assert.Equal(7460, session.Snapshot().Cash);
 
         var vincent = session.World.Get(Controlled);
-        var grocery = session.World.Businesses[Cast.Tailor];
+        var tailor = session.World.Businesses[Cast.Tailor];
 
-        Assert.Equal(6620, vincent.Capabilities.Cash);
-        Assert.True(grocery.PayingTribute);
+        Assert.Equal(7460, vincent.Capabilities.Cash);
+        Assert.True(tailor.PayingTribute);
 
         // His own belief on the business condition, through the existing belief channel rather than
         // any new mechanism.
         //
-        // Vincent performed this collection himself: participant provenance, not a delegate report.
+        // The money arriving is owner-observable discovery, not access to Tommy's private progress.
         var ownReading = vincent.Cognition.Find(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Tailor));
         Assert.NotNull(ownReading);
         Assert.Equal(Stance.Rejects, ownReading!.Stance);
-        Assert.Equal(SourceKind.Participant, ownReading.SourceKind);
+        Assert.Equal(SourceKind.Discovery, ownReading.SourceKind);
         Assert.True(ownReading.Confidence >= 0.3,
             "a later stale briefing may contest the discovery, but must not reverse it back into a refusal");
 
@@ -145,10 +134,10 @@ public sealed class PlayerOwnedOperationTests
         autonomous.AdvanceTo(JustAfterCollection);
 
         var autonomousVincent = autonomous.World.Get(Controlled);
-        var autonomousGrocery = autonomous.World.Businesses[Cast.Tailor];
+        var autonomousTailor = autonomous.World.Businesses[Cast.Tailor];
 
         Assert.Equal(autonomousVincent.Capabilities.Cash, vincent.Capabilities.Cash);
-        Assert.Equal(autonomousGrocery.PayingTribute, grocery.PayingTribute);
+        Assert.Equal(autonomousTailor.PayingTribute, tailor.PayingTribute);
         Assert.Equal(
             TraceWriter.Render(autonomous.World, "baseline", false),
             TraceWriter.Render(session.World, "baseline", false));
@@ -166,20 +155,20 @@ public sealed class PlayerOwnedOperationTests
     public void A_delegated_collection_is_legible_and_cannot_immediately_be_started_again()
     {
         var session = SimulationSession.Start(Seed, "baseline", Controlled);
-        // M028: the natural baseline now collects the tailor personally. Isolate delegated
-        // collection by staging the grocery's agreement after the real three-choice handover.
+        // Isolate the collection notice by staging the tailor's agreement after the real handover.
+        // The full golden path above proves both natural collections without this staging.
         foreach (string description in GoldenPathChoiceSequence.Take(3))
         {
             while (session.Pending is null) session.StepEvent();
             session.Choose(session.Pending.Options.Single(o => o.Description == description).Id);
         }
-        session.World.Businesses[Cast.Grocery].PayingTribute = true;
+        session.World.Businesses[Cast.Tailor].PayingTribute = true;
         PendingDecision? completion = null;
         for (int guard = 0; guard < 1000; guard++)
         {
             if (session.Pending is { } pending)
             {
-                if (pending.Occasion == "money from Bellini's grocery has started arriving after Tommy Nardo handled the job")
+                if (pending.Occasion == "money from Ferri's tailor shop has started arriving after Tommy Nardo handled the job")
                 {
                     completion = pending;
                     break;
@@ -189,11 +178,11 @@ public sealed class PlayerOwnedOperationTests
             else session.StepEvent();
         }
         Assert.NotNull(completion);
-        Assert.Equal(6840, session.Snapshot().Cash);
+        Assert.Equal(6620, session.Snapshot().Cash);
         Assert.Equal(SourceKind.Discovery, session.World.Get(Controlled).Cognition.Find(
-            new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery))!.SourceKind);
+            new Claim(ClaimKind.BusinessRefusesTribute, Cast.Tailor))!.SourceKind);
         Assert.DoesNotContain(completion!.Options,
-            option => option.Description.Contains("Bellini's grocery to pay", StringComparison.Ordinal));
+            option => option.Description.Contains("Ferri's tailor shop to pay", StringComparison.Ordinal));
     }
 
     // ================================================================= abandonment (ruling 3)

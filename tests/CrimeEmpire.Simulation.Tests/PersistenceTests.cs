@@ -40,32 +40,23 @@ public sealed class PersistenceTests
     // Independently pinned, matching PlayerOwnedOperationTests.cs and Game.cs's own copy — not
     // shared code, so the three cannot all be wrong about the same assumption together.
     //
-    // Re-derived 2026-09-11 by milestone 024's sixth correction. The old five-through-seven steps had
-    // Vincent personally alter a delegated operation — exactly the authority this correction removed;
-    // AlterStrategy is executor-only once delegated. Confirmed live, not guessed: with Vincent as the
-    // only controlled character and Tommy's own delegated decisions left to resolve autonomously
-    // (never controlled, never staged), his escalation to Threaten and the operation's own genuine
-    // completion both happen entirely in the background. Vincent's own next two real decisions are an
-    // unrelated question from Salvatore (3/25) and, once the delegated operation has genuinely
-    // completed, reporting that changed state (4/05), then asking for latitude at the next day's
-    // organizational review. A second collection cycle against the already-paying shop was a defect
-    // exposed by Matt's 2026-09-12 playtest, not a valid terminus.
-    // M028 measured public choices: delegated grocery plus personal tailor collection.
+    // Prior milestone paths remain in their archives; no second-payment cycle is legitimate.
+    // M028 correction: measured public choices through both delegated collections and the April 17 report.
     private static readonly string[] GoldenPathChoiceSequence =
     {
+        "persuade Ferri's tailor shop to pay",
+        "carry on getting Ferri's tailor shop to pay",
+        "hand it to Tommy Nardo",
         "persuade Bellini's grocery to pay",
+        "leave these orders unchanged",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
-        "persuade Ferri's tailor shop to pay",
+        "ask Salvatore Greco for permission",
+        "ask Salvatore Greco for permission",
         "leave these orders unchanged",
-        "carry on getting Ferri's tailor shop to pay",
-        "carry on getting Ferri's tailor shop to pay",
-        "carry on getting Ferri's tailor shop to pay",
-        "leave these orders unchanged",
-        "switch to threats with Ferri's tailor shop",
         "leave these orders unchanged",
         "ask Tommy Nardo what he knows about whether the outfit has a rule: no public violence in the harbour",
-        "ask Salvatore Greco for permission",
+        "report the situation to Salvatore Greco",
     };
 
     private const string LetItLie = "take no action";
@@ -259,7 +250,7 @@ public sealed class PersistenceTests
             var resumed = PersistentSession.Load(path);
             PlayChoices(resumed, GoldenPathChoiceSequence.Skip(3));
 
-            Assert.Equal(6620, resumed.Snapshot().Cash);
+            Assert.Equal(7460, resumed.Snapshot().Cash);
             Assert.Equal(uninterrupted.Snapshot().Cash, resumed.Snapshot().Cash);
             Assert.Equal(
                 TraceWriter.Render(uninterrupted.InnerSession.World, Variant, false),
@@ -329,7 +320,7 @@ public sealed class PersistenceTests
             var declined = PersistentSession.Load(path);
             ChooseByDescription(declined, LetItLie);
 
-            Assert.Equal(6620, golden.Snapshot().Cash);
+            Assert.Equal(7460, golden.Snapshot().Cash);
             Assert.NotEqual(golden.Snapshot().Cash, declined.Snapshot().Cash);
             Assert.True(golden.InnerSession.World.Businesses[Cast.Tailor].PayingTribute);
             Assert.False(declined.InnerSession.World.Businesses[Cast.Tailor].PayingTribute);

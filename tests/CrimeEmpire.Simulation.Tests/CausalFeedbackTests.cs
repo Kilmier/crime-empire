@@ -17,8 +17,9 @@ namespace CrimeEmpire.Simulation.Tests;
 ///
 /// The two required natural proofs both use the accepted seed-42 fixture, unmodified:
 ///
-///  - <b>Salvatore asks Vincent</b> — <c>"cautious-vincent"</c>, Salvatore controlled and viewpoint.
-///    Observed directly before writing these tests (not guessed): the ask becomes available on
+///  - <b>Salvatore asks Vincent</b> — corrected M028 witness is baseline seed 42, March 27.
+///    The historical cautious-vincent timing below is superseded; exact-claim answering is deliberately chosen.
+///    Historical timing before M028: the ask became available on
 ///    1987-04-03, and Vincent's own answer — which happens to contradict what Salvatore already held
 ///    from "the books" — reaches him naturally within a few days, through the ordinary report
 ///    channel, with no staging and no tuning. Both halves of the milestone's own instruction are
@@ -48,7 +49,7 @@ public sealed class CausalFeedbackTests
 {
     private const int Seed = 42;
 
-    private const string CautiousVincent = "cautious-vincent";
+    private const string NaturalQuestionVariant = "baseline";
     private const string Baseline = "baseline";
     private const string Salvatore = "salvatore";
     private const string Marco = "marco";
@@ -71,7 +72,7 @@ public sealed class CausalFeedbackTests
     [Fact]
     public void Asking_vincent_immediately_acknowledges_and_leaves_the_request_genuinely_unresolved()
     {
-        var session = SimulationSession.Start(Seed, CautiousVincent, Salvatore);
+        var session = SimulationSession.Start(Seed, NaturalQuestionVariant, Salvatore);
         var pending = AdvanceToPause(session);
         Assert.Equal(Salvatore, pending.ActorId);
 
@@ -129,7 +130,7 @@ public sealed class CausalFeedbackTests
     [Fact]
     public void A_delivered_answer_resolves_the_request_and_attributes_the_account_to_vincent()
     {
-        var session = SimulationSession.Start(Seed, CautiousVincent, "vincent", Salvatore);
+        var session = SimulationSession.Start(Seed, NaturalQuestionVariant, "vincent", Salvatore);
         var pending = AdvanceToVincentsAnswerToSalvatore(session);
         session.Choose(pending.Options.Single(o => o.Description == TellSalvatoreAboutTribute).Id);
 
@@ -138,11 +139,11 @@ public sealed class CausalFeedbackTests
         Assert.Contains(snapshot.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
     }
 
-    /// <summary>The current natural answer resolves the request without inventing a collection.</summary>
+    /// <summary>An autonomous report of collection is not an exact-claim answer about refusal.</summary>
     [Fact]
-    public void The_autonomous_report_answers_without_inventing_a_resolved_refusal()
+    public void A_later_report_asserting_a_different_claim_does_not_resolve_the_original_request()
     {
-        var session = SimulationSession.Start(Seed, CautiousVincent, Salvatore);
+        var session = SimulationSession.Start(Seed, NaturalQuestionVariant, Salvatore);
         var pending = AdvanceToPause(session);
         session.Choose(pending.Options.Single(o => o.Description == AskVincent).Id);
 
@@ -152,11 +153,10 @@ public sealed class CausalFeedbackTests
 
         var snapshot = session.Snapshot();
 
-        // M028: Vincent reports the tailor's collection but still holds the grocery refusal.
-        // His exact-claim answer resolves the question without inventing a successful grocery job.
-        Assert.Contains(snapshot.Known, b => b.Claim.Kind == ClaimKind.BusinessRefusesTribute && b.Claim.Subject == Cast.Grocery
-            && (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
-        Assert.DoesNotContain(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
+        // Both jobs now collect, but TributeCollected is not BusinessRefusesTribute.
+        // Reporting one cannot silently answer a question about the other.
+        Assert.Contains(snapshot.Known, b => b.Claim.Kind == ClaimKind.TributeCollected && b.Claim.Subject == Cast.Grocery);
+        Assert.Contains(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
         Assert.DoesNotContain(snapshot.Disagreements,
             d => d.Statement.Contains("Bellini's grocery", StringComparison.Ordinal)
                  && d.Accounts.Any(a => a.SourceName == "Vincent Russo"));
@@ -202,14 +202,14 @@ public sealed class CausalFeedbackTests
     [Fact]
     public void Save_load_preserves_an_unresolved_request_and_its_later_resolution()
     {
-        const string persuade = "persuade Bellini's grocery to pay";
-        const string carryOn = "carry on getting Bellini's grocery to pay";
+        const string persuade = "persuade Ferri's tailor shop to pay";
+        const string carryOn = "carry on getting Ferri's tailor shop to pay";
         const string handToTommy = "hand it to Tommy Nardo";
 
         string path = Path.Combine(Path.GetTempPath(), $"ce-018-request-{Guid.NewGuid():N}.db");
         try
         {
-            var original = PersistentSession.Start(Seed, CautiousVincent, "vincent", "salvatore");
+            var original = PersistentSession.Start(Seed, NaturalQuestionVariant, "vincent", "salvatore");
 
             PendingDecision AdvanceToPersistentPause()
             {
@@ -226,8 +226,8 @@ public sealed class CausalFeedbackTests
             // Salvatore's own question has arrived on its own by now (1987-03-24, confirmed directly)
             // and Vincent's next pause is the wake it produced — the request is genuinely open here,
             // not yet answered.
-            foreach (var next in new[] { "persuade Ferri's tailor shop to pay", "leave these orders unchanged",
-                         "carry on getting Ferri's tailor shop to pay" })
+            foreach (var next in new[] { "persuade Bellini's grocery to pay", "leave these orders unchanged",
+                         "carry on getting Bellini's grocery to pay", "hand it to Tommy Nardo", "ask Salvatore Greco for permission" })
                 original.Choose(AdvanceToPersistentPause().Options.Single(o => o.Description == next).Id);
             AdvanceToPersistentPause();
             var pendingRequest = Assert.Single(original.Snapshot().AwaitingAnswers);
@@ -257,7 +257,7 @@ public sealed class CausalFeedbackTests
     [Fact]
     public void Repeated_snapshots_neither_duplicate_nor_clear_an_unresolved_request()
     {
-        var session = SimulationSession.Start(Seed, CautiousVincent, Salvatore);
+        var session = SimulationSession.Start(Seed, NaturalQuestionVariant, Salvatore);
         var pending = AdvanceToPause(session);
         session.Choose(pending.Options.Single(o => o.Description == AskVincent).Id);
 
@@ -277,7 +277,7 @@ public sealed class CausalFeedbackTests
     {
         PlayerSnapshot Run()
         {
-            var session = SimulationSession.Start(Seed, CautiousVincent, Salvatore);
+            var session = SimulationSession.Start(Seed, NaturalQuestionVariant, Salvatore);
             var pending = AdvanceToPause(session);
             session.Choose(pending.Options.Single(o => o.Description == AskVincent).Id);
             session.AdvanceDays(3);
@@ -334,8 +334,8 @@ public sealed class CausalFeedbackTests
         var partial = StageTommysViolenceAndVincentsQuestion(Baseline);
         partial.Choose(AdvanceToPause(partial).Options.Single(o => o.Description == partialWithholding).Id);
 
-        var silentRequest = Assert.Single(silent.Snapshot().AwaitingAnswers);
-        var partialRequest = Assert.Single(partial.Snapshot().AwaitingAnswers);
+        var silentRequest = Assert.Single(silent.Snapshot().AwaitingAnswers, r => r.AskedId == "tommy");
+        var partialRequest = Assert.Single(partial.Snapshot().AwaitingAnswers, r => r.AskedId == "tommy");
 
         Assert.Equal(silentRequest.Statement, partialRequest.Statement);
         Assert.Equal(silentRequest.AskedName, partialRequest.AskedName);

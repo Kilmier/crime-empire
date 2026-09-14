@@ -151,3 +151,155 @@ Implementation commit: the focused commit containing this archive, directly foll
 locate its exact hash with `git log --diff-filter=A --format=%H -- docs/milestones/028-delegation-creates-bandwidth.md`.
 Self-review is implementer preflight only. No independent review or Matt acceptance of this
 implementation is claimed. Stop here for exact-commit review; do not begin milestone 029.
+
+## Review of `3db0cb1` and focused correction — 2026-09-14
+
+This appendix supersedes the initial implementation's claimed retirement of natural success bars;
+the original account above remains unchanged as history.
+
+### Review, authority and disposition
+
+Claude reviewed exact `3db0cb1ffba07292f1c89ebc313ed46275276e24`, Class A, **FAIL**:
+three P1 and two P2 findings. The supplied report was `REVIEW_3db0cb1.md`. He authored no runtime
+source, but authored proposal material and the bundled 027 closure text, which he excluded from
+review. Independence is therefore partial and disclosed, not a blanket independent PASS.
+The four pre-existing dirty roadmap/proposal files were documentation-only and excluded from his
+exact-source runtime checks. He reproduced build, 725 tests, three deterministic verifications,
+comparison and both viewpoint commands. He did not run Godot or the implementer's fault probes.
+
+Matt authorized investigation and a focused correction in this task. On review access he explicitly
+ruled: **“Keep free player review; add information-triggered NPC reviews.”** That settles the timing
+question: equivalent consequences and information restrictions, not identical thinking frequency.
+027 remains closed by Matt's previous owner exception; Claude's request for another review of its
+closure text does not reopen that gate.
+
+Finding dispositions in this correction:
+
+1. **P1 stranded delegated work — fixed at the executor boundary.** Resolving an auxiliary choice
+   after a block reschedules the same still-active execution only when no live step exists.
+   Existing continuation, escalation, postponement, reassignment and cancellation remain authoritative.
+   Seeking approval now applies its existing five-day execution delay to the actual executor,
+   personal or delegated. The absent supervisor receives no private progress or wake from this repair.
+   Claude's proposed hidden-pending-step owner remedy and relaxed assignment gate were not adopted:
+   neither is necessary, and both would weaken existing information/assignment constraints.
+2. **P1 inverted milestone-007 bar — restored, not retired.** The unmodified baseline now must collect
+   both opening shops, issue at least two assignments, exhibit natural repeated briefings and a
+   natural account conflict, and show the trust cost changing a later available candidate's score.
+   No synthetic account substitutes for those natural tests. The all-owned-operations assignment
+   gate is retained: valid outstanding work still keeps its assignment open.
+3. **P1 early review access — corrected under Matt's timing ruling.** All three receipt paths
+   (report, assignment, delegation briefing) can bring a supervised-order review forward when a
+   relevant receipt is news, a conflict, or an agreement. Successful observation acquisition can
+   also bring it forward. Relevance compares communicated/acquired claim subject/object against
+   the recipient's own order target or named executor. Withholding, repeated inert accounts,
+   unrelated news, failed observation and private delegate progress do not trigger it.
+   A missing operation target never matches a claim's missing object.
+   The same scheduler and pipeline handle free player requests, received-information occasions,
+   and the provisional seven-day reviews. This is not a new general-purpose trigger taxonomy.
+4. **P2 objective reachability — measured and pinned.** All six autonomous seed-42 variants remain
+   Unmet, honestly. A baseline seed-42 Vincent playthrough using twenty explicit public option texts
+   collects all three shops and ends **ObjectiveMet**, revenue loss 0, with no staged truth,
+   fixture alteration, coefficient change or deadline extension. The choices are pinned in
+   `OperationContinuityTests.The_unchanged_objective_is_reachable_through_legal_named_player_choices`.
+   This proves legal player reachability, not autonomous success. The Godot positive ending render
+   remains explicitly staged; it is not presented as this playthrough's UI proof.
+5. **P2 alphabetical prospective target — removed.** Single-target belief order and the own-active-
+   target exclusion remain; the six-candidate limit is unchanged. The first target is now the tailor
+   in every accepted seed-42 variant.
+
+The strong initial tailor belief was a non-blocking note, not authority to retune the fixture.
+It remains unchanged. Discovery is not testimony eligible for corroboration, but the claim that it
+cannot be argued against overstates the model: `Cognition.Receive` can contest direct knowledge.
+Bounded attention, information topology, and deferred tuning remain open concerns.
+
+### Corrected natural history and assurance
+
+At baseline seed 42 Vincent starts the tailor, delegates it on March 14, and starts the grocery at
+the hands-free occasion. Both genuinely advance during overlap. Tommy collects the tailor on
+March 26; Vincent delegates the grocery that day after his own attempts; Tommy collects it on
+April 13. Vincent reports April 17. The May 4 second assignment reintroduces Salvatore's stale
+grocery account to a Vincent who has now seen the money arrive: a real conflict returns.
+Salvatore's changed questions/report dates therefore follow changed received information and
+completed obligations, not a boss-specific scoring or knowledge exception.
+
+The thirteen-button golden path now ends at cash 7,460 (620 + 840 received), with owner-observable
+discovery provenance for delegated collection. Both persistence copies and Godot follow measured
+public choices. The personal-action Godot fork still renders continuation and delegation together;
+choosing continuation then threats collects the tailor personally for 620. Threats succeed, so this
+proof no longer demands subsequent force against an already-paying shop.
+
+Other historical dialogue proofs were re-established through live choices: the natural Salvatore
+question uses baseline March 27 rather than the now-inapplicable cautious-variant timing; its exact-
+claim answer is deliberately selected and survives replay. Autonomous reporting of TributeCollected
+does not answer BusinessRefusesTribute. Agreement coverage uses legal choices to finish the tailor
+personally, delegate the grocery, ask Salvatore, and choose his candid response; no beliefs or
+requests are injected. That is controlled-choice coverage, not fully autonomous emergence.
+The existing staged investigation now produces multiple distinct incidents in some variants;
+tests check each request's actual suspect and each answer's exact claim rather than falsely require
+one incident. The earlier staged mechanism tests remain labelled as staged.
+
+| Variant | Revenue loss | Conflicts | Agreements | Assignments | Vincent cash |
+|---|---:|---:|---:|---:|---:|
+| baseline | 0.55 | 1 | 4 | 2 | 7,460 |
+| cautious-vincent | 0.50 | 1 | 2 | 2 | 7,460 |
+| watchful-boss | 0.55 | 1 | 2 | 2 | 7,460 |
+| disloyal-vincent | 0.55 | 2 | 0 | 2 | 7,460 |
+| resentful-tommy | 0.55 | 1 | 4 | 2 | 7,460 |
+| capable-angelo | 0.55 | 1 | 2 | 2 | 7,460 |
+
+### Correction verification — implementer preflight, not independent review
+
+Final full solution build: **0 warnings, 0 errors**. Full solution tests:
+**751 passed, 0 failed, 0 skipped**. Commands:
+
+```powershell
+dotnet build CrimeEmpire.sln --verbosity quiet
+dotnet test CrimeEmpire.sln --no-build --no-restore --verbosity quiet
+dotnet run --no-build --project src/CrimeEmpire.Runner -- --verify --variant baseline --seed 42 --days 90
+dotnet run --no-build --project src/CrimeEmpire.Runner -- --verify --variant disloyal-vincent --seed 42 --days 90
+dotnet run --no-build --project src/CrimeEmpire.Runner -- --verify --variant resentful-tommy --seed 42 --days 90
+dotnet run --no-build --project src/CrimeEmpire.Runner -- --compare --seed 42
+dotnet run --no-build --project src/CrimeEmpire.Runner -- --variant disloyal-vincent --viewpoint salvatore --seed 42 --days 90
+dotnet run --no-build --project src/CrimeEmpire.Runner -- --variant baseline --viewpoint vincent --seed 42 --days 90
+git diff --check
+```
+
+Repeated verifications deterministic; both viewpoint commands exit zero. Comparison:
+six distinct traces, five distinct action sequences. These hashes are correction measurements, not
+independently reviewed baselines.
+
+| Variant | Trace hash | Chosen-action hash | Decisions |
+|---|---|---|---:|
+| baseline | 94831B526FCA5761 | 2930C6612450A449 | 36 |
+| cautious-vincent | A796B6CDA38EDBBF | B0DFFBEAEBD8F6F3 | 23 |
+| watchful-boss | 78523E6CE5904631 | 7A9ACC3C59970142 | 28 |
+| disloyal-vincent | 9A2F2987D4AE1544 | 6C88BE019F2CD0FA | 27 |
+| resentful-tommy | 6B634CBCA3EACD2D | 2930C6612450A449 | 36 |
+| capable-angelo | 0083E53CFF84A342 | A955423F0063E292 | 36 |
+
+Godot 4.7.1 mono: all ten headless flags listed in the original verification section were rerun after
+the final runtime edit and passed, including separate-process restart-save then restart-load.
+The review/cancellation test preserves the personal sibling. Only the isolated self-test save slot
+was used. This is actual scene-tree/button verification, not visual-layout or human-playtest evidence.
+
+Fault probes, all reverted:
+
+- Disable executor continuity: the staged real available corroboration choice strands the operation
+  and `Asking_elsewhere_after_a_block_preserves_work_without_informing_the_absent_owner` fails.
+- Remove report-receipt early review: both controlled/uncontrolled early-review cases and the genuine
+  report-generated save/replay case fail (three failures).
+- Restore alphabetical prospective selection: belief-order regression test fails.
+- Remove the conflict trust cost: the natural conflict-to-later-score test fails.
+
+Important limit: after restoring belief order, the natural block-continuity test alone still passes
+with the fallback disabled; that changed natural route does not exercise the auxiliary-choice bug.
+The staged **available-choice** probe is the discriminating check. No claim is made that reverting
+the assignment gate catches this correction: the gate was deliberately not changed.
+
+Additional coverage proves identical receipt-generated review instants/state across controlled and
+autonomous resolution, silence for private/unreceived information, no wake for repeated accounts,
+replay of a real pending early review, and equal explicit approval delays for actual executors.
+No new persistent state or replay command kind was introduced.
+
+The focused correction is the commit containing this appendix, directly after `3db0cb1`.
+Independent verification and Matt's acceptance remain pending. No 029 implementation is authorized.

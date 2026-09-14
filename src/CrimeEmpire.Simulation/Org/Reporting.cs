@@ -336,6 +336,7 @@ public static class Reporting
         foreach (var claim in report.Asserted)
         {
             var receipt = recipient.Cognition.Receive(claim, report.SenderId, report.At);
+            Strategy.Strategies.ReviewAfterReceipt(world, recipient, receipt);
             receipts.Add((claim, receipt));
 
             // What the recipient made of it is his business, and the social consequence is applied

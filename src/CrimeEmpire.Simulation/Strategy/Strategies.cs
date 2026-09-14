@@ -16,13 +16,29 @@ using CrimeSim.Sim;
 public static class Strategies
 {
     /// <summary>A bounded owner review occasion, independent of the delegate's private progress.</summary>
-    public static void ScheduleReview(World world, StrategyInstance s)
+    public static void ScheduleReview(World world, StrategyInstance s, DateTime? at = null)
     {
         if (s.PendingReviewEventId is { } prior)
             world.Queue.Cancel(prior, "operation review superseded");
-        s.PendingReviewEventId = world.Queue.Schedule(world.Now.AddDays(7), EventKind.RoleReview,
+        s.PendingReviewEventId = world.Queue.Schedule(at ?? world.Now.AddDays(7), EventKind.RoleReview,
             s.OwnerId, "review standing operation orders", new EventPayload
             { Note = "operation-review", StrategyOwnerId = s.OwnerId, StrategySequence = s.LocalSequence }).Id;
+    }
+
+    /// <summary>Received news or changed support concerning an issued order merits an early review.</summary>
+    public static void ReviewAfterReceipt(World world, Character recipient, Receipt receipt)
+    {
+        if (!receipt.IsNews && receipt.Conflict is null && receipt.Agreement is null) return;
+        ReviewAfterInformation(world, recipient, receipt.Record.Claim);
+    }
+
+    /// <summary>Match only a newly acquired claim against the recipient's own issued orders.</summary>
+    public static void ReviewAfterInformation(World world, Character recipient, Claim claim)
+    {
+        foreach (var operation in recipient.Execution.Operations.Where(s => s.DelegatedToId is not null))
+            if ((operation.TargetId is { } target && (claim.Subject == target || claim.Object == target))
+                || claim.Subject == operation.DelegatedToId)
+                ScheduleReview(world, operation, world.Now);
     }
     public static readonly string[] TributeSteps = { "make the approach", "put the demand", "press or accept", "collect" };
     public static readonly string[] ConcealSteps = { "quiet the witnesses", "tidy the paperwork" };

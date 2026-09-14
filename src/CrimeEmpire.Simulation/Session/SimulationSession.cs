@@ -216,11 +216,7 @@ public sealed class SimulationSession
         var actor = _world.Get(_controlledId);
         var operation = actor.Execution.Operations.SingleOrDefault(s => $"work-{s.LocalSequence}" == operationToken)
             ?? throw new ArgumentException("This operation is not an active order of yours.", nameof(operationToken));
-        if (operation.PendingReviewEventId is { } previous)
-            _world.Queue.Cancel(previous, "owner requested an earlier review");
-        operation.PendingReviewEventId = _world.Queue.Schedule(_clock, EventKind.RoleReview, actor.Id,
-            "review standing operation orders", new EventPayload
-            { Note = "operation-review", StrategyOwnerId = actor.Id, StrategySequence = operation.LocalSequence }).Id;
+        Strategy.Strategies.ScheduleReview(_world, operation, _clock);
         _runUntil = null;
         Pump(_clock, oneEventOnly: false);
     }

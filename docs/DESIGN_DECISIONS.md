@@ -305,6 +305,11 @@ settles nothing about presentation.
   personality still affects utility/preference, knowledge and feasibility filters still apply,
   and the six-candidate cap is unchanged. Ordinary unfocused deliberation is unchanged by this
   exception. This is not authority to bypass salience for arbitrary player actions.
+- **Free player review and information-triggered NPC review are compatible with causal parity.**
+  Matt ruled on 2026-09-14 during the milestone-028 correction: retain free player review, and add
+  early autonomous supervisor reviews when relevant information reaches them, alongside scheduled
+  review. Identical thinking frequency is not required. The early NPC trigger must arise from
+  legitimately received information, never the delegate's hidden failure or pending schedule.
 - **A player is a preference, not a second action implementation.** Deliberation splits into
   `Pipeline.Prepare` (trigger, beliefs, agenda, bounded generation, salience/knowledge/capability/
   access rejection, scoring) and `Pipeline.Resolve` (commit, schedule, record). `Pipeline.Deliberate`
@@ -822,8 +827,10 @@ true, and records a scope boundary Matt confirmed in chat rather than in a miles
 
 ## Operation staffing — settled by milestone 024's second and third corrections, 2026-09-11
 
-- **A character may be involved in at most one active operation at a time, either as its owner or
-  as its delegated executor.** Not "not currently the delegate of a second job" — owning a strategy
+- **Superseded for capacity by milestone 028: the historical rule was involvement in at most one
+  operation, either as its owner or delegated executor.** The current rule is one actual execution, with separate supervision;
+  see the milestone-028 ruling above. The following explains the superseded 024 implementation, not
+  the current staffing limit. Not "not currently the delegate of a second job" — owning a strategy
   he has never delegated, owning one he has since handed onward to somebody else, and carrying work
   delegated to him by somebody else are all the same disqualifying state: involvement, not merely
   execution. `Pipeline.AvailableToExecute(World, string)` is the one definition — a candidate is

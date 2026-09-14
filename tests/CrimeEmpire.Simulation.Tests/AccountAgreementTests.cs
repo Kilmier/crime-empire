@@ -423,27 +423,13 @@ public sealed class AccountAgreementTests
         Assert.Contains(world.AccountAgreements, a => a.ListenerId == "tommy" && a.Agreement.SpeakerId == "vincent");
     }
 
-    // ---------------------------------------------------------------- the natural seed-42 chain (ruling 8)
+    // ---------------------------------------------------------------- the seed-42 legal-choice chain (ruling 8)
 
     /// <summary>
-    /// Tommy already holds <c>TargetIsVulnerable(bellini-grocery)</c> from Vincent's delegation
-    /// briefing, and asks Salvatore about it — confirmed directly, 1987-03-23, unstaged. The answering
-    /// candidate this test needs — Salvatore giving Tommy his own account, Candid — is genuinely
-    /// generated at the resulting wake: this is not a missing mechanic.
-    ///
-    /// <b>Retargeted by milestone 024's sixth correction, not repinned to a new date.</b> The old title
-    /// claimed this agreement emerges autonomously at seed 42; it no longer does, and — traced directly
-    /// via <c>DecisionRecord.Generated</c>/<c>.Scored</c> at Salvatore's own wake — it never wins on its
-    /// own merits either: the delegated-execution correction gave Salvatore a competing organisational
-    /// concern (asking Vincent about the harbour's own shortfall) that scores 0.5849 against this
-    /// candidate's 0.2446, so Salvatore autonomously pursues the stronger concern instead. That is an
-    /// honest behavioural non-result, preserved below rather than routed around, per ruling 2 — Matt's
-    /// own words: Tommy honestly not getting corroborated is an acceptable outcome, not a defect to
-    /// paper over. The mechanic itself — an agreement Salvatore never withheld anything about raising
-    /// Tommy's trust by exactly <c>AccountAgreementTrustGain * Strength</c> — is preserved by explicitly
-    /// choosing that real, generated candidate through the controlled production pipeline: the same
-    /// <c>Runner.Step</c>/<c>Pipeline.Resolve</c> boundary an autonomous choice would have gone through,
-    /// with only which candidate wins made deliberate.
+    /// A legal-choice path preserves the corroboration exchange: Vincent finishes the tailor
+    /// personally, sends Tommy to the grocery, Tommy asks, and Salvatore's generated candid answer
+    /// raises trust through the actual receipt. No belief, request or report is injected.
+    /// This is a controlled-choice witness, not the fully autonomous baseline.
     /// </summary>
     [Fact]
     public void Salvatores_generated_answer_to_tommy_raises_tommys_trust_when_chosen()
@@ -454,7 +440,7 @@ public sealed class AccountAgreementTests
         double before = tommy.Social.Toward("salvatore").Trust;
         Assert.Equal(0.30, before, 9);
 
-        var prepared = AdvanceToPause(world, "salvatore");
+        var prepared = AdvanceToRequestedCorroboration(world);
         Assert.Equal(EventKind.RoleReview, prepared.Trigger.Kind);
 
         var answer = prepared.Scored
@@ -462,10 +448,9 @@ public sealed class AccountAgreementTests
             .Single(c => c.Kind == ActionKind.ReportToSuperior && c.TargetId == "tommy"
                          && c.Candor == ReportCandor.Candid && c.AnsweringClaim is { } a && a.Equals(Vulnerable));
 
-        // The honest non-result: left alone, Salvatore does not choose this. Recorded, not routed
-        // around — see this test's own doc comment.
+        // At this corrected legal-choice fork, the candid answer is also his preferred option.
         var topRanked = prepared.Scored.OrderByDescending(s => s.Total).ThenBy(s => s.Candidate.Id, StringComparer.Ordinal).First();
-        Assert.NotEqual(answer.Id, topRanked.Candidate.Id);
+        Assert.Equal(answer.Id, topRanked.Candidate.Id);
 
         Pipeline.Resolve(prepared, answer.Id);
 
@@ -500,7 +485,7 @@ public sealed class AccountAgreementTests
         double trustBefore = undisturbed.Get("tommy").Social.Toward("salvatore").Trust;
 
         var afterAgreement = Cast.Build(42, "baseline");
-        var prepared = AdvanceToPause(afterAgreement, "salvatore");
+        var prepared = AdvanceToRequestedCorroboration(afterAgreement);
         var answer = prepared.Scored
             .Select(s => s.Candidate)
             .Single(c => c.Kind == ActionKind.ReportToSuperior && c.TargetId == "tommy"
@@ -525,10 +510,42 @@ public sealed class AccountAgreementTests
     }
 
     /// <summary>
-    /// Drives <paramref name="controlled"/> to his own next deliberation, whichever it is, with
-    /// nothing chosen yet — the same <see cref="Runner.Step"/> boundary an autonomous choice would
-    /// resolve through, left open so a test can choose deliberately instead.
+    /// Reaches the corroboration fork through deliberately selected available actions.
+    /// All intermediate consequence, cognition and request updates use the production pipeline.
     /// </summary>
+    // Deliberately finish the first shop personally, leaving the grocery as Tommy's first job.
+    // This preserves the existing corroboration witness through legal choices, not staged beliefs.
+    private static PreparedDecision AdvanceToRequestedCorroboration(World world)
+    {
+        var opening = AdvanceToPause(world, "vincent");
+        Pipeline.Resolve(opening, opening.Available.Single(c => c.Kind == ActionKind.StartStrategy
+            && c.TargetId == Cast.Tailor && c.Method == CoercionMethod.Force).Id);
+        bool delegated = false;
+        bool asked = false;
+        var seen = new List<string>();
+        for (int guard = 0; guard < 1000; guard++)
+        {
+            var step = Runner.Step(world, Cast.Start.AddDays(90), !delegated ? "vincent" : asked ? "salvatore" : "tommy");
+            if (step.Status == StepStatus.Exhausted) break;
+            if (step.Awaiting is not { } prepared) continue;
+            seen.Add($"{prepared.Actor.Id} {prepared.At:d} " + string.Join(" | ", prepared.Available.Select(c => c.Id)));
+            if (asked && prepared.Available.Any(c => c.AnsweringClaim == Vulnerable
+                && c.TargetId == "tommy" && c.Candor == ReportCandor.Candid)) return prepared;
+            if (!delegated)
+            {
+                var handover = prepared.Available.FirstOrDefault(c => c.Kind == ActionKind.DelegateStrategy && c.TargetId == "tommy");
+                var start = prepared.Available.FirstOrDefault(c => c.Kind == ActionKind.StartStrategy && c.TargetId == Cast.Grocery && c.Method == CoercionMethod.Threaten);
+                Pipeline.Resolve(prepared, handover?.Id ?? start?.Id);
+                delegated = handover is not null;
+                continue;
+            }
+            var ask = prepared.Available.FirstOrDefault(c => c.Kind == ActionKind.SeekCorroboration && c.TargetId == "salvatore" && c.AboutClaim == Vulnerable);
+            Pipeline.Resolve(prepared, ask?.Id);
+            if (ask is not null) asked = true;
+        }
+        throw new InvalidOperationException("The real corroboration choice/answer was not reached. " + string.Join("\n", seen));
+    }
+
     private static PreparedDecision AdvanceToPause(World world, string controlled)
     {
         for (int guard = 0; guard < 5000; guard++)

@@ -67,8 +67,8 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         }
         session.ReviewOperation("work-0");
         Assert.Equal(6, session.Pending!.Options.Count);
-        Assert.Contains(session.Pending.Options, o => o.Description == "drop getting Bellini's grocery to pay");
-        Assert.DoesNotContain(session.Pending.Options, o => o.Description.Contains("Ferri"));
+        Assert.Contains(session.Pending.Options, o => o.Description == "drop getting Ferri's tailor shop to pay");
+        Assert.DoesNotContain(session.Pending.Options, o => o.Description.Contains("Bellini"));
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         var personal = owner.Execution.Strategy!;
         var assignmentId = personal.AssignmentId!.Value;
         // Staged agreement and collection-ready step; actual step resolution must keep sibling obligations.
-        world.Businesses[Cast.Tailor].PayingTribute = true;
+        world.Businesses[Cast.Grocery].PayingTribute = true;
         personal.StepIndex = 3;
         Strategies.ScheduleNextStep(world, personal, "collection ready", TimeSpan.Zero);
         session.StepEvent();
@@ -154,7 +154,7 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         long cancelled = delegated.PendingStepEventId!.Value;
         int ordinal = personal.NextAdvanceOrdinal;
         session.ReviewOperation($"work-{delegated.LocalSequence}");
-        var choice = Assert.Single(session.Pending!.Options, o => o.Description == "drop getting Bellini's grocery to pay");
+        var choice = Assert.Single(session.Pending!.Options, o => o.Description == "drop getting Ferri's tailor shop to pay");
         Assert.InRange(session.Pending.Options.Count, 2, 6);
         session.Choose(choice.Id);
         Assert.Same(personal, Assert.Single(owner.Execution.Operations));
@@ -256,8 +256,10 @@ public sealed class BandwidthTests(ITestOutputHelper output)
 
     private static readonly string[] Opening =
     {
-        "persuade Bellini's grocery to pay", "carry on getting Bellini's grocery to pay",
-        "hand it to Tommy Nardo", "persuade Ferri's tailor shop to pay",
+        "persuade Ferri's tailor shop to pay",
+        "carry on getting Ferri's tailor shop to pay",
+        "hand it to Tommy Nardo",
+        "persuade Bellini's grocery to pay",
     };
 
     private static SimulationSession Concurrent(string variant = "baseline")

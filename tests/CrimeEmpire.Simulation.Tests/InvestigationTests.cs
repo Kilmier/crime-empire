@@ -257,9 +257,13 @@ public sealed class InvestigationTests
         Assert.NotEmpty(suspicion);
 
         var asked = world.Requests.Where(r => r.AskerId == "kane").ToList();
-        Assert.Single(asked);
-        Assert.Equal("tommy", asked[0].AskedId);
-        Assert.Contains(suspicion, s => s.Claim.Equals(asked[0].About));
+        Assert.NotEmpty(asked);
+        Assert.All(asked, request =>
+        {
+            Assert.Equal("tommy", request.AskedId);
+            Assert.Contains(suspicion, s => s.Claim.Equals(request.About));
+            Assert.Single(asked, other => other.About.Equals(request.About));
+        });
     }
 
     /// <summary>
@@ -283,8 +287,10 @@ public sealed class InvestigationTests
     {
         var world = StageViolenceThenRun(variant, 90);
 
-        var answer = world.Reports.Single(r => r.SenderId == "tommy" && r.RecipientId == "kane");
-        Assert.Equal(world.Requests.Single(r => r.AskerId == "kane").About, answer.AnsweringClaim);
+        var answers = world.Reports.Where(r => r.SenderId == "tommy" && r.RecipientId == "kane").ToList();
+        Assert.NotEmpty(answers);
+        Assert.All(answers, answer => Assert.Contains(world.Requests,
+            r => r.AskerId == "kane" && r.AskedId == "tommy" && r.About.Equals(answer.AnsweringClaim)));
     }
 
     /// <summary>

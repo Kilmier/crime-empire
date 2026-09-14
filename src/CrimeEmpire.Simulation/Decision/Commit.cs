@@ -213,6 +213,8 @@ public static class Commit
                             belief.Claim, Stance.Believes, belief.Confidence * 0.8, belief.SourceKind),
                         actor.Id, world.Now);
 
+                    Strategies.ReviewAfterReceipt(world, sub, receipt);
+
                     // A briefing can contradict what the man already holds, and when it does it is
                     // a conflict like any other. Applying the consequence only in the report channel
                     // would be this project's most reliable defect — a rule written where it was
@@ -347,7 +349,7 @@ public static class Commit
                 world.Queue.Schedule(world.Now.AddDays(1), EventKind.RoleReview, boss.Id,
                     $"{actor.Name} asked for latitude in {agenda.Domain}",
                     new EventPayload { TargetId = actor.Id, Note = "permission-sought" });
-                if (actor.Execution.Strategy is { } s)
+                if (ctx.CurrentExecution is { } s)
                     Strategies.ScheduleNextStep(world, s, $"{s.Label}: waiting on {boss.Name}", TimeSpan.FromDays(5));
                 reconsideration.Add($"{boss.Name} answers, or does not");
                 return $"asked {boss.Name} for room to move";

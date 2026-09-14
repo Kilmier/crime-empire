@@ -173,7 +173,7 @@ public sealed class OperationReadsTests
         var op = PlayerView.Build(world, "tommy", world.Now).Operations.SingleOrDefault();
 
         Assert.NotNull(op);
-        Assert.Contains("Bellini's grocery", op!.Description, StringComparison.Ordinal);
+        Assert.Contains("Ferri's tailor shop", op!.Description, StringComparison.Ordinal);
         Assert.NotNull(op.Progress);
         Assert.Null(op.Since);
     }
@@ -534,7 +534,7 @@ public sealed class OperationReadsTests
 
         string section = rendered[opStart..nextSection];
 
-        Assert.Contains("Bellini's grocery", rendered[..opStart], StringComparison.Ordinal);
+        Assert.Contains("Ferri's tailor shop", rendered[..opStart], StringComparison.Ordinal);
 
         Assert.Contains(mustContain, section, StringComparison.Ordinal);
         Assert.DoesNotContain(mustNotContain, section, StringComparison.Ordinal);
@@ -716,7 +716,7 @@ public sealed class OperationReadsTests
         var first = AdvanceVincentToFirstPause(world);
         var startCandidate = first.Available.Single(c =>
             c.Kind == ActionKind.StartStrategy && c.Strategy == StrategyKind.SecureTribute
-            && c.TargetId == Cast.Grocery && c.Method == CoercionMethod.Persuade);
+            && c.TargetId == Cast.Tailor && c.Method == CoercionMethod.Persuade);
         Pipeline.Resolve(first, startCandidate.Id);
 
         return AdvanceVincentToFirstPause(world);

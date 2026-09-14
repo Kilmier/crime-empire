@@ -293,7 +293,6 @@ public static class Generators
         var refusing = ctx.Perceived.OfKind(ClaimKind.BusinessRefusesTribute)
                                     .Select(r => r.Claim.Subject)
                                     .Where(t => !ctx.Actor.Execution.Operations.Any(s => s.Kind == StrategyKind.SecureTribute && s.TargetId == t))
-                                    .OrderBy(t => t, StringComparer.Ordinal)
                                     .FirstOrDefault();
 
         string? mark = refusing;

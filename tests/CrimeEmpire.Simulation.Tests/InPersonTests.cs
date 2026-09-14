@@ -292,18 +292,18 @@ public sealed class InPersonTests
     public void A_delegated_threat_is_read_by_the_executor_and_not_the_owner()
     {
         var session = SimulationSession.Start(Seed, "baseline", "vincent");
-        Choose(session, "persuade Bellini's grocery to pay");
-        Choose(session, "carry on getting Bellini's grocery to pay");
+        Choose(session, "persuade Ferri's tailor shop to pay");
+        Choose(session, "carry on getting Ferri's tailor shop to pay");
         Choose(session, "hand it to Tommy Nardo");
         session.AdvanceDays(15);
         while (session.Status == SessionStatus.AwaitingChoice) session.ResolveAutomatically();
 
         var tommy = session.World.Get("tommy");
         var vincent = session.World.Get("vincent");
-        Assert.Contains(tommy.Social.Toward("marco").Impressions,
+        Assert.Contains(tommy.Social.Toward("paolo").Impressions,
             i => i.About is null && i.Kind is ImpressionKind.SeemedFrightened
                  or ImpressionKind.SeemedUnmoved or ImpressionKind.GaveNothingAway);
-        Assert.DoesNotContain(vincent.Social.Toward("marco").Impressions, i => i.About is null);
+        Assert.DoesNotContain(vincent.Social.Toward("paolo").Impressions, i => i.About is null);
     }
 
     // ================================================================= the natural lie
@@ -320,6 +320,7 @@ public sealed class InPersonTests
         // then Marco puts his question and the denial is on the table.
         var session = SimulationSession.Start(Seed, "baseline", "vincent");
         Choose(session, "ask Tommy Nardo what he knows about whether Bellini's grocery is not paying its tribute");
+        Choose(session, "use force on Ferri's tailor shop — breaking the rule: no public violence in the harbour");
         Choose(session, "use force on Bellini's grocery — breaking the rule: no public violence in the harbour");
 
         const string deny = "deny it to Marco Bellini: tell him you did not get violent at Bellini's grocery";
@@ -350,7 +351,7 @@ public sealed class InPersonTests
         // And what hangs over him says so in his own terms: the act, the witness, the denial, and
         // that Marco put it to him — never that Marco knows.
         string hanging = string.Join(" ", snapshot.Exposure);
-        Assert.StartsWith("You got violent at Bellini's grocery, against the outfit's rule.", hanging);
+        Assert.Contains("you got violent at Bellini's grocery, against the outfit's rule.", hanging);
         Assert.Contains("You denied it to Marco Bellini on ", hanging);
         Assert.Contains("Marco Bellini asked you about it on ", hanging);
         Assert.DoesNotContain("knows", hanging, StringComparison.Ordinal);

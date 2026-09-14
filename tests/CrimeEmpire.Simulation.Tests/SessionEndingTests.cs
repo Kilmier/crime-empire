@@ -29,8 +29,8 @@ public sealed class SessionEndingTests
     }
 
     [Theory]
-    [InlineData("baseline", ObjectiveOutcome.ObjectiveUnmet, 1.0)]
-    [InlineData("cautious-vincent", ObjectiveOutcome.ObjectiveUnmet, 1.0)]
+    [InlineData("baseline", ObjectiveOutcome.ObjectiveUnmet, 0.55)]
+    [InlineData("cautious-vincent", ObjectiveOutcome.ObjectiveUnmet, 0.50)]
     public void Natural_watch_only_runs_record_the_untuned_parallel_scenario_results(
         string variant,
         ObjectiveOutcome expected,

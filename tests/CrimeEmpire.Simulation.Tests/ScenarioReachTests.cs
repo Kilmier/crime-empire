@@ -10,8 +10,8 @@ namespace CrimeEmpire.Simulation.Tests;
 
 /// <summary>
 /// Milestone 007. Three things had to become true together for the mechanisms built in 004–006 to
-/// show up in a natural scenario. M028 changes that natural history: the conflict/channel
-/// checks now explicitly stage their inputs, while separate tests measure the current natural run.
+/// show up in a natural scenario. M028's correction preserves the second assignment, collection,
+/// and conflict-to-later-score bars in the unmodified seed-42 fixture.
 ///
 /// First, concealment stops being re-priced as a fresh gain every time it is repeated: what a report
 /// buys is the protection it did not already have. Second, being re-told something you have since
@@ -344,15 +344,11 @@ public sealed class ScenarioReachTests
         Assert.Null(cognition.Receive(account, "salvatore", t0.AddDays(28)).Conflict);
     }
 
-    /// <summary>Explicit stale accounts exercise conflict deduplication through Reporting.Deliver; not a natural-run claim.</summary>
+    /// <summary>The unmodified fixture supplies repeated briefings, not a staged replacement.</summary>
     [Fact]
-    public void Repeated_stale_briefings_count_once_through_the_production_report_channel()
+    public void The_accepted_run_shows_a_repeated_briefing_counting_once_per_movement()
     {
-        // M028: the old natural repeated-briefing witness no longer occurs. Stage the account,
-        // not the conflict calculation, and deliver its repetition through Reporting as well.
-        var world = Cast.Build(42, "baseline");
-        AccountScenario.ContradictVincent(world);
-        Reporting.Deliver(world, world.Reports.Last() with { Id = world.NextReportId(), At = world.Now.AddDays(1) }, world.Get("vincent"));
+        var world = Run("baseline");
         var vincent = world.Get("vincent");
         var refusing = new Claim(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
 
@@ -422,20 +418,20 @@ public sealed class ScenarioReachTests
             .FirstOrDefault();
 
         // M028: the choice is not a promise of collection; parallel work can remain blocked.
-        Assert.Equal(variant == "disloyal-vincent" ? Cast.Tailor : Cast.Grocery, firstStrategy);
+        Assert.Equal(Cast.Tailor, firstStrategy);
     }
 
-    /// <summary>A live sibling keeps the shared assignment open despite continued shortfall.</summary>
+    /// <summary>Both opening operations complete, allowing another genuine assignment.</summary>
     [Fact]
-    public void The_shortfall_does_not_duplicate_a_still_live_assignment()
+    public void The_shortfall_produces_a_second_assignment_after_the_opening_work_completes()
     {
         var world = Run("baseline");
 
         var briefings = world.TruthLog.Where(e => e.Kind == "assignment").ToList();
-        // M028: a still-live delegated operation keeps the assignment gate closed.
-        Assert.Single(briefings);
+        Assert.True(briefings.Count >= 2);
+        Assert.True(world.Businesses[Cast.Grocery].PayingTribute);
+        Assert.True(world.Businesses[Cast.Tailor].PayingTribute);
         Assert.True(world.Org.Condition(OrgCondition.RevenueLoss) >= Organization.SignificantRevenueLoss);
-        Assert.Contains(world.Get("vincent").Execution.Operations, s => s.DelegatedToId == "tommy");
     }
 
     // ================================================================ the milestone's own claims
@@ -455,59 +451,53 @@ public sealed class ScenarioReachTests
     // in CausalFeedbackTests.cs's "pending vs. declined" section and ControlledAutonomousParityTests.cs,
     // where only the originating incident is staged and the exchange itself runs unstaged.
 
-    /// <summary>Stage a real account conflict, then compare the same candid report through Utility before and after restoring trust. This is mechanism coverage, not current natural emergence.</summary>
+    /// <summary>A natural conflict moves trust, which a later real candidate actually reads.</summary>
     [Fact]
     public void The_conflict_changes_what_a_later_decision_is_scored_on()
     {
-        // M028: explicit stale account; scoring remains the real Utility path.
         var world = Cast.Build(42, "baseline");
-        AccountScenario.ContradictVincent(world);
         var vincent = world.Get("vincent");
-        var later = new Candidate("report:salvatore", ActionKind.ReportToSuperior, "test", "report in")
-        { TargetId = "salvatore", Domain = Cast.Harbour, Candor = ReportCandor.Candid };
-
-        double afterTrust = vincent.Social.Toward("salvatore").Trust;
-        Assert.True(afterTrust < 0.45, $"the conflict did not move trust: it stands at {afterTrust:0.000}");
-
-        var perceived = Salience.Perceive(vincent, world.Now);
-        var agenda = new Agenda(AgendaKind.DischargeResponsibility, "keep the harbour earning", "test", Cast.Harbour);
-        var rng = Rng.ForOccasion(world.Seed, "test|fixed");
-
-        // Milestone 008: read through the facet, not the component name.
-        //
-        // This used to sum `p.Name == "relationship effects"`, and that was measurably the wrong
-        // question. Of the 168 components carrying that name across the five variants, 61 read no
-        // relationship state at all — `SeekCorroboration`'s "going behind X" is `-0.45 * proud`. It
-        // happens not to appear on a `ReportToSuperior` candidate, so this particular test was
-        // getting a right answer from a wrong rule, which is the least durable kind. The name also
-        // folded in the Belonging share of loyalty, which is a drive rather than anything owed to
-        // Salvatore, so the figure it reported was never purely relational.
-        double Relationship() => Utility
-            .Score(later, vincent.View, vincent.Psychology, perceived, agenda, rng,
-                Strategies.CurrentExecution(world, vincent))
-            .RelationshipNet();
-
-        double withConflict = Relationship();
-        Assert.NotEqual(0.0, withConflict, 6);
-
-        // Undo only the trust the conflict cost him, leaving obligation, fear and grievances alone.
-        var rel = vincent.Social.Toward("salvatore");
-        Relations.Establish(vincent, "salvatore", trust: 0.45, obligation: rel.Obligation, fear: rel.Fear);
-
-        double withoutConflict = Relationship();
-
-        Assert.NotEqual(withConflict, withoutConflict, 6);
-        Assert.True(withConflict < withoutConflict,
-            $"being contradicted should lower what the relationship is worth to him, " +
-            $"but the component went from {withoutConflict:0.000} to {withConflict:0.000}");
+        double? cost = null;
+        bool witnessed = false;
+        for (int guard = 0; guard < 10000; guard++)
+        {
+            double before = vincent.Social.Toward("salvatore").Trust;
+            int conflicts = world.AccountConflicts.Count;
+            var step = Runner.Step(world, Cast.Start.AddDays(90), "vincent");
+            if (world.AccountConflicts.Skip(conflicts).Any(c => c.ListenerId == "vincent"
+                && c.Conflict.SpeakerId == "salvatore"))
+                cost = before - vincent.Social.Toward("salvatore").Trust;
+            if (step.Status == StepStatus.Exhausted) break;
+            if (step.Awaiting is not { } prepared) continue;
+            if (cost is > 0)
+            {
+                var rel = vincent.Social.Toward("salvatore");
+                double actualTrust = rel.Trust;
+                foreach (var candidate in prepared.Available)
+                {
+                    double Score() => Utility.Score(candidate, vincent.View, vincent.Psychology,
+                        prepared.Perceived, prepared.Agenda, Rng.ForOccasion(world.Seed, "test|fixed"),
+                        prepared.Context.CurrentExecution).RelationshipNet();
+                    double actual = Score();
+                    Relations.Establish(vincent, "salvatore", trust: actualTrust + cost.Value,
+                        obligation: rel.Obligation, fear: rel.Fear);
+                    double withoutConflict = Score();
+                    Relations.Establish(vincent, "salvatore", trust: actualTrust,
+                        obligation: rel.Obligation, fear: rel.Fear);
+                    if (Math.Abs(actual - withoutConflict) > 0.000001) witnessed = true;
+                }
+            }
+            Pipeline.Resolve(prepared, null);
+        }
+        Assert.True(cost is > 0, "No natural conflict cost Vincent trust.");
+        Assert.True(witnessed, "No later available candidate read the trust that conflict moved.");
     }
 
     /// <summary>Re-rank actual current-run decisions without relationship terms; at least one winner changes.</summary>
     [Fact]
     public void Relationship_components_change_at_least_one_natural_choice()
     {
-        // M028 retires the specific post-contradiction winner: that contradiction no longer
-        // occurs naturally. Measure actual re-ranking, not a margin or an invented replacement.
+        // Measure actual re-ranking, not a margin or an invented replacement.
         var world = Run("baseline");
         Assert.Contains(world.Decisions, d => d.Scored.Count > 1 &&
             !ReferenceEquals(d.Scored[0], d.Scored.OrderByDescending(s => s.TotalWithoutRelationships())

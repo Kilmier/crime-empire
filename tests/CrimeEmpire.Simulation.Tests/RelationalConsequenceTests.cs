@@ -484,11 +484,11 @@ public sealed class RelationalConsequenceTests
     /// concern (traced in `AccountAgreementTests.Salvatores_generated_answer_to_tommy_raises_tommys_trust_when_chosen`)
     /// now outranks answering Tommy at all, so no account — agreeing or conflicting — is ever given.
     [Theory]
-    [InlineData("baseline", 0)]
-    [InlineData("cautious-vincent", 0)]
-    [InlineData("watchful-boss", 0)]
+    [InlineData("baseline", 1)]
+    [InlineData("cautious-vincent", 1)]
+    [InlineData("watchful-boss", 1)]
     [InlineData("disloyal-vincent", 2)]
-    [InlineData("resentful-tommy", 0)]
+    [InlineData("resentful-tommy", 1)]
     public void The_scenario_produces_the_expected_number_of_conflicts(string variant, int expected)
         => Assert.Equal(expected, Run(variant).AccountConflicts.Count);
 

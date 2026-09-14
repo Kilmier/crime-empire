@@ -136,7 +136,7 @@ public partial class Game : Control
 
     /// <summary>
     /// Command-line switch for milestone 015's restart proof, process A: plays the golden path's
-    /// first four choices (including delegated grocery and personal tailor work), saves to
+    /// first four choices (including delegated tailor and personal grocery work), saves to
     /// <see cref="SelfTestRestartSavePath"/> (never the production slot — see the type header), and
     /// exits. Meant to be run as a genuinely separate OS process from <see cref="RestartLoadFlag"/> —
     /// see the milestone archive for the exact two-invocation proof.
@@ -147,7 +147,7 @@ public partial class Game : Control
     /// Command-line switch for milestone 015's restart proof, process B: loads
     /// <see cref="SelfTestRestartSavePath"/> — written by a prior, separate
     /// <see cref="RestartSaveFlag"/> process — and plays the golden path's remaining choices
-    /// through real buttons, reaching the personal tailor collection.
+    /// through real buttons, reaching the two delegated collections.
     /// </summary>
     private const string RestartLoadFlag = "--selftest-restart-load";
 
@@ -1284,29 +1284,23 @@ public partial class Game : Control
     /// <c>PlayerOwnedOperationTests</c> in the test project, not shared with it, so the two checks
     /// cannot both be wrong about the same assumption.
     /// </summary>
-    // Re-derived 2026-09-11 by milestone 024's sixth correction — see the identical copy's own
-    // comment in PersistenceTests.cs/PlayerOwnedOperationTests.cs for the full reasoning. Vincent can
-    // no longer alter a delegated operation, so his escalation is delegated to Tommy at step 3 and
-    // Tommy's own escalation and the operation's genuine completion happen autonomously in the
-    // background; Vincent's remaining pauses report the completed result and answer the next day's
-    // organizational review. The former second collection cycle was a real double-payment defect
-    // exposed by Matt's 2026-09-12 playtest.
-    // M028 measured public choices: delegated grocery plus personal tailor collection.
+    // M028 correction: tailor first, then grocery; both eventually delegated and collected.
+    // The thirteen choices match the measured run; no duplicate payment cycle is legitimate.
     private static readonly string[] GoldenPathChoiceSequence =
     {
+        "persuade Ferri's tailor shop to pay",
+        "carry on getting Ferri's tailor shop to pay",
+        "hand it to Tommy Nardo",
         "persuade Bellini's grocery to pay",
+        "leave these orders unchanged",
         "carry on getting Bellini's grocery to pay",
         "hand it to Tommy Nardo",
-        "persuade Ferri's tailor shop to pay",
+        "ask Salvatore Greco for permission",
+        "ask Salvatore Greco for permission",
         "leave these orders unchanged",
-        "carry on getting Ferri's tailor shop to pay",
-        "carry on getting Ferri's tailor shop to pay",
-        "carry on getting Ferri's tailor shop to pay",
-        "leave these orders unchanged",
-        "switch to threats with Ferri's tailor shop",
         "leave these orders unchanged",
         "ask Tommy Nardo what he knows about whether the outfit has a rule: no public violence in the harbour",
-        "ask Salvatore Greco for permission",
+        "report the situation to Salvatore Greco",
     };
 
     /// <summary>
@@ -1360,14 +1354,14 @@ public partial class Game : Control
     }
 
     /// <summary>
-    /// Drives Vincent's seed-42 delegated grocery and personal tailor operations through
+    /// Drives Vincent's seed-42 tailor and grocery operations, both eventually delegated, through
     /// real button presses — the interactive playthrough itself, not a claim about it — and reads the
     /// rendered cash label off the live screen, never <see cref="SimulationSession"/>'s internal
-    /// state, to confirm the measured personal collection: 6,000 rising to 6,620.
+    /// state, to confirm the measured collections: 6,000 rising to 7,460.
     ///
     /// <b>Asserts the opening screen too, before any button is pressed.</b> A check that only reads
-    /// the final screen cannot tell a real 6,000-to-6,620 change from a toolbar that always rendered
-    /// 6,620 regardless of what happened. The opening assertion guards against a fixed cash label;
+    /// the final screen cannot tell a real 6,000-to-7,460 change from a toolbar that always rendered
+    /// 7,460 regardless of what happened. The opening assertion guards against a fixed cash label;
     /// earlier mutation evidence belongs to the earlier milestone's archived amount, not this run.
     /// </summary>
     private void GoldenPathSelfTest()
@@ -1380,7 +1374,7 @@ public partial class Game : Control
         if (!Screen().Contains("cash on hand 6,000", StringComparison.Ordinal))
             throw new InvalidOperationException(
                 "the opening screen does not read \"cash on hand 6,000\" — the golden path's own " +
-                "starting point is wrong, so the later 6,620 would prove nothing");
+                "starting point is wrong, so the later 7,460 would prove nothing");
 
         PressChoicesInOrder(session, GoldenPathChoiceSequence, "CE-GOLDENPATH");
 
@@ -1400,7 +1394,7 @@ public partial class Game : Control
         GD.Print(screen);
         GD.Print("== CE-GOLDENPATH-SCREEN-END ==");
 
-        bool proved = screen.Contains("cash on hand 6,620", StringComparison.Ordinal);
+        bool proved = screen.Contains("cash on hand 7,460", StringComparison.Ordinal);
 
         if (proved)
         {
@@ -1410,47 +1404,23 @@ public partial class Game : Control
         }
 
         GD.PrintErr(
-            "CE-GOLDENPATH FAILED — did not reach the personal tailor collection with cash on hand " +
-            "reading 6,620 on screen, so it proves nothing");
+            "CE-GOLDENPATH FAILED — did not reach the two delegated collections with cash on hand " +
+            "reading 7,460 on screen, so it proves nothing");
         GetTree().Quit(1);
     }
 
     // ================================================================= direct action (milestone 017)
 
     /// <summary>
-    /// Milestone 017: the same seed-42 Vincent <c>SecureTribute</c> operation
-    /// <see cref="GoldenPathSelfTest"/> plays, but never delegated — Vincent presses "carry on" at the
-    /// exact pause that also offers "hand it to Tommy Nardo" (the fork this milestone is about),
-    /// then continues personally through escalation. Independently pinned from a live run of the
-    /// interactive path, the same way <see cref="GoldenPathChoiceSequence"/> itself was derived, not shared
-    /// with it or with the test project's copy of the same fork.
-    ///
-    /// Diverges from the accepted delegated trace naturally, through real button presses alone: Vincent
-    /// himself — not Tommy — puts hands on Bellini's grocery, conceals it himself, and answers for it
-    /// himself. Proceeds still land on Vincent regardless (cash still rises to 6,840) — ownership
-    /// determines proceeds, execution is what diverged, exactly the milestone's own distinction.
-    ///
-    /// <b>Re-derived 2026-09-09, after the choices past the fourth stopped matching</b> (the
-    /// `Rng.ForOccasion` correction redistributing which observation opportunities land at seed 42),
-    /// <b>and again 2026-09-11 by milestone 024's sixth correction.</b> This fork was never delegated,
-    /// so it was never affected by that correction's own delegated-execution changes directly — but the
-    /// concealment step's own duration changed: "cover it up" now resolves completely in one step,
-    /// where it previously needed a "carry on covering it up" continuation two pauses later, and
-    /// nothing after it (the old sequence's trailing "ask Salvatore Greco for permission" beat) is
-    /// offered at the point this now stops. Re-derived from a fresh live run of the interactive path,
-    /// not patched around the mismatch. Confirmed against the live screen, not assumed: cash still
-    /// reads 6,840, "you got violent at Bellini's grocery" is on screen in the second person throughout,
-    /// and "Tommy Nardo got violent" never appears.
+    /// M028 correction: keep the first tailor operation personal at the same fork that
+    /// offers delegation. Threaten suffices to collect; this proof is about who executes,
+    /// not a requirement to force violence after the business has already agreed.
     /// </summary>
     private static readonly string[] DirectActionChoiceSequence =
     {
-        "persuade Bellini's grocery to pay",
-        "carry on getting Bellini's grocery to pay",
-        "switch to threats with Bellini's grocery",
-        "switch to force with Bellini's grocery — breaking the rule: no public violence in the harbour",
-        "deny it to Salvatore Greco: tell him you did not get violent at Bellini's grocery",
-        "tell Salvatore Greco what you know about whether somebody on the street saw you at Bellini's grocery",
-        "cover it up before anyone finds out",
+        "persuade Ferri's tailor shop to pay",
+        "carry on getting Ferri's tailor shop to pay",
+        "switch to threats with Ferri's tailor shop",
     };
 
     private static bool DirectActionRequested()
@@ -1514,7 +1484,7 @@ public partial class Game : Control
         // walks the actual live scene tree via FindButton, the same helper Press itself uses to find
         // and click a button by its rendered text, so the check inspects exactly what a person looking
         // at the screen would see.
-        bool carryOnRendered = FindButton(this, "carry on getting Bellini's grocery to pay") is not null;
+        bool carryOnRendered = FindButton(this, "carry on getting Ferri's tailor shop to pay") is not null;
         bool delegateRendered = FindButton(this, "hand it to Tommy Nardo") is not null;
         if (!carryOnRendered || !delegateRendered)
             throw new InvalidOperationException(
@@ -1522,6 +1492,7 @@ public partial class Game : Control
                 $"carry-on button present: {carryOnRendered}, delegate button present: {delegateRendered}");
 
         PressChoicesInOrder(session, DirectActionChoiceSequence.Skip(1).ToList(), "CE-DIRECTACTION");
+        AdvanceToPause(session); // actual collection notice, not an assumed elapsed duration
 
         string screen = Screen();
 
@@ -1532,14 +1503,11 @@ public partial class Game : Control
         // Ownership determines proceeds regardless of who executed — unchanged from the accepted
         // delegated trace's own consequence, checked as a required negative: this is not where the
         // two branches diverge.
-        bool proceeds = screen.Contains("cash on hand 6,840", StringComparison.Ordinal);
+        bool proceeds = screen.Contains("cash on hand 6,620", StringComparison.Ordinal);
 
-        // Execution responsibility is exactly what diverged: Vincent himself put hands on the target
-        // and knows it as his own act — in the second person, since he is the man playing — never
-        // Tommy, the opposite of the accepted delegated trace, where Tommy is the one named and
-        // Vincent only came across it.
-        bool executedPersonally = screen.Contains("you got violent at Bellini's grocery", StringComparison.Ordinal);
-        bool noTommyExecution = !screen.Contains("Tommy Nardo got violent at Bellini's grocery", StringComparison.Ordinal);
+        // The collection notice names the actual executor, not merely the owner receiving cash.
+        bool executedPersonally = screen.Contains("money from Ferri's tailor shop has started arriving after you handled the job", StringComparison.Ordinal);
+        bool noTommyExecution = !screen.Contains("after Tommy Nardo handled the job", StringComparison.Ordinal);
 
         if (proceeds && executedPersonally && noTommyExecution)
         {
@@ -1594,7 +1562,7 @@ public partial class Game : Control
     {
         GD.Print("CE-CORROBORATION begin");
 
-        StartSession(seed: 42, variant: "cautious-vincent", controlled: "vincent", viewpoint: "salvatore");
+        StartSession(seed: 42, variant: "baseline", controlled: "vincent", viewpoint: "salvatore");
         var session = _session!;
 
         const string claim = "Bellini's grocery is not paying its tribute";
@@ -1602,17 +1570,15 @@ public partial class Game : Control
 
         PressChoicesInOrder(session, new[]
         {
+            "persuade Ferri's tailor shop to pay",
+            "carry on getting Ferri's tailor shop to pay",
+            "hand it to Tommy Nardo",
             "persuade Bellini's grocery to pay",
+            "leave these orders unchanged",
             "carry on getting Bellini's grocery to pay",
             "hand it to Tommy Nardo",
+            "ask Salvatore Greco for permission",
         }, "CE-CORROBORATION");
-
-        PressChoicesInOrder(session, new[]
-        {
-            "persuade Ferri's tailor shop to pay",
-            "leave these orders unchanged",
-            "carry on getting Ferri's tailor shop to pay",
-        }, "CE-CORROBORATION-BANDWIDTH");
 
         // Salvatore's own question arrives on its own by now; find Vincent's resulting wake and
         // answer it with the exact claim, rather than pressing "Next event" past it.
@@ -1868,14 +1834,14 @@ public partial class Game : Control
         {
             StartSession(seed: 42, variant: "baseline", controlled: "vincent", viewpoint: "vincent");
             PressChoicesInOrder(_session!, GoldenPathChoiceSequence.Take(4).ToArray(), "CE-BANDWIDTH");
-            if (FindButton(this, "Review getting Bellini's grocery to pay") is null
-                || FindButton(this, "Review getting Ferri's tailor shop to pay") is null)
+            if (FindButton(this, "Review getting Ferri's tailor shop to pay") is null
+                || FindButton(this, "Review getting Bellini's grocery to pay") is null)
                 throw new InvalidOperationException("the sidebar does not expose both ongoing operation reviews");
-            if (!Press("Review getting Bellini's grocery to pay")
-                || !Press("drop getting Bellini's grocery to pay"))
+            if (!Press("Review getting Ferri's tailor shop to pay")
+                || !Press("drop getting Ferri's tailor shop to pay"))
                 throw new InvalidOperationException("the selected operation cannot be cancelled through real buttons");
-            if (FindButton(this, "Review getting Bellini's grocery to pay") is not null
-                || FindButton(this, "Review getting Ferri's tailor shop to pay") is null)
+            if (FindButton(this, "Review getting Ferri's tailor shop to pay") is not null
+                || FindButton(this, "Review getting Bellini's grocery to pay") is null)
                 throw new InvalidOperationException("cancellation removed the wrong sidebar operation");
             GD.Print("CE-BANDWIDTH ok");
             GD.Print("CE-OPERATION ok");
@@ -1892,7 +1858,7 @@ public partial class Game : Control
     /// Isolates the <c>DOING</c> panel's own section of a flattened screen (between its header and
     /// the <c>WHAT JUST HAPPENED</c> block it always prints next) and checks it against exactly one
     /// expected phrase and one phrase that must not be there — plus, as a demonstrated precondition
-    /// rather than an assumed one, that the expected phrase's key noun phrase ("Bellini's grocery")
+    /// rather than an assumed one, that the expected phrase's key noun phrase ("Ferri's tailor shop")
     /// already appears earlier on the same screen, in the unrelated belief panel, proving the
     /// false-assurance risk a whole-screen check would have missed is real.
     /// </summary>
@@ -1905,11 +1871,11 @@ public partial class Game : Control
         if (doingEnd < 0) return (false, "no WHAT JUST HAPPENED marker found after DOING");
 
         string section = screen[doingStart..doingEnd];
-        // M028: Vincent's own tailor job may legitimately have personal progress below this row.
-        int nextOperation = section.IndexOf("getting Ferri's tailor shop to pay", StringComparison.Ordinal);
+        // M028: Vincent's own grocery job may legitimately have personal progress below this row.
+        int nextOperation = section.IndexOf("getting Bellini's grocery to pay", StringComparison.Ordinal);
         if (nextOperation >= 0) section = section[..nextOperation];
 
-        bool wordsAppearEarlier = screen[..doingStart].Contains("Bellini's grocery", StringComparison.Ordinal);
+        bool wordsAppearEarlier = screen[..doingStart].Contains("Ferri's tailor shop", StringComparison.Ordinal);
         if (!wordsAppearEarlier)
             return (false, "the false-assurance precondition did not hold — nothing to prove by isolating the section");
 
@@ -1925,7 +1891,7 @@ public partial class Game : Control
 
     /// <summary>
     /// Process A of the two-process restart proof: plays <see cref="GoldenPathChoiceSequence"/>'s first
-    /// four choices (including delegated grocery and personal tailor work), presses the real
+    /// four choices (including delegated tailor and personal grocery work), presses the real
     /// "Save" button, and exits. Run as a genuinely separate OS process from
     /// <see cref="RunRestartLoadSelfTest"/> — two independent headless Godot invocations against the
     /// same real save slot, not two calls within one process. See the milestone archive for the exact
@@ -1982,8 +1948,8 @@ public partial class Game : Control
     /// Process B of the two-process restart proof: loads the save <see cref="RunRestartSaveSelfTest"/>
     /// wrote — in a prior, separate OS process — through the real "Load saved game" button, then plays
     /// <see cref="GoldenPathChoiceSequence"/>'s remaining choices through real buttons, reaching the
-    /// same personal tailor collection <see cref="GoldenPathSelfTest"/> reaches in one continuous
-    /// process: 6,620 on the rendered screen.
+    /// same two delegated collections <see cref="GoldenPathSelfTest"/> reaches in one continuous
+    /// process: 7,460 on the rendered screen.
     /// </summary>
     private void RunRestartLoadSelfTest()
     {
@@ -2039,7 +2005,7 @@ public partial class Game : Control
             GD.Print(screen);
             GD.Print("== CE-RESTART-LOAD-SCREEN-END ==");
 
-            bool proved = screen.Contains("cash on hand 6,620", StringComparison.Ordinal);
+            bool proved = screen.Contains("cash on hand 7,460", StringComparison.Ordinal);
             if (proved)
             {
                 GD.Print("CE-RESTART-LOAD ok");
@@ -2048,8 +2014,8 @@ public partial class Game : Control
             }
 
             GD.PrintErr(
-                "CE-RESTART-LOAD FAILED — did not reach the personal tailor collection with cash on hand " +
-                "reading 6,620 on screen, so it proves nothing");
+                "CE-RESTART-LOAD FAILED — did not reach the two delegated collections with cash on hand " +
+                "reading 7,460 on screen, so it proves nothing");
             GetTree().Quit(1);
         }
         finally

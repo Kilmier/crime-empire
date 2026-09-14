@@ -40,8 +40,8 @@ does not turn them into defects.
 
 ## Coverage boundary and queue
 
-**Reconciled checkpoint: `3db0cb1`.** Every commit through exact
-`3db0cb1ffba07292f1c89ebc313ed46275276e24` appears below, either alone or in an exact group. Coverage
+**Reconciled checkpoint: `663ba68`.** Every commit through exact
+`663ba68c594179e7a9e4f9c1a5ce19347d90a56c` appears below, either alone or in an exact group. Coverage
 through `c7dd34b` preserves the pre-cleanup ledger and milestone evidence; the subsequent rows record
 the cleanup, correction chain, 2026-09-12 historical audit, its independently reviewed repairs, the
 Milestone 027 authorization transition, and the reviewed implementation.
@@ -57,8 +57,11 @@ accepted both PASS outcomes on 2026-09-12. The historical chronological review g
 before implementation began. Claude independently failed `64881a1` on one accepted P2 record defect;
 the runtime implementation had no blocking finding. Matt then closed milestone 027 on 2026-09-12,
 exempting the record correction `303eed0` from a further review round by owner ruling; that row is an
-owner closure and not an independent review. This ledger update cannot establish the review outcome
-of the commit that contains it.
+owner closure and not an independent review. Claude then independently failed `3db0cb1` on three P1
+and two P2 findings and passed its correction `663ba68` after fixes on one accepted P2; Matt accepted
+that outcome and closed milestone 028 on 2026-09-14, granting a bounded owner exception for the
+documentation-only closure commit. This ledger update cannot establish the review outcome of the
+commit that contains it.
 
 The audit was an independent exact-diff review by Astra, who authored none of the inspected commits.
 It was static: Astra did not run builds, tests, Runner verification, Godot, restart, or
@@ -237,27 +240,36 @@ its A/B/C class only after opening the exact diff.
 | `608f05e` (exact `608f05ef0e67149ba64a6ec50585fd5df6a30506`) | Astra independent exact-commit review (Class B): **PASS**, no findings. Astra did not author the inspected commit. The six-document transition accurately recorded the accepted historical PASS outcomes, closed the historical gate through `8651ecd`, preserved every prior FAIL, authorized Milestone 027 with R1–R6, and deferred finished-operation history. Matt accepted the outcome on 2026-09-12 before implementation began. |
 | `64881a1` (exact `64881a162581b366314ace043c0a866ef0ddb7c3`) | Fresh Claude Opus 5 independent exact-commit review (Class A): **FAIL**, one P2 accepted by Matt on 2026-09-12. Runtime implementation met all six authorized rulings with no blocking code defect, but its archive claimed the accepted `608f05e` review without folding that outcome into this ledger as rule 8 required. Corrected by `303eed0`. Claude authored none of the inspected commits, edited nothing, and recorded no acceptance (`milestones/027`). |
 | `303eed0` (exact `303eed0f1504c76c59671821877be9a98ed82b5e`) | **Closed by owner ruling, not an independent review.** Matt closed milestone 027 on 2026-09-12 and explicitly exempted this documentation-only record correction from a further review round, the same owner exception recorded for `c7dd34b`. No independent exact-commit review of this diff exists and none is claimed. The correction folded `608f05e`'s accepted PASS and `64881a1`'s accepted FAIL into the active range and advanced the verification baseline; `64881a1`'s FAIL and every earlier FAIL remain the historical outcomes for their hashes (`milestones/027`). |
-| `3db0cb1` (exact `3db0cb1ffba07292f1c89ebc313ed46275276e24`) | Claude Class A **FAIL**, three P1 and two P2. Runtime-source independent; proposal/027-text authorship disclosed and 027 closure text excluded. Matt authorized the focused correction and explicitly preserved free player review with information-triggered NPC reviews. 027 remains owner-closed. Exact findings, reproduced checks and correction dispositions: `milestones/028-delegation-creates-bandwidth.md` appendix. No acceptance of the implementation is claimed. |
+| `3db0cb1` (exact `3db0cb1ffba07292f1c89ebc313ed46275276e24`) | Claude Class A **FAIL**, three P1 and two P2. Runtime-source independent; proposal/027-text authorship disclosed and 027 closure text excluded. Matt authorized the focused correction and explicitly preserved free player review with information-triggered NPC reviews. 027 remains owner-closed. Exact findings, reproduced checks and correction dispositions: `milestones/028-delegation-creates-bandwidth.md` appendix. **Corrected by `663ba68`; this FAIL remains the historical outcome for this hash.** |
+| `663ba68` (exact `663ba68c594179e7a9e4f9c1a5ce19347d90a56c`) | Claude independent exact-commit review (Class A): **PASS AFTER FIXES**, one P2 documentation finding, accepted by Matt on 2026-09-14. All five earlier findings verified fixed against measured behaviour rather than the archive's account: executor continuity at the block boundary, milestone 007's second-assignment/collection/conflict bars restored naturally, receipt-triggered NPC review reading only received claims, objective reachability proven through a real unstaged player session, and belief-order target selection restored. The P2: no information-triggered review fires naturally in any of the six variants, and the archive did not disclose it. Independence is partial and disclosed — Claude authored the review being corrected, earlier proposal material, and the 027 closure text carried by `3db0cb1`, and ran no Godot self-test. Claude reproduced build, **751 tests**, three deterministic verifications, comparison, both viewpoint runs and `git diff --check`. **Matt accepted and closed milestone 028** (`milestones/028`). |
+| This closure commit | **Closed by owner ruling, not an independent review.** Matt granted an explicit bounded owner exception from a further review round for this documentation-only correction, the same instrument recorded for `c7dd34b` and `303eed0`. It appends the measured honest non-result and the milestone-028 closure to the archive and records the acceptance here. No runtime code, test, tuning, or fixture changed. No independent review of this diff exists and none is claimed; a tracked ledger cannot cover the commit containing its own update (rule 8). |
 
 ## Current verification baseline
 
-Latest independently reproduced **runtime** baseline: `3db0cb1`, reproduced by Claude with
-the partial-independence limits recorded above. The newer correction measurements in
-`milestones/028-delegation-creates-bandwidth.md` remain implementer evidence, not independent review.
-Hashes are regression evidence, not permanent design requirements.
+Latest independently reproduced **runtime** baseline: `663ba68`, reproduced by Claude with the
+partial-independence limits recorded above. Hashes are regression evidence, not permanent design
+requirements; an authorized behaviour change may move them if the new values and reasons are recorded
+in its milestone archive.
 
-- Build: 0 warnings, 0 errors. Tests: 725 passed, 0 failed, 0 skipped.
-- Trace / chosen-action hashes: `baseline` `CA2DFF62228F6EEA` / `AE27F7DAE0AF7BFF`;
-  `cautious-vincent` `1D0E12399D471166` / `65F90BCC51E84099`; `watchful-boss`
-  `77FE4D954730CC2D` / `D71670931684CC20`; `disloyal-vincent` `9A2F2987D4AE1544` /
-  `6C88BE019F2CD0FA`; `resentful-tommy` `1FB4CE2205EBB7D6` / `AE27F7DAE0AF7BFF`;
-  `capable-angelo` `BDD25ADA2FAA73E9` / `79880C77B05A88C1`.
+- Build: 0 warnings, 0 errors. Tests: 751 passed, 0 failed, 0 skipped.
+- Trace / chosen-action hashes: `baseline` `94831B526FCA5761` / `2930C6612450A449`;
+  `cautious-vincent` `A796B6CDA38EDBBF` / `B0DFFBEAEBD8F6F3`; `watchful-boss`
+  `78523E6CE5904631` / `7A9ACC3C59970142`; `disloyal-vincent` `9A2F2987D4AE1544` /
+  `6C88BE019F2CD0FA`; `resentful-tommy` `6B634CBCA3EACD2D` / `2930C6612450A449`;
+  `capable-angelo` `0083E53CFF84A342` / `A955423F0063E292`.
 - Three repeated-run verifications deterministic; comparison: six distinct traces, five action
-  sequences; both required viewpoint runs exit 0.
-- All six natural seed-42 sessions Unmet. This baseline contains the reviewed stalled-work defect;
-  green tests do not certify the behavioural success bars.
-- No Godot or mutation checks were independently rerun in this review. Their earlier results remain
-  implementer-reported. The previous `64881a1` baseline is preserved in the 027 archive.
+  sequences; both required viewpoint runs exit 0; `git diff --check` clean.
+- Independently measured behaviour at seed 42 `baseline`: two assignments, both opening shops
+  collected, one perceived conflict, no stalled operation and no repeating no-op review.
+- All six natural seed-42 sessions remain **Unmet**. `ObjectiveMet` is reachable through legal
+  unstaged player choices only, pinned by
+  `OperationContinuityTests.The_unchanged_objective_is_reachable_through_legal_named_player_choices`.
+- No information-triggered supervisory review fires naturally in any variant; that mechanism's
+  demonstrated surface is controlled production-path tests and fault probes. See the 028 archive's
+  honest non-result section.
+- No Godot or mutation checks were independently rerun in either milestone-028 review round. Those
+  results remain implementer-reported. The previous `3db0cb1` and `64881a1` baselines are preserved
+  in this file's history and the 027 archive.
 
 Run commands from `AGENTS.md` §Verification. Re-measure after the last edit that could affect the
 reported value; never copy a number from an earlier worktree state.

@@ -303,3 +303,58 @@ No new persistent state or replay command kind was introduced.
 
 The focused correction is the commit containing this appendix, directly after `3db0cb1`.
 Independent verification and Matt's acceptance remain pending. No 029 implementation is authorized.
+
+## Honest non-result — the information-triggered review does not fire naturally, 2026-09-14
+
+**Appended, not rewritten.** Claude's independent Class A review of exact
+`663ba68c594179e7a9e4f9c1a5ce19347d90a56c` returned **PASS AFTER FIXES** with one P2 documentation
+finding, which Matt accepted on 2026-09-14. This section is that correction.
+
+**No information-triggered supervisory review occurs naturally in any of the six current variants.**
+Every `operation-review` occasion measured at seed 42 is explained by the provisional seven-day
+schedule and by re-delegation, not by a receipt:
+
+| Variant | Review occasions |
+|---|---|
+| `baseline`, `cautious-vincent`, `watchful-boss`, `resentful-tommy`, `capable-angelo` | 21 Mar, 2 Apr, 9 Apr |
+| `disloyal-vincent` | 21 Mar, 2 Apr, 9 Apr (09:00) |
+
+The tailor is delegated on 14 March, giving 21 March; it completes on 26 March and the grocery is
+delegated the same day, giving 2 April; then 9 April. Nothing in that sequence is early.
+
+**What this means, stated plainly.** The early-review mechanism is correct, actor-neutral, and pinned
+— `InformationTriggeredReviewTests` exercises all three receipt paths and successful observation
+through the production channels, and removing the report-receipt trigger fails three of those cases —
+but **its entire demonstrated surface is controlled production-path tests and fault probes.** The
+accepted fixture never exercises it. The earlier account in this archive said the receipt paths *can*
+bring a review forward and listed that coverage; it did not say that they never do so naturally, and
+a reader could have concluded the correction was live in the scenario when it is not.
+
+This is the sixth instance in this project of *the mechanism works and the scenario cannot show it*,
+and it is recorded here on the standard milestone 022 set for its rumour non-result. **Nothing was
+tuned, and nothing should be.** The honest lever is the same one 022 named: what the fixture routes,
+not what a coefficient permits. A receipt only brings a review forward when it is news, a conflict, or
+an agreement whose claim names the supervised order's target or its executor, and at seed 42 no such
+receipt reaches a supervisor while he still holds that order. Whether to change that is future scope
+and is not authorized here.
+
+No runtime code, test, coefficient, or fixture changed in this correction.
+
+## Closure — milestone 028 closed by owner ruling, 2026-09-14
+
+Matt accepted Claude's independent review of `663ba68` and its P2 finding, and closed milestone 028.
+
+- **`3db0cb1` remains the historical Class A FAIL** — three P1 and two P2 — **corrected by
+  `663ba68`.** Closure does not convert that verdict into a PASS, and every earlier FAIL in this
+  project's chain likewise stands.
+- **`663ba68` is PASS AFTER FIXES**, with partial reviewer independence disclosed: Claude authored no
+  runtime source but authored the review being corrected, earlier proposal material, and the 027
+  closure text carried by `3db0cb1`.
+- **This documentation-only closure commit carries Matt's explicit bounded owner exception** from a
+  further independent review round, the same instrument recorded for `c7dd34b` and `303eed0`. It is an
+  owner closure, not an independent PASS, and it cannot record its own review.
+- **Milestone 027 stays closed** on its own earlier owner exception. That gate is not reopened here.
+- Standing limit, unchanged: no Godot self-test was independently rerun in either review round. All
+  ten headless results remain implementer-reported.
+
+No next milestone is authorized.

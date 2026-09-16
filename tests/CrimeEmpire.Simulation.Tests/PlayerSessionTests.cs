@@ -203,7 +203,8 @@ public sealed class PlayerSessionTests
     public void The_pending_decision_offers_only_what_survived_his_own_filters()
     {
         var session = SimulationSession.Start(Seed, "baseline", Controlled);
-        var pending = RunToFirstPause(session);
+        var pending = RunToProductionRejectionPause(session);
+        string productionRejectedId = RejectedOptionOf(session);
 
         Assert.Equal(Controlled, pending.ActorId);
         Assert.NotEmpty(pending.Options);
@@ -228,6 +229,8 @@ public sealed class PlayerSessionTests
         Assert.True(scoredIds.SetEquals(offeredIds),
             $"offered [{string.Join(", ", offeredIds)}] against scored [{string.Join(", ", scoredIds)}]");
         Assert.NotEmpty(record.Rejected);
+        Assert.Contains(record.Rejected, r => r.Candidate.Id == productionRejectedId
+            && r.Stage == RejectionStage.Salience);
         foreach (var rejected in record.Rejected)
             Assert.DoesNotContain(rejected.Candidate.Id, offeredIds);
     }
@@ -338,7 +341,7 @@ public sealed class PlayerSessionTests
     public void An_action_that_was_not_open_to_him_is_refused_and_the_session_stays_usable()
     {
         var session = SimulationSession.Start(Seed, "baseline", Controlled);
-        var pending = RunToFirstPause(session);
+        var pending = RunToProductionRejectionPause(session);
         int decisionsBefore = session.World.Decisions.Count;
 
         // Options carry opaque tokens, so the raw candidate id is not a key the session accepts —
@@ -1421,6 +1424,34 @@ public sealed class PlayerSessionTests
     }
 
     /// <summary>
+    /// The grouped opening legitimately retains every generated leaf, so it is no longer a fixture
+    /// for rejection behavior. Drive the real session to Vincent's first blocked Tailor operation,
+    /// where production generation proposes abandonment and production salience rejects it. Earlier
+    /// choices are resolved through the autonomous side of the same prepared decisions.
+    /// </summary>
+    private static PendingDecision RunToProductionRejectionPause(SimulationSession session)
+    {
+        session.AdvanceTo(End);
+        for (int guard = 0; guard < 100 && session.Status == SessionStatus.AwaitingChoice; guard++)
+        {
+            var prepared = PreparedOf(session);
+            if (prepared.Rejected.Any(r => r.Candidate.Kind == ActionKind.AbandonStrategy
+                && r.Stage == RejectionStage.Salience))
+            {
+                Assert.Equal(new DateTime(1987, 3, 11, 15, 0, 0, DateTimeKind.Utc), prepared.At);
+                Assert.Equal(EventKind.StrategyBlocked, prepared.Trigger.Kind);
+                _ = RejectedOptionOf(session); // Verify every fixture assumption before returning it.
+                return session.Pending!;
+            }
+
+            session.ResolveAutomatically();
+        }
+
+        throw new Xunit.Sdk.XunitException(
+            "the production session never reached the expected blocked-operation salience rejection");
+    }
+
+    /// <summary>
     /// The option the controlled character would have taken, read out of the pipeline's own ranking
     /// without resolving anything.
     ///
@@ -1431,17 +1462,22 @@ public sealed class PlayerSessionTests
         => PreparedOf(session).Scored[0].Candidate.Id;
 
     /// <summary>
-    /// An option this deliberation actually generated and then refused, for whatever reason. Taken
-    /// from the production filter's own rejection list rather than invented.
+    /// The concrete abandonment option this deliberation actually generated and then rejected at
+    /// production salience. The assertions keep this from degrading into an invented unavailable id
+    /// or a fixture that happens to reject something for a different reason.
     /// </summary>
     private static string RejectedOptionOf(SimulationSession session)
     {
         var prepared = PreparedOf(session);
-        var offered = prepared.Available.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
-        var generated = prepared.Generated.FirstOrDefault(c => !offered.Contains(c.Id));
+        var rejection = Assert.Single(prepared.Rejected, r =>
+            r.Candidate.Kind == ActionKind.AbandonStrategy
+            && r.Stage == RejectionStage.Salience);
 
-        Assert.NotNull(generated);
-        return generated!.Id;
+        Assert.Contains(prepared.Generated, c => c.Id == rejection.Candidate.Id);
+        Assert.DoesNotContain(prepared.Scored, s => s.Candidate.Id == rejection.Candidate.Id);
+        Assert.DoesNotContain(prepared.Available, c => c.Id == rejection.Candidate.Id);
+        Assert.StartsWith("it did not occur to ", rejection.Reason, StringComparison.Ordinal);
+        return rejection.Candidate.Id;
     }
 
     private static PreparedDecision PreparedOf(SimulationSession session)

@@ -282,15 +282,63 @@ only by which way the account points.
 - **Immediate cancellation is the prototype.** A selected owner's order can be cancelled through
   the shared decision pipeline; only that operation's pending work and commitments are released.
   Commands travelling in flight and a subordinate choosing whether to comply are deferred.
-- **Bounded prospective selection remains.** Generate one prospective tribute target, excluding
-  same-kind operations this actor already owns; other actors' unknown operations do not reserve a
-  target globally. The six-candidate attention cap and coercion-method fan-out remain unchanged.
+- **Superseded for the specified two-known-target occasion by milestone 029: the milestone-028 rule
+  generated one prospective tribute target and retained six concrete candidates.** That remains the
+  fallback everywhere milestone 029's exact activation predicate is false. On the approved
+  milestone-029 occasion, generation admits the first two eligible held-refusal targets in existing
+  belief order and attention retains up to six top-level alternatives containing at most ten
+  concrete leaves. No slots are reserved for jobs: when both job groups survive, at most four
+  singleton alternatives fit; when fewer job groups survive, more singletons may compete for the
+  remaining top-level slots. Other actors' unknown operations still do not reserve a target globally.
 - **Orders are not telemetry.** An owner may see their issued order, target and assigned executor,
   but a delegate's private progress, changed method and failed attempts are not automatically
   disclosed. Existing report channels remain; richer progress inquiries are separate work.
 
 Source: Matt's milestone-028 authorization and follow-up rulings in the implementation task;
 implementation and prototype timing are recorded in `milestones/028-delegation-creates-bandwidth.md`.
+
+## Conditional grouped job-and-method attention — milestone 029, Matt's rulings
+
+- **The exception is exact and conditional.** Determine activation from redundancy-surviving
+  responsibility candidates for exactly two distinct known tribute-refusal targets, before salience
+  filtering. Eligible leaves are existing `StartStrategy` / `SecureTribute` candidates with a
+  non-null target, one of the three existing coercion methods, and the exact
+  `BusinessRefusesTribute(TargetId)` requirement. Zero-target, one-target,
+  unattributed-shortfall, and every unrelated occasion use the original flat pipeline unchanged.
+- **Attention counts top-level alternatives only on that occasion.** Each surviving target group is
+  one alternative alongside every singleton action. Retain up to six top-level alternatives and at
+  most ten concrete leaves. No category has a protected slot. Both job groups leave room for at most
+  four singletons; if a group is absent, more singletons may compete for the available slots.
+- **Methods remain trait-sensitive concrete choices.** Salience is applied to each leaf before it
+  may join a group; a below-threshold method cannot hitchhike and an empty group is not retained.
+  Group identity is `(StartStrategy, SecureTribute, TargetId)` with ordinal target equality. Group
+  salience is its strongest surviving leaf, whose candidate id breaks equal-salience ties and serves
+  as the group's ordering id.
+- **Ordering remains total and cancellation keeps priority.** Top-level alternatives sort focused
+  cancellation first, then salience descending, then ordering id ordinal. Cancellation remains a
+  singleton, consumes one of six slots, and grants no group priority or backfill. After top-level
+  selection, concrete leaves return to the original flat cancellation/salience/candidate-id order
+  for feasibility and RNG-consuming utility scoring. Player-facing options remain concrete leaves in
+  candidate-id ordinal order.
+- **Feasibility stays late, with no backfill.** Knowledge, capability, and access checks run after
+  attention allocation exactly as before. A retained group may lose every method and leave fewer than
+  six available top-level alternatives. This is accepted for milestone 029, not a general ruling that
+  feasibility must always remain late.
+- **The decision remains atomic and actor-neutral.** Controlled and autonomous actors prepare the
+  same groups, leaves, feasibility results, scores, and concrete candidate identities. Selection and
+  commit still name one existing leaf; group metadata is ephemeral preparation state, never a saved
+  decision phase or player option id.
+- **Deterministic evaluation hashes may move for the measured reason.** Retaining additional leaves
+  changes which deterministic decision-noise draws reach which score. Such trace changes are
+  acceptable only when repeated runs reproduce them, their first divergence is the authorized
+  two-target evaluation, and action-history and coarse-outcome comparisons remain separately
+  verified. Neither equality establishes complete cross-build world-state equality.
+- **The claim is option preservation, not job diversity.** Milestone 029 does not assert that Tailor
+  and Grocery are meaningfully non-dominated plans, does not tune traits or weights, and does not
+  change information routing, B/C work, UI, dominance pruning, RNG design, or the storyline.
+
+Source: Matt's milestone-029 authorization after the grouped job-and-method experiment; the bounded
+scope and experimental evidence are preserved in `docs/proposals/` and the milestone archive.
 
 ## The player boundary — settled by milestone 009
 

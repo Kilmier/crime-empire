@@ -2,6 +2,31 @@ namespace CrimeSim.Decision;
 
 using CrimeSim.Domain;
 
+public readonly record struct AttentionGroupKey(
+    ActionKind Kind,
+    StrategyKind Strategy,
+    string TargetId);
+
+public sealed record AttentionLeaf(Candidate Candidate, double Salience);
+
+public sealed record AttentionAlternative(
+    AttentionGroupKey? GroupKey,
+    Candidate Anchor,
+    double Salience,
+    bool FocusedCancellation,
+    IReadOnlyList<AttentionLeaf> Leaves)
+{
+    public bool IsGroup => GroupKey is not null;
+    public string OrderingId => Anchor.Id;
+}
+
+public sealed record AttentionAllocation(
+    bool GroupingActivated,
+    IReadOnlyList<string> EligibleTargetIds,
+    IReadOnlyList<AttentionAlternative> OrderedAlternatives,
+    IReadOnlyList<AttentionAlternative> RetainedAlternatives,
+    IReadOnlyList<AttentionLeaf> RetainedLeaves);
+
 /// <summary>
 /// Rejects options the character cannot conceive of, does not know enough to attempt, or cannot
 /// perform. Every rejection carries its stage and a sentence of reason, because the rejections are
@@ -14,9 +39,20 @@ public static class Filters
         => ctx.ReviewOperation is { } reviewed && c.IsOperationReview
             && c.Kind == ActionKind.AbandonStrategy && c.OperationOwnerId == reviewed.OwnerId
             && c.OperationSequence == reviewed.LocalSequence;
+
+    private static bool EligibleKnownRefusal(Candidate c)
+        => c.Generator == "FromResponsibility"
+            && c.Kind == ActionKind.StartStrategy
+            && c.Strategy == StrategyKind.SecureTribute
+            && c.TargetId is not null
+            && c.Method is CoercionMethod.Persuade or CoercionMethod.Threaten or CoercionMethod.Force
+            && c.RequiredKnowledge.Contains(
+                new Claim(ClaimKind.BusinessRefusesTribute, c.TargetId));
+
     public sealed record Result(
         List<Candidate> Passed,
-        List<Rejection> Rejected);
+        List<Rejection> Rejected,
+        AttentionAllocation Attention);
 
     public static Result Apply(GeneratorContext ctx, IReadOnlyList<Candidate> candidates, SalienceProfile salience)
     {
@@ -101,6 +137,19 @@ public static class Filters
             }
         }
 
+        // Milestone 029's branch is decided after redundancy has established which target proposals
+        // are genuinely eligible, but before salience can erase every method for one of them. It
+        // consults only belief-derived generated candidates. The generator admits at most two known
+        // refusal targets, so exactly two means this one bounded occasion and nothing broader.
+        var eligibleKnownRefusals = candidates
+            .Where(c => !redundant.Contains(c.Id) && EligibleKnownRefusal(c))
+            .ToList();
+        var eligibleTargetIds = eligibleKnownRefusals
+            .Select(c => c.TargetId!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        bool groupingActivated = eligibleTargetIds.Count == 2;
+
         // Stage 1 — salience. What occurs to them at all.
         var salient = new List<(Candidate Candidate, double Score)>();
         foreach (var c in candidates)
@@ -115,20 +164,104 @@ public static class Filters
                 salient.Add((c, s));
         }
 
-        var considered = salient
+        var flatOrdered = salient
             .OrderByDescending(x => FocusedCancellation(ctx, x.Candidate))
             .ThenByDescending(x => x.Score)
             .ThenBy(x => x.Candidate.Id, StringComparer.Ordinal)
             .ToList();
 
-        foreach (var extra in considered.Skip(SalienceProfile.MaxCandidates))
-            rejected.Add(new Rejection(extra.Candidate, RejectionStage.Salience,
-                $"crowded out — only {SalienceProfile.MaxCandidates} options held his attention"));
+        List<(Candidate Candidate, double Score)> considered;
+        AttentionAllocation attention;
+
+        if (!groupingActivated)
+        {
+            // Preserve the original pipeline literally when the exact activation predicate is
+            // false: same ordering, truncation, rejection text/order and late feasibility pass.
+            foreach (var extra in flatOrdered.Skip(SalienceProfile.MaxCandidates))
+                rejected.Add(new Rejection(extra.Candidate, RejectionStage.Salience,
+                    $"crowded out — only {SalienceProfile.MaxCandidates} options held his attention"));
+
+            considered = flatOrdered.Take(SalienceProfile.MaxCandidates).ToList();
+            var ordered = flatOrdered
+                .Select(x => Singleton(ctx, x.Candidate, x.Score))
+                .ToList();
+            attention = new AttentionAllocation(
+                false,
+                eligibleTargetIds,
+                ordered,
+                ordered.Take(SalienceProfile.MaxCandidates).ToList(),
+                considered.Select(x => new AttentionLeaf(x.Candidate, x.Score)).ToList());
+        }
+        else
+        {
+            var eligibleIds = eligibleKnownRefusals
+                .Select(c => c.Id)
+                .ToHashSet(StringComparer.Ordinal);
+            var alternatives = new List<AttentionAlternative>();
+
+            // Groups are made only from methods that independently survived salience. A target
+            // whose methods all fell below threshold contributes no empty top-level alternative.
+            foreach (var leaves in flatOrdered
+                         .Where(x => eligibleIds.Contains(x.Candidate.Id))
+                         .GroupBy(x => x.Candidate.TargetId!, StringComparer.Ordinal))
+            {
+                var orderedLeaves = leaves
+                    .Select(x => new AttentionLeaf(x.Candidate, x.Score))
+                    .OrderByDescending(x => x.Salience)
+                    .ThenBy(x => x.Candidate.Id, StringComparer.Ordinal)
+                    .ToList();
+                if (orderedLeaves.Count == 0) continue;
+
+                var anchor = orderedLeaves[0];
+                alternatives.Add(new AttentionAlternative(
+                    new AttentionGroupKey(
+                        ActionKind.StartStrategy,
+                        StrategyKind.SecureTribute,
+                        leaves.Key),
+                    anchor.Candidate,
+                    anchor.Salience,
+                    false,
+                    orderedLeaves));
+            }
+
+            alternatives.AddRange(flatOrdered
+                .Where(x => !eligibleIds.Contains(x.Candidate.Id))
+                .Select(x => Singleton(ctx, x.Candidate, x.Score)));
+
+            var ordered = alternatives
+                .OrderByDescending(x => x.FocusedCancellation)
+                .ThenByDescending(x => x.Salience)
+                .ThenBy(x => x.OrderingId, StringComparer.Ordinal)
+                .ToList();
+            var retained = ordered.Take(SalienceProfile.MaxCandidates).ToList();
+
+            foreach (var extra in ordered.Skip(SalienceProfile.MaxCandidates))
+            foreach (var leaf in extra.Leaves)
+                rejected.Add(new Rejection(leaf.Candidate, RejectionStage.Salience,
+                    $"crowded out — only {SalienceProfile.MaxCandidates} top-level options held his attention"));
+
+            var retainedIds = retained
+                .SelectMany(x => x.Leaves)
+                .Select(x => x.Candidate.Id)
+                .ToHashSet(StringComparer.Ordinal);
+
+            // Grouping changes membership only. Restore the original concrete flat order before
+            // late feasibility and Utility.Score consume it (and therefore before RNG draws).
+            considered = flatOrdered
+                .Where(x => retainedIds.Contains(x.Candidate.Id))
+                .ToList();
+            attention = new AttentionAllocation(
+                true,
+                eligibleTargetIds,
+                ordered,
+                retained,
+                considered.Select(x => new AttentionLeaf(x.Candidate, x.Score)).ToList());
+        }
 
         var passed = new List<Candidate>();
 
         // Stages 2-4 — knowledge, capability, access.
-        foreach (var (c, _) in considered.Take(SalienceProfile.MaxCandidates))
+        foreach (var (c, _) in considered)
         {
             var missing = c.RequiredKnowledge.FirstOrDefault(k => !ctx.Perceived.Holds(k));
             if (c.RequiredKnowledge.Count > 0 && !c.RequiredKnowledge.All(ctx.Perceived.Holds))
@@ -169,8 +302,16 @@ public static class Filters
             passed.Add(c);
         }
 
-        return new Result(passed, rejected);
+        return new Result(passed, rejected, attention);
     }
+
+    private static AttentionAlternative Singleton(GeneratorContext ctx, Candidate c, double salience)
+        => new(
+            null,
+            c,
+            salience,
+            FocusedCancellation(ctx, c),
+            new[] { new AttentionLeaf(c, salience) });
 
     private static string Describe(Claim c) => c.Kind switch
     {

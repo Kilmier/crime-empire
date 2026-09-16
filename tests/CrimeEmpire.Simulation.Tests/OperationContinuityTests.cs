@@ -180,6 +180,6 @@ public sealed class OperationContinuityTests(ITestOutputHelper output)
         { Id = 123, Time = world.Now, Kind = EventKind.RoleReview, OwnerId = vincent.Id, Cause = "test" });
         var targets = prepared.Generated.Where(c => c.Kind == ActionKind.StartStrategy
             && c.Strategy == StrategyKind.SecureTribute).Select(c => c.TargetId).Distinct();
-        Assert.Equal(new[] { Cast.Tailor }, targets);
+        Assert.Equal(new[] { Cast.Tailor, Cast.Grocery }, targets);
     }
 }

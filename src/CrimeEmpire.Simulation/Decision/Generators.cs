@@ -290,21 +290,14 @@ public static class Generators
         // office-to-assignment chain exists to prevent.
         if (ctx.MyOffice is null && ctx.MyAssignment is null) yield break;
 
-        var refusing = ctx.Perceived.OfKind(ClaimKind.BusinessRefusesTribute)
-                                    .Select(r => r.Claim.Subject)
-                                    .Where(t => !ctx.Actor.Execution.Operations.Any(s => s.Kind == StrategyKind.SecureTribute && s.TargetId == t))
-                                    .FirstOrDefault();
+        var marks = ctx.Perceived.OfKind(ClaimKind.BusinessRefusesTribute)
+                                 .Select(r => r.Claim.Subject)
+                                 .Where(t => !ctx.Actor.Execution.Operations.Any(s => s.Kind == StrategyKind.SecureTribute && s.TargetId == t))
+                                 .Take(2)
+                                 .Select(t => (Mark: t, Requirement: new Claim(ClaimKind.BusinessRefusesTribute, t)))
+                                 .ToList();
 
-        string? mark = refusing;
-        Claim requirement = default;
-        bool hasRequirement = false;
-
-        if (mark is not null)
-        {
-            requirement = new Claim(ClaimKind.BusinessRefusesTribute, mark);
-            hasRequirement = true;
-        }
-        else
+        if (marks.Count == 0)
         {
             // No named refuser. Milestone 012: this used to fall back to
             // ctx.VisibleTargets.FirstOrDefault() unconditionally, which named a mark — always the
@@ -322,33 +315,35 @@ public static class Generators
             var gap = new Claim(ClaimKind.UnattributedShortfall, domain);
             if (ctx.Perceived.Holds(gap))
             {
-                mark = ctx.VisibleTargets.FirstOrDefault(t =>
+                var mark = ctx.VisibleTargets.FirstOrDefault(t =>
                     !ctx.Actor.Execution.Operations.Any(s => s.Kind == StrategyKind.SecureTribute && s.TargetId == t) &&
                     ctx.Perceived.Position(new Claim(ClaimKind.BusinessRefusesTribute, t))?.Stance
                         != Stance.Rejects);
                 if (mark is not null)
                 {
-                    requirement = gap;
-                    hasRequirement = true;
+                    marks.Add((mark, gap));
                 }
             }
         }
 
-        if (mark is null) yield break;
+        if (marks.Count == 0) yield break;
 
-        foreach (var method in new[] { CoercionMethod.Persuade, CoercionMethod.Threaten, CoercionMethod.Force })
+        foreach (var (mark, requirement) in marks)
         {
-            yield return Coercive(
-                ctx,
-                $"start:tribute:{mark}:{method}",
-                ActionKind.StartStrategy,
-                nameof(FromResponsibility),
-                Verb(method, mark),
-                mark,
-                StrategyKind.SecureTribute,
-                method,
-                domain,
-                requires: hasRequirement ? new[] { requirement } : Array.Empty<Claim>());
+            foreach (var method in new[] { CoercionMethod.Persuade, CoercionMethod.Threaten, CoercionMethod.Force })
+            {
+                yield return Coercive(
+                    ctx,
+                    $"start:tribute:{mark}:{method}",
+                    ActionKind.StartStrategy,
+                    nameof(FromResponsibility),
+                    Verb(method, mark),
+                    mark,
+                    StrategyKind.SecureTribute,
+                    method,
+                    domain,
+                    requires: new[] { requirement });
+            }
         }
     }
 

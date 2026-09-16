@@ -33,6 +33,7 @@ public sealed class PreparedDecision
         SalienceProfile salience,
         IReadOnlyList<Candidate> generated,
         IReadOnlyList<Rejection> rejected,
+        AttentionAllocation attention,
         IReadOnlyList<ScoreBreakdown> scored)
     {
         World = world;
@@ -44,6 +45,7 @@ public sealed class PreparedDecision
         Salience = salience;
         Generated = generated;
         Rejected = rejected;
+        Attention = attention;
         Scored = scored;
 
         // Ordinal id order, deliberately not rank order and deliberately not the salience order
@@ -67,6 +69,7 @@ public sealed class PreparedDecision
     internal SalienceProfile Salience { get; }
     internal IReadOnlyList<Candidate> Generated { get; }
     internal IReadOnlyList<Rejection> Rejected { get; }
+    internal AttentionAllocation Attention { get; }
 
     /// <summary>
     /// Every scored breakdown, best first. DEVELOPER-FACING — this is the utility calculation.
@@ -205,7 +208,7 @@ public static class Pipeline
 
         return new PreparedDecision(
             world, actor, trigger, agenda, ctx, perceived, salience,
-            generated, filtered.Rejected, scored);
+            generated, filtered.Rejected, filtered.Attention, scored);
     }
 
     /// <summary>

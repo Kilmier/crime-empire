@@ -5,13 +5,14 @@ review coverage belongs in REVIEW_LEDGER.
 
 ## Status
 
-**Milestone 029 — Grouped job-and-method attention — is implemented; awaiting independent exact-
-commit Class A review and Matt acceptance. No subsequent milestone is authorized.**
+**No milestone is active.**
 
-Matt authorized the bounded production scope on 2026-09-16 after three held experiments. The
-focused implementation and verification evidence are archived in
-`milestones/029-grouped-job-and-method-attention.md`. The held grouped experiment remains intact as
-evidence and was not promoted as production code.
+**Milestone 029 — Grouped job-and-method attention — is closed and accepted.** Matt reviewed exact
+`aa9f30cb439dfab9def8c7a68a4704869da18320`, reported that it passes, and authorized closeout on
+2026-09-16. Matt authored none of the commit. No separate review report or independently reproduced
+command record accompanied the ruling, so the archive and ledger distinguish the owner review and
+acceptance from the implementation's recorded verification evidence. The held grouped experiment
+remains intact as evidence and was not promoted as production code.
 
 **Milestone 028 — Delegation creates bandwidth — is closed and accepted.** Matt accepted Claude's
 independent Class A review of exact `663ba68c594179e7a9e4f9c1a5ce19347d90a56c` (**PASS AFTER FIXES**,
@@ -25,12 +26,9 @@ reopened.
 
 ## Current gate
 
-**Stop.** The implementation is complete and its full gate is green: build 0 warnings/0 errors,
-766 tests passed, the three required deterministic verification variants and their repeats passed,
-all six chosen-action histories and coarse outcomes match the accepted baseline, both viewpoint runs
-passed, and the authorized evaluation-hash changes are recorded in the archive. Do not alter the
-implementation, push it, or begin later work before independent exact-commit review and Matt's
-ruling.
+**Stop. Nothing further is authorized.** Milestone 029 is closed. No implementation, fixture,
+tuning, runtime change, or subsequent milestone may begin until Matt authorizes new scope here.
+`ROADMAP.md` candidates and `docs/proposals/` grant no permission.
 
 ## Deliberately carried work
 

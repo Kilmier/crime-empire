@@ -159,3 +159,20 @@ locate its exact hash with
 `git log --diff-filter=A --format=%H -- docs/milestones/029-grouped-job-and-method-attention.md`.
 Self-review and the evidence above are implementer preflight only. No independent review or Matt
 acceptance is claimed. Stop here for exact-commit Class A review; do not begin subsequent work.
+
+## Owner review and closure — 2026-09-16
+
+Matt reviewed exact implementation commit `aa9f30cb439dfab9def8c7a68a4704869da18320`, ruled “this
+passes review,” and authorized milestone closeout. Matt authored none of the reviewed commit. The
+owner verdict is **PASS** and the implementation is accepted; no correction was requested.
+
+No separate review report, additional findings, command transcript, or independently reproduced
+verification was supplied with the ruling. The production measurements and green gate above remain
+the implementer's recorded evidence, not a claim that another agent reran them. This limitation does
+not weaken or expand the accepted scope: all exclusions and deferred work remain in force, the held
+experiments remain evidence, and no subsequent milestone is authorized.
+
+The documentation-only commit containing this appendix records the ruling and closure. It changes no
+runtime code, test, fixture, tuning, or outcome. Under review-ledger rule 8 it cannot establish its
+own review status; a later authorized change may fold that bookkeeping commit into the ledger without
+reopening milestone 029.

@@ -21,6 +21,7 @@ public sealed class InPersonTests
     private static readonly DateTime End = Cast.Start.AddDays(90);
 
     private static readonly Claim Grocery = new(ClaimKind.BusinessRefusesTribute, Cast.Grocery);
+    private static readonly Claim GroceryVulnerability = new(ClaimKind.TargetIsVulnerable, Cast.Grocery);
     private static readonly Claim VincentsViolence = new(ClaimKind.PersonUsedViolence, "vincent", Cast.Grocery);
 
     // ================================================================= the no-position reply
@@ -36,7 +37,7 @@ public sealed class InPersonTests
     {
         var session = SimulationSession.Start(Seed, "baseline", "vincent");
         var pending = AdvanceToPause(session);
-        const string ask = "ask Tommy Nardo what he knows about whether Bellini's grocery is not paying its tribute";
+        const string ask = "ask Tommy Nardo what he knows about whether Bellini's grocery would fold if leaned on";
         session.Choose(pending.Options.Single(o => o.Description == ask).Id);
 
         var asked = session.Snapshot();
@@ -52,12 +53,12 @@ public sealed class InPersonTests
         var disclaimer = Assert.Single(answered.Disclaimers);
         Assert.Equal("tommy", disclaimer.PersonId);
         Assert.Equal(
-            "Tommy Nardo says he knows nothing about whether Bellini's grocery is not paying its tribute",
+            "Tommy Nardo says he knows nothing about whether Bellini's grocery would fold if leaned on",
             disclaimer.Description);
 
-        // And it is not a denial: the grocery claim is neither contested nor listed as disagreed.
-        Assert.DoesNotContain(answered.Disagreements, d => d.Claim.Matches(Grocery));
-        Assert.False(answered.Known.Single(b => b.Claim.Matches(Grocery)).Contested);
+        // And it is not a denial: the vulnerability claim is neither contested nor listed as disagreed.
+        Assert.DoesNotContain(answered.Disagreements, d => d.Claim.Matches(GroceryVulnerability));
+        Assert.False(answered.Known.Single(b => b.Claim.Matches(GroceryVulnerability)).Contested);
     }
 
     /// <summary>
@@ -309,26 +310,31 @@ public sealed class InPersonTests
     // ================================================================= the natural lie
 
     /// <summary>
-    /// The playtest scene: Vincent uses force, Marco asks him about it, Vincent denies it to his
-    /// face. Vincent comes away with a reading of Marco, shown on his roster under Marco and under
-    /// what just happened — in the second person, as his own reading, never as Marco's state.
+    /// Vincent uses force, Iris asks him about it, and Vincent denies it to her face. He comes away
+    /// with a reading of Iris, shown on his roster and under what just happened — in the second
+    /// person, as his own reading, never as Iris's state.
     /// </summary>
     [Fact]
-    public void Lying_to_a_mans_face_leaves_a_reading_of_it()
+    public void Lying_to_someones_face_leaves_a_reading_of_it()
     {
-        // Matt's own path, 2026-09-05: ask Tommy first, use force when the job comes round again,
-        // then Marco puts his question and the denial is on the table.
+        // The milestone-030 briefing changes the bounded later reporting set: Marco's natural
+        // question now retains silence but not denial, while Iris's next question retains the lie.
+        // The channel under test is the same production in-person account and reaction path.
         var session = SimulationSession.Start(Seed, "baseline", "vincent");
-        Choose(session, "ask Tommy Nardo what he knows about whether Bellini's grocery is not paying its tribute");
+        Choose(session, "ask Tommy Nardo what he knows about whether Bellini's grocery would fold if leaned on");
         Choose(session, "use force on Ferri's tailor shop — breaking the rule: no public violence in the harbour");
         Choose(session, "use force on Bellini's grocery — breaking the rule: no public violence in the harbour");
 
-        const string deny = "deny it to Marco Bellini: tell him you did not get violent at Bellini's grocery";
+        const string deny = "deny it to Det. Iris Kane: tell her you did not get violent at Bellini's grocery";
         PendingDecision? offering = null;
         var seen = new List<string>();
-        for (int guard = 0; guard < 400 && offering is null && session.Date < End; guard++)
+        for (int guard = 0; guard < 400 && offering is null && session.Date < End
+             && session.Status != SessionStatus.Resolved; guard++)
         {
-            var pending = AdvanceToPause(session);
+            for (int step = 0; step < 5000 && session.Status == SessionStatus.Ready; step++)
+                session.StepEvent();
+            if (session.Status == SessionStatus.Resolved) break;
+            var pending = session.Pending!;
             seen.Add($"{session.Date:d MMM}: {string.Join(" | ", pending.Options.Select(o => o.Description))}");
             if (pending.Options.Any(o => o.Description == deny)) offering = pending;
             else session.Choose(pending.Options.First(o => o.Description.StartsWith("carry on", StringComparison.Ordinal)
@@ -338,22 +344,25 @@ public sealed class InPersonTests
         session.Choose(offering!.Options.Single(o => o.Description == deny).Id);
 
         var vincent = session.World.Get("vincent");
-        var impression = Assert.Single(vincent.Social.Toward("marco").Impressions, i => i.About is not null);
+        var delivered = session.World.Reports.Last(r => r.SenderId == "vincent" && r.RecipientId == "kane");
+        Assert.NotEmpty(delivered.Asserted);
+        Assert.NotNull(delivered.AnsweringClaim);
+        var impression = Assert.Single(vincent.Social.Toward("kane").Impressions, i => i.About is not null);
         Assert.Equal(VincentsViolence.Kind, impression.About!.Value.Kind);
 
         var snapshot = session.Snapshot();
-        var marco = snapshot.Attitudes.Single(a => a.PersonId == "marco");
-        var read = Assert.Single(marco.Impressions, i => i.Description.Contains("you got violent", StringComparison.Ordinal));
-        // A reading, never a fact about Marco: "seemed to", "did not seem to", or "you could not tell".
-        Assert.Matches("^(Marco Bellini seemed to believe you|Marco Bellini did not seem to believe you|you could not tell whether Marco Bellini believed you)", read.Description);
+        var iris = snapshot.Attitudes.Single(a => a.PersonId == "kane");
+        var read = Assert.Single(iris.Impressions, i => i.Description.Contains("you got violent", StringComparison.Ordinal));
+        // A reading, never a fact about Iris: "seemed to", "did not seem to", or "you could not tell".
+        Assert.Matches("^(Det. Iris Kane seemed to believe you|Det. Iris Kane did not seem to believe you|you could not tell whether Det. Iris Kane believed you)", read.Description);
         Assert.DoesNotContain("believes", read.Description, StringComparison.Ordinal);
 
         // And what hangs over him says so in his own terms: the act, the witness, the denial, and
-        // that Marco put it to him — never that Marco knows.
+        // that Iris put it to him — never that Iris knows.
         string hanging = string.Join(" ", snapshot.Exposure);
         Assert.Contains("you got violent at Bellini's grocery, against the outfit's rule.", hanging);
-        Assert.Contains("You denied it to Marco Bellini on ", hanging);
-        Assert.Contains("Marco Bellini asked you about it on ", hanging);
+        Assert.Contains("You denied it to Det. Iris Kane on ", hanging);
+        Assert.Contains("Det. Iris Kane asked you about it on ", hanging);
         Assert.DoesNotContain("knows", hanging, StringComparison.Ordinal);
     }
 

@@ -143,10 +143,19 @@ public sealed record PlayerCommittedAction(DateTime At, string Description);
 /// </summary>
 public sealed record PlayerOperation(
     string Description,
+    string Approach,
     string? ExecutorName,
     DateTime? Since,
     string? Progress,
     string? ReviewToken = null);
+
+/// <summary>One itemized receipt from this character's own cash history.</summary>
+public sealed record PlayerIncome(
+    DateTime At,
+    double Amount,
+    string SourceName,
+    string ExecutorName,
+    bool HandledPersonally);
 
 /// <summary>
 /// The viewpoint character's own business, when he owns one. <see cref="PayingTribute"/> only — on
@@ -260,6 +269,7 @@ public sealed record PlayerSnapshot(
     /// about him, not a measurement the model took of anybody.
     /// </summary>
     double Cash,
+    IReadOnlyList<PlayerIncome> Income,
     /// <summary>
     /// What he knows about himself — his own skills, in words. Milestone 026's first correction, on
     /// the same footing as <see cref="Cash"/>: his own state, copied out of his own
@@ -290,6 +300,7 @@ public sealed record PlayerSnapshot(
     IReadOnlyList<PlayerOperation> Operations,
     IReadOnlyList<PlayerRequest> AwaitingAnswers)
 {
+    public IReadOnlyList<PlayerIncome> Income { get; init; } = Frozen.List(Income);
     public IReadOnlyList<PlayerOperation> Operations { get; init; } = Frozen.List(Operations);
     public IReadOnlyList<string> SelfKnowledge { get; init; } = Frozen.List(SelfKnowledge);
     public IReadOnlyList<PlayerBelief> Known { get; init; } = Frozen.List(Known);
@@ -553,6 +564,20 @@ public static class PlayerView
             ? null
             : new PlayerBusinessStatus(ownedBusiness.Id, ownedBusiness.Name, ownedBusiness.PayingTribute);
 
+        // ---------------------------------------------------------------- cash this character received
+        // The balance and its receipts are the same character-owned state. This names no payer's
+        // cash and reads no truth log: each receipt was written atomically with this character's own
+        // balance change at collection.
+        var income = who.Capabilities.CashReceipts
+            .OrderBy(r => r.At)
+            .Select(r => new PlayerIncome(
+                r.At,
+                r.Amount,
+                name(r.SourceId),
+                name(r.ExecutorId),
+                r.ExecutorId == who.Id))
+            .ToList();
+
         // ---------------------------------------------------------------- awaiting answers
         //
         // Corrected three times by milestone 018's review. The first correction read World.Decisions
@@ -592,6 +617,7 @@ public static class PlayerView
             who.RoleTitle,
             self,
             who.Capabilities.Cash,
+            income,
             PlayerNarration.SelfKnowledge(
                 who.Capabilities[Skill.Persuasion], who.Capabilities[Skill.Coercion],
                 who.Capabilities[Skill.Discretion], who.Capabilities[Skill.Investigation], self),
@@ -747,9 +773,17 @@ public static class PlayerView
         // otherwise. Progress is shown only to him; everyone else who can see this operation at all
         // (the owner, watching a delegate) learns the outcome the way milestones 017 and 022 settled.
         bool doingItHimself = who.Id == (s.DelegatedToId ?? s.OwnerId);
+        CoercionMethod visibleMethod = who.Id == s.OwnerId
+            // The owner's own last order, never the delegate's live method. Production operations
+            // always set this at start; Persuade is the fail-closed default for hand-built fixtures.
+            ? s.OwnerOrderedMethod ?? CoercionMethod.Persuade
+            : s.Method;
 
         return new PlayerOperation(
             PlayerOption.Work(s.Kind, s.TargetId, name, self),
+            s.Kind == StrategyKind.SecureTribute && s.TargetId is { } target
+                ? PlayerOption.Approach(visibleMethod, target, name)
+                : PlayerOption.Work(s.Kind, s.TargetId, name, self),
             s.DelegatedToId is { } executor && executor != who.Id ? name(executor) : null,
             // The owner's own act, known to him regardless of who is carrying it now. Not the
             // executor's: StartedAt is when the operation began, which for a man it was later handed

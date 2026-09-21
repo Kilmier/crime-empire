@@ -340,6 +340,57 @@ implementation and prototype timing are recorded in `milestones/028-delegation-c
 Source: Matt's milestone-029 authorization after the grouped job-and-method experiment; the bounded
 scope and experimental evidence are preserved in `docs/proposals/` and the milestone archive.
 
+## One informed choice — milestone 030, Matt's rulings
+
+- **A paired assignment briefing may carry the issuer's held vulnerability assessment.** When an
+  assignment discloses `BusinessRefusesTribute(Target)`, it may also disclose an affirmative
+  `TargetIsVulnerable(Target)` position the issuer already holds about that same target. The account
+  is captured at issuance immediately after its paired refusal, preserving stance, confidence and
+  claimed basis; later delivery does not reread the issuer's mind. It reaches only the named
+  recipient through ordinary `Cognition.Receive` and the existing receipt effects. This is a
+  source-limited account, not truth synchronization, and grants no organization-wide knowledge.
+- **Player-legible tradeoff, not a changed autonomous winner, is the milestone's success rule.** A
+  person must be able to understand competing reasons for the retained target/method choices and
+  observe a consequence through information available to the controlled character. Autonomous
+  Vincent may retain the same opening winner; no coefficient, trait, fixture, resistance, RNG or
+  storyline tuning is authorized to manufacture a different one.
+- **Existing presentation gets the first proof burden.** Assignment briefing and intelligence
+  surfaces may describe the source, target, uncertainty and assessment qualitatively, but may not
+  expose confidence numbers, hidden resistance, utility values, success percentages or a recommended
+  option. If those existing surfaces cannot make the tradeoff comprehensible, the result is a
+  presentation-rescope request, not standing permission for a recommendation UI, new screen or
+  general interface architecture.
+- **Milestone 029's opening question is the refusal; milestone 030 is expected to move it to
+  vulnerability.** Before the paired disclosure Vincent's corroboration candidate concerns
+  `BusinessRefusesTribute(Grocery)`. After he receives Salvatore's held assessment, the existing
+  cognition-driven corroboration generator is expected to ask about
+  `TargetIsVulnerable(Grocery)`. The subject change must arise from received information and disappear
+  when that disclosure is removed; it is not a hardcoded or protected choice.
+
+Source: Matt's authorization of revision 2 of
+`docs/proposals/MILESTONE_030_ONE_INFORMED_CHOICE.md` on 2026-09-19 after Astra's
+**AUTHORIZE** preauthorization verdict. This records durable rulings, not implementation acceptance.
+
+### Human-playtest presentation correction — Matt's 2026-09-20 ruling
+
+- **The existing briefing may explain the objective-to-option relationship.** It may state that a
+  known non-paying business in the assignment's domain is relevant to the domain-wide tribute
+  shortfall. This is an explanation of the existing objective and generated choices, not a
+  recommendation and not access to any business the character does not already believe is refusing.
+- **An owner retains the standing order he gave when work is delegated.** Target, method and named
+  executor are the owner's own acts. A delegate's later private progress or independently changed
+  method remains withheld until communicated. Presentation therefore reads the owner's last ordered
+  method, not the operation's live executor-side method.
+- **A character may see an itemized history of cash actually received by that character.** Date,
+  source business, amount and the executor the owner knowingly assigned are all facts on the cash
+  recipient's side. This is a record of the existing collection consequence on the existing activity
+  surface, not a new revenue consequence or a read of anybody else's cash.
+- The correction stays on the existing briefing, operation and activity surfaces. It adds no new
+  screen, recommendation, hidden score, success percentage, consequence, tuning or calendar change.
+
+Source: Matt's neutral Milestone-030 playtest and explicit bounded-rescope authorization on
+2026-09-20.
+
 ## The player boundary — settled by milestone 009
 
 See `milestones/009-godot-playable-shell.md`. What is settled is where a person enters the decision

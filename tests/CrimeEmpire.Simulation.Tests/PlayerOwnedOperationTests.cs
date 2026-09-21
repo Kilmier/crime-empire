@@ -110,7 +110,13 @@ public sealed class PlayerOwnedOperationTests
 
         // Through the player-facing snapshot, not only the internal world — the consequence a person
         // watching the Godot shell would actually see.
-        Assert.Equal(7460, session.Snapshot().Cash);
+        var snapshot = session.Snapshot();
+        Assert.Equal(7460, snapshot.Cash);
+        Assert.Equal(new[] { 620d, 840d }, snapshot.Income.Select(r => r.Amount).ToArray());
+        Assert.Equal(new[] { "Ferri's tailor shop", "Bellini's grocery" },
+            snapshot.Income.Select(r => r.SourceName).ToArray());
+        Assert.All(snapshot.Income, r => Assert.Equal("Tommy Nardo", r.ExecutorName));
+        Assert.All(snapshot.Income, r => Assert.False(r.HandledPersonally));
 
         var vincent = session.World.Get(Controlled);
         var tailor = session.World.Businesses[Cast.Tailor];

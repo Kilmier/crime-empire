@@ -135,6 +135,14 @@ public partial class Game : Control
     private const string OperationFlag = "--selftest-operation";
 
     /// <summary>
+    /// Milestone 030's live opening proof. Drives the real Vincent interface to the natural seed-42
+    /// assignment pause, checks the captured source-limited assessment and all six target/method
+    /// buttons, then commits Tailor/Persuade through the real button handler and checks the order is
+    /// visible. It never opens a developer trace and never touches a save.
+    /// </summary>
+    private const string InformedChoiceFlag = "--selftest-informed-choice";
+
+    /// <summary>
     /// Command-line switch for milestone 015's restart proof, process A: plays the golden path's
     /// first four choices (including delegated tailor and personal grocery work), saves to
     /// <see cref="SelfTestRestartSavePath"/> (never the production slot — see the type header), and
@@ -275,6 +283,12 @@ public partial class Game : Control
         if (FlagRequested(OperationFlag))
         {
             RunOperationSelfTest();
+            return;
+        }
+
+        if (FlagRequested(InformedChoiceFlag))
+        {
+            RunInformedChoiceSelfTest();
             return;
         }
 
@@ -793,14 +807,17 @@ public partial class Game : Control
         foreach (var op in snapshot.Operations)
         {
             yield return Plain(op.Description);
+            if (op.ExecutorName is { } executor)
+                yield return Faint(
+                    $"    {executor} is handling it under {p.Possessive} standing order: {op.Approach}");
+            else
+                yield return Faint($"    {p.Possessive} current approach: {op.Approach}");
             // Second correction: Since is the owner's own age for the operation, not a handover time
             // — nothing records when it was delegated — and is null for the executor for the same
             // reason "Tommy has had it since 2 Mar" would be a false statement whenever the job was
             // delegated later than it began. Omitted for him rather than rendered wrong.
             if (op.Since is { } since)
                 yield return Faint($"    running since {since.ToString("d MMM", CultureInfo.InvariantCulture)}");
-            if (op.ExecutorName is { } executor)
-                yield return Faint($"    {executor} is handling it");
             yield return Faint($"    {op.Progress ?? "progress is not directly visible; see received accounts"}");
             if (op.ReviewToken is { } token && _session is { } session
                 && session.ControlledCharacterId == session.ViewpointCharacterId)
@@ -829,6 +846,21 @@ public partial class Game : Control
             .FirstOrDefault();
         if (latestRead is not null)
             yield return Faint($"{latestRead.At.ToString("d MMM", CultureInfo.InvariantCulture)}  {latestRead.Description}");
+
+        if (snapshot.Income.Count > 0)
+        {
+            yield return Plain("INCOME RECEIVED");
+            foreach (var receipt in snapshot.Income.OrderByDescending(r => r.At))
+            {
+                string executor = receipt.HandledPersonally
+                    ? $"{p.Subject} handled the job"
+                    : $"{receipt.ExecutorName} handled the job";
+                yield return Faint(
+                    $"{receipt.At.ToString("d MMM", CultureInfo.InvariantCulture)}  " +
+                    $"+{receipt.Amount.ToString("N0", CultureInfo.InvariantCulture)} from " +
+                    $"{receipt.SourceName} — {executor}");
+            }
+        }
 
         if (snapshot.MyBusiness is { } business)
             yield return Faint(
@@ -1209,6 +1241,70 @@ public partial class Game : Control
         GetTree().Quit(1);
     }
 
+    private void RunInformedChoiceSelfTest()
+    {
+        try
+        {
+            StartSession(seed: 42, variant: "baseline", controlled: Roster.DefaultControlledId,
+                viewpoint: Roster.DefaultControlledId);
+            var session = _session!;
+
+            for (int guard = 0; guard < 100 && session.Status != SessionStatus.AwaitingChoice; guard++)
+                if (!Press("Next event"))
+                    throw new InvalidOperationException("no \"Next event\" control is available");
+
+            if (session.Status != SessionStatus.AwaitingChoice)
+                throw new InvalidOperationException("Vincent never reached the opening assignment choice");
+
+            string screen = Screen();
+            string[] requiredText =
+            {
+                "restore the harbour tribute, for Salvatore Greco",
+                "Bellini's grocery is not paying its tribute",
+                "he suspects Bellini's grocery would fold if leaned on",
+                "His standing rule: no public violence in the harbour",
+                "Ferri's tailor shop is another part of that shortfall: you already know it is not paying its tribute",
+                "Salvatore Greco",
+            };
+            foreach (string expected in requiredText)
+                if (!screen.Contains(expected, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"the opening screen omits \"{expected}\"");
+
+            string[] choices =
+            {
+                "persuade Ferri's tailor shop to pay",
+                "threaten Ferri's tailor shop",
+                "use force on Ferri's tailor shop — breaking the rule: no public violence in the harbour",
+                "persuade Bellini's grocery to pay",
+                "threaten Bellini's grocery",
+                "use force on Bellini's grocery — breaking the rule: no public violence in the harbour",
+                "ask Tommy Nardo what he knows about whether Bellini's grocery would fold if leaned on",
+            };
+            foreach (string choice in choices)
+                if (FindAnyButton(this, choice) is null)
+                    throw new InvalidOperationException($"the opening screen does not offer \"{choice}\"");
+
+            foreach (string forbidden in new[] { "0.45", "0.41625", "resistance", "utility", "recommended" })
+                if (screen.Contains(forbidden, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException($"the opening screen leaks forbidden detail \"{forbidden}\"");
+
+            if (!Press("persuade Ferri's tailor shop to pay"))
+                throw new InvalidOperationException("the Tailor/Persuade button could not be pressed");
+            string afterChoice = Screen();
+            if (!afterChoice.Contains("persuade Ferri's tailor shop to pay", StringComparison.Ordinal)
+                || !afterChoice.Contains("Ferri's tailor shop", StringComparison.Ordinal))
+                throw new InvalidOperationException("the chosen Tailor/Persuade order is not visible after commitment");
+
+            GD.Print("CE-INFORMED-CHOICE opening-context=ok six-methods=ok corroboration=vulnerability hidden-values=absent tailor-persuade=committed");
+            GetTree().Quit();
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"CE-INFORMED-CHOICE FAILED — {ex}");
+            GetTree().Quit(1);
+        }
+    }
+
     /// <summary>
     /// Astra's accepted historical-audit finding L3, exercised at the rendering boundary. The
     /// simulation projection may contain two incident-specific disagreements whose truth-log ids
@@ -1230,6 +1326,7 @@ public partial class Game : Control
             ViewpointRole: "boss",
             ViewpointPronouns: PlayerView.You,
             Cash: 0,
+            Income: Array.Empty<PlayerIncome>(),
             SelfKnowledge: Array.Empty<string>(),
             Known: new[]
             {
@@ -1394,7 +1491,14 @@ public partial class Game : Control
         GD.Print(screen);
         GD.Print("== CE-GOLDENPATH-SCREEN-END ==");
 
-        bool proved = screen.Contains("cash on hand 7,460", StringComparison.Ordinal);
+        bool proved = screen.Contains("cash on hand 7,460", StringComparison.Ordinal)
+            && screen.Contains("INCOME RECEIVED", StringComparison.Ordinal)
+            && screen.Contains(
+                "+620 from Ferri's tailor shop — Tommy Nardo handled the job",
+                StringComparison.Ordinal)
+            && screen.Contains(
+                "+840 from Bellini's grocery — Tommy Nardo handled the job",
+                StringComparison.Ordinal);
 
         if (proved)
         {
@@ -1404,8 +1508,8 @@ public partial class Game : Control
         }
 
         GD.PrintErr(
-            "CE-GOLDENPATH FAILED — did not reach the two delegated collections with cash on hand " +
-            "reading 7,460 on screen, so it proves nothing");
+            "CE-GOLDENPATH FAILED — did not show both itemized delegated collections and cash on " +
+            "hand reading 7,460 on screen, so it proves nothing");
         GetTree().Quit(1);
     }
 
@@ -1817,6 +1921,10 @@ public partial class Game : Control
 
         (bool ok, string why) vincentResult = CheckOperationSection(
             vincentScreen, mustContain: "Tommy Nardo is handling it", mustNotContain: "made his demand");
+        if (vincentResult.ok && !vincentScreen.Contains(
+                "Tommy Nardo is handling it under his standing order: persuade Ferri's tailor shop to pay",
+                StringComparison.Ordinal))
+            vincentResult = (false, "Vincent's delegated operation does not retain his standing method order");
 
         StartSession(seed: 42, variant: "baseline", controlled: null, viewpoint: "tommy");
         _session!.AdvanceDays(20);
@@ -1829,6 +1937,9 @@ public partial class Game : Control
 
         (bool ok, string why) tommyResult = CheckOperationSection(
             tommyScreen, mustContain: "made his demand", mustNotContain: "is handling it");
+        if (tommyResult.ok && !tommyScreen.Contains(
+                "his current approach: threaten Ferri's tailor shop", StringComparison.Ordinal))
+            tommyResult = (false, "Tommy's operation does not show the approach he is carrying out");
 
         if (vincentResult.ok && tommyResult.ok)
         {

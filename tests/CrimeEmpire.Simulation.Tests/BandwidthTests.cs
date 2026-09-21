@@ -209,6 +209,10 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         hidden.FailedAttempts = 90;
         hidden.StepIndex = 3;
         hidden.Method = CoercionMethod.Force;
+        Assert.Equal("persuade Ferri's tailor shop to pay",
+            b.Snapshot().Operations.Single(o => o.ExecutorName == "Tommy Nardo").Approach);
+        Assert.Equal("use force on Ferri's tailor shop",
+            PlayerView.Build(b.World, "tommy", b.World.Now).Operations.Single().Approach);
         Assert.Equal(JsonSerializer.Serialize(a.Snapshot()), JsonSerializer.Serialize(b.Snapshot()));
         a.ReviewOperation($"work-{hidden.LocalSequence}");
         b.ReviewOperation($"work-{hidden.LocalSequence}");

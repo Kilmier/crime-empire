@@ -349,7 +349,8 @@ public static class Strategies
                 }
 
                 business.TributeCollectedForCurrentAgreement = true;
-                owner.Capabilities.Cash += business.MonthlyRevenue * 0.2;
+                double amount = business.MonthlyRevenue * 0.2;
+                owner.Capabilities.ReceiveCash(amount, business.Id, executor.Id, world.Now);
                 owner.Motivations.AddPressure(PressureKind.RevenueShortfall, -0.6);
                 world.Org.AdjustCondition(OrgCondition.RevenueLoss, -0.5);
                 world.Record("tribute-collected", executor.Id, business.Id,

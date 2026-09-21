@@ -331,6 +331,124 @@ public sealed class PersistenceTests
         }
     }
 
+    // ================================================================= milestone 030 checkpoints
+
+    [Fact]
+    public void Save_before_assignment_delivery_reproduces_the_captured_payload_and_later_opening()
+    {
+        string path = NewSavePath();
+        try
+        {
+            var original = PersistentSession.Start(Seed, Variant, Controlled);
+            for (int guard = 0; guard < 20 && original.InnerSession.World.Org.Assignments.Count == 0; guard++)
+                original.StepEvent();
+
+            var assignment = Assert.Single(original.InnerSession.World.Org.Assignments);
+            Assert.Contains(assignment.Disclosed, d =>
+                d.Claim.Kind == ClaimKind.TargetIsVulnerable && d.Claim.Subject == Cast.Grocery);
+            Assert.Null(original.InnerSession.World.Get(Controlled).Cognition.Find(
+                new Claim(ClaimKind.TargetIsVulnerable, Cast.Grocery)));
+            Assert.Equal(SessionStatus.Ready, original.Status);
+
+            original.Save(path);
+            var loaded = PersistentSession.Load(path);
+            AssertExactInternalIdentity(original, loaded);
+
+            AdvanceToNextPause(original);
+            AdvanceToNextPause(loaded);
+            AssertExactInternalIdentity(original, loaded);
+            Assert.Contains(original.Pending!.Options,
+                o => o.Description ==
+                     "ask Tommy Nardo what he knows about whether Bellini's grocery would fold if leaned on");
+        }
+        finally
+        {
+            Cleanup(path);
+        }
+    }
+
+    [Theory]
+    [InlineData("persuade Ferri's tailor shop to pay", Cast.Tailor, false)]
+    [InlineData("use force on Bellini's grocery — breaking the rule: no public violence in the harbour", Cast.Grocery, true)]
+    public void Save_at_the_opening_and_during_each_consequence_branch_reproduces_future_behavior(
+        string openingChoice, string targetId, bool expectsViolence)
+    {
+        string openingPath = NewSavePath();
+        string branchPath = NewSavePath();
+        try
+        {
+            var original = PersistentSession.Start(Seed, Variant, Controlled);
+            AdvanceToNextPause(original);
+            Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
+
+            original.Save(openingPath);
+            var loaded = PersistentSession.Load(openingPath);
+            AssertExactInternalIdentity(original, loaded);
+
+            ChoosePendingByDescription(original, openingChoice);
+            ChoosePendingByDescription(loaded, openingChoice);
+            AssertExactInternalIdentity(original, loaded);
+
+            // The first approach is the executor's firsthand vulnerability impression. Saving here
+            // covers assignment receipt, the committed operation, pending step identity and the
+            // newly written Discovery record before either consequence branch has resolved.
+            AdvanceTogetherUntil(original, loaded, () =>
+                original.InnerSession.World.Get(Controlled).Execution.Operations
+                    .Any(s => s.TargetId == targetId && s.StepIndex >= 1));
+            var impression = original.InnerSession.World.Get(Controlled).Cognition.Find(
+                new Claim(ClaimKind.TargetIsVulnerable, targetId));
+            Assert.NotNull(impression);
+            Assert.Equal(SourceKind.Discovery, impression.SourceKind);
+
+            original.Save(branchPath);
+            var branchLoaded = PersistentSession.Load(branchPath);
+            AssertExactInternalIdentity(original, branchLoaded);
+
+            bool completed = DriveOperationToCompletionTogether(original, branchLoaded, targetId);
+            AssertExactInternalIdentity(original, branchLoaded);
+
+            var snapshot = original.Snapshot();
+            var refusal = original.InnerSession.World.Get(Controlled).Cognition.Find(
+                new Claim(ClaimKind.BusinessRefusesTribute, targetId));
+            Assert.NotNull(refusal);
+
+            var visibleImpression = Assert.Single(snapshot.Known,
+                b => b.Claim.Kind == ClaimKind.TargetIsVulnerable && b.Claim.Subject == targetId);
+            Assert.Equal("you found out for yourself", visibleImpression.Attribution);
+
+            if (completed)
+            {
+                Assert.False(refusal.IsHeld);
+                Assert.True(snapshot.Cash > 6000, "the completed operation produced no player-visible takings");
+            }
+            else
+            {
+                Assert.Equal(SessionStatus.Resolved, original.Status);
+                Assert.True(refusal.IsHeld);
+                Assert.Contains(snapshot.Operations,
+                    operation => operation.Description.Contains("Ferri's tailor shop", StringComparison.Ordinal));
+            }
+
+            var violence = snapshot.Known.Where(b =>
+                b.Claim.Kind == ClaimKind.PersonUsedViolence
+                && b.Claim.Subject == Controlled
+                && b.Claim.Object == targetId).ToList();
+            Assert.Equal(expectsViolence, violence.Count > 0);
+            if (expectsViolence)
+            {
+                Assert.Contains(snapshot.Known, b =>
+                    b.Claim.Kind == ClaimKind.PersonBreachedPolicy && b.Claim.Subject == Controlled);
+                Assert.Contains(snapshot.Exposure,
+                    line => line.Contains("against the outfit's rule", StringComparison.Ordinal));
+            }
+        }
+        finally
+        {
+            Cleanup(openingPath);
+            Cleanup(branchPath);
+        }
+    }
+
     // ================================================================= information boundary
 
     /// <summary>
@@ -693,6 +811,65 @@ public sealed class PersistenceTests
     private static void PlayChoices(PersistentSession session, IEnumerable<string> descriptions)
     {
         foreach (string description in descriptions) ChooseByDescription(session, description);
+    }
+
+    private static void ChoosePendingByDescription(PersistentSession session, string description)
+    {
+        Assert.Equal(SessionStatus.AwaitingChoice, session.Status);
+        var option = Assert.Single(session.Pending!.Options, o => o.Description == description);
+        session.Choose(option.Id);
+    }
+
+    private static void AdvanceTogetherUntil(
+        PersistentSession original, PersistentSession loaded, Func<bool> reached)
+    {
+        for (int guard = 0; guard < 5000 && !reached(); guard++)
+        {
+            Assert.Equal(SessionStatus.Ready, original.Status);
+            Assert.Equal(SessionStatus.Ready, loaded.Status);
+            original.StepEvent();
+            loaded.StepEvent();
+            AssertExactInternalIdentity(original, loaded);
+        }
+        Assert.True(reached(), "the expected branch checkpoint was never reached");
+    }
+
+    private static bool DriveOperationToCompletionTogether(
+        PersistentSession original, PersistentSession loaded, string targetId)
+    {
+        for (int guard = 0; guard < 10000; guard++)
+        {
+            bool live = original.InnerSession.World.Get(Controlled).Execution.Operations
+                .Any(s => s.TargetId == targetId);
+            if (!live) return true;
+
+            Assert.Equal(original.Status, loaded.Status);
+            if (original.Status == SessionStatus.AwaitingChoice)
+            {
+                string? choice = original.Pending!.Options
+                    .Select(o => o.Description)
+                    .FirstOrDefault(d => d.StartsWith("carry on getting", StringComparison.Ordinal))
+                    ?? original.Pending.Options.Select(o => o.Description)
+                        .FirstOrDefault(d => d == "take no action")
+                    ?? original.Pending.Options[0].Description;
+                Assert.Contains(loaded.Pending!.Options, o => o.Description == choice);
+                ChoosePendingByDescription(original, choice);
+                ChoosePendingByDescription(loaded, choice);
+            }
+            else
+            {
+                if (original.Status == SessionStatus.Resolved)
+                {
+                    Assert.Equal(SessionStatus.Resolved, loaded.Status);
+                    return false;
+                }
+                original.StepEvent();
+                loaded.StepEvent();
+            }
+            AssertExactInternalIdentity(original, loaded);
+        }
+
+        throw new InvalidOperationException($"operation on {targetId} neither completed nor reached the deadline");
     }
 
     private static void FinishWithFirstVisibleOption(PersistentSession session)

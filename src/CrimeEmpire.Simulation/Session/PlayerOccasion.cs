@@ -191,7 +191,8 @@ internal static class PlayerOccasion
     /// decision arrived with no context but "restore the harbour tribute".</param>
     internal static string? Focus(
         Character actor, Agenda agenda, ScheduledEvent trigger, Func<string, string> name, Pronouns? voice = null,
-        Func<long, Assignment?>? assignment = null, Func<string, Pronouns>? pronouns = null)
+        Func<long, Assignment?>? assignment = null, Func<string, Pronouns>? pronouns = null,
+        IReadOnlyList<string>? relevantTargets = null)
     {
         var self = voice ?? actor.Pronouns;
 
@@ -205,7 +206,7 @@ internal static class PlayerOccasion
             // record of the briefing is to hand, the rest of what he was told with it.
             AgendaKind.FulfilAssignment =>
                 agenda.AssignmentId is { } id && assignment?.Invoke(id) is { } given
-                    ? Briefing(given, agenda.Description, actor, name, self, pronouns)
+                    ? Briefing(given, agenda.Description, actor, name, self, pronouns, relevantTargets)
                     : agenda.Description,
 
             // His own standing duty, in the words the scenario gave it.
@@ -227,17 +228,18 @@ internal static class PlayerOccasion
     /// The job as it was given, from the record taken at issuance: the objective, who wants it and by
     /// when, what he was told, and the rule he was told to keep.
     ///
-    /// <b>Everything here was said to him.</b> <see cref="Assignment.Disclosed"/> is the snapshot of
-    /// what the issuer asserted at the time, delivered through <c>Cognition.Receive</c> like any
-    /// account; <see cref="Assignment.Constraints"/> is the rule's own description; the deadline is
-    /// the one he was given. Nothing reads the issuer's current mind — "he is waiting to see how you
-    /// handle it" would be the boss's state, which the capo does not have — and the rule is stated
-    /// from the constraint rather than repeated from the disclosed awareness claim, so it appears
-    /// once.
+    /// <see cref="Assignment.Disclosed"/> is the snapshot of what the issuer asserted at the time,
+    /// delivered through <c>Cognition.Receive</c> like any account; <see cref="Assignment.Constraints"/>
+    /// is the rule's own description; the deadline is the one he was given. A bounded presentation
+    /// correction may also connect that briefing to a refusal the recipient already holds and can
+    /// already act on; that sentence is explicitly attributed to his own knowledge, never to the
+    /// issuer. Nothing reads the issuer's current mind — "he is waiting to see how you handle it"
+    /// would be the boss's state, which the capo does not have — and the rule is stated from the
+    /// constraint rather than repeated from the disclosed awareness claim, so it appears once.
     /// </summary>
     private static string Briefing(
         Assignment given, string objective, Character actor, Func<string, string> name, Pronouns self,
-        Func<string, Pronouns>? pronouns)
+        Func<string, Pronouns>? pronouns, IReadOnlyList<string>? relevantTargets)
     {
         var issuer = pronouns?.Invoke(given.IssuerId) ?? Pronouns.He;
         string issuerName = name(given.IssuerId);
@@ -253,6 +255,28 @@ internal static class PlayerOccasion
         {
             $"{objective}, for {issuerName}, by {given.Deadline.ToString("d MMMM", System.Globalization.CultureInfo.InvariantCulture)}.",
         };
+
+        var disclosedRefusals = given.Disclosed
+            .Where(d => d.Claim.Kind == ClaimKind.BusinessRefusesTribute)
+            .Select(d => d.Claim.Subject)
+            .ToHashSet(StringComparer.Ordinal);
+        var ownRelevantRefusals = (relevantTargets ?? Array.Empty<string>())
+            .Where(target => !disclosedRefusals.Contains(target))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (ownRelevantRefusals.Count > 0)
+        {
+            foreach (string target in ownRelevantRefusals)
+                parts.Add(
+                    $"{name(target)} is another part of that shortfall: " +
+                    $"{self.Subject} already {self.Verb("knows", "know")} it is not paying its tribute.");
+        }
+        else
+        {
+            parts.Add(
+                $"Any {name(given.Domain)} business {self.Subject} {self.Verb("knows", "know")} " +
+                "is withholding tribute is relevant to that shortfall.");
+        }
         if (told.Count > 0)
             parts.Add($"{issuerName} told {self.Object}: {string.Join("; ", told)}.");
         if (given.Constraints.Count > 0)

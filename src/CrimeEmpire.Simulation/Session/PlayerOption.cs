@@ -117,17 +117,22 @@ internal static class PlayerOption
 
     private static string Start(Candidate c, Func<string, string> name) => c.Strategy switch
     {
-        StrategyKind.SecureTribute when c.TargetId is { } t && c.Method is { } m => m switch
-        {
-            CoercionMethod.Persuade => $"persuade {name(t)} to pay",
-            CoercionMethod.Threaten => $"threaten {name(t)}",
-            _ => $"use force on {name(t)}",
-        },
+        StrategyKind.SecureTribute when c.TargetId is { } t && c.Method is { } m =>
+            Approach(m, t, name),
         StrategyKind.ConcealIncident => "cover it up before anyone finds out",
         StrategyKind.InvestigateIncident when c.TargetId is { } t => $"open an investigation at {name(t)}",
         StrategyKind.InvestigateIncident => "open an investigation",
         _ => "set something in motion",
     };
+
+    /// <summary>The concrete target/method order, shared by choice and standing-order surfaces.</summary>
+    internal static string Approach(CoercionMethod method, string targetId, Func<string, string> name)
+        => method switch
+        {
+            CoercionMethod.Persuade => $"persuade {name(targetId)} to pay",
+            CoercionMethod.Threaten => $"threaten {name(targetId)}",
+            _ => $"use force on {name(targetId)}",
+        };
 
     /// <summary>
     /// What he would say, and how straight he would say it.

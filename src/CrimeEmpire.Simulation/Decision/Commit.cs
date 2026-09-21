@@ -79,6 +79,7 @@ public static class Commit
                     Domain = c.Domain ?? "",
                     TargetId = c.TargetId,
                     Method = c.Method ?? CoercionMethod.Persuade,
+                    OwnerOrderedMethod = c.Method ?? CoercionMethod.Persuade,
                     StartedAt = world.Now,
                     Deadline = ctx.MyAssignment?.Deadline ?? world.Now.AddDays(30),
                     AssignmentId = agenda.AssignmentId,
@@ -146,6 +147,7 @@ public static class Commit
                 var s = ExecutedOperation(world, actor, c, ctx);
                 var was = s.Method;
                 s.Method = c.Method ?? s.Method;
+                if (actor.Id == s.OwnerId) s.OwnerOrderedMethod = s.Method;
                 // Only when this alter genuinely changes which prohibited method is operative —
                 // the first breach ever recorded, or the method actually moving under a breaching
                 // candidate — does the decision-maker change. A repeated or no-op alter that leaves

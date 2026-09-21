@@ -468,6 +468,18 @@ public sealed class SimulationSession
                 token, PlayerOption.Describe(candidate, name, self, pronouns, prepared.Actor.Id)));
         }
 
+        // These are already-visible concrete options, not a second read of world truth. Passing
+        // their distinct targets lets the briefing connect the assignment to an undisclosed refusal
+        // the actor already knows, without naming a business that did not actually occur to him.
+        var relevantAssignmentTargets = prepared.Available
+            .Where(c => c.Kind == ActionKind.StartStrategy
+                        && c.Strategy == StrategyKind.SecureTribute
+                        && c.Domain == prepared.Agenda.Domain
+                        && c.TargetId is not null)
+            .Select(c => c.TargetId!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
         return new PendingDecision(
             prepared.At,
             prepared.Actor.Id,
@@ -475,7 +487,9 @@ public sealed class SimulationSession
             prepared.Actor.RoleTitle,
             self,
             PlayerOccasion.For(prepared.Trigger, prepared.Actor, name, self),
-            PlayerOccasion.Focus(prepared.Actor, prepared.Agenda, prepared.Trigger, name, self, assignment, pronouns),
+            PlayerOccasion.Focus(
+                prepared.Actor, prepared.Agenda, prepared.Trigger, name, self, assignment, pronouns,
+                relevantAssignmentTargets),
             options);
     }
 

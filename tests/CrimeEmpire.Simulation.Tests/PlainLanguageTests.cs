@@ -221,7 +221,12 @@ public sealed class PlainLanguageTests
 
         string focus = session.Pending!.Focus!;
         Assert.StartsWith("restore the harbour tribute, for Salvatore Greco, by ", focus);
-        Assert.Contains("Salvatore Greco told you: Bellini's grocery is not paying its tribute.", focus);
+        Assert.Contains(
+            "Ferri's tailor shop is another part of that shortfall: you already know it is not paying its tribute.",
+            focus);
+        Assert.Contains(
+            "Salvatore Greco told you: Bellini's grocery is not paying its tribute; he suspects Bellini's grocery would fold if leaned on.",
+            focus);
         Assert.Contains("His standing rule: no public violence in the harbour.", focus);
         // The rule is stated once, from the constraint, not again from the disclosed awareness claim.
         Assert.Equal(1, focus.Split("no public violence in the harbour").Length - 1);

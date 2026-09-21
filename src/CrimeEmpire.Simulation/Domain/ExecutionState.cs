@@ -46,6 +46,15 @@ public sealed class StrategyInstance
     public required string Domain { get; init; }
     public string? TargetId { get; set; }
     public CoercionMethod Method { get; set; } = CoercionMethod.Persuade;
+
+    /// <summary>
+    /// The method the owner last chose while the operation was his to direct. It remains his own
+    /// remembered order after delegation even if the executor later changes the live
+    /// <see cref="Method"/> privately. Null only on legacy or deliberately hand-built fixtures that
+    /// never passed through a start decision; player projection then falls back without exposing a
+    /// delegate-side change.
+    /// </summary>
+    public CoercionMethod? OwnerOrderedMethod { get; set; }
     public int StepIndex { get; set; }
     public required DateTime StartedAt { get; init; }
     public DateTime Deadline { get; set; }

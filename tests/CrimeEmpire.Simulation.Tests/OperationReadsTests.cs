@@ -65,6 +65,7 @@ public sealed class OperationReadsTests
 
         Assert.NotNull(op);
         Assert.Contains("Bellini's grocery", op!.Description, StringComparison.Ordinal);
+        Assert.Equal("persuade Bellini's grocery to pay", op.Approach);
         Assert.Equal("Tommy Nardo", op.ExecutorName);
         Assert.Equal(Cast.Start, op.Since);
     }
@@ -94,7 +95,7 @@ public sealed class OperationReadsTests
         foreach (bool delegated in new[] { true, false })
         {
             var op = Snapshot(Operating(delegated, stepIndex: 2)).Operations.SingleOrDefault()!;
-            string text = $"{op.Description} {op.ExecutorName} {op.Progress}";
+            string text = $"{op.Description} {op.Approach} {op.ExecutorName} {op.Progress}";
 
             Assert.DoesNotContain("SecureTribute", text, StringComparison.Ordinal);
             Assert.DoesNotContain("bellini-grocery", text, StringComparison.Ordinal);
@@ -558,6 +559,7 @@ public sealed class OperationReadsTests
             Domain = Cast.Harbour,
             TargetId = Cast.Grocery,
             Method = CoercionMethod.Persuade,
+            OwnerOrderedMethod = CoercionMethod.Persuade,
             StartedAt = Cast.Start,
             Deadline = Cast.Start.AddDays(30),
             StepIndex = stepIndex,
@@ -574,7 +576,7 @@ public sealed class OperationReadsTests
     private static string Render(World world)
     {
         var op = Snapshot(world).Operations.SingleOrDefault();
-        return op is null ? "" : $"{op.Description}|{op.ExecutorName}|{op.Since:O}|{op.Progress}";
+        return op is null ? "" : $"{op.Description}|{op.Approach}|{op.ExecutorName}|{op.Since:O}|{op.Progress}";
     }
 
     // ================================================================= helpers — one operation per executor

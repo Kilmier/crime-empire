@@ -214,3 +214,36 @@ now asserts the request is answered for this exact scenario. This closes the one
 recorded above as a side effect of an unrelated fix, not by design — it does not settle whether a
 stale, logically-mooted request should resolve on some other basis when no future report ever
 happens to restate its literal claim. That remains open, and this correction never considered it.
+
+### 8. Operation duration does not yet match the apparent scale of the action
+
+Matt's 2026-09-20 Milestone-030 playtest made a pacing mismatch concrete: choosing to persuade or
+threaten a shopkeeper reads like an hours-or-one-day encounter, while the current operation advances
+through multi-day scheduled steps and can present several days of apparent inactivity before a
+visible refusal or result. The implementation currently bundles approach, conversation, pressure,
+response and collection into a mission-sized sequence, but the option names only the immediate
+social act. That makes elapsed time hard to interpret even when the scheduler is behaving exactly as
+implemented.
+
+This is not resolved by making progress omniscient, nor by shortening a timer inside a presentation
+correction. It needs a design ruling on whether the operation represents one encounter, a campaign of
+repeated contacts, or explicit travel/preparation/conversation/collection phases; then the calendar,
+player wording and consequence cadence can be evaluated together. Until then, the current timings
+are prototype timings rather than a durable pacing decision.
+
+### 9. Initial delegation is unavailable, and a busy subordinate disappears without explanation
+
+Matt's 2026-09-20 Milestone-030 playtest exposed two connected management-flow gaps. A free Tommy
+cannot be assigned either known tribute job at the opening: Vincent must personally start an
+operation, wait for a later reconsideration, and only then hand the existing operation over. Once
+Tommy holds one job, delegation on the other disappears without saying that he is already occupied.
+The one-operation-per-executor rule is intentional; the start-then-handoff ceremony and silent
+unavailability are not established design decisions.
+
+Direct assignment at the opening would change the candidate model, scheduling and actor-parity
+surface rather than merely rewording a panel. It needs a ruling on whether the initial choice names
+target, method and executor together, how that stays bounded when several jobs and subordinates are
+known, and how NPCs receive the same capability. Independently, the interface needs a principled way
+to explain relevant unavailable actions without turning rejected candidates or hidden staffing
+state into an omniscient menu. Neither change belonged in Milestone 030's bounded presentation
+correction.

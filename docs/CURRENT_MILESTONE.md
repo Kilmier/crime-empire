@@ -1,52 +1,42 @@
 # Current Milestone
 
 Mutable active handoff. Detailed implementation/correction history belongs in the milestone archive;
-review coverage belongs in REVIEW_LEDGER.
+review coverage belongs in `REVIEW_LEDGER.md`.
 
 ## Status
 
-**No milestone is active.**
+**Milestone 030 — One informed choice — is implemented, archived and awaiting independent
+exact-commit Class A review.** The focused implementation commit is the commit that adds
+`docs/milestones/030-one-informed-choice.md`; locate its exact hash with:
 
-**Milestone 029 — Grouped job-and-method attention — is closed and accepted.** Matt reviewed exact
-`aa9f30cb439dfab9def8c7a68a4704869da18320`, reported that it passes, and authorized closeout on
-2026-09-16. Matt authored none of the commit. No separate review report or independently reproduced
-command record accompanied the ruling, so the archive and ledger distinguish the owner review and
-acceptance from the implementation's recorded verification evidence. The held grouped experiment
-remains intact as evidence and was not promoted as production code.
+```powershell
+git log --diff-filter=A --format=%H -- docs/milestones/030-one-informed-choice.md
+```
 
-**Milestone 028 — Delegation creates bandwidth — is closed and accepted.** Matt accepted Claude's
-independent Class A review of exact `663ba68c594179e7a9e4f9c1a5ce19347d90a56c` (**PASS AFTER FIXES**,
-one P2 documentation finding) and closed the milestone on 2026-09-14.
+Matt's 2026-09-20 human-comprehension gate passed after the bounded presentation correction. That is
+owner playtest evidence, not independent code review or final acceptance of the implementation
+commit.
 
-`3db0cb1ffba07292f1c89ebc313ed46275276e24` remains the historical Class A **FAIL** — three P1 and two
-P2 — corrected by `663ba68`. Closure does not convert it into a PASS, and every earlier FAIL stands.
+Milestone 029 remains accepted at exact `aa9f30cb439dfab9def8c7a68a4704869da18320`; its
+documentation-only owner-closeout descendant is `d908d8e268231591fe5ec61890cee42356f60051`.
 
-**Milestone 027 remains closed and accepted** on its own earlier owner exception. That gate is not
-reopened.
+## Review gate
 
-## Current gate
+The reviewer must read `AGENTS.md`, `docs/REVIEW_LEDGER.md`, the canonical project documents and
+`docs/milestones/030-one-informed-choice.md`, then review the exact implementation commit. Assign
+Class A from the diff; check feature intent, actor-neutral behavior, recipient privacy, deterministic
+persistent state, the player information boundary, the bounded presentation correction, test
+assurance and scope. Record findings, limits and verdict in the milestone archive and the compact
+coverage result in `REVIEW_LEDGER.md` according to repository process.
 
-**Stop. Nothing further is authorized.** Milestone 029 is closed. No implementation, fixture,
-tuning, runtime change, or subsequent milestone may begin until Matt authorizes new scope here.
-`ROADMAP.md` candidates and `docs/proposals/` grant no permission.
+No subsequent milestone is authorized. Do not begin new runtime or design work while this review
+gate is open.
 
 ## Deliberately carried work
 
-- Layer 2's reason to prefer one day's plan remains unproved. Milestone 029 tests option
-  representation only; proposed milestone-030 work remains unauthorized.
-- **No information-triggered supervisory review fires naturally in any of the six variants.** The
-  mechanism is correct and pinned, but demonstrated only through controlled production-path tests and
-  fault probes. Recorded as an honest non-result in the 028 archive; nothing is to be tuned to make it
-  fire.
-- The provisional seven-day review interval is an implementation timing, not a durable design ruling.
-- Rich progress requests/reports, delayed commands/refusal, skill-based supervision caps, and new
-  failure penalties remain deferred. Existing attribution and information channels remain.
-- Finished-operation history, clock presentation, adjustable speed and pacing remain separate work.
-- `Rng.ForDecision`, arrest, territory, money sinks, succession, rival content and other layer-three
-  systems remain out of scope.
-- OPEN_CONCERNS' bounded attention, information topology and deferred tuning risks remain open.
-- Stale ROADMAP labels for milestones 011 and 025, and the pre-existing uncommitted roadmap/proposal
-  edits in the working tree, were deliberately not touched by this correction. REVIEW_LEDGER remains
-  authoritative for review coverage.
-- No Godot self-test was independently rerun in either milestone-028 review round; all ten headless
-  results remain implementer-reported.
+- `OPEN_CONCERNS.md` records the newly observed operation-duration mismatch and the unresolved
+  start-with-delegate / silent-busy-subordinate flow.
+- Direct initial delegation, unavailable-option explanation, additional campaign content and all
+  other post-Milestone-030 work require separate authorization.
+- The primary checkout's existing `ROADMAP.md` and proposal edits are unrelated user work and must
+  remain untouched and uncommitted by this milestone.

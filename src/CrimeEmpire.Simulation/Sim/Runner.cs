@@ -116,8 +116,9 @@ public static class Runner
                 // The briefing lands whether or not a person is about to choose what to do about
                 // it. Being told something is not a decision, and pausing before it would leave the
                 // player choosing on information he has not yet been given.
-                DeliverAssignment(world, actor, ev);
-                return Think(world, actor, ev, controlledCharacterId);
+                return DeliverAssignment(world, actor, ev)
+                    ? Think(world, actor, ev, controlledCharacterId)
+                    : null;
 
             // Everything else is a reason for one person to think.
             case EventKind.RoleReview:
@@ -224,7 +225,23 @@ public static class Runner
         // policies are globally visible — and he is told it in the terms the boss used at the time.
         var disclosed = new List<ReportedClaim>();
         foreach (var r in boss.Cognition.OfKind(ClaimKind.BusinessRefusesTribute))
+        {
             disclosed.Add(ReportedClaim.Honest(r.Claim, Stance.Believes, 0.75, r.SourceKind));
+
+            // A target assessment directly concerning this disclosed refusal travels beside it,
+            // at exactly the stance, confidence and basis the issuer holds now. The assignment is
+            // the snapshot: delivery must not look the issuer up again six hours later. Pairing on
+            // the structured claim subject keeps the rule actor- and fixture-neutral, and checking
+            // IsHeld prevents doubt, rejection or absence from becoming an affirmative briefing.
+            var vulnerability = boss.Cognition.Find(
+                new Claim(ClaimKind.TargetIsVulnerable, r.Claim.Subject));
+            if (vulnerability is { IsHeld: true })
+                disclosed.Add(ReportedClaim.Honest(
+                    vulnerability.Claim,
+                    vulnerability.Stance,
+                    vulnerability.Confidence,
+                    vulnerability.SourceKind));
+        }
 
         // A gap he suspects but cannot name travels the same channel as a shop he can — the existing
         // route rulings 2 and 5 require, rather than a fact invented to close it. Passed on at his
@@ -262,10 +279,12 @@ public static class Runner
             new EventPayload { AssignmentId = assignment.Id });
     }
 
-    private static void DeliverAssignment(World world, Character actor, ScheduledEvent ev)
+    private static bool DeliverAssignment(World world, Character actor, ScheduledEvent ev)
     {
         var assignment = world.Org.Assignments.FirstOrDefault(a => a.Id == ev.Payload.AssignmentId);
-        if (assignment is null) return;
+        if (assignment is null || !string.Equals(
+                assignment.RecipientId, actor.Id, StringComparison.Ordinal))
+            return false;
 
         // Briefing a man is telling him something, so it goes through Receive like any other
         // account: it leaves testimony he can weigh, contest and attribute. Using Learn here put
@@ -303,6 +322,7 @@ public static class Runner
             new Responsibility($"assignment:{assignment.Id}", assignment.Objective, assignment.Domain));
         actor.Execution.Commitments.Add(new Commitment(
             $"assignment:{assignment.Id}", assignment.Objective, assignment.IssuerId, world.Now, 0.8));
+        return true;
     }
 
     // ---------------------------------------------------------------- perception

@@ -40,8 +40,8 @@ does not turn them into defects.
 
 ## Coverage boundary and queue
 
-**Reconciled checkpoint: `aa9f30c`.** Every commit through exact
-`aa9f30cb439dfab9def8c7a68a4704869da18320` appears below, either alone or in an exact group. Coverage
+**Reconciled checkpoint: `e6d0044`.** Every commit through exact
+`e6d0044455efa85049553d818813f5c975c68fcc` appears below, either alone or in an exact group. Coverage
 through `c7dd34b` preserves the pre-cleanup ledger and milestone evidence; the subsequent rows record
 the cleanup, correction chain, 2026-09-12 historical audit, its independently reviewed repairs, the
 Milestone 027 authorization transition, and the reviewed implementation.
@@ -62,8 +62,12 @@ and two P2 findings and passed its correction `663ba68` after fixes on one accep
 that outcome and closed milestone 028 on 2026-09-14, granting a bounded owner exception for the
 documentation-only closure commit `557b02e`. Matt then reviewed milestone 029's Class A
 implementation `aa9f30c`, reported PASS, and accepted and closed the milestone on 2026-09-16. No
-separate report or independently reproduced command record accompanied that owner review. This
-ledger update cannot establish the review outcome of the commit that contains it.
+separate report or independently reproduced command record accompanied that owner review. Matt then
+reviewed Milestone 030's Class A implementation `e6d0044`, reported PASS, and tentatively accepted
+and closed it on 2026-09-20 so work could move on while Claude was unavailable. That bounded owner
+exception is not an independent review; retrospective independent review remains a carried audit
+item rather than an open operational gate. This ledger update cannot establish the review outcome of
+the commit that contains it.
 
 The audit was an independent exact-diff review by Astra, who authored none of the inspected commits.
 It was static: Astra did not run builds, tests, Runner verification, Godot, restart, or
@@ -246,38 +250,39 @@ its A/B/C class only after opening the exact diff.
 | `663ba68` (exact `663ba68c594179e7a9e4f9c1a5ce19347d90a56c`) | Claude independent exact-commit review (Class A): **PASS AFTER FIXES**, one P2 documentation finding, accepted by Matt on 2026-09-14. All five earlier findings verified fixed against measured behaviour rather than the archive's account: executor continuity at the block boundary, milestone 007's second-assignment/collection/conflict bars restored naturally, receipt-triggered NPC review reading only received claims, objective reachability proven through a real unstaged player session, and belief-order target selection restored. The P2: no information-triggered review fires naturally in any of the six variants, and the archive did not disclose it. Independence is partial and disclosed — Claude authored the review being corrected, earlier proposal material, and the 027 closure text carried by `3db0cb1`, and ran no Godot self-test. Claude reproduced build, **751 tests**, three deterministic verifications, comparison, both viewpoint runs and `git diff --check`. **Matt accepted and closed milestone 028** (`milestones/028`). |
 | `557b02e` (exact `557b02ebe9226947d5c28b119003b5499cc7700a`) | **Closed by owner ruling, not an independent review.** Matt granted an explicit bounded owner exception from a further review round for this documentation-only correction, the same instrument recorded for `c7dd34b` and `303eed0`. It appends the measured honest non-result and the milestone-028 closure to the archive and records the acceptance here. No runtime code, test, tuning, or fixture changed. No independent review of this diff exists and none is claimed (`milestones/028`). |
 | `aa9f30c` (exact `aa9f30cb439dfab9def8c7a68a4704869da18320`) | Matt's owner review of this Codex-authored Class A implementation: **PASS**, accepted and closed on 2026-09-16. Matt authored none of the commit. It implements the exact two-known-target grouped-attention exception, preserves six top-level alternatives and at most ten leaves without reserved job slots, retains late feasibility/no backfill and actor parity, repairs both player-session rejection fixtures against a real production salience rejection, and records the accepted evaluation-hash changes without claiming complete world-state equality. No separate review report, findings, or independently reproduced command record accompanied the ruling; the archive's 0/0 build, 766-test pass, deterministic comparisons and viewpoints remain implementer evidence (`milestones/029`). |
+| `e6d0044` (exact `e6d0044455efa85049553d818813f5c975c68fcc`) | Matt's owner review of this Codex-authored Class A implementation: **PASS**, tentatively accepted and operationally closed on 2026-09-20 by explicit bounded exception because Claude was unavailable and Matt directed that work must move on. Matt's playtests established the human-comprehension gate, including the direct Ferri briefing, Tommy's standing-order method, and itemized job income. No independent exact-commit review, separate review report, findings, or independently reproduced full verification record accompanied the ruling. The archive's 0/0 build, 780-test pass, deterministic Runner/viewpoint checks, eleven Godot checks and mutation probes remain implementer evidence. Retrospective independent review remains desirable and must not be inferred from this owner closure (`milestones/030-one-informed-choice.md`). |
 
 ## Current verification baseline
 
-Latest accepted **runtime** baseline: `aa9f30c`, accepted through Matt's owner review above. Its gate
-was recorded by the implementer; no separate reproduction transcript accompanied the ruling. The
+Latest tentatively accepted **runtime** baseline: `e6d0044`, accepted through Matt's bounded owner
+exception above. Its gate was recorded by the implementer; no separate independent reproduction
+transcript accompanied the ruling. The
 latest independently reproduced runtime baseline remains `663ba68`, with the partial-independence
 limits recorded above. Hashes are regression evidence, not permanent design requirements; an
 authorized behaviour change may move them if the new values and reasons are recorded in its
 milestone archive.
 
-- Build: 0 warnings, 0 errors. Tests: 766 passed, 0 failed, 0 skipped.
-- Trace / chosen-action hashes: `baseline` `97951D6B06FCBB89` / `2930C6612450A449`;
-  `cautious-vincent` `732B93A3A11BE5CC` / `B0DFFBEAEBD8F6F3`; `watchful-boss`
-  `47FA7A0810099341` / `7A9ACC3C59970142`; `disloyal-vincent` `9A2F2987D4AE1544` /
-  `6C88BE019F2CD0FA`; `resentful-tommy` `4B7CEDC90A55F934` / `2930C6612450A449`;
-  `capable-angelo` `CC5B231104297A1A` / `A955423F0063E292`.
+- Build: 0 warnings, 0 errors. Tests: 780 passed, 0 failed, 0 skipped.
+- Trace / chosen-action hashes: `baseline` `D6F9F0DAC0B308DA` / `2930C6612450A449`;
+  `cautious-vincent` `810FCB7835E4E95C` / `B0DFFBEAEBD8F6F3`; `watchful-boss`
+  `C7F693E2BF222FAD` / `7A9ACC3C59970142`; `disloyal-vincent` `4CF63C356514998F` /
+  `6C88BE019F2CD0FA`; `resentful-tommy` `95CA45A72333EFEA` / `2930C6612450A449`;
+  `capable-angelo` `CF75E6FB50BABC58` / `A955423F0063E292`.
 - Three repeated-run verifications deterministic; comparison: six distinct traces, five action
   sequences; both required viewpoint runs exit 0; `git diff --check` clean.
-- Chosen-action histories and coarse runner outcomes equal the independently reproduced `663ba68`
-  baseline in all six variants. Five trace hashes move first at Vincent's authorized opening leaf
-  evaluation; disloyal Vincent never activates grouping and its trace remains unchanged. Complete
-  cross-build world-state equality was not measured.
+- Chosen-action histories remain equal to the independently reproduced `663ba68` baseline in all six
+  variants. Milestone 030 changes trace content through authorized information and presentation work;
+  complete cross-build world-state equality was not measured.
 - All six natural seed-42 sessions remain **Unmet**. `ObjectiveMet` is reachable through legal
   unstaged player choices only, pinned by
   `OperationContinuityTests.The_unchanged_objective_is_reachable_through_legal_named_player_choices`.
 - No information-triggered supervisory review fires naturally in any variant; that mechanism's
   demonstrated surface is controlled production-path tests and fault probes. See the 028 archive's
   honest non-result section.
-- No separate Godot headless suite was run for milestone 029 because UI and presentation were
-  excluded. No Godot or mutation checks were independently rerun in either milestone-028 review
-  round. Those earlier results remain implementer-reported. The previous `663ba68`, `3db0cb1` and
-  `64881a1` baselines are preserved in this file's history and the milestone archives.
+- The milestone-030 implementer reported nine individual Godot checks plus an isolated two-process
+  restart save/load pair, and six load-bearing mutation probes. None was independently rerun for the
+  owner closeout. The previous `aa9f30c`, `663ba68`, `3db0cb1` and `64881a1` baselines are preserved
+  in this file's history and the milestone archives.
 
 Run commands from `AGENTS.md` §Verification. Re-measure after the last edit that could affect the
 reported value; never copy a number from an earlier worktree state.

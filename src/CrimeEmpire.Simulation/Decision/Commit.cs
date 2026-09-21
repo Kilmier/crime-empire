@@ -44,8 +44,11 @@ public static class Commit
                 // enforcement on being offered as a delegate. Re-read World at the write boundary:
                 // GeneratorContext is a preparation-time snapshot and is not authoritative if a
                 // caller reaches Commit directly or the world changes between prepare and commit.
+                bool commissioning = Commissioning.IsOperation(c);
+                string executorId = c.InitialExecutorId ?? actor.Id;
+                if (commissioning) Commissioning.Validate(world, actor, c, executorId);
                 var authoritativeExecution = Strategies.CurrentExecution(world, actor);
-                if (actor.Execution.Strategy is null && authoritativeExecution is { } busyWith)
+                if (!commissioning && actor.Execution.Strategy is null && authoritativeExecution is { } busyWith)
                     throw new SimulationInvariantException(
                         $"'{actor.Id}' cannot start {c.Strategy}; he is currently carrying " +
                         $"{busyWith.Label} for somebody else. One operation at a time.");
@@ -63,7 +66,7 @@ public static class Commit
                 // Complete to never find. Filters' redundancy stage already refused a candidate that
                 // would merely restart the same (Kind, TargetId) or re-attempt an already-handled
                 // incident, so anything that reaches here is a real replacement.
-                if (actor.Execution.Strategy is { } previous)
+                if (!commissioning && actor.Execution.Strategy is { } previous)
                 {
                     if (previous.PendingStepEventId is { } pendingPrevious)
                         world.Queue.Cancel(pendingPrevious,
@@ -74,6 +77,10 @@ public static class Commit
                 var s = new StrategyInstance
                 {
                     OwnerId = actor.Id,
+                    DelegatedToId = commissioning && executorId != actor.Id ? executorId : null,
+                    CommissionedExecutorId = commissioning ? executorId : null,
+                    InitialBriefing = commissioning && executorId != actor.Id
+                        ? AssignmentBriefing.CaptureTarget(actor, c.TargetId!) : Array.Empty<ReportedClaim>(),
                     LocalSequence = actor.StrategyCount++,
                     Kind = c.Strategy!.Value,
                     Domain = c.Domain ?? "",
@@ -99,7 +106,8 @@ public static class Commit
                     // StrategyInstance.PolicyBreachDecisionMakerId's own doc comment.
                     PolicyBreachDecisionMakerId = c.BreachesPolicyId is not null ? actor.Id : null,
                 };
-                actor.Execution.Strategy = s;
+                if (commissioning) actor.Execution.Operations.Add(s);
+                else actor.Execution.Strategy = s;
                 actor.Execution.Intention = c.Description;
                 actor.Execution.Commitments.Add(new Commitment(
                     $"strategy:{s.OwnerId}:{s.LocalSequence}", c.Description, ctx.SuperiorId, world.Now, 0.6));
@@ -107,6 +115,18 @@ public static class Commit
                 if (s.Kind == StrategyKind.ConcealIncident && c.AboutIncident is { } incident)
                     actor.Execution.AttemptedConcealments.Add(incident);
 
+                if (s.DelegatedToId is { } initialExecutor)
+                {
+                    var sub = world.Get(initialExecutor);
+                    actor.Execution.RecordDelegation(initialExecutor);
+                    AssignmentBriefing.Deliver(world, sub, actor.Id, initialExecutor, s.InitialBriefing);
+                    sub.Execution.Commitments.Add(new Commitment(
+                        $"strategy:{s.OwnerId}:{s.LocalSequence}", $"handle {s.Label} for {actor.Name}", actor.Id, world.Now, 0.7));
+                    Strategies.ScheduleReview(world, s);
+                    if (authoritativeExecution is null)
+                        world.Queue.Schedule(world.Now, EventKind.RoleReview, actor.Id,
+                            "commissioning left his hands free", new EventPayload { Note = "hands-free" });
+                }
                 Strategies.ScheduleNextStep(world, s, $"{s.Label}: first step");
                 reconsideration.Add("the target refuses outright");
                 reconsideration.Add("he comes to believe police are watching");

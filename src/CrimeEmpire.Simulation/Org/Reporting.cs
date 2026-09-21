@@ -320,7 +320,14 @@ public static class Reporting
             asserted,
             withheld,
             framing,
-            candidate.AnsweringClaim);
+            candidate.AnsweringClaim)
+        {
+            Operations = asserted.Where(a => sender.Execution.OperationLearning.TryGetValue(a.Claim, out var learned)
+                    && Equals(sender.Cognition.Find(a.Claim), learned.Position))
+                .Select(a => { var learned = sender.Execution.OperationLearning[a.Claim];
+                    return new ReportedOperation(a.Claim, learned.OwnerId, learned.Sequence); })
+                .ToArray(),
+        };
     }
 
     /// <summary>
@@ -332,6 +339,8 @@ public static class Reporting
     /// </summary>
     public static void Deliver(World world, Report report, Character recipient)
     {
+        if (report.RecipientId != recipient.Id)
+            throw new SimulationInvariantException("A report must reach its named recipient.");
         var receipts = new List<(ReportedClaim Claim, Receipt Receipt)>();
         foreach (var claim in report.Asserted)
         {
@@ -366,6 +375,10 @@ public static class Reporting
             recipient.Cognition.ReceiveDisclaimer(asked, report.SenderId, report.At);
 
         world.Reports.Add(report);
+        foreach (var about in report.Operations.Where(o => o.OwnerId == recipient.Id))
+            foreach (var account in report.Asserted.Where(a => a.Claim.Equals(about.Claim)))
+                recipient.Execution.OperationAccounts.Add(new OperationAccount(about.OwnerId,
+                    about.Sequence, report.SenderId, report.At, account.Claim, account.AssertedStance));
         world.Record("report", report.SenderId, report.RecipientId, report.Framing);
 
         // And what the speaker read off the listener's face, now that the listener has made of it

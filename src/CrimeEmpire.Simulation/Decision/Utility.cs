@@ -297,6 +297,38 @@ public static class Utility
             rel.Trust, rel.Obligation, psy[Drive.Belonging], actor.Social.GrievanceAgainst(otherId));
     }
 
+    /// <summary>Existing delegation considerations, shared by bounded retention and full scoring.
+    /// No objective skill lookup, random draw, or new weight belongs in retention.</summary>
+    internal static IReadOnlyList<ScoreComponent> DelegationConsiderations(CharacterView actor,
+        Psychology psy, PerceivedSituation perceived, string executor, bool comparative)
+    {
+        var loyalty = Loyalty(actor, psy, executor);
+        var parts = new List<ScoreComponent>
+        {
+            new("relationship effects", 0.9 * loyalty.TrustPart, $"he trusts {executor} to carry it out for him", RelationshipFacet.Trust, 0),
+            new("relationship effects", 0.9 * loyalty.ObligationPart, $"what he owes {executor} makes handing it over natural", RelationshipFacet.Obligation, 0),
+            new("relationship effects", 0.9 * loyalty.BelongingPart, "putting work through his own people is what belonging looks like", RelationshipFacet.Belonging, 0.9 * loyalty.BelongingPart),
+        };
+        if (loyalty.HasGrievance)
+            parts.Add(new("relationship effects", 0.9 * loyalty.GrievancePart,
+                $"what he holds against {executor} makes him a worse bet", RelationshipFacet.Grievance, 0));
+        if (comparative)
+        {
+            // Milestone 021: implication and rejection use the same held capability ladder as
+            // the roster. Magnitude and confidence stay separate; absent belief adds nothing.
+            var reading = CapabilityBar.Read(executor, perceived.Position);
+            foreach (var (bar, weight) in CapabilityWeights)
+            {
+                var position = reading.FirstOrDefault(r => r.Bar == bar);
+                if (position.Bar is null) continue;
+                double direction = position.Clears ? 1.0 : -1.0;
+                parts.Add(new("executor capability", direction * weight * position.Confidence,
+                    Describe(executor, bar, position.Clears)));
+            }
+        }
+        return parts;
+    }
+
     public static ScoreBreakdown Score(
         Candidate cand,
         CharacterView actor,
@@ -396,11 +428,8 @@ public static class Utility
         switch (cand.Kind)
         {
             case ActionKind.DelegateStrategy when cand.TargetId is not null:
-                AddLoyaltyParts("relationship effects", 0.9, Loyalty(actor, psy, cand.TargetId),
-                    $"he trusts {cand.TargetId} to carry it out for him",
-                    $"what he owes {cand.TargetId} makes handing it over natural",
-                    "putting work through his own people is what belonging looks like",
-                    $"what he holds against {cand.TargetId} makes him a worse bet");
+                foreach (var part in DelegationConsiderations(actor, psy, perceived, cand.TargetId, cand.ComparingExecutors))
+                    Add(part.Name, part.Value, part.Explanation, part.Reads, part.WithoutRelationship);
                 break;
             case ActionKind.ReportToSuperior when cand.TargetId is not null:
                 AddLoyaltyParts("relationship effects", 0.7, Loyalty(actor, psy, cand.TargetId),
@@ -425,60 +454,6 @@ public static class Utility
                 Add("relationship effects", -1.6 * actor.Social.Toward(cand.TargetId).Fear,
                     "holding out against them frightens him", RelationshipFacet.Fear, 0);
                 break;
-        }
-
-        // --- executor capability (delegation only) ---------------------------------------------
-        //
-        // A separate consideration from "relationship effects" above, not folded into it: how good a
-        // candidate executor is at the job is not a fact about how he is regarded.
-        //
-        // MILESTONE 021 — READ FROM WHAT HE BELIEVES, NOT FROM ANYTHING CARRIED HERE. This term has
-        // now been wrong twice in the same place, and both times the fault was where the figure came
-        // from rather than what was done with it. Milestone 020 read the executor's objective
-        // Capabilities[Skill.Coercion] off World — an omniscient read Codex rejected. Its first
-        // correction moved that to a number on the relationship, which was actor-held but was a
-        // scalar with no source, no confidence and no way to be revised or contested. It now reads
-        // PersonIsCapable claims out of `perceived`, like every other belief the scorer consults, so
-        // the omniscience question cannot come back through this door: Score has no World, and the
-        // candidate no longer carries a capability figure for a generator to smuggle one onto.
-        //
-        // TAGGED None, and this time truthfully — no relationship state is read here at all. That is
-        // the same tag milestone 020 used and the reason is finally the stated one.
-        //
-        // MAGNITUDE IS WHICH BARS HE HOLDS; CONFIDENCE IS HOW SURE HE IS OF EACH. The ruling behind
-        // CapabilityBar's ladder, applied: each bar contributes its own weight, scaled by the
-        // confidence of that particular belief. A firmly held "he is up to rough work" and a shaky
-        // "he is exceptional" are different inputs, and summing bars rather than averaging them is
-        // what keeps the ladder from collapsing back into one number.
-        //
-        // Only for a genuinely comparative delegation — Candidate.ComparingExecutors, set by the
-        // generator when more than one *nameable* subordinate is on offer. Comparing one man's
-        // capability to the field is meaningless with a field of one, and every accepted variant
-        // other than capable-angelo has exactly one subordinate.
-        if (cand.Kind == ActionKind.DelegateStrategy && cand.ComparingExecutors && cand.TargetId is not null)
-        {
-            // THROUGH THE SHARED READING, NOT THE RAW RECORDS. Milestone 021's correction: the
-            // ladder's implication is resolved in one place so this and the roster panel cannot
-            // arrive at different tiers for the same man, and so a character holding the high bar
-            // while rejecting the low one cannot produce two score components pulling opposite ways
-            // — which is not him being wrong about the man, it is the model contradicting itself
-            // about what his own beliefs amount to.
-            var reading = CapabilityBar.Read(cand.TargetId, perceived.Position);
-
-            foreach (var (bar, weight) in CapabilityWeights)
-            {
-                var position = reading.FirstOrDefault(r => r.Bar == bar);
-                if (position.Bar is null) continue;
-
-                // Held pulls toward him at that bar's weight; rejected pushes away at the same
-                // weight, so a man believed *not* to be up to rough work is a worse bet than one
-                // nobody has an opinion about — which is the whole point of holding a position
-                // rather than a number. Doubts sits between and is deliberately not special-cased:
-                // IsHeld already treats Suspects as held and Doubts as not.
-                double direction = position.Clears ? 1.0 : -1.0;
-                Add("executor capability", direction * weight * position.Confidence,
-                    Describe(cand.TargetId, bar, position.Clears));
-            }
         }
 
         // --- personality and value alignment -------------------------------------------------

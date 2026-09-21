@@ -73,7 +73,7 @@ public static class Filters
             // generated-then-scored, the same shape Pipeline.AvailableToExecute's own delegation-
             // eligibility check already established for being offered as a delegate in the first
             // place — this is the mirror case, starting one of his own instead.
-            if (ctx.Actor.Execution.Strategy is null && ctx.CurrentExecution is { } busyWith)
+            if (!Commissioning.IsOperation(c) && ctx.Actor.Execution.Strategy is null && ctx.CurrentExecution is { } busyWith)
             {
                 rejected.Add(new Rejection(c, RejectionStage.Redundancy,
                     $"{ctx.Actor.Name} already has his hands full with {busyWith.Label}"));
@@ -268,6 +268,14 @@ public static class Filters
             {
                 rejected.Add(new Rejection(c, RejectionStage.Knowledge,
                     $"{ctx.Actor.Name} does not know that {Describe(missing)}"));
+                continue;
+            }
+
+            if (Commissioning.IsOperation(c))
+            {
+                if (c.RequiredAuthority > ctx.Actor.Capabilities.Authority || !Commissioning.CanCommission(ctx, c, salience))
+                    rejected.Add(new Rejection(c, RejectionStage.Capability, "no eligible execution route"));
+                else passed.Add(c);
                 continue;
             }
 

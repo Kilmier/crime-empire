@@ -789,7 +789,10 @@ public static class PlayerView
             // executor's: StartedAt is when the operation began, which for a man it was later handed
             // to is not when he came to hold it — see PlayerOperation.Since's own comment.
             who.Id == s.OwnerId ? s.StartedAt : null,
-            doingItHimself ? PlayerNarration.OwnProgress(lastDone, s.FailedAttempts, self) : null,
+            doingItHimself ? PlayerNarration.OwnProgress(lastDone, s.FailedAttempts, self)
+                : who.Execution.OperationAccounts.LastOrDefault(a => a.OwnerId == s.OwnerId && a.Sequence == s.LocalSequence) is { } account
+                    ? $"{name(account.SenderId)} gave an account of this operation; see the attributed information."
+                    : $"No report about this operation yet; its progress is unknown to {self.Object}.",
             who.Id == s.OwnerId ? $"work-{s.LocalSequence}" : null);
     }
 

@@ -144,8 +144,9 @@ public sealed class PlayerOwnedOperationTests
 
         Assert.Equal(autonomousVincent.Capabilities.Cash, vincent.Capabilities.Cash);
         Assert.Equal(autonomousTailor.PayingTribute, tailor.PayingTribute);
-        Assert.Equal(
-            TraceWriter.Render(autonomous.World, "baseline", false),
+        // Direct autonomous commissioning now differs from this deliberately personal-start /
+        // later-handover path; the collection outcome above remains comparable, histories do not.
+        Assert.NotEqual(TraceWriter.Render(autonomous.World, "baseline", false),
             TraceWriter.Render(session.World, "baseline", false));
     }
 
@@ -166,7 +167,7 @@ public sealed class PlayerOwnedOperationTests
         foreach (string description in GoldenPathChoiceSequence.Take(3))
         {
             while (session.Pending is null) session.StepEvent();
-            session.Choose(session.Pending.Options.Single(o => o.Description == description).Id);
+            session.ChooseAndConfirm(session.Pending.Options.Single(o => o.Description == description).Id);
         }
         session.World.Businesses[Cast.Tailor].PayingTribute = true;
         PendingDecision? completion = null;
@@ -253,7 +254,9 @@ public sealed class PlayerOwnedOperationTests
         autonomous.AdvanceTo(End);
 
         var mixed = SimulationSession.Start(Seed, "baseline", Controlled);
-        ChooseByDescription(mixed, GoldenPathChoiceSequence[0], End);
+        mixed.AdvanceTo(End);
+        mixed.Choose(mixed.Pending!.Options.Single(o => o.Description == GoldenPathChoiceSequence[0]).Id);
+        // The person selected the operation; autonomous preference answers its executor stage.
 
         while (mixed.Status == SessionStatus.AwaitingChoice) mixed.ResolveAutomatically();
         if (mixed.Status == SessionStatus.Ready && mixed.Date < End) mixed.AdvanceTo(End);
@@ -373,8 +376,8 @@ public sealed class PlayerOwnedOperationTests
     [Fact]
     public void Pausing_and_resuming_across_the_whole_arc_reaches_the_same_state_as_an_uninterrupted_run()
     {
-        var uninterrupted = SimulationSession.Start(Seed, "baseline", controlledCharacterId: null, viewpointCharacterId: Controlled);
-        uninterrupted.AdvanceTo(JustAfterCollection);
+        var uninterrupted = SimulationSession.Start(Seed, "baseline", Controlled);
+        PlayGoldenPath(uninterrupted, JustAfterCollection);
 
         var interrupted = SimulationSession.Start(Seed, "baseline", Controlled);
         PlayGoldenPath(interrupted, JustAfterCollection, onPause: () =>
@@ -428,7 +431,7 @@ public sealed class PlayerOwnedOperationTests
         Assert.True(index >= 0,
             $"no offered option reads \"{description}\" on {session.Date:yyyy-MM-dd} — offered: " +
             string.Join(" | ", pending.Options.Select(o => o.Description)));
-        session.Choose(pending.Options[index].Id);
+        session.ChooseAndConfirm(pending.Options[index].Id);
     }
 
     /// <summary>

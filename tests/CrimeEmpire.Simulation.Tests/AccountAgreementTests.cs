@@ -452,7 +452,7 @@ public sealed class AccountAgreementTests
         var topRanked = prepared.Scored.OrderByDescending(s => s.Total).ThenBy(s => s.Candidate.Id, StringComparer.Ordinal).First();
         Assert.Equal(answer.Id, topRanked.Candidate.Id);
 
-        Pipeline.Resolve(prepared, answer.Id);
+        CommissioningTestDriver.Resolve(prepared, answer.Id);
 
         var agreement = Assert.Single(world.AccountAgreements,
             a => a.ListenerId == "tommy" && a.Agreement.SpeakerId == "salvatore" && a.Agreement.Claim.Equals(Vulnerable));
@@ -490,7 +490,7 @@ public sealed class AccountAgreementTests
             .Select(s => s.Candidate)
             .Single(c => c.Kind == ActionKind.ReportToSuperior && c.TargetId == "tommy"
                          && c.Candor == ReportCandor.Candid && c.AnsweringClaim is { } a && a.Equals(Vulnerable));
-        Pipeline.Resolve(prepared, answer.Id);
+        CommissioningTestDriver.Resolve(prepared, answer.Id);
         double trustAfter = afterAgreement.Get("tommy").Social.Toward("salvatore").Trust;
 
         Assert.True(trustAfter > trustBefore);
@@ -518,7 +518,7 @@ public sealed class AccountAgreementTests
     private static PreparedDecision AdvanceToRequestedCorroboration(World world)
     {
         var opening = AdvanceToPause(world, "vincent");
-        Pipeline.Resolve(opening, opening.Available.Single(c => c.Kind == ActionKind.StartStrategy
+        CommissioningTestDriver.Resolve(opening, opening.Available.Single(c => c.Kind == ActionKind.StartStrategy
             && c.TargetId == Cast.Tailor && c.Method == CoercionMethod.Force).Id);
         bool delegated = false;
         bool asked = false;
@@ -535,12 +535,12 @@ public sealed class AccountAgreementTests
             {
                 var handover = prepared.Available.FirstOrDefault(c => c.Kind == ActionKind.DelegateStrategy && c.TargetId == "tommy");
                 var start = prepared.Available.FirstOrDefault(c => c.Kind == ActionKind.StartStrategy && c.TargetId == Cast.Grocery && c.Method == CoercionMethod.Threaten);
-                Pipeline.Resolve(prepared, handover?.Id ?? start?.Id);
+                CommissioningTestDriver.Resolve(prepared, handover?.Id ?? start?.Id);
                 delegated = handover is not null;
                 continue;
             }
             var ask = prepared.Available.FirstOrDefault(c => c.Kind == ActionKind.SeekCorroboration && c.TargetId == "salvatore" && c.AboutClaim == Vulnerable);
-            Pipeline.Resolve(prepared, ask?.Id);
+            CommissioningTestDriver.Resolve(prepared, ask?.Id);
             if (ask is not null) asked = true;
         }
         throw new InvalidOperationException("The real corroboration choice/answer was not reached. " + string.Join("\n", seen));

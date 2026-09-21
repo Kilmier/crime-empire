@@ -291,6 +291,16 @@ public sealed class SimulationReplayTests
             $"{d.Agenda.Kind}|{d.Agenda.Domain}|{d.Chosen?.Candidate.Id}|" +
             $"{Number(d.Chosen?.Total ?? 0)}|{d.Outcome}"));
 
+        lines.AddRange(world.Decisions.Select(d => "executors|" + System.Text.Json.JsonSerializer.Serialize(
+            new { d.ExecutorOptions, d.ExecutorChoice })));
+        lines.AddRange(world.Reports.Select(r => "report-operations|" + System.Text.Json.JsonSerializer.Serialize(r.Operations)));
+        foreach (var c in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
+        {
+            lines.Add("operation-learning|" + c.Id + "|" + System.Text.Json.JsonSerializer.Serialize(
+                c.Execution.OperationLearning.OrderBy(x => x.Key.ToString(), StringComparer.Ordinal).Select(x => x.Value)));
+            lines.Add("operation-accounts|" + c.Id + "|" + System.Text.Json.JsonSerializer.Serialize(c.Execution.OperationAccounts));
+        }
+
         // Report content and candour are simulation state, so determinism has to cover them —
         // otherwise a run could pass the replay test while quietly composing different accounts.
         lines.AddRange(world.Reports.Select(r =>
@@ -417,7 +427,8 @@ public sealed class SimulationReplayTests
         foreach (var d in world.Decisions)
             lines.Add($"decision|{d.ActorId}|{d.TriggerKind}|{d.Agenda.Kind}|{d.Agenda.Domain}|" +
                       $"{d.Chosen?.Candidate.Kind}|{d.Chosen?.Candidate.Strategy}|{d.Chosen?.Candidate.Method}|" +
-                      $"{d.Chosen?.Candidate.TargetId}|{d.Chosen?.Candidate.Candor}");
+                      $"{d.Chosen?.Candidate.TargetId}|{d.Chosen?.Candidate.Candor}|" +
+                      $"{d.ExecutorChoice?.Candidate.Kind}|{d.ExecutorChoice?.Candidate.TargetId}");
 
         foreach (var business in world.Businesses.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
             lines.Add($"business|{business.Id}|{Number(business.MonthlyRevenue)}|" +
@@ -438,7 +449,8 @@ public sealed class SimulationReplayTests
             foreach (var operation in character.Execution.Operations)
                 lines.Add($"operation|{operation.OwnerId}|{operation.LocalSequence}|{operation.Kind}|" +
                     $"{operation.TargetId}|{operation.Method}|{operation.StepIndex}|{operation.NextAdvanceOrdinal}|" +
-                    $"{operation.DelegatedToId}|{operation.PolicyBreachDecisionMakerId}|{operation.FailedAttempts}");
+                    $"{operation.DelegatedToId}|{operation.PolicyBreachDecisionMakerId}|{operation.FailedAttempts}|" +
+                    $"{operation.CommissionedExecutorId}|{operation.OwnerOrderedMethod}");
 
             // As above, minus the grievance timestamp: a DateTime is not derived from any global
             // counter, but it is free text as far as this comparator is concerned and the narrower

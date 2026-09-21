@@ -193,6 +193,8 @@ public sealed record InformationRequest(long Id, string AskerId, string AskedId,
 /// equally requires that the player-facing layer never see them. Nothing under Runner/ may render
 /// this type — the player sees its effects on the recipient's cognition, not the record itself.
 /// </summary>
+public sealed record ReportedOperation(Claim Claim, string OwnerId, int Sequence);
+
 public sealed record Report(
     long Id,
     string SenderId,
@@ -215,6 +217,7 @@ public sealed record Report(
     /// does not have is the false-assurance pattern this repository already has two examples of.
     /// </summary>
     public Claim? AnsweringClaim { get; init; } = AnsweringClaim;
+    public IReadOnlyList<ReportedOperation> Operations { get; init; } = Array.Empty<ReportedOperation>();
 
     public override string ToString()
         => $"{SenderId} -> {RecipientId} [{Candor}] {Asserted.Count} asserted, {Withheld.Count} withheld"

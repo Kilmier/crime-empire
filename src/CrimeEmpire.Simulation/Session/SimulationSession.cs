@@ -54,6 +54,8 @@ public sealed class SimulationSession
     private PreparedDecision? _prepared;
     private PendingDecision? _pending;
     private SessionResult? _result;
+    private PreparedCommission? _commission;
+    private string? _executorChoice;
 
     /// <summary>
     /// Opaque option token to candidate id, for the decision currently in front of the player.
@@ -279,6 +281,40 @@ public sealed class SimulationSession
                 $"'{optionId}' is not one of the options {prepared.Actor.Id} was offered at " +
                 $"{prepared.At:O}. A choice names an option from the pending decision it answers.");
 
+        if (_commission is { } commission)
+        {
+            if (candidateId == "back")
+            {
+                if (_executorChoice is not null) _executorChoice = null;
+                else _commission = null;
+                if (_commission is null)
+                    _pending = Project(prepared, _optionIds, PlayerView.NameIn(_world), PronounsIn(_world),
+                        PlayerView.You, id => _world.Org.Assignments.FirstOrDefault(a => a.Id == id));
+                else ProjectCommission();
+                return;
+            }
+            if (candidateId == "confirm" && _executorChoice is not null)
+            {
+                Pipeline.Resolve(prepared, commission.Operation.Id, _executorChoice);
+                ClearPending();
+                Resume();
+                return;
+            }
+            if (_executorChoice is not null || !commission.Available.Any(c => c.Id == candidateId))
+                throw new SimulationInvariantException("That executor is not open in this draft.");
+            _executorChoice = candidateId;
+            ProjectCommission();
+            return;
+        }
+
+        var operation = prepared.Available.Single(c => c.Id == candidateId);
+        if (Commissioning.IsOperation(operation))
+        {
+            _commission = Commissioning.Prepare(prepared, operation);
+            ProjectCommission();
+            return;
+        }
+
         // Resolve validates the candidate against the ones that survived his own filters and throws
         // before touching any state. Clearing the pending decision only after it returns is what
         // makes a rejected choice recoverable rather than wedging the session.
@@ -303,7 +339,7 @@ public sealed class SimulationSession
             throw new InvalidOperationException(
                 "nothing is waiting on a choice; the controlled character is not mid-deliberation.");
 
-        Pipeline.Resolve(prepared, null);
+        Pipeline.Resolve(prepared, _commission?.Operation.Id);
 
         ClearPending();
         Resume();
@@ -412,9 +448,59 @@ public sealed class SimulationSession
 
     private void ClearPending()
     {
+        _commission = null;
+        _executorChoice = null;
         _prepared = null;
         _pending = null;
         _optionIds.Clear();
+    }
+
+    private void ProjectCommission()
+    {
+        var prepared = _prepared!;
+        var commission = _commission!;
+        var name = PlayerView.NameIn(_world);
+        var actor = prepared.Actor;
+        var options = new List<PendingOption>();
+        _optionIds.Clear();
+        void Add(string id, string description)
+        {
+            var token = Token($"draft:{prepared.Trigger.Id}:{commission.Operation.Id}:{_executorChoice}:{id}");
+            if (!_optionIds.TryAdd(token, id)) throw new SimulationInvariantException("Draft token collision.");
+            options.Add(new PendingOption(token, description));
+        }
+        if (_executorChoice is null)
+            foreach (var candidate in commission.Available)
+            {
+                string executor = Commissioning.Executor(prepared, candidate);
+                Add(candidate.Id, executor == actor.Id ? "Do it yourself" : $"Assign {name(executor)}");
+            }
+        else Add("confirm", "Confirm operation");
+        Add("back", "Go back");
+
+        // Only known subordinates, and only the owner's own standing assignments can explain work.
+        // Eligibility may be authoritative; private reasons never become a rejected-candidate menu.
+        var staffing = new List<string>();
+        foreach (var id in prepared.Context.SubordinateIds.Intersect(prepared.Context.AcquaintedIds)
+                     .OrderBy(id => id, StringComparer.Ordinal))
+        {
+            if (prepared.Context.AvailableSubordinateIds.Contains(id)) continue;
+            var order = actor.Execution.Operations.FirstOrDefault(s => s.DelegatedToId == id);
+            staffing.Add(order is null ? $"{name(id)} is unavailable for this assignment."
+                : $"{name(id)} is unavailable: you assigned {PlayerOption.Work(order.Kind, order.TargetId, name, PlayerView.You)}.");
+        }
+        if (prepared.Context.CurrentExecution is not null)
+            staffing.Add("You are already executing an operation; you can assign eligible subordinates.");
+        string? selected = _executorChoice is null ? null : Commissioning.Executor(prepared,
+            commission.Available.Single(c => c.Id == _executorChoice));
+        _pending = _pending! with
+        {
+            Options = options,
+            Commissioning = new CommissioningSummary(
+                PlayerOption.Describe(commission.Operation, name, PlayerView.You, PronounsIn(_world), actor.Id),
+                selected is null ? null : selected == actor.Id ? "You" : name(selected),
+                "Usually unfolds over several days; setbacks may extend it.", staffing),
+        };
     }
 
     /// <summary>

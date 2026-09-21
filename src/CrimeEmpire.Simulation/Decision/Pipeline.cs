@@ -38,6 +38,7 @@ public sealed class PreparedDecision
     {
         World = world;
         Actor = actor;
+        DecisionIndex = actor.DecisionCount - 1;
         Trigger = trigger;
         Agenda = agenda;
         Context = ctx;
@@ -58,6 +59,8 @@ public sealed class PreparedDecision
     }
 
     internal World World { get; }
+    internal int DecisionIndex { get; }
+    internal Dictionary<string, PreparedCommission> Commissions { get; } = new(StringComparer.Ordinal);
 
     public Character Actor { get; }
     public ScheduledEvent Trigger { get; }
@@ -224,7 +227,8 @@ public static class Pipeline
     /// not rebuilt — so <c>DecisionRecord.Chosen</c> is still reference-equal to its entry in
     /// <c>Scored</c>, which is what the developer trace's "← chosen" marker keys on.
     /// </summary>
-    public static DecisionRecord Resolve(PreparedDecision prepared, string? chosenCandidateId)
+    public static DecisionRecord Resolve(PreparedDecision prepared, string? chosenCandidateId,
+        string? executorCandidateId = null)
     {
         if (prepared.IsResolved)
             throw new SimulationInvariantException(
@@ -252,13 +256,28 @@ public static class Pipeline
                     "character could not have taken himself.");
         }
 
-        prepared.IsResolved = true;
+        PreparedCommission? commission = null;
+        ScoreBreakdown? executorChoice = null;
+        Candidate? committed = chosen?.Candidate;
+        if (committed is not null && Commissioning.IsOperation(committed))
+        {
+            commission = Commissioning.Prepare(prepared, committed);
+            executorChoice = executorCandidateId is null ? commission.Scored.FirstOrDefault()
+                : commission.Scored.FirstOrDefault(s => s.Candidate.Id == executorCandidateId);
+            if (executorChoice is null)
+                throw new SimulationInvariantException("No retained executor was selected.");
+            committed = committed with { InitialExecutorId = Commissioning.Executor(prepared, executorChoice.Candidate) };
+            Commissioning.Validate(world, actor, committed, committed.InitialExecutorId);
+        }
+        else if (executorCandidateId is not null)
+            throw new SimulationInvariantException("An executor cannot be selected for this action.");
 
         // 7-8. Commit and schedule what follows.
         var reconsideration = new List<string>();
         string outcome = chosen is null
             ? "nothing was open to him"
-            : Commit.Apply(world, actor, chosen.Candidate, prepared.Agenda, prepared.Context, reconsideration);
+            : Commit.Apply(world, actor, committed!, prepared.Agenda, prepared.Context, reconsideration);
+        prepared.IsResolved = true;
 
         // A question, report, or other side action does not abandon the executor's standing work.
         // At a block the step has finished; preserve continuity if the chosen action did not already
@@ -288,7 +307,8 @@ public static class Pipeline
             chosen,
             outcome,
             reconsideration,
-            prepared.Salience.Notes.Where(n => n.Length > 0).ToList());
+            prepared.Salience.Notes.Where(n => n.Length > 0).ToList())
+        { ExecutorOptions = commission?.Scored ?? Array.Empty<ScoreBreakdown>(), ExecutorChoice = executorChoice };
 
         world.Decisions.Add(record);
         return record;

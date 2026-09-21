@@ -42,6 +42,8 @@ public sealed record Candidate(
     public string? OperationOwnerId { get; init; }
     public int? OperationSequence { get; init; }
     public bool IsOperationReview { get; init; }
+    /// <summary>Chosen at commissioning; null on ordinary non-commissioning candidates.</summary>
+    public string? InitialExecutorId { get; init; }
 
     /// <summary>
     /// How honest this report would be. Set only on <see cref="ActionKind.ReportToSuperior"/>.

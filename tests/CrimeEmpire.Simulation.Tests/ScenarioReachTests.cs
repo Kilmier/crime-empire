@@ -487,7 +487,7 @@ public sealed class ScenarioReachTests
                     if (Math.Abs(actual - withoutConflict) > 0.000001) witnessed = true;
                 }
             }
-            Pipeline.Resolve(prepared, null);
+            CommissioningTestDriver.Resolve(prepared, null);
         }
         Assert.True(cost is > 0, "No natural conflict cost Vincent trust.");
         Assert.True(witnessed, "No later available candidate read the trust that conflict moved.");

@@ -239,12 +239,14 @@ public static class Generators
         if (domain is null) yield break;
 
         // Already running something in this domain: FromCommitment owns that.
-        if (ctx.CurrentExecution?.Domain == domain) yield break;
+        if (ctx.CurrentExecution?.Domain == domain &&
+            (ctx.Actor.Capabilities.Crew < 1 || Commissioning.Delegates(ctx).Count == 0)) yield break;
 
         bool investigator = ctx.Actor.Capabilities[Skill.Investigation] >= 0.4;
 
         if (investigator)
         {
+            if (ctx.CurrentExecution?.Domain == domain) yield break;
             // Work from an actual lead if she has one. Claims are matched by identity, so the
             // requirement has to name the record she really holds rather than a reconstructed
             // one — otherwise a detective is refused permission to investigate her own lead.
@@ -472,48 +474,12 @@ public static class Generators
             // Variants.Apply for Angelo), which independently puts them in AcquaintedIds via
             // SocialState.Others — so this filter is a no-op for every accepted trace hash, and only
             // bites a subordinate nobody has ever actually put in front of the actor.
-            var acquainted = new HashSet<string>(ctx.AcquaintedIds, StringComparer.Ordinal);
-            // Milestone 024's second correction, same shape as the acquaintance guard just above:
-            // a subordinate already busy — running a strategy of his own, or already carrying
-            // delegated work for somebody else — is not offered at all, never generated-then-
-            // rejected. AvailableSubordinateIds is Pipeline.AvailableToExecute's own output; see that
-            // method for the one shared rule and Commit.Apply's matching fail-closed guard.
-            var available = new HashSet<string>(ctx.AvailableSubordinateIds, StringComparer.Ordinal);
-            var nameableSubordinates = ctx.SubordinateIds
-                .Where(acquainted.Contains)
-                .Where(available.Contains)
-                .ToList();
-
-            // One candidate per nameable subordinate, not the single highest-trust pick. With
-            // exactly one — every existing accepted variant — this loop produces exactly the one
-            // candidate it always did, same id, same fields. With more than one, each is offered
-            // on its own merits and scored by Utility like anything else: relationship state
-            // already reads generically per TargetId, and ExecutorCoercion is attached below only
-            // because there is genuinely more than one nameable man to compare — comparative is
-            // computed from the filtered set, not the raw organisational count, so a boss with two
-            // subordinates on the roster but only one he could actually name gets no comparison.
-            bool comparative = nameableSubordinates.Count > 1;
-
-            foreach (string sub in nameableSubordinates.OrderBy(id => id, StringComparer.Ordinal))
-            {
-                yield return new Candidate(
-                    $"delegate:{s.Kind}:{sub}",
-                    ActionKind.DelegateStrategy,
-                    nameof(FromRelationship),
-                    $"have {sub} handle {s.Label}")
-                {
-                    TargetId = sub,
-                    Strategy = s.Kind,
-                    Method = s.Kind == StrategyKind.SecureTribute ? s.Method : null,
-                    Domain = s.Domain,
-                    RequiredCrew = 1,
-                    // Only whether there is a comparison to make. What this man is believed capable
-                    // of is Utility's to read out of the actor's own beliefs (milestone 021); no
-                    // capability figure crosses from here, because a generator can see World and
-                    // the scorer deliberately cannot.
-                    ComparingExecutors = comparative,
-                };
-            }
+            var available = Commissioning.Delegates(ctx);
+            foreach (string sub in available)
+                yield return Commissioning.DelegateCandidate($"delegate:{s.Kind}:{sub}", sub,
+                    s.Kind, s.Domain, s.Kind == StrategyKind.SecureTribute ? s.Method : null,
+                    available.Count > 1) with { Generator = nameof(FromRelationship),
+                        Description = $"have {sub} handle {s.Label}" };
         }
 
         // Being asked directly changes who he answers to for this one exchange. Without it a

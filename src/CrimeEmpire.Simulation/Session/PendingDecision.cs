@@ -18,6 +18,13 @@ using CrimeSim.Domain;
 /// </summary>
 public sealed record PendingOption(string Id, string Description);
 
+/// <summary>Copied choices, not live execution. No scheduling or evaluation data crosses here.</summary>
+public sealed record CommissioningSummary(string Operation, string? Executor, string Expectation,
+    IReadOnlyList<string> Staffing)
+{
+    public IReadOnlyList<string> Staffing { get; init; } = Frozen.List(Staffing);
+}
+
 /// <summary>
 /// A deliberation stopped at the last question, waiting for a person to answer it.
 ///
@@ -50,6 +57,7 @@ public sealed record PendingDecision(
     string? Focus,
     IReadOnlyList<PendingOption> Options)
 {
+    public CommissioningSummary? Commissioning { get; init; }
     /// <summary>
     /// Frozen at construction. An <c>IReadOnlyList&lt;T&gt;</c> backed by a <c>List&lt;T&gt;</c> can
     /// be cast straight back and mutated, so the guarantee has to be a property of this type rather

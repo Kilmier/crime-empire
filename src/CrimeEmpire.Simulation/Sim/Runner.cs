@@ -233,14 +233,7 @@ public static class Runner
             // the snapshot: delivery must not look the issuer up again six hours later. Pairing on
             // the structured claim subject keeps the rule actor- and fixture-neutral, and checking
             // IsHeld prevents doubt, rejection or absence from becoming an affirmative briefing.
-            var vulnerability = boss.Cognition.Find(
-                new Claim(ClaimKind.TargetIsVulnerable, r.Claim.Subject));
-            if (vulnerability is { IsHeld: true })
-                disclosed.Add(ReportedClaim.Honest(
-                    vulnerability.Claim,
-                    vulnerability.Stance,
-                    vulnerability.Confidence,
-                    vulnerability.SourceKind));
+            AssignmentBriefing.AddAssessment(boss, r.Claim.Subject, disclosed);
         }
 
         // A gap he suspects but cannot name travels the same channel as a shop he can — the existing
@@ -286,37 +279,7 @@ public static class Runner
                 assignment.RecipientId, actor.Id, StringComparison.Ordinal))
             return false;
 
-        // Briefing a man is telling him something, so it goes through Receive like any other
-        // account: it leaves testimony he can weigh, contest and attribute. Using Learn here put
-        // claims into his head with a source attached but nothing on record of anyone having
-        // spoken — which reads, from the outside, exactly like the organisation handing him
-        // knowledge for being in it.
-        //
-        // Delivering the snapshot taken at issuance, not the issuer's current beliefs. Reading them
-        // back here asked what the boss thinks *now* about something he said six hours ago, so a
-        // change of mind in between rewrote what he had already told his capo.
-        foreach (var disclosed in assignment.Disclosed)
-        {
-            var receipt = actor.Cognition.Receive(disclosed, assignment.IssuerId, world.Now);
-            Strategies.ReviewAfterReceipt(world, actor, receipt);
-
-            // The third receipt path, and it takes the same rule. A boss whose briefing contradicts
-            // what his capo already holds has contradicted him, and being the man who issued the
-            // assignment does not make it cost nothing.
-            if (receipt.Conflict is { } conflict)
-            {
-                world.AccountConflicts.Add(new PerceivedConflict(actor.Id, conflict, world.Now));
-                Relations.RecordAccountConflict(actor, conflict, world.Now);
-            }
-
-            // Milestone 016: the third receipt path. A boss whose briefing corroborates what his
-            // capo already holds earns the same trust rise any other fresh corroboration would.
-            if (receipt.Agreement is { } agreement)
-            {
-                world.AccountAgreements.Add(new PerceivedAgreement(actor.Id, agreement, world.Now));
-                Relations.RecordAccountAgreement(actor, agreement, world.Now);
-            }
-        }
+        AssignmentBriefing.Deliver(world, actor, assignment.IssuerId, assignment.RecipientId, assignment.Disclosed);
 
         actor.Motivations.Responsibilities.Add(
             new Responsibility($"assignment:{assignment.Id}", assignment.Objective, assignment.Domain));

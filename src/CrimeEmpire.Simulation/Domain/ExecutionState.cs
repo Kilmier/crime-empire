@@ -55,6 +55,8 @@ public sealed class StrategyInstance
     /// delegate-side change.
     /// </summary>
     public CoercionMethod? OwnerOrderedMethod { get; set; }
+    public string? CommissionedExecutorId { get; init; }
+    public IReadOnlyList<ReportedClaim> InitialBriefing { get; init; } = Array.Empty<ReportedClaim>();
     public int StepIndex { get; set; }
     public required DateTime StartedAt { get; init; }
     public DateTime Deadline { get; set; }
@@ -133,8 +135,15 @@ public sealed class StrategyInstance
         : $"{Kind}({Domain}, target={TargetId}, method={Method})";
 }
 
+public sealed record OperationLearning(string OwnerId, int Sequence, InformationRecord Position);
+public sealed record OperationAccount(string OwnerId, int Sequence, string SenderId, DateTime At,
+    Claim Claim, Stance Stance);
+
 public sealed class ExecutionState
 {
+    // Attribution follows information acquired during an actual operation, not address/time guesses.
+    public Dictionary<Claim, OperationLearning> OperationLearning { get; } = new();
+    public List<OperationAccount> OperationAccounts { get; } = new();
     /// <summary>What the character has chosen to pursue, in plain words, for the trace.</summary>
     public string? Intention { get; set; }
 

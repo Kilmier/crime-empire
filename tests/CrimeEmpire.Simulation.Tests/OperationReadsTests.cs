@@ -44,7 +44,7 @@ public sealed class OperationReadsTests
         var lateDelegated = Operating(delegated: true, stepIndex: 3);
 
         Assert.Equal(Render(earlyDelegated), Render(lateDelegated));
-        Assert.Null(Snapshot(earlyDelegated).Operations.SingleOrDefault()!.Progress);
+        Assert.Contains("progress is unknown", Snapshot(earlyDelegated).Operations.Single()!.Progress);
 
         var earlyOwn = Operating(delegated: false, stepIndex: 1);
         var lateOwn = Operating(delegated: false, stepIndex: 3);
@@ -146,7 +146,7 @@ public sealed class OperationReadsTests
 
         Assert.NotNull(op);
         Assert.Equal("Tommy Nardo", op!.ExecutorName);
-        Assert.Null(op.Progress);
+        Assert.Contains("progress is unknown", op.Progress);
         // The date, not the exact instant — the same precision the rendered "running since 2 Mar"
         // ever carries; the operation actually starts partway through 2 March, not at Cast.Start's
         // own midnight-adjacent instant.
@@ -213,7 +213,9 @@ public sealed class OperationReadsTests
         Assert.DoesNotContain("made his demand", delegatedRow);
 
         string tommyRendered = IntelligenceWriter.Render(world, "tommy");
-        CheckOperationSection(tommyRendered, mustContain: "made his demand", mustNotContain: "is handling it");
+        var actualProgress = PlayerView.Build(world, "tommy", world.Now).Operations.Single().Progress;
+        Assert.False(string.IsNullOrWhiteSpace(actualProgress));
+        CheckOperationSection(tommyRendered, mustContain: actualProgress!, mustNotContain: "is handling it");
     }
 
     // ================================================================= one operation per executor
@@ -485,7 +487,7 @@ public sealed class OperationReadsTests
 
         int queueBefore = world.Queue.Count;
         var postpone = blocked.Available.Single(c => c.Kind == ActionKind.PostponeStrategy);
-        Pipeline.Resolve(blocked, postpone.Id);
+        CommissioningTestDriver.Resolve(blocked, postpone.Id);
 
         Assert.Contains(operation, vincent.Execution.Operations);
         Assert.NotNull(operation.PendingStepEventId);
@@ -669,7 +671,7 @@ public sealed class OperationReadsTests
 
             // Preserve the ordinary autonomous path for any unrelated wake belonging to the same
             // actor; only the delegated block is held for the test's explicit choice.
-            Pipeline.Resolve(step.Awaiting!, null);
+            CommissioningTestDriver.Resolve(step.Awaiting!, null);
         }
 
         throw new InvalidOperationException("guard exceeded before the delegated operation blocked");
@@ -719,7 +721,7 @@ public sealed class OperationReadsTests
         var startCandidate = first.Available.Single(c =>
             c.Kind == ActionKind.StartStrategy && c.Strategy == StrategyKind.SecureTribute
             && c.TargetId == Cast.Tailor && c.Method == CoercionMethod.Persuade);
-        Pipeline.Resolve(first, startCandidate.Id);
+        CommissioningTestDriver.Resolve(first, startCandidate.Id);
 
         return AdvanceVincentToFirstPause(world);
     }

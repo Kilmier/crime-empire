@@ -38,7 +38,7 @@ public sealed class InPersonTests
         var session = SimulationSession.Start(Seed, "baseline", "vincent");
         var pending = AdvanceToPause(session);
         const string ask = "ask Tommy Nardo what he knows about whether Bellini's grocery would fold if leaned on";
-        session.Choose(pending.Options.Single(o => o.Description == ask).Id);
+        session.ChooseAndConfirm(pending.Options.Single(o => o.Description == ask).Id);
 
         var asked = session.Snapshot();
         Assert.Contains(asked.AwaitingAnswers, r => r.AskedId == "tommy");
@@ -337,11 +337,11 @@ public sealed class InPersonTests
             var pending = session.Pending!;
             seen.Add($"{session.Date:d MMM}: {string.Join(" | ", pending.Options.Select(o => o.Description))}");
             if (pending.Options.Any(o => o.Description == deny)) offering = pending;
-            else session.Choose(pending.Options.First(o => o.Description.StartsWith("carry on", StringComparison.Ordinal)
+            else session.ChooseAndConfirm(pending.Options.First(o => o.Description.StartsWith("carry on", StringComparison.Ordinal)
                                                           || o.Description == "take no action").Id);
         }
         Assert.True(offering is not null, "the denial was never offered; pauses seen:" + Environment.NewLine + string.Join(Environment.NewLine, seen));
-        session.Choose(offering!.Options.Single(o => o.Description == deny).Id);
+        session.ChooseAndConfirm(offering!.Options.Single(o => o.Description == deny).Id);
 
         var vincent = session.World.Get("vincent");
         var delivered = session.World.Reports.Last(r => r.SenderId == "vincent" && r.RecipientId == "kane");
@@ -636,6 +636,6 @@ public sealed class InPersonTests
         Assert.True(option is not null,
             $"{session.Date:yyyy-MM-dd} does not offer \"{description}\" — offered: " +
             string.Join(" | ", pending.Options.Select(o => o.Description)));
-        session.Choose(option!.Id);
+        session.ChooseAndConfirm(option!.Id);
     }
 }

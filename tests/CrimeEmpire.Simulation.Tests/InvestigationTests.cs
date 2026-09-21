@@ -431,7 +431,7 @@ public sealed class InvestigationTests
         while (session.Status == SessionStatus.AwaitingChoice)
         {
             offered.AddRange(session.Pending!.Options.Select(o => o.Description));
-            session.Choose(session.Pending!.Options[0].Id);
+            session.ChooseAndConfirm(session.Pending!.Options[0].Id);
         }
 
         Assert.Contains(offered, o =>

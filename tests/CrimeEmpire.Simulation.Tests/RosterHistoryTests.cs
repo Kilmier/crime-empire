@@ -281,7 +281,7 @@ public sealed class RosterHistoryTests
         var withHistory = Cast.Build(42, "baseline");
         Runner.Run(withHistory, Cast.Start.AddDays(90));
 
-        var snapshot = PlayerView.Build(withHistory, "salvatore", withHistory.Now);
+        var snapshot = PlayerView.Build(withHistory, "tommy", withHistory.Now);
         var remembered = snapshot.Attitudes.SelectMany(a => a.History).ToList();
 
         Assert.NotEmpty(remembered);

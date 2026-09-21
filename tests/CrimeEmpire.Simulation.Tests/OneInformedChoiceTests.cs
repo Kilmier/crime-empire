@@ -259,7 +259,7 @@ public sealed class OneInformedChoiceTests
         Assert.Equal(controlled.Scored.Select(ScoreSignature),
             autonomous.Scored.Select(ScoreSignature));
 
-        Pipeline.Resolve(controlled, null);
+        CommissioningTestDriver.Resolve(controlled, null);
         var controlledRecord = controlledWorld.Decisions.Last(d => d.ActorId == "vincent");
         Assert.Equal(autonomous.ChosenActionSignature(), controlledRecord.ChosenActionSignature());
     }
@@ -274,7 +274,7 @@ public sealed class OneInformedChoiceTests
             && c.TargetId == Cast.Grocery
             && c.Method == CoercionMethod.Threaten);
 
-        Pipeline.Resolve(opening, threaten.Id);
+        CommissioningTestDriver.Resolve(opening, threaten.Id);
         var operation = Assert.Single(world.Get("vincent").Execution.Operations);
         Assert.Equal(CoercionMethod.Threaten, operation.OwnerOrderedMethod);
 

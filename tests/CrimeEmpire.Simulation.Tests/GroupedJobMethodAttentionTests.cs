@@ -177,7 +177,7 @@ public sealed class GroupedJobMethodAttentionTests(ITestOutputHelper output)
         var chosen = prepared.Available.Single(c => c.TargetId == Cast.Tailor
             && c.Method == CoercionMethod.Persuade);
         string token = optionIds.Single(kv => kv.Value == chosen.Id).Key;
-        session.Choose(token);
+        session.ChooseAndConfirm(token);
         Assert.Equal(chosen.Id,
             session.World.Decisions.Last(d => d.ActorId == "vincent").Chosen!.Candidate.Id);
         Assert.Equal(CoercionMethod.Persuade,

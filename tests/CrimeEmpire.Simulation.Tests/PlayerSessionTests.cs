@@ -220,7 +220,7 @@ public sealed class PlayerSessionTests
 
         // Resolve it and read the record the pipeline wrote: everything offered was scored, and
         // nothing that was rejected was offered.
-        session.Choose(pending.Options[0].Id);
+        session.ChooseAndConfirm(pending.Options[0].Id);
 
         var record = session.World.Decisions.Last(d => d.ActorId == Controlled);
         var scoredIds = record.Scored.Select(s => s.Candidate.Id).ToHashSet(StringComparer.Ordinal);
@@ -303,7 +303,7 @@ public sealed class PlayerSessionTests
             {
                 preferred = wanted;
                 forkIndex = chosen.World.Decisions.Count;
-                chosen.Choose(alternative.Id);
+                chosen.ChooseAndConfirm(alternative.Id);
             }
             else
             {
@@ -347,15 +347,15 @@ public sealed class PlayerSessionTests
         // Options carry opaque tokens, so the raw candidate id is not a key the session accepts —
         // and neither is anything else that was not offered.
         string rejectedCandidateId = RejectedOptionOf(session);
-        Assert.Throws<SimulationInvariantException>(() => session.Choose(rejectedCandidateId));
-        Assert.Throws<SimulationInvariantException>(() => session.Choose("no-such-option"));
+        Assert.Throws<SimulationInvariantException>(() => session.ChooseAndConfirm(rejectedCandidateId));
+        Assert.Throws<SimulationInvariantException>(() => session.ChooseAndConfirm("no-such-option"));
 
         // And the guarantee that matters underneath it: the pipeline itself refuses a candidate its
         // own filters ruled out at this very deliberation. Asserted against `Pipeline.Resolve`
         // directly, because that is where actor parity is enforced — the session's token map is an
         // indirection in front of it, not a second answer to the same question.
         Assert.Throws<SimulationInvariantException>(
-            () => Pipeline.Resolve(PreparedOf(session), rejectedCandidateId));
+            () => CommissioningTestDriver.Resolve(PreparedOf(session), rejectedCandidateId));
 
         Assert.Equal(SessionStatus.AwaitingChoice, session.Status);
         Assert.Equal(decisionsBefore, session.World.Decisions.Count);
@@ -365,7 +365,7 @@ public sealed class PlayerSessionTests
         // *his* decision was recorded and records what he chose, not that exactly one thing
         // happened.
         var available = PreparedOf(session).Available.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
-        session.Choose(pending.Options[0].Id);
+        session.ChooseAndConfirm(pending.Options[0].Id);
 
         var his = session.World.Decisions[decisionsBefore];
         Assert.Equal(Controlled, his.ActorId);
@@ -425,8 +425,8 @@ public sealed class PlayerSessionTests
 
         Assert.Equal(StepStatus.AwaitingChoice, step.Status);
         var prepared = step.Awaiting!;
-        Pipeline.Resolve(prepared, null);
-        Assert.Throws<SimulationInvariantException>(() => Pipeline.Resolve(prepared, null));
+        CommissioningTestDriver.Resolve(prepared, null);
+        Assert.Throws<SimulationInvariantException>(() => CommissioningTestDriver.Resolve(prepared, null));
     }
 
     /// <summary>
@@ -501,7 +501,7 @@ public sealed class PlayerSessionTests
         while (session.Status == SessionStatus.AwaitingChoice)
         {
             Capture();
-            session.Choose(session.Pending!.Options[^1].Id);
+            session.ChooseAndConfirm(session.Pending!.Options[^1].Id);
         }
         Capture();
 
@@ -1413,7 +1413,7 @@ public sealed class PlayerSessionTests
     private static void Settle(SimulationSession session)
     {
         while (session.Status == SessionStatus.AwaitingChoice)
-            session.Choose(session.Pending!.Options[^1].Id);
+            session.ChooseAndConfirm(session.Pending!.Options[^1].Id);
     }
 
     private static PendingDecision RunToFirstPause(SimulationSession session)

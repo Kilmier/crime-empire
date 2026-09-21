@@ -65,6 +65,19 @@ public static class TraceWriter
             }
         }
 
+        if (d.ExecutorChoice is not null)
+        {
+            sb.AppendLine("   initial executor (after operation selection; developer diagnostic)");
+            foreach (var executor in d.ExecutorOptions)
+            {
+                string selected = ReferenceEquals(executor, d.ExecutorChoice) ? "*" : " ";
+                sb.AppendLine($"     {selected} {executor.Candidate.Id}  {executor.Total:0.0000}");
+                if (full)
+                    foreach (var part in executor.Components)
+                        sb.AppendLine($"         {part.Name}: {part.Value:+0.0000;-0.0000} — {part.Explanation}");
+            }
+        }
+
         var neverOccurred = d.Rejected.Where(r => r.Stage == RejectionStage.Salience).ToList();
         var ruledOut = d.Rejected.Where(r => r.Stage != RejectionStage.Salience).ToList();
 

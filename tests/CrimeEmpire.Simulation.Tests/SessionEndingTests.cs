@@ -29,7 +29,7 @@ public sealed class SessionEndingTests
     }
 
     [Theory]
-    [InlineData("baseline", ObjectiveOutcome.ObjectiveUnmet, 0.55)]
+    [InlineData("baseline", ObjectiveOutcome.ObjectiveUnmet, 0.50)]
     [InlineData("cautious-vincent", ObjectiveOutcome.ObjectiveUnmet, 0.50)]
     public void Natural_watch_only_runs_record_the_untuned_parallel_scenario_results(
         string variant,
@@ -95,7 +95,7 @@ public sealed class SessionEndingTests
         Assert.Equal(Deadline, session.Date);
         Assert.Null(session.Result);
 
-        session.Choose(session.Pending!.Options[0].Id);
+        session.ChooseAndConfirm(session.Pending!.Options[0].Id);
 
         Assert.Equal(SessionStatus.Resolved, session.Status);
         Assert.NotNull(session.Result);
@@ -137,7 +137,7 @@ public sealed class SessionEndingTests
             session.StepEvent,
             () => session.AdvanceDays(1),
             () => session.AdvanceTo(DateTime.MaxValue),
-            () => session.Choose("not-an-option"),
+            () => session.ChooseAndConfirm("not-an-option"),
             session.ResolveAutomatically,
         };
 

@@ -78,7 +78,7 @@ public sealed class ExecutorSuitabilityTests
     // Independently pinned, matching DirectActionVsDelegationTests' own copy, per this project's
     // practice of not sharing the same constant across files that check the same assumption.
     private const string StartPersuade = "persuade Ferri's tailor shop to pay";
-    private const string CarryOn = "carry on getting Ferri's tailor shop to pay";
+    private const string CarryOn = "leave these orders unchanged";
     private const string DelegateToTommy = "hand it to Tommy Nardo";
     private const string DelegateToAngelo = "hand it to Angelo Conti";
 
@@ -1336,7 +1336,9 @@ public sealed class ExecutorSuitabilityTests
 
     private static PendingDecision ReachFork(SimulationSession session, DateTime horizon)
     {
-        RunToNextPause(session, horizon);
+        // Commissioning adds competing work to later ordinary reviews; focus the owned operation
+        // to exercise the existing two-executor handover boundary without reserving ordinary slots.
+        while (session.Pending is null) session.StepEvent();
         ChooseByDescription(session, StartPersuade);
         return RunToNextPause(session, horizon);
     }
@@ -1356,7 +1358,9 @@ public sealed class ExecutorSuitabilityTests
         Assert.True(index >= 0,
             $"no offered option reads \"{description}\" on {session.Date:yyyy-MM-dd} — offered: " +
             string.Join(" | ", pending.Options.Select(o => o.Description)));
-        session.Choose(pending.Options[index].Id);
+        session.ChooseAndConfirm(pending.Options[index].Id);
+        if (description == StartPersuade && session.Status == SessionStatus.Ready)
+            session.ReviewOperation("work-0");
     }
 
     // ================================================================= helpers — developer-facing pipeline level
@@ -1377,8 +1381,8 @@ public sealed class ExecutorSuitabilityTests
         var startCandidate = first.Available.Single(c =>
             c.Kind == ActionKind.StartStrategy && c.Strategy == StrategyKind.SecureTribute
             && c.TargetId == Cast.Tailor && c.Method == CoercionMethod.Persuade);
-        Pipeline.Resolve(first, startCandidate.Id);
-
+        CommissioningTestDriver.Resolve(first, startCandidate.Id);
+        Strategies.ScheduleReview(world, first.Actor.Execution.Strategy!, world.Now);
         return AdvanceToVincentsNextPause(world);
     }
 
@@ -1607,14 +1611,16 @@ public sealed class ExecutorSuitabilityTests
         Assert.True(index >= 0,
             $"no offered option reads \"{description}\" on {session.Date:yyyy-MM-dd} — offered: " +
             string.Join(" | ", pending.Options.Select(o => o.Description)));
-        session.Choose(pending.Options[index].Id);
+        session.ChooseAndConfirm(pending.Options[index].Id);
+        if (description == StartPersuade && session.Status == SessionStatus.Ready)
+            session.ReviewOperation("work-0");
     }
 
     private static void SettleLastOption(CrimeEmpire.Persistence.Session.PersistentSession session)
     {
         session.AdvanceDays(90);
         while (session.Status == SessionStatus.AwaitingChoice)
-            session.Choose(session.Pending!.Options[^1].Id);
+            session.ChooseAndConfirm(session.Pending!.Options[^1].Id);
     }
 
     private static string StrategyFingerprint(StrategyInstance? s)

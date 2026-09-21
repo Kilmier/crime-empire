@@ -68,7 +68,7 @@ public sealed class InformationTriggeredReviewTests
         var pause = Runner.Step(controlled, controlled.Now, "vincent");
         var decision = Assert.IsType<PreparedDecision>(pause.Awaiting);
         string chosen = decision.Scored[0].Candidate.Id;
-        Pipeline.Resolve(decision, chosen);
+        CommissioningTestDriver.Resolve(decision, chosen);
         var npc = Runner.Step(automatic, automatic.Now, null);
         Assert.Equal(pause.Event!.Time, npc.Event!.Time);
         Assert.Equal(ControlledAutonomousParityTests.ComprehensiveFingerprint(automatic),
@@ -116,7 +116,7 @@ public sealed class InformationTriggeredReviewTests
         var claim = new Claim(ClaimKind.PersonUsedViolence, "tommy", Cast.Grocery, 101);
         Deliver(world, claim);
         var review = Runner.Step(world, world.Now, "vincent").Awaiting!;
-        Pipeline.Resolve(review, review.Available.Single(c => c.Kind == ActionKind.ContinueStrategy).Id);
+        CommissioningTestDriver.Resolve(review, review.Available.Single(c => c.Kind == ActionKind.ContinueStrategy).Id);
         long next = operation.PendingReviewEventId!.Value;
         Deliver(world, claim);
         Assert.Equal(next, operation.PendingReviewEventId);
@@ -149,7 +149,7 @@ public sealed class InformationTriggeredReviewTests
     {
         var session = PersistentSession.Start(42, "baseline", "tommy");
         for (int guard = 0; session.Pending is null && guard < 1000; guard++) session.StepEvent();
-        session.Choose(session.Pending!.Options.Single(o =>
+        session.ChooseAndConfirm(session.Pending!.Options.Single(o =>
             o.Description == "report the situation to Vincent Russo").Id);
         var world = session.InnerSession.World;
         var operation = Assert.Single(world.Get("vincent").Execution.Operations, s => s.DelegatedToId == "tommy");
@@ -162,8 +162,13 @@ public sealed class InformationTriggeredReviewTests
             Assert.Equal(ControlledAutonomousParityTests.ComprehensiveFingerprint(world),
                 ControlledAutonomousParityTests.ComprehensiveFingerprint(loaded.InnerSession.World));
             var prior = operation.PendingReviewEventId;
-            session.StepEvent();
-            loaded.StepEvent();
+            // Other same-time events may precede the information-triggered owner review now.
+            for (int i = 0; i < 30 && operation.PendingReviewEventId == prior; i++)
+            {
+                Assert.Null(session.Pending);
+                session.StepEvent();
+                loaded.StepEvent();
+            }
             Assert.Contains(world.Decisions, d => d.ActorId == "vincent" && d.At == session.Date);
             Assert.NotEqual(prior, operation.PendingReviewEventId);
             Assert.Equal(ControlledAutonomousParityTests.ComprehensiveFingerprint(world),

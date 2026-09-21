@@ -180,6 +180,7 @@ public static class Strategies
 
         string stepName = steps[s.StepIndex];
         s.StepIndex++;
+        var before = actor.Cognition.Records.ToDictionary(r => r.Claim);
 
         switch (s.Kind)
         {
@@ -193,6 +194,10 @@ public static class Strategies
                 AdvanceInvestigation(world, owner, actor, s, stepName, rng);
                 break;
         }
+        foreach (var position in actor.Cognition.Records)
+            if (!before.TryGetValue(position.Claim, out var prior) || !Equals(prior, position))
+                actor.Execution.OperationLearning[position.Claim] = new OperationLearning(
+                    s.OwnerId, s.LocalSequence, position);
     }
 
     // ------------------------------------------------------------------ tribute

@@ -238,6 +238,13 @@ public partial class Game : Control
             ? SelfTestRestartSavePath
             : ProductionSavePath;
 
+        if (FlagRequested("--selftest-commission") || FlagRequested("--selftest-commission-save") || FlagRequested("--selftest-commission-load"))
+        {
+            _activeSavePath = ProjectSettings.GlobalizePath("user://crime-empire-commission-test.db");
+            RunCommissioningSelfTest();
+            return;
+        }
+
         if (SelfTestRequested())
         {
             RunSelfTest();
@@ -986,6 +993,15 @@ public partial class Game : Control
             : pending.At.ToString("d MMM yyyy", CultureInfo.InvariantCulture));
 
         if (pending.Focus is { } focus) yield return Faint($"on {actor.Possessive} mind: {focus}");
+
+        if (pending.Commissioning is { } draft)
+        {
+            yield return Plain($"Secure tribute — {draft.Operation}");
+            yield return Plain(draft.Executor is null ? "Choose who will carry out the operation." : $"Executor: {draft.Executor}");
+            yield return Faint(draft.Expectation);
+            yield return Faint("This is an unconfirmed plan. Assigned work becomes known through reports or visible consequences.");
+            foreach (var staffing in draft.Staffing) yield return Faint(staffing);
+        }
 
         // Milestone 026's second correction: what hangs over him, so that "cover it up" and "deny
         // it" read as what they are — his own conscience listing exits — rather than as somebody
@@ -1920,7 +1936,7 @@ public partial class Game : Control
         GD.Print("== CE-OPERATION-VINCENT-END ==");
 
         (bool ok, string why) vincentResult = CheckOperationSection(
-            vincentScreen, mustContain: "Tommy Nardo is handling it", mustNotContain: "made his demand");
+            vincentScreen, mustContain: "Tommy Nardo is handling it", mustNotContain: "pushed harder");
         if (vincentResult.ok && !vincentScreen.Contains(
                 "Tommy Nardo is handling it under his standing order: persuade Ferri's tailor shop to pay",
                 StringComparison.Ordinal))
@@ -1936,7 +1952,7 @@ public partial class Game : Control
         GD.Print("== CE-OPERATION-TOMMY-END ==");
 
         (bool ok, string why) tommyResult = CheckOperationSection(
-            tommyScreen, mustContain: "made his demand", mustNotContain: "is handling it");
+            tommyScreen, mustContain: "pushed harder", mustNotContain: "is handling it");
         if (tommyResult.ok && !tommyScreen.Contains(
                 "his current approach: threaten Ferri's tailor shop", StringComparison.Ordinal))
             tommyResult = (false, "Tommy's operation does not show the approach he is carrying out");
@@ -2162,15 +2178,124 @@ public partial class Game : Control
         => OS.GetCmdlineArgs().Contains(flag) || OS.GetCmdlineUserArgs().Contains(flag);
 
     /// <summary>
-    /// Presses the button reading this text, as a person would, and lets its own handler do the rest
-    /// — including the rebuild that frees the button the signal came from.
+    /// Exercises commissioning through live controls and isolated replay save/load processes.
     /// </summary>
-    private bool Press(string text)
+    private void RunCommissioningSelfTest()
+    {
+        try
+        {
+            string stage = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--commission-stage="))?.Split('=')[1] ?? "executor";
+            string expectedPath = _activeSavePath + ".expected";
+            string State() => System.Text.Json.JsonSerializer.Serialize(new { _session!.Date, _session.Pending, Snapshot = _session.Snapshot() });
+            void Click(string text)
+            {
+                if (!Press(text, false)) throw new InvalidOperationException($"Commissioning button missing: {text}");
+            }
+            if (FlagRequested("--selftest-commission-load"))
+            {
+                BuildStartScreen(); Click("Load saved game");
+                if (State() != System.IO.File.ReadAllText(expectedPath))
+                    throw new InvalidOperationException("Fresh-process draft reconstruction differs.");
+                if (stage == "report")
+                {
+                    Click("report the situation to Vincent Russo");
+                    if (State() == System.IO.File.ReadAllText(expectedPath))
+                        throw new InvalidOperationException("Restored reporting decision did not resolve.");
+                }
+                if (_session!.Pending?.Commissioning is { Executor: null }) Click("Assign Tommy Nardo");
+                if (_session.Pending?.Commissioning is not null) Click("Confirm operation");
+                if (stage is not ("back" or "report") && !_session.Snapshot().Operations.Any(o => o.ExecutorName == "Tommy Nardo"))
+                    throw new InvalidOperationException("Loaded commission did not retain its executor.");
+            }
+            else if (stage == "report")
+            {
+                // Reports commit and deliver atomically. The preceding real executor decision
+                // is therefore the supported save boundary before information transmission.
+                StartSession(42, "baseline", "tommy", "tommy");
+                for (int i = 0; i < 300; i++)
+                {
+                    if (_session!.Pending?.Options.Any(o => o.Description == "report the situation to Vincent Russo") == true
+                        && _session.Date > _session.StartedOn.AddDays(3)) break;
+                    if (_session.Pending is { } pending)
+                    {
+                        var option = pending.Options.FirstOrDefault(o => o.Description.StartsWith("carry on"))
+                            ?? pending.Options.First(o => o.Description != "Go back");
+                        if (!Press(option.Description)) throw new InvalidOperationException("Report-path choice missing.");
+                    }
+                    else Click("Next event");
+                }
+                if (_session!.Pending?.Options.Any(o => o.Description == "report the situation to Vincent Russo") != true)
+                    throw new InvalidOperationException("No natural executor account reached.");
+                Click("Save"); System.IO.File.WriteAllText(expectedPath, State());
+            }
+            else
+            {
+                StartSession(42, "baseline", "vincent", "vincent");
+                for (int i = 0; i < 100 && _session!.Pending is null; i++) Click("Next event");
+                Click("threaten Bellini's grocery");
+                if (!Screen().Contains("Usually unfolds over several days; setbacks may extend it."))
+                    throw new InvalidOperationException("Static planning expectation is not rendered.");
+                if (stage != "leaf") Click("Assign Tommy Nardo");
+                if (stage == "back") { Click("Go back"); Click("Go back"); }
+                if (stage is "committed" or "execution") Click("Confirm operation");
+                if (stage == "execution")
+                {
+                    var reachesExecution = _session!.Date.AddDays(3);
+                    for (int i = 0; i < 100 && _session.Date < reachesExecution; i++)
+                    {
+                        if (_session.Pending is { } pending)
+                        {
+                            var option = pending.Options.FirstOrDefault(o => o.Description.StartsWith("carry on")
+                                || o.Description == "leave these orders unchanged" || o.Description == "take no action")
+                                ?? pending.Options.First(o => o.Description != "Go back");
+                            if (!Press(option.Description)) throw new InvalidOperationException("Execution continuation missing.");
+                        }
+                        else Click("Next event");
+                    }
+                    if (_session.Date < reachesExecution || !_session.Snapshot().Operations.Any(o => o.ExecutorName == "Tommy Nardo"))
+                        throw new InvalidOperationException("Commission did not survive scheduled execution.");
+                }
+                if (FlagRequested("--selftest-commission-save"))
+                {
+                    Click("Save");
+                    System.IO.File.WriteAllText(expectedPath, State());
+                }
+                else
+                {
+                    if (_session!.Snapshot().Operations.Count != 0) throw new InvalidOperationException("Draft started work.");
+                    Click("Go back"); Click("Go back");
+                    Click("threaten Bellini's grocery"); Click("Assign Tommy Nardo"); Click("Confirm operation");
+                    string screen = Screen();
+                    if (!screen.Contains("Tommy Nardo is handling it") || !screen.Contains("No report about this operation yet"))
+                        throw new InvalidOperationException("Standing order or source-limited status is not rendered.");
+                    Click("Next event"); Click("persuade Ferri's tailor shop to pay");
+                    if (!Screen().Contains("Tommy Nardo is unavailable: you assigned"))
+                        throw new InvalidOperationException("Known staffing explanation is absent.");
+                    Click("Do it yourself"); Click("Confirm operation");
+                    if (_session.Snapshot().Operations.Count != 2) throw new InvalidOperationException("Delegation did not create bandwidth.");
+                }
+            }
+            GD.Print("CE-COMMISSION ok " + stage);
+            GetTree().Quit();
+        }
+        catch (Exception ex) { GD.PrintErr("CE-COMMISSION FAILED " + ex); GetTree().Quit(1); }
+    }
+
+    private bool Press(string text, bool finishCommission = true)
     {
         var button = FindButton(this, text);
         if (button is null) return false;
 
         button.EmitSignal(BaseButton.SignalName.Pressed);
+        // Historical personal-start UI proofs explicitly answer the added executor/confirmation
+        // questions. The commissioning proofs use finishCommission:false to exercise each button.
+        if (finishCommission && _session?.Pending?.Commissioning is { Executor: null })
+        {
+            var personal = FindButton(this, "Do it yourself");
+            var executor = personal?.Text ?? _session.Pending.Options.First(o => o.Description.StartsWith("Assign ")).Description;
+            if (!Press(executor, false) || !Press("Confirm operation", false))
+                throw new InvalidOperationException("The commissioning controls are missing.");
+        }
         return true;
     }
 

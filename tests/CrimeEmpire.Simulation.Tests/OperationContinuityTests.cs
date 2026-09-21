@@ -44,7 +44,7 @@ public sealed class OperationContinuityTests(ITestOutputHelper output)
             for (int guard = 0; session.Pending is null && session.Status != SessionStatus.Resolved && guard < 1000; guard++)
                 session.StepEvent();
             Assert.NotNull(session.Pending);
-            session.Choose(session.Pending.Options.Single(o => o.Description == choice).Id);
+            session.ChooseAndConfirm(session.Pending.Options.Single(o => o.Description == choice).Id);
         }
         session.AdvanceDays(90);
         Assert.Equal(SessionStatus.Resolved, session.Status);
@@ -77,7 +77,7 @@ public sealed class OperationContinuityTests(ITestOutputHelper output)
         { Id = 234, Time = world.Now, Kind = EventKind.StrategyBlocked, OwnerId = executor.Id, Cause = "staged refusal",
           Payload = new EventPayload { StrategyOwnerId = owner.Id, StrategySequence = operation.LocalSequence } });
         var question = prepared.Available.First(c => c.Kind == ActionKind.SeekCorroboration && c.TargetId == "salvatore");
-        Pipeline.Resolve(prepared, question.Id);
+        CommissioningTestDriver.Resolve(prepared, question.Id);
         Assert.NotNull(operation.PendingStepEventId);
         Assert.Same(operation, Strategies.CurrentExecution(world, executor));
         Assert.Equal(knownBefore, System.Text.Json.JsonSerializer.Serialize(owner.Cognition.Records));

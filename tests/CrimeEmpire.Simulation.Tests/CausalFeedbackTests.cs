@@ -77,7 +77,7 @@ public sealed class CausalFeedbackTests
         Assert.Equal(Salvatore, pending.ActorId);
 
         var askOption = pending.Options.Single(o => o.Description == AskVincent);
-        session.Choose(askOption.Id);
+        session.ChooseAndConfirm(askOption.Id);
 
         var snapshot = session.Snapshot();
 
@@ -132,34 +132,38 @@ public sealed class CausalFeedbackTests
     {
         var session = SimulationSession.Start(Seed, NaturalQuestionVariant, "vincent", Salvatore);
         var pending = AdvanceToVincentsAnswerToSalvatore(session);
-        session.Choose(pending.Options.Single(o => o.Description == TellSalvatoreAboutTribute).Id);
+        session.ChooseAndConfirm(pending.Options.Single(o => o.Description == TellSalvatoreAboutTribute).Id);
 
         var snapshot = session.Snapshot();
         Assert.DoesNotContain(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
         Assert.Contains(snapshot.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
     }
 
-    /// <summary>An autonomous report of collection is not an exact-claim answer about refusal.</summary>
+    /// <summary>A report of target vulnerability is not an exact-claim answer about refusal.</summary>
     [Fact]
     public void A_later_report_asserting_a_different_claim_does_not_resolve_the_original_request()
     {
         var session = SimulationSession.Start(Seed, NaturalQuestionVariant, Salvatore);
         var pending = AdvanceToPause(session);
-        session.Choose(pending.Options.Single(o => o.Description == AskVincent).Id);
+        session.ChooseAndConfirm(pending.Options.Single(o => o.Description == AskVincent).Id);
 
-        // Vincent is not controlled here at all — this is his fully autonomous path, exactly the
-        // shape the old (now-retired) expectation assumed would answer the question within days.
-        AdvanceDaysThroughOwnPauses(session, 90);
+        // Initial autonomous commissioning changes which later natural accounts arrive. Exercise
+        // the exact-claim distinction with an ordinary real report of a different held claim.
+        var world = session.World;
+        var sender = world.Get("vincent");
+        var different = new Claim(ClaimKind.TargetIsVulnerable, Cast.Grocery);
+        Assert.True(sender.Cognition.Holds(different));
+        var report = Reporting.Compose(world, sender, world.Get(Salvatore),
+            new Candidate("different-account", ActionKind.ReportToSuperior, "test", "account")
+            { TargetId = Salvatore, Candor = ReportCandor.Candid, AnsweringClaim = different },
+            Salience.Perceive(sender, world.Now));
+        Assert.Contains(report.Asserted, a => a.Claim == different);
+        Assert.DoesNotContain(report.Asserted, a => a.Claim.Kind == ClaimKind.BusinessRefusesTribute);
+        Reporting.Deliver(world, report, world.Get(Salvatore));
+        Assert.Contains(session.Snapshot().AwaitingAnswers, r => r.AskedId == "vincent");
+        Assert.Contains(world.Get(Salvatore).Cognition.Testimony,
+            t => t.SenderId == "vincent" && t.Claim == different);
 
-        var snapshot = session.Snapshot();
-
-        // Both jobs now collect, but TributeCollected is not BusinessRefusesTribute.
-        // Reporting one cannot silently answer a question about the other.
-        Assert.Contains(snapshot.Known, b => b.Claim.Kind == ClaimKind.TributeCollected && b.Claim.Subject == Cast.Grocery);
-        Assert.Contains(snapshot.AwaitingAnswers, r => r.AskedId == "vincent");
-        Assert.DoesNotContain(snapshot.Disagreements,
-            d => d.Statement.Contains("Bellini's grocery", StringComparison.Ordinal)
-                 && d.Accounts.Any(a => a.SourceName == "Vincent Russo"));
     }
 
     /// <summary>
@@ -180,7 +184,7 @@ public sealed class CausalFeedbackTests
         var playerChosen = SimulationSession.Start(Seed, Baseline, "vincent");
         var pending = AdvanceToPause(playerChosen);
         var matching = pending.Options.Single(o => o.Description == autoDescription);
-        playerChosen.Choose(matching.Id);
+        playerChosen.ChooseAndConfirm(matching.Id);
 
         Assert.Equal(autoDescription, playerChosen.Snapshot().LastAction!.Description);
     }
@@ -219,16 +223,16 @@ public sealed class CausalFeedbackTests
                 return original.Pending!;
             }
 
-            original.Choose(AdvanceToPersistentPause().Options.Single(o => o.Description == persuade).Id);
-            original.Choose(AdvanceToPersistentPause().Options.Single(o => o.Description == carryOn).Id);
-            original.Choose(AdvanceToPersistentPause().Options.Single(o => o.Description == handToTommy).Id);
+            original.ChooseAndConfirm(AdvanceToPersistentPause().Options.Single(o => o.Description == persuade).Id);
+            original.ChooseAndConfirm(AdvanceToPersistentPause().Options.Single(o => o.Description == carryOn).Id);
+            original.ChooseAndConfirm(AdvanceToPersistentPause().Options.Single(o => o.Description == handToTommy).Id);
 
             // Salvatore's own question has arrived on its own by now (1987-03-24, confirmed directly)
             // and Vincent's next pause is the wake it produced — the request is genuinely open here,
             // not yet answered.
             foreach (var next in new[] { "persuade Bellini's grocery to pay", "leave these orders unchanged",
                          "carry on getting Bellini's grocery to pay", "hand it to Tommy Nardo", "ask Salvatore Greco for permission" })
-                original.Choose(AdvanceToPersistentPause().Options.Single(o => o.Description == next).Id);
+                original.ChooseAndConfirm(AdvanceToPersistentPause().Options.Single(o => o.Description == next).Id);
             AdvanceToPersistentPause();
             var pendingRequest = Assert.Single(original.Snapshot().AwaitingAnswers);
 
@@ -241,7 +245,7 @@ public sealed class CausalFeedbackTests
             Assert.Equal(pendingRequest.AskedAt, reloadedRequest.AskedAt);
             Assert.Equal(pendingRequest.Statement, reloadedRequest.Statement);
 
-            loaded.Choose(loaded.Pending!.Options.Single(o => o.Description == TellSalvatoreAboutTribute).Id);
+            loaded.ChooseAndConfirm(loaded.Pending!.Options.Single(o => o.Description == TellSalvatoreAboutTribute).Id);
             var resolved = loaded.Snapshot();
             Assert.DoesNotContain(resolved.AwaitingAnswers, r => r.AskedId == "vincent");
             Assert.Contains(resolved.Known, b => (b.Attribution ?? "").Contains("Vincent", StringComparison.Ordinal));
@@ -259,7 +263,7 @@ public sealed class CausalFeedbackTests
     {
         var session = SimulationSession.Start(Seed, NaturalQuestionVariant, Salvatore);
         var pending = AdvanceToPause(session);
-        session.Choose(pending.Options.Single(o => o.Description == AskVincent).Id);
+        session.ChooseAndConfirm(pending.Options.Single(o => o.Description == AskVincent).Id);
 
         var first = session.Snapshot();
         var second = session.Snapshot();
@@ -279,7 +283,7 @@ public sealed class CausalFeedbackTests
         {
             var session = SimulationSession.Start(Seed, NaturalQuestionVariant, Salvatore);
             var pending = AdvanceToPause(session);
-            session.Choose(pending.Options.Single(o => o.Description == AskVincent).Id);
+            session.ChooseAndConfirm(pending.Options.Single(o => o.Description == AskVincent).Id);
             session.AdvanceDays(3);
             return session.Snapshot();
         }
@@ -329,10 +333,10 @@ public sealed class CausalFeedbackTests
             "say nothing to Vincent Russo about it either way";
 
         var silent = StageTommysViolenceAndVincentsQuestion(Baseline);
-        silent.Choose(AdvanceToPause(silent).Options.Single(o => o.Description == silence).Id);
+        silent.ChooseAndConfirm(AdvanceToPause(silent).Options.Single(o => o.Description == silence).Id);
 
         var partial = StageTommysViolenceAndVincentsQuestion(Baseline);
-        partial.Choose(AdvanceToPause(partial).Options.Single(o => o.Description == partialWithholding).Id);
+        partial.ChooseAndConfirm(AdvanceToPause(partial).Options.Single(o => o.Description == partialWithholding).Id);
 
         var silentRequest = Assert.Single(silent.Snapshot().AwaitingAnswers, r => r.AskedId == "tommy");
         var partialRequest = Assert.Single(partial.Snapshot().AwaitingAnswers, r => r.AskedId == "tommy");
@@ -363,7 +367,7 @@ public sealed class CausalFeedbackTests
         var session = StageTommysViolenceAndVincentsQuestion(Baseline);
         var pending = AdvanceToPause(session);
         Assert.Equal("tommy", pending.ActorId);
-        session.Choose(pending.Options.Single(o => o.Description == falseDenial).Id);
+        session.ChooseAndConfirm(pending.Options.Single(o => o.Description == falseDenial).Id);
 
         var snapshot = session.Snapshot();
         Assert.DoesNotContain(snapshot.AwaitingAnswers, r => r.AskedId == "tommy");
@@ -392,7 +396,7 @@ public sealed class CausalFeedbackTests
             for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
                 original.StepEvent();
             Assert.Equal(SessionStatus.AwaitingChoice, original.Status);
-            original.Choose(original.Pending!.Options.Single(o => o.Description == falseDenial).Id);
+            original.ChooseAndConfirm(original.Pending!.Options.Single(o => o.Description == falseDenial).Id);
 
             Assert.DoesNotContain(original.Snapshot().AwaitingAnswers, r => r.AskedId == "tommy");
 
@@ -436,7 +440,7 @@ public sealed class CausalFeedbackTests
 
             for (int guard = 0; guard < 5000 && original.Status != SessionStatus.AwaitingChoice; guard++)
                 original.StepEvent();
-            original.Choose(original.Pending!.Options.Single(o => o.Description == partialWithholding).Id);
+            original.ChooseAndConfirm(original.Pending!.Options.Single(o => o.Description == partialWithholding).Id);
 
             Assert.Single(original.Snapshot().AwaitingAnswers);
 
@@ -499,7 +503,7 @@ public sealed class CausalFeedbackTests
 
         var playerChosen = StageTommysViolenceAndVincentsQuestion(Baseline);
         var pending = AdvanceToPause(playerChosen);
-        playerChosen.Choose(pending.Options.Single(o => o.Description == autoDescription).Id);
+        playerChosen.ChooseAndConfirm(pending.Options.Single(o => o.Description == autoDescription).Id);
 
         // The parity itself is the claim, not a specific expected count — whichever way the chosen
         // option actually leaves the request, both paths must leave it the identical way.
@@ -532,7 +536,7 @@ public sealed class CausalFeedbackTests
     {
         var session = SimulationSession.Start(Seed, Baseline, Marco);
         var pending = AdvanceToPause(session);
-        session.Choose(pending.Options.Single(o => o.Description == choice).Id);
+        session.ChooseAndConfirm(pending.Options.Single(o => o.Description == choice).Id);
 
         var snapshot = session.Snapshot();
         Assert.NotNull(snapshot.LastAction);
@@ -547,7 +551,7 @@ public sealed class CausalFeedbackTests
     {
         var session = SimulationSession.Start(Seed, Baseline, Marco);
         var pending = AdvanceToPause(session);
-        session.Choose(pending.Options.Single(o => o.Description == "refuse Vincent Russo").Id);
+        session.ChooseAndConfirm(pending.Options.Single(o => o.Description == "refuse Vincent Russo").Id);
 
         var snapshot = session.Snapshot();
         Assert.NotNull(snapshot.MyBusiness);
@@ -562,7 +566,7 @@ public sealed class CausalFeedbackTests
     {
         var session = SimulationSession.Start(Seed, Baseline, Marco);
         var pending = AdvanceToPause(session);
-        session.Choose(pending.Options.Single(o => o.Description == "pay what Vincent Russo is asking").Id);
+        session.ChooseAndConfirm(pending.Options.Single(o => o.Description == "pay what Vincent Russo is asking").Id);
 
         var snapshot = session.Snapshot();
         Assert.NotNull(snapshot.MyBusiness);
@@ -978,7 +982,7 @@ public sealed class CausalFeedbackTests
         while (session.Date < horizon)
         {
             while (session.Status == SessionStatus.AwaitingChoice)
-                session.Choose(session.Pending!.Options[0].Id);
+                session.ChooseAndConfirm(session.Pending!.Options[0].Id);
             int remaining = (horizon - session.Date).Days;
             if (remaining <= 0) break;
             session.AdvanceDays(remaining);
@@ -1006,7 +1010,7 @@ public sealed class CausalFeedbackTests
             {
                 case SessionCommandKind.StepEvent: loaded.StepEvent(); break;
                 case SessionCommandKind.AdvanceDays: loaded.AdvanceDays(command.Days!.Value); break;
-                case SessionCommandKind.Choose: loaded.Choose(command.OptionToken!); break;
+                case SessionCommandKind.Choose: loaded.ChooseAndConfirm(command.OptionToken!); break;
                 default: throw new InvalidOperationException($"unrecognised command kind '{command.Kind}'");
             }
         }

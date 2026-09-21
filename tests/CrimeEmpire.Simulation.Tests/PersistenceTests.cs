@@ -217,7 +217,7 @@ public sealed class PersistenceTests
         {
             session.StepEvent,
             () => session.AdvanceDays(1),
-            () => session.Choose("not-an-option"),
+            () => session.ChooseAndConfirm("not-an-option"),
         })
         {
             Assert.Throws<InvalidOperationException>(input);
@@ -805,7 +805,7 @@ public sealed class PersistenceTests
         Assert.True(index >= 0,
             $"no offered option reads \"{description}\" on {session.Date:yyyy-MM-dd} — offered: " +
             string.Join(" | ", pending.Options.Select(o => o.Description)));
-        session.Choose(pending.Options[index].Id);
+        session.ChooseAndConfirm(pending.Options[index].Id);
     }
 
     private static void PlayChoices(PersistentSession session, IEnumerable<string> descriptions)
@@ -817,7 +817,7 @@ public sealed class PersistenceTests
     {
         Assert.Equal(SessionStatus.AwaitingChoice, session.Status);
         var option = Assert.Single(session.Pending!.Options, o => o.Description == description);
-        session.Choose(option.Id);
+        session.ChooseAndConfirm(option.Id);
     }
 
     private static void AdvanceTogetherUntil(
@@ -877,7 +877,7 @@ public sealed class PersistenceTests
         for (int guard = 0; guard < 20000 && session.Status != SessionStatus.Resolved; guard++)
         {
             if (session.Status == SessionStatus.AwaitingChoice)
-                session.Choose(session.Pending!.Options[0].Id);
+                session.ChooseAndConfirm(session.Pending!.Options[0].Id);
             else
                 session.StepEvent();
         }

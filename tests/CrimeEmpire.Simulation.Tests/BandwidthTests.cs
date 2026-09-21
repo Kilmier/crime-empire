@@ -23,7 +23,7 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         { Id = 1234, Time = world.Now, Kind = EventKind.RoleReview, OwnerId = tommy.Id, Cause = "test" });
         var continued = prepared.Generated.Single(c => c.Kind == ActionKind.ContinueStrategy);
         session.ReviewOperation("work-0");
-        session.Choose(session.Pending!.Options.Single(o => o.Description == "hand it to Angelo Conti").Id);
+        session.ChooseAndConfirm(session.Pending!.Options.Single(o => o.Description == "hand it to Angelo Conti").Id);
         string before = ControlledAutonomousParityTests.ComprehensiveFingerprint(world);
         Assert.Throws<SimulationInvariantException>(() => Commit.Apply(world, tommy, continued,
             prepared.Agenda, prepared.Context, new List<string>()));
@@ -37,12 +37,12 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         var session = Concurrent("capable-angelo");
         var owner = session.World.Get("vincent");
         session.ReviewOperation("work-1");
-        session.Choose(session.Pending!.Options.Single(o => o.Description == "hand it to Angelo Conti").Id);
+        session.ChooseAndConfirm(session.Pending!.Options.Single(o => o.Description == "hand it to Angelo Conti").Id);
         // The third known refusal is staged to test capacity, not claimed as a natural opening.
         owner.Cognition.Learn(new Claim(ClaimKind.BusinessRefusesTribute, Cast.Bakery),
             Stance.Believes, 1.0, SourceKind.Discovery, owner.Id, session.World.Now);
         while (session.Pending is null) session.StepEvent();
-        session.Choose(session.Pending.Options.Single(o => o.Description == "persuade Dorato's bakery to pay").Id);
+        session.ChooseAndConfirm(session.Pending.Options.Single(o => o.Description == "persuade Dorato's bakery to pay").Id);
         Assert.Equal(3, owner.Execution.Operations.Count);
         Assert.Equal(3, owner.Execution.Operations.Select(s => s.DelegatedToId ?? s.OwnerId).Distinct().Count());
         Assert.NotNull(Strategies.CurrentExecution(session.World, owner));
@@ -80,7 +80,7 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         player.ReviewOperation("work-0");
         Assert.Equal(JsonSerializer.Serialize(auto.Pending), JsonSerializer.Serialize(player.Pending));
         auto.ResolveAutomatically();
-        player.Choose(player.Pending!.Options.Single(o => o.Description == auto.Snapshot().LastAction!.Description).Id);
+        player.ChooseAndConfirm(player.Pending!.Options.Single(o => o.Description == auto.Snapshot().LastAction!.Description).Id);
         Assert.Equal(ControlledAutonomousParityTests.ComprehensiveFingerprint(auto.World),
             ControlledAutonomousParityTests.ComprehensiveFingerprint(player.World));
     }
@@ -156,7 +156,7 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         session.ReviewOperation($"work-{delegated.LocalSequence}");
         var choice = Assert.Single(session.Pending!.Options, o => o.Description == "drop getting Ferri's tailor shop to pay");
         Assert.InRange(session.Pending.Options.Count, 2, 6);
-        session.Choose(choice.Id);
+        session.ChooseAndConfirm(choice.Id);
         Assert.Same(personal, Assert.Single(owner.Execution.Operations));
         Assert.Equal(pending, personal.PendingStepEventId);
         Assert.Equal(ordinal, personal.NextAdvanceOrdinal);
@@ -182,7 +182,7 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         var start = s.StartedAt;
         long oldStep = s.PendingStepEventId!.Value;
         session.ReviewOperation($"work-{s.LocalSequence}");
-        session.Choose(session.Pending!.Options.Single(o => o.Description == "hand it to Angelo Conti").Id);
+        session.ChooseAndConfirm(session.Pending!.Options.Single(o => o.Description == "hand it to Angelo Conti").Id);
         Assert.Same(s, owner.Execution.Operations.Single(o => o.LocalSequence == s.LocalSequence));
         Assert.Equal("angelo", s.DelegatedToId);
         Assert.Equal("tommy", s.PolicyBreachDecisionMakerId);
@@ -238,7 +238,7 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         foreach (var text in Opening)
         {
             while (session.Pending is null) session.StepEvent();
-            session.Choose(session.Pending.Options.Single(o => o.Description == text).Id);
+            session.ChooseAndConfirm(session.Pending.Options.Single(o => o.Description == text).Id);
         }
         session.ReviewOperation("work-0");
         string path = Path.Combine(Path.GetTempPath(), $"bandwidth-{Guid.NewGuid():N}.db");
@@ -250,7 +250,7 @@ public sealed class BandwidthTests(ITestOutputHelper output)
             Assert.Equal(ControlledAutonomousParityTests.ComprehensiveFingerprint(session.InnerSession.World),
                 ControlledAutonomousParityTests.ComprehensiveFingerprint(loaded.InnerSession.World));
             foreach (var branch in new[] { session, loaded })
-                branch.Choose(branch.Pending!.Options.Single(o => o.Description.StartsWith("drop ")).Id);
+                branch.ChooseAndConfirm(branch.Pending!.Options.Single(o => o.Description.StartsWith("drop ")).Id);
             Assert.Equal(ControlledAutonomousParityTests.ComprehensiveFingerprint(session.InnerSession.World),
                 ControlledAutonomousParityTests.ComprehensiveFingerprint(loaded.InnerSession.World));
             Assert.Single(loaded.Snapshot().Operations);
@@ -272,7 +272,12 @@ public sealed class BandwidthTests(ITestOutputHelper output)
         foreach (var description in Opening)
         {
             for (int guard = 0; session.Pending is null && guard < 1000; guard++) session.StepEvent();
-            session.Choose(session.Pending!.Options.Single(o => o.Description == description).Id);
+            if (!session.Pending!.Options.Any(o => o.Description == description) && description.StartsWith("hand it to"))
+            {
+                session.ChooseAndConfirm(session.Pending.Options.Single(o => o.Description.StartsWith("carry on")).Id);
+                session.ReviewOperation("work-0");
+            }
+            session.ChooseAndConfirm(session.Pending!.Options.Single(o => o.Description == description).Id);
         }
         Assert.Equal(2, session.Snapshot().Operations.Count);
         return session;

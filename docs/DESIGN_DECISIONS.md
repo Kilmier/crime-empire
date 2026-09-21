@@ -1030,3 +1030,33 @@ findings. Retired in favor of this entry; see `OPEN_CONCERNS.md` for what's stil
 - **No heuristic test for a disguised heat bar.** Was concern #10. Resolved:
   `GAME_VISION.md`'s Design Heuristics and
   `INFORMATION_AND_LEGIBILITY.md`'s "Anti-heat-bar tests" both cover this directly now.
+
+## Direct commissioning — milestone 031, Matt's authorization
+
+- SecureTribute is a multi-phase pressure operation. Retain prototype timing; the static expectation
+  "Usually unfolds over several days; setbacks may extend it" is scope information, never a live ETA.
+- Commissioning and personal execution eligibility are separate. The owner can commission a free
+  known direct subordinate while executing other work; each executor still carries at most one job.
+- The milestone-029 preparation/attention contract is unchanged. After selecting a retained tribute
+  leaf only, a paused replayable draft replaces its atomic selection boundary. The original decision
+  remains unresolved. Backtracking must not repeat deliberation, consume RNG, increment decision
+  counts, reserve resources, disclose information, move time or resolve as inaction. Confirm once
+  through shared resolution with write-boundary validation. Existing replay persistence reconstructs
+  drafts; no second save architecture is authorized.
+- Executor attention is protected self when personally eligible plus at most five known eligible
+  direct subordinates (no sixth subordinate without self). Reuse existing delegation eligibility,
+  salience, relationship and capability-belief semantics with no new coefficients. Deterministic
+  retention ties; neutral candidate-id presentation. NPC commissioning is present, not future work.
+- Reuse milestone-030 target assessment capture and ordinary assignment receipt effects. Direct
+  commission captures the selected target's held refusal and paired held vulnerability at the
+  issuer's stance, confidence and basis. Only the named recipient learns these accounts.
+- An operation-specific account needs attribution, not just a matching address or a nearby time.
+  Existing reported claims may carry the operation the sender learned them through. Only actual
+  receipt updates the owner's account history; unrelated accounts and private progress do not.
+- Initial delegation preserves owner/local identity, progress, standing versus live method,
+  policy responsibility, scheduling and existing controls/reviews. New interventions, delayed
+  commands, new negotiation/refusal, live forecasts and reporting vocabulary remain deferred.
+
+Source: Matt's acceptance of the 031 scope review findings, two owner rulings, and explicit
+implementation authorization in the Commission the Job task. These are scope decisions, not
+implementation acceptance; see CURRENT_MILESTONE.md for the active gate.

@@ -30,6 +30,8 @@ public sealed record DecisionRecord(
     IReadOnlyList<string> Reconsideration,
     IReadOnlyList<string> SalienceNotes)
 {
+    public IReadOnlyList<ScoreBreakdown> ExecutorOptions { get; init; } = Array.Empty<ScoreBreakdown>();
+    public ScoreBreakdown? ExecutorChoice { get; init; }
     /// <summary>
     /// What this character actually did, as structured fields — the unit of comparison for
     /// "do two configurations behave differently".
@@ -54,6 +56,7 @@ public sealed record DecisionRecord(
             return $"{At:O}|{ActorId}|nothing-was-open";
 
         return $"{At:O}|{ActorId}|{c.Kind}|{c.Id}|{c.TargetId}|" +
-               $"{c.AboutClaim}|{c.AnsweringClaim}|{c.Candor}";
+               $"{c.AboutClaim}|{c.AnsweringClaim}|{c.Candor}" +
+               (ExecutorChoice is null ? "" : $"|executor:{ExecutorChoice.Candidate.Id}");
     }
 }

@@ -620,7 +620,7 @@ public sealed class DirectActionVsDelegationTests
         Assert.True(index >= 0,
             $"no offered option reads \"{description}\" on {session.Date:yyyy-MM-dd} — offered: " +
             string.Join(" | ", pending.Options.Select(o => o.Description)));
-        session.Choose(pending.Options[index].Id);
+        session.ChooseAndConfirm(pending.Options[index].Id);
     }
 
     /// <summary>
@@ -632,7 +632,7 @@ public sealed class DirectActionVsDelegationTests
     private static void Settle(SimulationSession session)
     {
         while (session.Status == SessionStatus.AwaitingChoice)
-            session.Choose(session.Pending!.Options[^1].Id);
+            session.ChooseAndConfirm(session.Pending!.Options[^1].Id);
     }
 
     /// <summary>The operation's own replay/future-decision-relevant identity — owner, delegate,
@@ -873,7 +873,7 @@ public sealed class DirectActionVsDelegationTests
         Assert.True(index >= 0,
             $"no offered option reads \"{description}\" on {session.Date:yyyy-MM-dd} — offered: " +
             string.Join(" | ", pending.Options.Select(o => o.Description)));
-        session.Choose(pending.Options[index].Id);
+        session.ChooseAndConfirm(pending.Options[index].Id);
     }
 
     /// <summary>
@@ -889,7 +889,7 @@ public sealed class DirectActionVsDelegationTests
     {
         session.AdvanceDays(90);
         while (session.Status == SessionStatus.AwaitingChoice)
-            session.Choose(session.Pending!.Options[^1].Id);
+            session.ChooseAndConfirm(session.Pending!.Options[^1].Id);
     }
 
     /// <summary>Full equivalence between a loaded continuation and its unsaved control: history, the

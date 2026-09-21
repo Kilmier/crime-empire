@@ -12,6 +12,92 @@ namespace CrimeEmpire.Simulation.Tests;
 
 public sealed class CommissioningTests
 {
+    private static PreparedCommission ScoreOpening(Action<World, Character, Candidate>? change = null,
+        CoercionMethod method = CoercionMethod.Persuade)
+    {
+        var world = Cast.Build(42, "capable-angelo");
+        var opening = Opening(world);
+        change?.Invoke(world, opening.Actor, Leaf(opening, method: method));
+        var prepared = Pipeline.Prepare(world, opening.Actor, opening.Trigger);
+        return Commissioning.Prepare(prepared, Leaf(prepared, method: method));
+    }
+
+    private static double Component(ScoreBreakdown score, string name)
+        => score.Components.Where(c => c.Name == name).Sum(c => c.Value);
+
+    [Fact]
+    public void Executor_scoring_ignores_unrelated_vulnerability_of_the_executor()
+    {
+        var before = ScoreOpening();
+        var after = ScoreOpening((world, owner, _) => owner.Cognition.Learn(
+            new Claim(ClaimKind.TargetIsVulnerable, "tommy"), Stance.Knows, 1,
+            SourceKind.Participant, owner.Id, world.Now));
+        Assert.Equal(JsonSerializer.Serialize(before.Scored), JsonSerializer.Serialize(after.Scored));
+        Assert.All(after.Available, c => Assert.Equal(Cast.Grocery, c.TargetId));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Every_executor_prices_the_selected_shops_vulnerability_and_claim_confidence(bool knowledge)
+    {
+        var before = ScoreOpening();
+        var after = ScoreOpening((world, owner, leaf) => owner.Cognition.Learn(
+            knowledge ? Assert.Single(leaf.RequiredKnowledge) : new Claim(ClaimKind.TargetIsVulnerable, Cast.Grocery),
+            Stance.Knows, 1, SourceKind.Participant, owner.Id, world.Now));
+        string changedComponent = knowledge ? "uncertainty" : "expected reward";
+        Assert.Equal(3, before.Scored.Count);
+        foreach (var score in before.Scored)
+        {
+            var changed = Assert.Single(after.Scored, s => s.Candidate.Id == score.Candidate.Id);
+            Assert.True(Component(changed, changedComponent) > Component(score, changedComponent));
+            Assert.Equal(before.Operation.RequiredKnowledge, score.Candidate.RequiredKnowledge);
+        }
+        Assert.Single(before.Scored.Select(s => Component(s, changedComponent)).Distinct());
+        Assert.Single(after.Scored.Select(s => Component(s, changedComponent)).Distinct());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Held_executor_evidence_can_reorder_delegates_without_changing_operation_components(bool capability)
+    {
+        PreparedCommission WithFavored(string favored) => ScoreOpening((world, owner, _) =>
+        {
+            foreach (string id in new[] { "tommy", "angelo" })
+            {
+                Relations.Establish(owner, id, trust: capability ? .5 : id == favored ? 1 : 0);
+                foreach (string bar in new[] { CapabilityBar.RoughWork, CapabilityBar.HardMan })
+                    owner.Cognition.Learn(CapabilityBar.About(id, bar),
+                        capability && id != favored ? Stance.Rejects : Stance.Believes,
+                        1, SourceKind.Participant, owner.Id, world.Now);
+            }
+        });
+        var tommy = WithFavored("tommy"); var angelo = WithFavored("angelo");
+        static string BestDelegate(PreparedCommission c) => c.Scored.First(
+            s => s.Candidate.Kind == ActionKind.DelegateStrategy).Candidate.InitialExecutorId!;
+        Assert.Equal("tommy", BestDelegate(tommy));
+        Assert.Equal("angelo", BestDelegate(angelo));
+        foreach (var score in tommy.Scored)
+        {
+            var other = Assert.Single(angelo.Scored, s => s.Candidate.Id == score.Candidate.Id);
+            Assert.Equal(Component(score, "expected reward"), Component(other, "expected reward"));
+            Assert.Equal(Component(score, "uncertainty"), Component(other, "uncertainty"));
+        }
+    }
+
+    [Fact]
+    public void Delegate_alternatives_preserve_the_selected_operations_policy_cost()
+    {
+        var commission = ScoreOpening(method: CoercionMethod.Force);
+        Assert.NotNull(commission.Operation.BreachesPolicyId);
+        Assert.All(commission.Scored, score =>
+        {
+            Assert.Equal(commission.Operation.BreachesPolicyId, score.Candidate.BreachesPolicyId);
+            Assert.True(Component(score, "reluctance to breach policy") < 0);
+        });
+    }
+
     internal static SimulationSession Opening()
     {
         var session = SimulationSession.Start(42, "baseline", "vincent");
@@ -136,16 +222,16 @@ public sealed class CommissioningTests
         var commission = Commissioning.Prepare(p, Leaf(p));
         Assert.Equal(6, commission.Available.Count);
         Assert.Single(commission.Available, c => c.Kind == ActionKind.StartStrategy);
-        Assert.DoesNotContain(commission.Available, c => c.TargetId is "extra-0" or "extra-8");
+        Assert.DoesNotContain(commission.Available, c => c.InitialExecutorId is "extra-0" or "extra-8");
         Assert.Equal(commission.Available.OrderBy(c => c.Id, StringComparer.Ordinal), commission.Available);
         Assert.Equal(new[] { "extra-1", "extra-2", "extra-3", "extra-4", "tommy" },
-            commission.Available.Where(c => c.Kind == ActionKind.DelegateStrategy).Select(c => c.TargetId));
+            commission.Available.Where(c => c.Kind == ActionKind.DelegateStrategy).Select(c => c.InitialExecutorId));
         // A held capability judgment can move a name into the five places. Objective skill was
         // never consulted, and the final menu still uses neutral id order.
         owner.Cognition.Learn(new Claim(ClaimKind.PersonIsCapable, "extra-7", CapabilityBar.HardMan),
             Stance.Believes, .95, SourceKind.Participant, owner.Id, world.Now);
         var informed = Pipeline.Prepare(world, owner, opening.Trigger);
-        Assert.Contains(Commissioning.Prepare(informed, Leaf(informed)).Available, c => c.TargetId == "extra-7");
+        Assert.Contains(Commissioning.Prepare(informed, Leaf(informed)).Available, c => c.InitialExecutorId == "extra-7");
         owner.Execution.Operations.Add(Work(owner.Id, Cast.Tailor));
         var busyOwner = Pipeline.Prepare(world, owner, opening.Trigger);
         Assert.Equal(5, Commissioning.Prepare(busyOwner, Leaf(busyOwner)).Available.Count);
@@ -406,7 +492,7 @@ public sealed class CommissioningTests
         var leaf = Leaf(p, Cast.Grocery, CoercionMethod.Force);
         var commission = Commissioning.Prepare(p, leaf);
         Assert.DoesNotContain(commission.Available, c => c.Kind == ActionKind.StartStrategy);
-        Assert.Contains(commission.Available, c => c.TargetId == "tommy");
+        Assert.Contains(commission.Available, c => c.InitialExecutorId == "tommy");
         Pipeline.Resolve(p, leaf.Id);
         Assert.Equal("tommy", original.Actor.Execution.Operations.Single().DelegatedToId);
     }

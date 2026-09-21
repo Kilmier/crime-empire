@@ -218,3 +218,93 @@ held claim, rather than assuming an obsolete automatic collection report arrives
 - New interventions, delayed commands, new refusal/negotiation behavior, live forecasts and new
   reporting vocabulary remain deferred. No next milestone is authorized by this delivery.
 - Unrelated ROADMAP and proposal edits were left outside this commit. No push was requested or made.
+
+## Correction 1 — preserve operation inputs during executor scoring
+
+### Independent review and owner ruling
+
+Sol's review supplied by Matt names exact implementation commit
+`c279d04a7b65b802d359286cac8806eaf2b0303f` against parent `ae4e465`. Sol stated that he authored
+neither commit. Verdict: **FAIL, Class A; safe to build upon: NO**. One new P1: commissioning
+delegates used the executor as `TargetId` and dropped `RequiredKnowledge`, while generic reward
+and uncertainty scoring interpreted those fields as the selected business and its evidence.
+In the live capable-Angelo Bellini/Persuade trace, Tommy received reward +0.2156 and no uncertainty;
+self received +0.3502 and -0.4226. These were supposed to price the same selected operation.
+
+Sol reproduced a clean build, 803 passing tests, all six hashes twice, comparison (six traces/five
+action sequences), both required viewpoints, all 24 Godot checks and the diff check. Sol did not
+repeat the twelve source mutations because that review was read-only. Those original probes did
+not cover this defect; their success was insufficient assurance. Other commissioning requirements
+were assessed as implemented and covered, while human comprehension remained pending.
+
+Matt accepted this P1 for correction. This append records that ruling and the focused correction;
+it supersedes the original archive's claim that no independent review had occurred. It does not
+change the original FAIL into PASS or establish acceptance of the corrected state.
+
+### Correction and regression proof
+
+- Initial delegate alternatives clone the retained operation, preserving its business, method,
+  required knowledge and policy context. The staffing fields use the existing delegation crew
+  requirement and do not require the commissioning actor's personal execution skill.
+- `InitialExecutorId` carries the separate executor identity through retention, relationship and
+  capability scoring, confirmation and presentation. Historical handover candidates keep their
+  existing identity convention through the scorer's fallback. No new coefficient is introduced.
+- The behavioral replay comparator includes the now-separate executor identity. Existing retention
+  assertions read that identity rather than the business target.
+- Six additional cases use the production commissioning preparation path: an unrelated vulnerability
+  belief about Tommy leaves executor scores unchanged; changing shop vulnerability or required-claim
+  confidence affects every alternative's corresponding component; changing only relationship or held
+  capability evidence can reorder delegates without changing those operation components; delegated
+  force preserves the selected operation's policy cost.
+- Temporarily injecting `TargetId = id` into the new delegate construction made
+  `Executor_scoring_ignores_unrelated_vulnerability_of_the_executor` fail (one test, one failure).
+  Source bytes were restored in a finally block, then rebuilt before all verification below.
+
+### Verification on the restored correction
+
+- `dotnet build CrimeEmpire.sln --no-restore --verbosity quiet`: 0 warnings/errors.
+- `dotnet test CrimeEmpire.sln --no-build --no-restore`: **809 passed**, no failures/skips;
+  29 commissioning cases, including the six additional cases. No historical expected outcome was
+  changed to make this correction pass.
+- `--verify --seed 42 --days 90` for every existing variant produced equal A/B hashes:
+
+  | Variant | Corrected trace hash |
+  |---|---|
+  | baseline | `A99EC8C3720272B5` |
+  | cautious-vincent | `F5890C72AAA69948` |
+  | watchful-boss | `2A05F3A500CF0D74` |
+  | disloyal-vincent | `ED344BD31EF7B2E6` |
+  | resentful-tommy | `A4D7CEA8BE62B8C7` |
+  | capable-angelo | `F5C95925301DA227` |
+
+- `--compare --seed 42`: six distinct traces, five distinct chosen-action sequences. Hashes change
+  because executor evaluation now uses the actual operation inputs. No timing, RNG algorithm,
+  personality, capability weight, fixture or pacing tuning was performed.
+- Required disloyal-Vincent/Salvatore and baseline/Vincent viewpoint runs completed successfully;
+  the existing information-boundary tests also passed. This is implementer verification.
+- All 24 headless Godot checks passed: the nine existing single-process checks, commissioning,
+  restart save/load, and commissioning save/load pairs at leaf, executor, back, committed, execution
+  and report boundaries. An isolated ordinary-save override was supplied; the real playtest save's
+  hash was identical before and after the run.
+- Logs were written to temporary `ce031-correction-*` files. Saves remain build-specific under the
+  existing replay contract; this is not a claim that saves from the previous build load in this one.
+
+### Human playtest evidence and carried feedback
+
+Before this correction, Matt confirmed direct Tommy commissioning and confirmation, busy-Tommy
+exclusion with personal execution of the other job, multi-day progression, personally collected
+tailor income followed by Tommy's grocery income, and save/load at various phases with no duplicate
+payment and stable executor/job/method. His initial load complaint was explicitly retracted.
+
+Matt requested clearer mission wording identifying both shops without losing source attribution;
+permission wording that states the requested act; meaningful visible responses to reports and
+questions; relevance checks for asking about a business after payment; and the ability to tell a
+delegate to change approach. The screenshots also show a vertically wrapped session-objective
+label occupying excessive space. These are observations for later scope assessment, not changes
+made in this P1 correction. A pending answer is not by itself proof that a response never occurs;
+stale character beliefs are not automatically an information-boundary defect. Suggested dialogue
+must not invent private feelings, progress, forecasts or a financial-cut mechanic.
+
+New owner intervention remains explicitly deferred under the authorized M031 scope. The full human
+comprehension gate, independent correction review and Matt's acceptance of the corrected state are
+not established by these tests or observations. Unrelated ROADMAP/proposal work remains untouched.

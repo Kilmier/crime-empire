@@ -54,12 +54,19 @@ public static class Commissioning
 
         var ctx = decision.Context;
         var delegates = Delegates(ctx);
-        var retained = delegates.Select(id => DelegateCandidate($"executor:{operation.Id}:{id}", id,
-                operation.Strategy!.Value, operation.Domain, operation.Method, delegates.Count > 1))
+        // Keep the selected job's target, knowledge and policy inputs. Only the means of
+        // staffing it changes; the executor is not the business being coerced.
+        var retained = delegates.Select(id => operation with
+            {
+                Id = $"executor:{operation.Id}:{id}", Kind = ActionKind.DelegateStrategy,
+                Description = $"have {id} execute {operation.Strategy}",
+                InitialExecutorId = id, ComparingExecutors = delegates.Count > 1,
+                RequiredSkill = null, RequiredSkillLevel = 0, RequiredCrew = 1,
+            })
             .Where(c => RequirementsMet(ctx.Actor, c) && decision.Salience.For(c) >= SalienceProfile.Threshold)
             .OrderByDescending(c => decision.Salience.For(c))
             .ThenByDescending(c => Utility.DelegationConsiderations(ctx.Actor, decision.Actor.Psychology,
-                decision.Perceived, c.TargetId!, c.ComparingExecutors).Sum(p => p.Value))
+                decision.Perceived, c.InitialExecutorId!, c.ComparingExecutors).Sum(p => p.Value))
             .ThenBy(c => c.Id, StringComparer.Ordinal).Take(5).ToList();
         if (PersonallyEligible(ctx, operation))
             retained.Add(operation with { Id = $"executor:{operation.Id}:{decision.Actor.Id}" });
@@ -78,7 +85,7 @@ public static class Commissioning
     }
 
     internal static string Executor(PreparedDecision decision, Candidate choice)
-        => choice.Kind == ActionKind.DelegateStrategy ? choice.TargetId! : decision.Actor.Id;
+        => choice.InitialExecutorId ?? decision.Actor.Id;
 
     internal static void Validate(World world, Character owner, Candidate operation, string executor)
     {

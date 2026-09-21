@@ -42,7 +42,8 @@ public sealed record Candidate(
     public string? OperationOwnerId { get; init; }
     public int? OperationSequence { get; init; }
     public bool IsOperationReview { get; init; }
-    /// <summary>Chosen at commissioning; null on ordinary non-commissioning candidates.</summary>
+    /// <summary>Executor alternative during commissioning, then the confirmed executor.
+    /// Separate from the operation's business TargetId; null on ordinary candidates.</summary>
     public string? InitialExecutorId { get; init; }
 
     /// <summary>

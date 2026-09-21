@@ -428,7 +428,8 @@ public static class Utility
         switch (cand.Kind)
         {
             case ActionKind.DelegateStrategy when cand.TargetId is not null:
-                foreach (var part in DelegationConsiderations(actor, psy, perceived, cand.TargetId, cand.ComparingExecutors))
+                foreach (var part in DelegationConsiderations(actor, psy, perceived,
+                    cand.InitialExecutorId ?? cand.TargetId, cand.ComparingExecutors))
                     Add(part.Name, part.Value, part.Explanation, part.Reads, part.WithoutRelationship);
                 break;
             case ActionKind.ReportToSuperior when cand.TargetId is not null:

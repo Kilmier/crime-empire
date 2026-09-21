@@ -2,15 +2,17 @@
 
 ## Status and gate
 
-**Milestone 031 — Commission the Job: implementation delivered; awaiting independent review.**
+**Milestone 031 — Commission the Job: accepted P1 corrected; awaiting independent correction review.**
 Matt authorized the revised scope after accepting its P1 and five P2 findings and supplying the two
 owner rulings. The implementation and verification record is in
 [`milestones/031-commission-the-job.md`](milestones/031-commission-the-job.md).
 
-The implementation commit is the commit adding that archive. Review its exact diff from `ae4e465`;
-this is implementation-risk work, with the independent reviewer assigning the final review class.
-No independent PASS, owner acceptance or milestone closure is asserted by implementer verification.
-Do not begin another milestone or extend this implementation before the review/owner gate.
+Sol independently reviewed `c279d04a7b65b802d359286cac8806eaf2b0303f` against `ae4e465`:
+Class A **FAIL**, one P1 for executor alternatives replacing the selected business target and losing
+its knowledge inputs. Matt accepted that finding for correction. The focused correction preserves
+operation inputs and carries executor identity separately. Review the correction commit containing
+this update against `c279d04`; no independent PASS, owner acceptance of the corrected state, or
+milestone closure is asserted. Do not begin another milestone or extend this correction.
 
 ## Delivered scope
 
@@ -26,14 +28,16 @@ scope and tests are the implementation review target; this short handoff does no
 
 ## Verification and outstanding human evidence
 
-Build passed with no warnings/errors; 803 tests passed; all six seed-42 variants replayed identically;
-24 Godot UI/restart checks and 12 deliberate fault checks passed. See the archive for commands,
-hashes, first behavior differences, test adaptations and limits.
+Correction build passed with no warnings/errors; 809 tests passed; all six seed-42 variants replayed
+identically; 24 Godot UI/restart checks passed with the ordinary playtest save unchanged. Restoring
+the reviewed target substitution makes the focused regression fail. See the appended archive record
+for evidence, hashes and limits. The original 12 mutation probes missed this defect.
 
-The human comprehension gate is still pending: Matt must be able to identify objective, executor,
-ordered method, multi-day scope, known progress and staffing reasons without confusing no-report
-with inactivity or an expectation with a guaranteed completion date. The request is outstanding;
-automated checks do not establish human comprehension.
+Matt reported that initial delegation, staffing availability, income attribution and save/load at
+various phases worked, with no duplicated payment and executor/job/method retained. He also raised
+briefing, permission-label, report/response and post-completion relevance concerns, and requested
+future owner control over a delegate's approach. These observations do not close the human
+comprehension gate or authorize those additional changes; the archive preserves the playtest notes.
 
 ## Deliberately carried work
 

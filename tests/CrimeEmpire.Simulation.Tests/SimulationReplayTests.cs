@@ -428,7 +428,7 @@ public sealed class SimulationReplayTests
             lines.Add($"decision|{d.ActorId}|{d.TriggerKind}|{d.Agenda.Kind}|{d.Agenda.Domain}|" +
                       $"{d.Chosen?.Candidate.Kind}|{d.Chosen?.Candidate.Strategy}|{d.Chosen?.Candidate.Method}|" +
                       $"{d.Chosen?.Candidate.TargetId}|{d.Chosen?.Candidate.Candor}|" +
-                      $"{d.ExecutorChoice?.Candidate.Kind}|{d.ExecutorChoice?.Candidate.TargetId}");
+                      $"{d.ExecutorChoice?.Candidate.Kind}|{d.ExecutorChoice?.Candidate.TargetId}|{d.ExecutorChoice?.Candidate.InitialExecutorId}");
 
         foreach (var business in world.Businesses.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
             lines.Add($"business|{business.Id}|{Number(business.MonthlyRevenue)}|" +

@@ -355,7 +355,8 @@ public static class Strategies
 
                 business.TributeCollectedForCurrentAgreement = true;
                 double amount = business.MonthlyRevenue * 0.2;
-                owner.Capabilities.ReceiveCash(amount, business.Id, executor.Id, world.Now);
+                owner.Capabilities.ReceiveCash(amount, business.Id, executor.Id, world.Now,
+                    new OperationIdentity(s.OwnerId, s.LocalSequence));
                 owner.Motivations.AddPressure(PressureKind.RevenueShortfall, -0.6);
                 world.Org.AdjustCondition(OrgCondition.RevenueLoss, -0.5);
                 world.Record("tribute-collected", executor.Id, business.Id,
@@ -866,6 +867,13 @@ public static class Strategies
     public static void Complete(World world, Character owner, StrategyInstance s, string why)
     {
         string executorId = s.DelegatedToId ?? s.OwnerId;
+        if (s.Kind == StrategyKind.SecureTribute)
+        {
+            var identity = new OperationIdentity(s.OwnerId, s.LocalSequence);
+            if (!owner.Execution.EndedTributeOrders.Any(e => e.Operation == identity))
+                owner.Execution.EndedTributeOrders.Add(new TributeOrderEnded(identity, s.TargetId,
+                    executorId, world.Now, owner.Capabilities.CashReceipts.Any(r => r.Operation == identity)));
+        }
         world.Queue.Schedule(world.Now, EventKind.StrategyComplete, owner.Id,
             $"{s.Label} finished: {why}",
             new EventPayload

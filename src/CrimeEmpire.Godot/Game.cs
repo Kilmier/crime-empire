@@ -238,6 +238,13 @@ public partial class Game : Control
             ? SelfTestRestartSavePath
             : ProductionSavePath;
 
+        if (FlagRequested("--selftest-scene") || FlagRequested("--selftest-scene-save") || FlagRequested("--selftest-scene-load"))
+        {
+            _activeSavePath = ProjectSettings.GlobalizePath("user://crime-empire-scene-test.db");
+            RunSceneSelfTest();
+            return;
+        }
+
         if (FlagRequested("--selftest-commission") || FlagRequested("--selftest-commission-save") || FlagRequested("--selftest-commission-load"))
         {
             _activeSavePath = ProjectSettings.GlobalizePath("user://crime-empire-commission-test.db");
@@ -495,6 +502,11 @@ public partial class Game : Control
 
         _root.AddChild(BuildToolbar(session, snapshot));
         _root.AddChild(BuildObjective(session));
+        var situation = new VBoxContainer();
+        situation.AddChild(Heading("THE SITUATION"));
+        foreach (string line in SceneNarration.Situation(snapshot, session.Pending))
+            situation.AddChild(Plain(line));
+        _root.AddChild(situation);
 
         var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         columns.AddThemeConstantOverride("separation", 10);
@@ -838,6 +850,12 @@ public partial class Game : Control
 
         yield return new HSeparator();
         yield return Plain("WHAT JUST HAPPENED");
+
+        yield return Heading("CHRONICLE");
+        yield return Faint(SceneNarration.HistoryLimit);
+        foreach (var entry in snapshot.Chronicle.Reverse())
+            yield return Plain($"{entry.At.ToString("d MMM HH:mm", CultureInfo.InvariantCulture)}  {SceneNarration.Entry(entry)}");
+        yield return new HSeparator();
 
         yield return snapshot.LastAction is { } action
             ? Faint($"{action.At.ToString("d MMM", CultureInfo.InvariantCulture)}  {p.Subject} chose to {action.Description}")
@@ -2279,6 +2297,134 @@ public partial class Game : Control
             GetTree().Quit();
         }
         catch (Exception ex) { GD.PrintErr("CE-COMMISSION FAILED " + ex); GetTree().Quit(1); }
+    }
+
+    /// <summary>M032: the production controls and the actual scene/chronicle labels, including
+    /// fresh-process replay. Expected data is test evidence only, never a production save source.</summary>
+    private void RunSceneSelfTest()
+    {
+        try
+        {
+            string route = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--scene-route="))?.Split('=')[1] ?? "direct";
+            string expectedPath = _activeSavePath + ".expected";
+            string State() => System.Text.Json.JsonSerializer.Serialize(new { _session!.Date, _session.Pending, Snapshot = _session.Snapshot() });
+            void Click(string text)
+            {
+                if (!Press(text, false)) throw new InvalidOperationException($"Scene button missing: {text}");
+            }
+            void Advance()
+            {
+                if (_session!.Pending is { } pending)
+                {
+                    var choice = pending.Options.FirstOrDefault(o => o.Description.StartsWith("carry on")
+                        || o.Description == "leave these orders unchanged" || o.Description == "take no action")
+                        ?? pending.Options.First(o => o.Description != "Go back");
+                    if (!Press(choice.Description)) throw new InvalidOperationException("Scene continuation missing.");
+                }
+                else Click("Next event");
+            }
+            void CheckRendered()
+            {
+                string screen = Screen();
+                int start = screen.IndexOf("THE SITUATION", StringComparison.Ordinal);
+                var voice = _session!.Snapshot().ViewpointPronouns;
+                string knowledgeHeading = $"WHAT {voice.Subject.ToUpperInvariant()} {voice.Verb("KNOWS", "KNOW")}";
+                int end = start < 0 ? -1 : screen.IndexOf(knowledgeHeading, start, StringComparison.Ordinal);
+                if (start < 0 || end < start) throw new InvalidOperationException("Situation card absent from live UI.");
+                string card = screen[start..end];
+                foreach (var line in SceneNarration.Situation(_session!.Snapshot(), _session.Pending))
+                    if (!card.Contains(line)) throw new InvalidOperationException("Situation line absent from its own card.");
+                int history = screen.IndexOf("CHRONICLE", StringComparison.Ordinal);
+                if (history < 0) throw new InvalidOperationException("Chronicle absent.");
+                string chronicle = screen[history..];
+                if (!chronicle.Contains(SceneNarration.HistoryLimit)) throw new InvalidOperationException("History limitation absent.");
+                foreach (var entry in _session.Snapshot().Chronicle)
+                    if (!chronicle.Contains(SceneNarration.Entry(entry))) throw new InvalidOperationException("Chronicle entry absent from live UI.");
+            }
+            bool refusal = false;
+            if (FlagRequested("--selftest-scene-load"))
+            {
+                BuildStartScreen(); Click("Load saved game");
+                if (State() != System.IO.File.ReadAllText(expectedPath))
+                    throw new InvalidOperationException("Field-complete scene reconstruction differs after process restart.");
+            }
+            else if (route == "accounts")
+            {
+                StartSession(42, "baseline", null, "vincent");
+                for (int i = 0; i < 14 && _session!.Status != SessionStatus.Resolved; i++) Click("Advance a week");
+                if (!_session!.Snapshot().Chronicle.Any(e => e.Id.Kind == ChronicleKind.Account))
+                    throw new InvalidOperationException("No production account reached the chronicle.");
+                CheckRendered(); Click("Save"); System.IO.File.WriteAllText(expectedPath, State());
+            }
+            else
+            {
+                StartSession(42, route == "revisions" ? "capable-angelo" : "baseline", "vincent", "vincent");
+                for (int i = 0; i < 100 && _session!.Pending is null; i++) Click("Next event");
+                Click("threaten Bellini's grocery");
+                Click(route is "delegated" or "revisions" ? "Assign Tommy Nardo" : "Do it yourself");
+                Click("Confirm operation");
+                CheckRendered();
+                if (_session!.Snapshot().Chronicle.Count != 1) throw new InvalidOperationException("Order is not immediate.");
+                if (route == "delegated" && !Screen().Contains("No report about this operation yet"))
+                    throw new InvalidOperationException("Delegated progress leaked before an account.");
+                if (route == "cancelled")
+                {
+                    Click("Review getting Bellini's grocery to pay"); Click("drop getting Bellini's grocery to pay");
+                }
+                else
+                {
+                    var date = _session.Date.AddDays(3);
+                    for (int i = 0; i < 100 && _session.Date < date; i++) Advance();
+                    if (_session.Snapshot().Operations.Count == 0) throw new InvalidOperationException("Save boundary must be during work.");
+                }
+                if (route == "revisions")
+                {
+                    bool second = false;
+                    for (int i = 0; i < 1500 && _session.Snapshot().Income.Count < 2; i++)
+                    {
+                        if (_session.Status == SessionStatus.Resolved) throw new InvalidOperationException("Two-collection revision route did not finish.");
+                        if (!second && _session.Snapshot().Income.Count == 1
+                            && _session.Pending?.Options.Any(o => o.Description == "threaten Ferri's tailor shop") == true)
+                        {
+                            Click("threaten Ferri's tailor shop"); Click("Assign Tommy Nardo"); Click("Confirm operation"); second = true;
+                        }
+                        else Advance();
+                    }
+                    if (_session.Snapshot().Income.Count != 2 || !_session.Snapshot().Known.Any(b =>
+                            b.Claim.Subject == "tommy" && b.Certainty == "you are certain of it"))
+                        throw new InvalidOperationException("Revised current belief is absent after two collections.");
+                    if (_session.Snapshot().Chronicle.Any(e => e.Claim?.Subject == "tommy"))
+                        throw new InvalidOperationException("Independent revisions invented chronicle entries.");
+                }
+                Click("Save"); System.IO.File.WriteAllText(expectedPath, State());
+                if (!FlagRequested("--selftest-scene-save"))
+                {
+                    Click("Load");
+                    if (State() != System.IO.File.ReadAllText(expectedPath)) throw new InvalidOperationException("Scene reload differs.");
+                }
+            }
+            CheckRendered();
+            if (!FlagRequested("--selftest-scene-save") && route is not ("cancelled" or "revisions" or "accounts"))
+            {
+                for (int i = 0; i < 1000 && !_session!.Snapshot().Chronicle.Any(e => e.Id.Kind == ChronicleKind.Income); i++)
+                {
+                    if (_session!.Status == SessionStatus.Resolved) throw new InvalidOperationException("Route never paid.");
+                    Advance(); CheckRendered();
+                    refusal |= _session.Pending?.Occasion?.Contains("has turned you down") == true;
+                }
+                if (!_session!.Snapshot().Chronicle.Any(e => e.Id.Kind == ChronicleKind.Ended && e.MoneyArrived == true))
+                    throw new InvalidOperationException("Collection and ended order missing.");
+                if (route == "direct" && !refusal) throw new InvalidOperationException("Direct route did not expose a personal refusal.");
+                GD.Print("CE-SCENE terminal " + Screen());
+            }
+            // A non-recipient watches the same autonomous production world; no owner history leaks.
+            StartSession(42, "baseline", null, "kane");
+            for (int i = 0; i < 8; i++) Click("Advance a week");
+            if (_session!.Snapshot().Chronicle.Count != 0 || Screen().Contains("Order: threaten Bellini"))
+                throw new InvalidOperationException("Non-recipient gained private operation history.");
+            GD.Print("CE-SCENE ok " + route); GetTree().Quit();
+        }
+        catch (Exception ex) { GD.PrintErr("CE-SCENE FAILED " + ex); GetTree().Quit(1); }
     }
 
     private bool Press(string text, bool finishCommission = true)

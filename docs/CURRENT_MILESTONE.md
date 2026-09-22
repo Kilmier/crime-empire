@@ -2,27 +2,33 @@
 
 ## Status and gate
 
-**No active milestone. Milestone 031 — Commission the Job is closed by Matt's ruling on
-2026-09-21.** Matt accepted the corrected state after Sol's independent Class A PASS AFTER FIXES
-on `80037423f7760e5fe8f828b5a559f8af4e1e45fc` and the corrected-build playtest. This resolves the
-milestone's human-comprehension gate by owner acceptance; it does not assert that all presentation
-concerns have been solved.
+**Milestone 032 — One Operation Becomes a Scene: implementation and self-verification complete;
+independent exact-commit review and Matt's human comprehension/playtest acceptance remain pending.**
 
-The append-only implementation, review, correction and closure record is in
-[`milestones/031-commission-the-job.md`](milestones/031-commission-the-job.md).
-The documentation-only closure commit containing this update requires its own exact-commit
-Class B review under AGENTS.md; no review exemption was requested or granted.
-No next milestone or additional implementation is authorized. Do not push.
+Matt explicitly authorized the revised scope on 2026-09-22, accepted the independent confirmation
+review's AUTHORIZE recommendation and P2-1/P2-2 as resolved, and reaffirmed acceptance of Milestone
+031 closure commit `2ce33e0`. This records his ruling without inventing independent closure-commit
+review evidence or a ledger verdict.
+
+The authorized scope, implementation record, 826-test result, unchanged fingerprints, mutation
+checks, field-complete replay/process evidence, 35 Godot checks, limitations and playtest instructions
+are archived in [032-one-operation-becomes-a-scene.md](milestones/032-one-operation-becomes-a-scene.md)
+and included in the single M032 implementation commit. The associated narrative-rendering ruling in
+DESIGN_DECISIONS remains the durable boundary. Self-verification is not independent acceptance.
+
+The next action is independent review of that exact implementation commit, then Matt's findings
+rulings and explicit acceptance of the direct/delegated human comprehension gate. No human gate has
+been claimed passed. Append subsequent findings, corrections and acceptance to the archive.
+Do not push, close M032, or begin M033 without the required ruling.
 
 ## Deliberately carried work
 
-- Narrative explanations for delays, meaningful responses to reports/questions, clearer briefing
-  and permission wording, post-completion question relevance, and the session-objective layout
-  remain follow-up observations. They are not authorized implementation scope.
-- New owner intervention to change a delegate's approach, delayed commands, new refusal/negotiation,
-  live forecasts and new reporting vocabulary remain deferred.
-- OPEN_CONCERNS #8 remains open for pacing and narrative legibility. #9's initial delegation and
-  known staffing gaps are resolved by the accepted M031 implementation.
-- Milestone 030 remains operationally closed through its owner exception; retrospective independent
-  review and the pre-existing ledger/check-out hash discrepancy remain carried.
-- Existing ROADMAP/proposal modifications belong to unrelated work and remain untouched.
+- OPEN_CONCERNS #8 remains open for pacing and narrative legibility. Unknown delays remain unknown;
+  this bounded chronicle is not a complete encounter transcript.
+- Meaningful follow-ups, post-payment question relevance, permission wording and broader objective
+  layout remain deferred.
+- M030 remains operationally closed by owner exception; retrospective independent review and the
+  pre-existing ledger/check-out hash discrepancy remain carried.
+- M033 Force presentation, M034 continuous calendar and M035 Harbor command screen remain
+  unauthorized directions, each requiring fresh scope and authorization.
+- Unrelated ROADMAP and proposal working-tree changes remain untouched and outside the M032 commit.

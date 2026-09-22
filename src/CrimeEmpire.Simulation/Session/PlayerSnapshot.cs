@@ -147,7 +147,10 @@ public sealed record PlayerOperation(
     string? ExecutorName,
     DateTime? Since,
     string? Progress,
-    string? ReviewToken = null);
+    string? ReviewToken = null)
+{
+    public OperationIdentity? TributeOperation { get; init; }
+}
 
 /// <summary>One itemized receipt from this character's own cash history.</summary>
 public sealed record PlayerIncome(
@@ -300,6 +303,8 @@ public sealed record PlayerSnapshot(
     IReadOnlyList<PlayerOperation> Operations,
     IReadOnlyList<PlayerRequest> AwaitingAnswers)
 {
+    private readonly IReadOnlyList<PlayerChronicleEntry> _chronicle = Array.Empty<PlayerChronicleEntry>();
+    public IReadOnlyList<PlayerChronicleEntry> Chronicle { get => _chronicle; init => _chronicle = Frozen.List(value); }
     public IReadOnlyList<PlayerIncome> Income { get; init; } = Frozen.List(Income);
     public IReadOnlyList<PlayerOperation> Operations { get; init; } = Frozen.List(Operations);
     public IReadOnlyList<string> SelfKnowledge { get; init; } = Frozen.List(SelfKnowledge);
@@ -323,7 +328,7 @@ public sealed record PlayerSnapshot(
 /// its own; the Godot interface displays its fields. Neither can be more generous than the other,
 /// because neither decides.
 /// </summary>
-public static class PlayerView
+public static partial class PlayerView
 {
     /// <summary>
     /// How far back "recent" reaches — the part of what he holds that the interface puts in front of
@@ -631,7 +636,7 @@ public static class PlayerView
             lastAction,
             myBusiness,
             Operating(world, who, name, self),
-            awaitingAnswers);
+            awaitingAnswers) { Chronicle = Chronicle(world, who, name, self) };
     }
 
     /// <summary>
@@ -793,7 +798,9 @@ public static class PlayerView
                 : who.Execution.OperationAccounts.LastOrDefault(a => a.OwnerId == s.OwnerId && a.Sequence == s.LocalSequence) is { } account
                     ? $"{name(account.SenderId)} gave an account of this operation; see the attributed information."
                     : $"No report about this operation yet; its progress is unknown to {self.Object}.",
-            who.Id == s.OwnerId ? $"work-{s.LocalSequence}" : null);
+            who.Id == s.OwnerId ? $"work-{s.LocalSequence}" : null)
+        { TributeOperation = s.Kind == StrategyKind.SecureTribute
+            ? new OperationIdentity(s.OwnerId, s.LocalSequence) : null };
     }
 
     /// <summary>

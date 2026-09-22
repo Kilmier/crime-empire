@@ -32,6 +32,8 @@ public sealed record DecisionRecord(
 {
     public IReadOnlyList<ScoreBreakdown> ExecutorOptions { get; init; } = Array.Empty<ScoreBreakdown>();
     public ScoreBreakdown? ExecutorChoice { get; init; }
+    /// <summary>Written by the successful start commit, never reconstructed from live work.</summary>
+    public OperationIdentity? StartedOperation { get; init; }
     /// <summary>
     /// What this character actually did, as structured fields — the unit of comparison for
     /// "do two configurations behave differently".

@@ -136,14 +136,21 @@ public sealed class StrategyInstance
 }
 
 public sealed record OperationLearning(string OwnerId, int Sequence, InformationRecord Position);
+public sealed record OperationIdentity(string OwnerId, int LocalSequence);
 public sealed record OperationAccount(string OwnerId, int Sequence, string SenderId, DateTime At,
-    Claim Claim, Stance Stance);
+    Claim Claim, Stance Stance, long SourceReportId = 0, int ClaimOrdinal = 0,
+    double AssertedConfidence = 0, SourceKind ClaimedBasis = SourceKind.Report);
+
+/// <summary>Only the owner's ended tribute order, never the executor's private reason.</summary>
+public sealed record TributeOrderEnded(OperationIdentity Operation, string? TargetId,
+    string ExecutorId, DateTime At, bool MoneyArrived);
 
 public sealed class ExecutionState
 {
     // Attribution follows information acquired during an actual operation, not address/time guesses.
     public Dictionary<Claim, OperationLearning> OperationLearning { get; } = new();
     public List<OperationAccount> OperationAccounts { get; } = new();
+    public List<TributeOrderEnded> EndedTributeOrders { get; } = new();
     /// <summary>What the character has chosen to pursue, in plain words, for the trace.</summary>
     public string? Intention { get; set; }
 

@@ -1060,3 +1060,39 @@ findings. Retired in favor of this entry; see `OPEN_CONCERNS.md` for what's stil
 Source: Matt's acceptance of the 031 scope review findings, two owner rulings, and explicit
 implementation authorization in the Commission the Job task. These are scope decisions, not
 implementation acceptance; see CURRENT_MILESTONE.md for the active gate.
+
+## Narrative rendering and personal chronicle — Matt's rulings, 2026-09-22
+
+- **The simulation authors reality; presentation authors expression.** A renderer may turn a
+  structured, viewpoint-legal meaning into deterministic prose, emphasis, pacing, or layout. It may
+  not invent an act, speech act, claim, emotion, witness, relationship, motive, consequence, or
+  uncertainty that the simulation did not supply.
+- **`PlayerView.Build` remains the sole player-visible derivation boundary.** A situation card,
+  chronicle, or later command screen consumes frozen snapshot values. It does not query `World`, a
+  truth log, developer records, or mutable domain objects after that boundary. Rendered prose is not
+  authoritative simulation state and is not persisted.
+- **Received history is preserved as received.** A source-bearing account keeps its speaker,
+  asserted stance and uncertainty, claimed basis, receipt time, known event time when supplied, and
+  real operation or incident attribution. Later corroboration or contradiction appends a later entry
+  only when another source-bearing account is actually received; it does not rewrite the earlier
+  account. An independent belief revision changes the current knowledge view and creates no chronicle
+  entry in the bounded Personal Demo ruling. Evidence or current belief may therefore change without
+  changing what somebody previously said. A history of independent revisions needs separate scope.
+- **Unknown remains a valid result.** An unexplained delay, silence, delegated outcome, or missing
+  event time must remain unknown until a legitimate observation, account, discovery, or owner-visible
+  consequence supplies it. Presentation does not complete a causal story by inference from hidden
+  truth or from the absence of a message.
+- **A chronicle is a bounded projection, not a second simulation or generic event store.** Each entry
+  must name an existing durable, viewpoint-owned source. Where an accepted entry genuinely lacks one,
+  a milestone may authorize the smallest typed retention required for that entry, with stable identity
+  and persistence tests. It may not authorize a general narrative-history framework by implication.
+- **Personal Demo v0.1 / Harbor Demo is an internal validation target, not the canonical MVP / First
+  Playable.** Improving the existing Harbor scenario's legibility does not remove or satisfy the
+  larger target's organizations, territory, economy, police, arrest, imprisonment, succession, cast,
+  or operation breadth.
+
+Source: Matt's acceptance of the Personal Playable Demo roadmap rulings and Astra's final
+`AUTHORIZE` scope review on 2026-09-22. These are durable presentation and product-boundary decisions;
+the independent-belief-revision boundary was clarified by Matt's acceptance of Milestone 032 scope
+review finding P2-1 on the same date. These rulings do not authorize a milestone. See
+`CURRENT_MILESTONE.md` for the active executable scope and gate.

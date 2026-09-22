@@ -21,7 +21,8 @@ public static class Commit
         Candidate c,
         Agenda agenda,
         GeneratorContext ctx,
-        List<string> reconsideration)
+        List<string> reconsideration,
+        Action<OperationIdentity>? retainStartedOperation = null)
     {
         switch (c.Kind)
         {
@@ -128,6 +129,8 @@ public static class Commit
                             "commissioning left his hands free", new EventPayload { Note = "hands-free" });
                 }
                 Strategies.ScheduleNextStep(world, s, $"{s.Label}: first step");
+                if (s.Kind == StrategyKind.SecureTribute)
+                    retainStartedOperation?.Invoke(new OperationIdentity(s.OwnerId, s.LocalSequence));
                 reconsideration.Add("the target refuses outright");
                 reconsideration.Add("he comes to believe police are watching");
                 return $"began {s.Label}"

@@ -292,13 +292,15 @@ public sealed class SimulationReplayTests
             $"{Number(d.Chosen?.Total ?? 0)}|{d.Outcome}"));
 
         lines.AddRange(world.Decisions.Select(d => "executors|" + System.Text.Json.JsonSerializer.Serialize(
-            new { d.ExecutorOptions, d.ExecutorChoice })));
+            new { d.ExecutorOptions, d.ExecutorChoice, d.StartedOperation })));
         lines.AddRange(world.Reports.Select(r => "report-operations|" + System.Text.Json.JsonSerializer.Serialize(r.Operations)));
         foreach (var c in world.Characters.Values.OrderBy(c => c.Id, StringComparer.Ordinal))
         {
             lines.Add("operation-learning|" + c.Id + "|" + System.Text.Json.JsonSerializer.Serialize(
                 c.Execution.OperationLearning.OrderBy(x => x.Key.ToString(), StringComparer.Ordinal).Select(x => x.Value)));
             lines.Add("operation-accounts|" + c.Id + "|" + System.Text.Json.JsonSerializer.Serialize(c.Execution.OperationAccounts));
+            lines.Add("ended-tribute|" + c.Id + "|" + System.Text.Json.JsonSerializer.Serialize(c.Execution.EndedTributeOrders));
+            lines.Add("cash-receipts|" + c.Id + "|" + System.Text.Json.JsonSerializer.Serialize(c.Capabilities.CashReceipts));
         }
 
         // Report content and candour are simulation state, so determinism has to cover them —

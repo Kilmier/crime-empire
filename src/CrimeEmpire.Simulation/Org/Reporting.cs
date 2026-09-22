@@ -376,9 +376,11 @@ public static class Reporting
 
         world.Reports.Add(report);
         foreach (var about in report.Operations.Where(o => o.OwnerId == recipient.Id))
-            foreach (var account in report.Asserted.Where(a => a.Claim.Equals(about.Claim)))
+            foreach (var (account, ordinal) in report.Asserted.Select((a, i) => (a, i))
+                         .Where(pair => pair.a.Claim.Equals(about.Claim)))
                 recipient.Execution.OperationAccounts.Add(new OperationAccount(about.OwnerId,
-                    about.Sequence, report.SenderId, report.At, account.Claim, account.AssertedStance));
+                    about.Sequence, report.SenderId, report.At, account.Claim, account.AssertedStance,
+                    report.Id, ordinal, account.AssertedConfidence, account.ClaimedBasis));
         world.Record("report", report.SenderId, report.RecipientId, report.Framing);
 
         // And what the speaker read off the listener's face, now that the listener has made of it

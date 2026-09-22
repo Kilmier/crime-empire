@@ -274,9 +274,11 @@ public static class Pipeline
 
         // 7-8. Commit and schedule what follows.
         var reconsideration = new List<string>();
+        OperationIdentity? startedOperation = null;
         string outcome = chosen is null
             ? "nothing was open to him"
-            : Commit.Apply(world, actor, committed!, prepared.Agenda, prepared.Context, reconsideration);
+            : Commit.Apply(world, actor, committed!, prepared.Agenda, prepared.Context, reconsideration,
+                identity => startedOperation = identity);
         prepared.IsResolved = true;
 
         // A question, report, or other side action does not abandon the executor's standing work.
@@ -308,7 +310,8 @@ public static class Pipeline
             outcome,
             reconsideration,
             prepared.Salience.Notes.Where(n => n.Length > 0).ToList())
-        { ExecutorOptions = commission?.Scored ?? Array.Empty<ScoreBreakdown>(), ExecutorChoice = executorChoice };
+        { ExecutorOptions = commission?.Scored ?? Array.Empty<ScoreBreakdown>(), ExecutorChoice = executorChoice,
+          StartedOperation = startedOperation };
 
         world.Decisions.Add(record);
         return record;

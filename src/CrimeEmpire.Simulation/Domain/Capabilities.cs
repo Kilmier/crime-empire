@@ -13,7 +13,8 @@ public enum Skill
 /// balance it changed. Source and executor are ids until the player projection resolves names; the
 /// receipt itself is never another character's state and carries no hidden business value.
 /// </summary>
-public sealed record CashReceipt(DateTime At, double Amount, string SourceId, string ExecutorId);
+public sealed record CashReceipt(DateTime At, double Amount, string SourceId, string ExecutorId,
+    OperationIdentity? Operation = null);
 
 /// <summary>
 /// Whether and how well a character can act. Capability gates candidates; it never creates desire.
@@ -45,11 +46,12 @@ public sealed class Capabilities
     public IReadOnlyList<CashReceipt> CashReceipts => _cashReceipts;
 
     /// <summary>Apply and remember one owner-visible receipt as a single transaction.</summary>
-    public void ReceiveCash(double amount, string sourceId, string executorId, DateTime at)
+    public void ReceiveCash(double amount, string sourceId, string executorId, DateTime at,
+        OperationIdentity? operation = null)
     {
         if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
         Cash += amount;
-        _cashReceipts.Add(new CashReceipt(at, amount, sourceId, executorId));
+        _cashReceipts.Add(new CashReceipt(at, amount, sourceId, executorId, operation));
     }
 
     /// <summary>Formal authority rank. Affects salience and social consequence, never possibility.</summary>

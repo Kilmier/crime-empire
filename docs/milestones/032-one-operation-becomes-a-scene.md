@@ -469,3 +469,28 @@ Start a fresh baseline game, seed 42, controlling Vincent. Use Next event until 
    explain what was ordered, the method/executor, what happened or was reported, the source of each
    fact, what is still unknown, and what changed. The chronicle is not a transcript. Matt's explicit
    acceptance of these answers and of the presentation is still required.
+
+### Human playtest acceptance and follow-up notes — 2026-09-22
+
+Matt completed direct and delegated baseline play, including save/load, separate Vincent and Tommy
+assignments, concurrent ownership with one execution per actor, Tommy finishing one assignment and
+later taking over Vincent's existing operation, and the final operation-linked receipt. He explained
+the objective, businesses, standing rule, available approaches, source distinctions and unknown
+information without relying on the developer trace. After resolving the initially unclear
+commissioning sequence, he reported that everything seemed to work. This records his acceptance of
+the M032 human comprehension/playtest gate; it is not an independent exact-commit review or final
+milestone acceptance.
+
+The live playtest exposed a presentation defect in the broad session-objective area: its heading can
+wrap one character per line and the panel consumes a large share of the window, leaving less room to
+read the decision surface. The objective itself remained understandable, but the layout needs a
+future authorized correction.
+
+The playtest also exposed a discoverability problem in the current commissioning order. The existing
+flow selects a concrete target-and-method leaf before asking for an executor. It worked as designed:
+Vincent could independently assign Tommy either persuasion or threats at Ferri's tailor shop, and
+could later hand Tommy the grocery operation. Matt proposed a clearer future flow of **job/target →
+executor → method/instruction**, with persuade and threaten as instructions and a future **use your
+judgment** option when delegated discretion exists. This is recorded as an unresolved design proposal,
+not a settled decision: it would change the milestone-029 attention contract and milestone-031
+commissioning sequence and therefore requires separate review, authorization and scope.

@@ -234,9 +234,12 @@ are prototype timings rather than a durable pacing decision.
 **Milestone 031 owner ruling:** SecureTribute represents a multi-phase pressure operation. A static
 qualitative expectation will state its multi-day scale; it must never derive an ETA from hidden
 execution state. This settles the meaning, not whether the prototype pacing feels right. The human
-comprehension and pacing evidence remains pending; timings are unchanged.
+comprehension gate was accepted by Matt when closing M031 on 2026-09-21; timings are unchanged.
+Pacing and narrative legibility remain open: his corrected-build playtest noted that neither shop
+explained why payment took so long. Future accounts must be grounded in what characters can say or
+observe, without exposing private execution or inventing a completion forecast.
 
-### 9. Initial delegation is unavailable, and a busy subordinate disappears without explanation
+### 9. ~~Initial delegation is unavailable, and a busy subordinate disappears without explanation~~
 
 Matt's 2026-09-20 Milestone-030 playtest exposed two connected management-flow gaps. A free Tommy
 cannot be assigned either known tribute job at the opening: Vincent must personally start an
@@ -256,5 +259,7 @@ correction.
 **Milestone 031 response:** Matt authorized direct commissioning through a bounded second executor
 stage and a paused replayable draft, with known staffing explanations and present NPC reachability.
 See `DESIGN_DECISIONS.md`, "Direct commissioning", for the rulings. Implementation evidence is in
-`milestones/031-commission-the-job.md`; independent review and the human comprehension gate remain
-outstanding. This concern is not recorded as closed by implementer test results.
+`milestones/031-commission-the-job.md`. Sol independently passed correction `8003742`, and Matt
+accepted and closed M031 on 2026-09-21 after playtesting initial delegation, staffing explanations
+and both jobs' payment. This concern is resolved by reviewed implementation and owner acceptance.
+Changing a delegate's approach remains separate deferred intervention scope.

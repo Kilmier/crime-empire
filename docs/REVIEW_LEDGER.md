@@ -252,51 +252,38 @@ its A/B/C class only after opening the exact diff.
 | `aa9f30c` (exact `aa9f30cb439dfab9def8c7a68a4704869da18320`) | Matt's owner review of this Codex-authored Class A implementation: **PASS**, accepted and closed on 2026-09-16. Matt authored none of the commit. It implements the exact two-known-target grouped-attention exception, preserves six top-level alternatives and at most ten leaves without reserved job slots, retains late feasibility/no backfill and actor parity, repairs both player-session rejection fixtures against a real production salience rejection, and records the accepted evaluation-hash changes without claiming complete world-state equality. No separate review report, findings, or independently reproduced command record accompanied the ruling; the archive's 0/0 build, 766-test pass, deterministic comparisons and viewpoints remain implementer evidence (`milestones/029`). |
 | `e6d0044` (exact `e6d0044455efa85049553d818813f5c975c68fcc`) | Matt's owner review of this Codex-authored Class A implementation: **PASS**, tentatively accepted and operationally closed on 2026-09-20 by explicit bounded exception because Claude was unavailable and Matt directed that work must move on. Matt's playtests established the human-comprehension gate, including the direct Ferri briefing, Tommy's standing-order method, and itemized job income. No independent exact-commit review, separate review report, findings, or independently reproduced full verification record accompanied the ruling. The archive's 0/0 build, 780-test pass, deterministic Runner/viewpoint checks, eleven Godot checks and mutation probes remain implementer evidence. Retrospective independent review remains desirable and must not be inferred from this owner closure (`milestones/030-one-informed-choice.md`). |
 | `c279d04` (exact `c279d04a7b65b802d359286cac8806eaf2b0303f`, parent `ae4e465`) | Sol independent exact-commit review, author of neither commit, Class A: **FAIL — safe to build upon: NO**. One P1: initial executor alternatives substitute the executor for the selected business and omit RequiredKnowledge, corrupting reward and uncertainty evaluation. Matt accepted the finding for a focused correction. Sol reproduced 0/0 build, 803 tests, six repeated deterministic hashes, comparison, both viewpoints and 24 Godot checks; did not independently repeat the twelve source mutations. Human comprehension remained pending. Detailed finding and correction evidence: [`milestones/031-commission-the-job.md`](milestones/031-commission-the-job.md#correction-1--preserve-operation-inputs-during-executor-scoring). |
+| `8003742` (exact `80037423f7760e5fe8f828b5a559f8af4e1e45fc`, parent `c279d04`) | Sol independent exact-commit review, author of neither commit, Class A: **PASS AFTER FIXES — safe to build upon: YES**. Accepted P1 fixed; no new P1/P2. Reproduced build, 29 focused/809 total tests, six repeated variants, comparison, viewpoints, 24 Godot checks and corrected live scoring; source mutation not independently repeated. Matt accepted the corrected state and closed M031 on 2026-09-21 after corrected-build playtesting. Human acceptance and remaining narrative/control feedback are recorded in the [M031 closure](milestones/031-commission-the-job.md#owner-closure--2026-09-21). |
 
-The preceding row establishes only the named M031 review; it does not reconcile the pre-existing
-M030 hash discrepancy (`e6d0044` in this ledger versus `5874077` in this checkout) or supply a review
-of `ae4e465`. The focused M031 correction containing this entry requires its own exact-commit review.
+The M031 rows establish only the named reviews; they do not reconcile the pre-existing M030 hash
+discrepancy (`e6d0044` in this ledger versus `5874077` in this checkout) or supply a review of
+`ae4e465`. The documentation-only closure commit containing this update requires its own exact-diff
+Class B review. Matt's milestone closure does not grant that commit a review exemption.
 
 ## Current verification baseline
 
-Latest tentatively accepted **runtime** baseline: `e6d0044`, accepted through Matt's bounded owner
-exception above. Its gate was recorded by the implementer; no separate independent reproduction
-transcript accompanied the ruling. The
-latest independently passed runtime baseline remains `663ba68`, with the partial-independence
-limits recorded above. Hashes are regression evidence, not permanent design requirements; an
-authorized behaviour change may move them if the new values and reasons are recorded in its
-milestone archive.
+Latest independently passed and owner-accepted runtime baseline:
+`80037423f7760e5fe8f828b5a559f8af4e1e45fc`. Sol reproduced the following checks in the review
+supplied by Matt; Matt accepted the corrected state and closed M031 on 2026-09-21 after playtesting.
 
-- Build: 0 warnings, 0 errors. Tests: 780 passed, 0 failed, 0 skipped.
-- Trace / chosen-action hashes: `baseline` `D6F9F0DAC0B308DA` / `2930C6612450A449`;
-  `cautious-vincent` `810FCB7835E4E95C` / `B0DFFBEAEBD8F6F3`; `watchful-boss`
-  `C7F693E2BF222FAD` / `7A9ACC3C59970142`; `disloyal-vincent` `4CF63C356514998F` /
-  `6C88BE019F2CD0FA`; `resentful-tommy` `95CA45A72333EFEA` / `2930C6612450A449`;
-  `capable-angelo` `CF75E6FB50BABC58` / `A955423F0063E292`.
-- Three repeated-run verifications deterministic; comparison: six distinct traces, five action
-  sequences; both required viewpoint runs exit 0; `git diff --check` clean.
-- Chosen-action histories remain equal to the independently reproduced `663ba68` baseline in all six
-  variants. Milestone 030 changes trace content through authorized information and presentation work;
-  complete cross-build world-state equality was not measured.
-- All six natural seed-42 sessions remain **Unmet**. `ObjectiveMet` is reachable through legal
-  unstaged player choices only, pinned by
-  `OperationContinuityTests.The_unchanged_objective_is_reachable_through_legal_named_player_choices`.
-- No information-triggered supervisory review fires naturally in any variant; that mechanism's
-  demonstrated surface is controlled production-path tests and fault probes. See the 028 archive's
-  honest non-result section.
-- The milestone-030 implementer reported nine individual Godot checks plus an isolated two-process
-  restart save/load pair, and six load-bearing mutation probes. None was independently rerun for the
-  owner closeout. The previous `aa9f30c`, `663ba68`, `3db0cb1` and `64881a1` baselines are preserved
-  in this file's history and the milestone archives.
+- Build: 0 warnings/errors. Focused commissioning tests: 29/29; full suite: 809/809.
+- All six seed-42, 90-day variants repeated deterministically, matching the recorded trace hashes:
+  baseline `A99EC8C3720272B5`; cautious-vincent `F5890C72AAA69948`;
+  watchful-boss `2A05F3A500CF0D74`; disloyal-vincent `ED344BD31EF7B2E6`;
+  resentful-tommy `A4D7CEA8BE62B8C7`; capable-angelo `F5C95925301DA227`.
+- Comparison: six distinct traces, five distinct chosen-action sequences. Both required viewpoints
+  passed with no observed information leak. All 24 Godot checks and exact diff/whitespace checks passed.
+- The live Bellini/Persuade trace gives both Tommy and Vincent expected reward +0.3502 and
+  uncertainty -0.4226. Executor relationship/capability evaluation retains its separate identity.
+- The implementer killed the target-substitution mutation; Sol inspected the regression's structure
+  but did not independently repeat the source mutation. This limitation remains explicit.
+- Human evidence: direct commissioning, staffing exclusion, income attribution and save/load were
+  exercised; on the corrected build Matt confirmed both payments, then closed the milestone.
+  Narrative and management-control feedback remains carried, not silently declared implemented.
+- Prior verification baselines remain preserved in this file's history and the milestone archives.
+  Neither this closure nor the M031 reviews resolve the carried M030 review/history discrepancy.
 
-More recent verification is **not acceptance**: Sol independently reproduced the failing M031
-implementation's checks; the focused correction has implementer evidence of 809 passing tests,
-six deterministic variants, six distinct traces/five action sequences, both viewpoints and 24 Godot
-checks. The target-substitution mutation is killed by the new regression. Correction hashes and
-the human playtest observations are in the appended M031 archive record linked above.
-
-Run commands from `AGENTS.md` §Verification. Re-measure after the last edit that could affect the
-reported value; never copy a number from an earlier worktree state.
+Run commands from `AGENTS.md` §Verification. Runtime checks were not rerun for this documentation-only
+closure; these are the named review's results, not new measurements of the closure diff.
 
 ## Class A review checklist
 

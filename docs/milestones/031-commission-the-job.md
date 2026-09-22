@@ -308,3 +308,43 @@ must not invent private feelings, progress, forecasts or a financial-cut mechani
 New owner intervention remains explicitly deferred under the authorized M031 scope. The full human
 comprehension gate, independent correction review and Matt's acceptance of the corrected state are
 not established by these tests or observations. Unrelated ROADMAP/proposal work remains untouched.
+
+## Owner closure — 2026-09-21
+
+Matt supplied Sol's independent review of exact correction
+`80037423f7760e5fe8f828b5a559f8af4e1e45fc` against
+`c279d04a7b65b802d359286cac8806eaf2b0303f`: **PASS AFTER FIXES, Class A; safe to build upon: YES**.
+Sol stated that he authored neither commit. No new P1 or P2 findings remained. The accepted P1 was
+verified fixed across retention, scoring, confirmation, presentation and replay comparison, with
+historical delegation preserved through the fallback. The live Bellini/Persuade trace gave both
+Tommy and Vincent reward +0.3502 and uncertainty -0.4226.
+
+Sol reproduced the clean build, 29 focused and 809 total passing tests, all six repeated variants
+and recorded hashes, six-trace/five-action-sequence comparison, required viewpoints, all 24 Godot
+checks, and exact diff/whitespace checks. Sol did not independently mutate the source; he inspected
+the load-bearing test structure. That limitation does not become a claimed mutation rerun here.
+
+Matt then playtested the corrected build. He again noted the absent ability to change Tommy's
+approach, and that the shops never explained why payment took so long. He explicitly described the
+latter as a note for future narrative work. He confirmed both incomes: +620 from Ferri handled
+personally and +840 from Bellini handled by Tommy, taking cash from 6,000 to 7,460 with no ongoing
+operations shown. His earlier save/load checks and stable executor/job/method observations remain
+as recorded above; they were not claimed as repeated in this final short run.
+
+After those observations Matt ruled: "great. I think Milestone 31 is closed." This records his
+acceptance of the corrected state and the milestone's human-comprehension gate, following the
+independent PASS. It supersedes the pending-gate statements above without rewriting their history.
+It is not a claim that every narrative or interface issue is resolved, nor a separate measurement
+of every comprehension criterion.
+
+Carried feedback includes explanations for delays, visible conversational responses, clearer
+mission/permission wording, post-completion question relevance, the oversized vertically wrapped
+session-objective label, and owner control over a delegate's method. New intervention mechanics,
+delayed commands, refusal/negotiation, live forecasts and reporting vocabulary remain deferred.
+OPEN_CONCERNS #8 remains open for pacing/narrative legibility; #9's initial delegation and staffing
+gaps are resolved. The M030 retrospective review and historical hash discrepancy remain carried.
+
+This closure changes documentation only. Runtime verification above is attributed to the named
+reviews; it was not rerun for prose edits. The closure commit requires independent Class B review
+under the ordinary process; Matt did not grant an exception. No next milestone was begun, no push
+was made, and unrelated ROADMAP/proposal work was left untouched.

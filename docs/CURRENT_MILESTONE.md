@@ -2,9 +2,8 @@
 
 ## Status and gate
 
-**Milestone 032 — One Operation Becomes a Scene: implementation and self-verification complete;
-Matt's human comprehension/playtest acceptance is recorded; independent exact-commit review remains
-pending.**
+**No milestone is active. Milestone 032 — One Operation Becomes a Scene is closed by Matt's
+explicit owner ruling. Independent exact-commit review remains outstanding.**
 
 Matt explicitly authorized the revised scope on 2026-09-22, accepted the independent confirmation
 review's AUTHORIZE recommendation and P2-1/P2-2 as resolved, and reaffirmed acceptance of Milestone
@@ -23,10 +22,13 @@ comprehension/playtest gate is accepted and archived. The live session also reco
 session-objective layout and a proposed future **job/target → executor → method/instruction** flow;
 neither is treated as settled design or folded into M032 behavior.
 
-The next action is independent review of exact implementation commit `f844f36`, followed in
-chronological order by review of the subsequent gate-recording documentation commit. Findings rulings
-and final milestone acceptance remain pending. Do not push, close M032, or begin M033 without the
-required ruling.
+After accepting the human playtest and authorizing the GitHub push, Matt explicitly instructed:
+"close M32." This closes M032 by owner exception to the outstanding independent-review gate;
+it does not establish an independent PASS or erase review debt. The closure is appended to the
+archive. Implementation `f844f36`, playtest record `9a215b0`, and this closure record remain subject
+to independent exact-commit review in the repository's chronological queue.
+
+No next milestone is authorized. Await Matt's next scope instruction before beginning further work.
 
 ## Deliberately carried work
 

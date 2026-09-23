@@ -494,3 +494,19 @@ executor → method/instruction**, with persuade and threaten as instructions an
 judgment** option when delegated discretion exists. This is recorded as an unresolved design proposal,
 not a settled decision: it would change the milestone-029 attention contract and milestone-031
 commissioning sequence and therefore requires separate review, authorization and scope.
+
+### Owner closure after playtest acceptance
+
+After the accepted human playtest, Matt authorized pushing the committed branch to GitHub; the push
+through `9a215b0495de926243917a290f84883c928d8b9d` succeeded. He then explicitly instructed
+"close M32." M032 is closed by that owner ruling, covering implementation
+`f844f3657617eb50632eb0355737a9a899c43e3d` and playtest record `9a215b0`.
+
+This is a bounded owner exception to the outstanding independent-review gate, not an independent
+review verdict. No independent PASS is claimed for either commit or this closure record; the
+chronological review debt remains. Previously recorded automated verification is unchanged, and
+this documentation-only closure does not claim a new simulation or Godot test run.
+
+The objective-panel layout defect and proposed job/target → executor → method/instruction flow,
+including future delegated discretion, remain carried as recorded above. Closure neither resolves
+those follow-ups nor authorizes their implementation. No M033 work is authorized or begun.

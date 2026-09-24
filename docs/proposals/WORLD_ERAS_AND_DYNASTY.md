@@ -26,6 +26,39 @@ No era grants omniscience. Technology changes trace production, access, retentio
 attribution, and sharing; institutions and individuals still need authority, resources, competence,
 and legitimate information paths.
 
+## Long-term expansion concept: cyberpunk conspiracy era
+
+**Status: noncanonical DLC idea, not a roadmap commitment.** A future alternate or later-era
+expansion could apply the same character, organization, information, and institutional foundations to
+a cyberpunk criminal ecosystem. The era should change opportunity and surveillance rather than
+replace the base game with unrelated mechanics.
+
+Appropriate criminal activity could include data theft, cyber-extortion, identity and credential
+markets, corporate espionage, black-market technology or augmentation, synthetic-drug supply,
+surveillance manipulation, information brokerage, infrastructure sabotage, and political influence
+operations. Each activity would still need actors, capabilities, access, traces, witnesses or
+records, information paths, and persistent consequences; "cybercrime" must not become an abstract
+button that bypasses the simulation.
+
+A cult or cult-like organization could operate across politics, legitimate institutions, and the
+underworld. A player might build, infiltrate, finance, exploit, expose, investigate, fragment, or
+destroy it. Cult influence should arise through individual recruitment, belief, coercion, patronage,
+compromise, secrecy, favors, and offices rather than a global cult-power meter. Members, fronts,
+politicians, police, businesspeople, and criminals may each know different parts of the network and
+interpret its purpose differently.
+
+The investigative side could support noir conspiracy play: connect observations that initially seem
+unrelated, cultivate or pressure sources, compare conflicting testimony, uncover institutional
+protection, seek authorization, survive interference, and decide whether an apparently unified
+conspiracy is real, exaggerated, fragmented, or being used by somebody else. Supernatural certainty
+is not implied; ambiguity, belief, ritual, fraud, sincere conviction, and deliberate mythmaking can
+coexist without the interface revealing an omniscient answer.
+
+This expansion idea is valuable only if it reuses the base game's actor-neutral systems. The same
+world should permit manipulating the organization for power, serving it, resisting it from within,
+or investigating it from an institutional or independent position. It does not authorize alternate
+careers, a cult system, a cyberpunk era, or DLC production now.
+
 ## Scope guardrail
 
 The first playable does not need a century of authored content or several complete technology
